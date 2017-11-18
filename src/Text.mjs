@@ -1,0 +1,4 @@
+export class Text {
+  constructor() {
+  }
+}
