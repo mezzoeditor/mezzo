@@ -64,6 +64,8 @@ export class Editor {
 
     this._input = document.createElement('input');
     this._input.style.cssText = `
+      outline: none;
+      border: none;
       width: 0;
       height: 0;
       position: absolute;
