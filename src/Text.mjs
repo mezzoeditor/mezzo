@@ -1,6 +1,23 @@
+import { FontMetrics } from "./FontMetrics.mjs";
+
 export class Text {
   constructor() {
     this._lines = [""];
+    this._metrics = FontMetrics.createSimple();
+  }
+
+  /**
+   * @param {!Editor.FontMetrics} metrics
+   */
+  setFontMetrics(metrics) {
+    this._metrics = metrics;
+  }
+
+  /**
+   * @return {!Editor.FontMetrics}
+   */
+  fontMetrics() {
+    return this._metrics;
   }
 
   /**
@@ -30,5 +47,17 @@ export class Text {
    */
   line(lineNumber) {
     return this._lines[lineNumber];
+  }
+
+  /**
+   * @return {?{x: number, y: number}}
+   */
+  toCoordinates(lineNumber, columnNumber) {
+  }
+
+  /**
+   * @return {?{lineNumber: number, columnNumber: number}}
+   */
+  fromCoordinates(x, y) {
   }
 }
