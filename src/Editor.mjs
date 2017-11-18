@@ -1,9 +1,12 @@
 import {Text} from "./Text.mjs"
 
 export class Editor {
-  constructor(domDocument) {
-    //TODO: shadow dom!
-    this._element = domDocument.createElement('editor-element');
+  /**
+   * @param {!Document} document
+   */
+  constructor(document) {
+    this._createDOM(document);
+    this._createRenderer();
     this._text = new Text();
   }
 
@@ -12,6 +15,7 @@ export class Editor {
    */
   setText(text) {
     this._text.setText(text);
+    this._render();
   }
 
   /**
@@ -22,6 +26,7 @@ export class Editor {
   }
 
   resize() {
+    this._render();
   }
 
   /**
@@ -32,8 +37,25 @@ export class Editor {
   }
 
   /**
-   * @param {function()}
+   * @param {function()} callback
    */
   setTextChangedCallback(callback) {
+    this._textChangedCallback = callback;
+  }
+
+  /**
+   * @param {!Document} document 
+   */
+  _createDOM(document) {
+    //TODO: shadow dom!
+    this._element = document.createElement('div');
+    this._element.style.border = '1px solid black';
+  }
+
+  _createRenderer() {
+  }
+
+  _render() {
+    this._element.textContent = this._text.text();
   }
 }
