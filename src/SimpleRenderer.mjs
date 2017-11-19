@@ -39,10 +39,10 @@ export class SimpleRenderer {
    * @param {!Operation} op
    */
   invalidate(op) {
-    if (op.type === Operation.Type.Cursors) {
-      this._updateCursors(op);
-      return;
-    }
+    if (op.cursorsChanged)
+      this._updateCursors();
+    if (op.cursorsMoved)
+      this._moveCursors();
 
     if (!this._text.operationAffectsRect(op, this._viewport))
       return;
@@ -79,39 +79,37 @@ export class SimpleRenderer {
       this._canvas.removeChild(this._canvas.lastChild);
     for (let i = 0; i < this._text.lineCount(); i++) {
       let line = this._canvas.ownerDocument.createElement('div');
+      line.style.setProperty('height', this._text.fontMetrics().lineHeight + 'px');
       line.textContent = this._text.line(i);
       this._canvas.appendChild(line);
     }
   }
 
-  /**
-   * @param {!Operation} op
-   */
-  _updateCursors(op) {
-    if (!op.moveOnly) {
-      let elements = new Set();
-      for (let cursor of this._text.cursors()) {
-        let element = cursor[cursorSymbol];
-        if (!element) {
-          element = this._canvas.ownerDocument.createElement('div');
-          element.style.setProperty('width', '2px');
-          element.style.setProperty('height', this._text.fontMetrics().lineHeight + 'px');
-          element.style.setProperty('background', 'red');
-          element.style.setProperty('position', 'absolute');
-          element.style.setProperty('margin-left', '-1px');
-          cursor[cursorSymbol] = element;
-          element.style.setProperty('visibility', this._cursorsVisible ? 'visible' : 'hidden');
-          this._overlay.appendChild(element);
-        }
-        elements.add(element);
+  _updateCursors() {
+    let elements = new Set();
+    for (let cursor of this._text.cursors()) {
+      let element = cursor[cursorSymbol];
+      if (!element) {
+        element = this._canvas.ownerDocument.createElement('div');
+        element.style.setProperty('width', '2px');
+        element.style.setProperty('height', this._text.fontMetrics().lineHeight + 'px');
+        element.style.setProperty('background', 'red');
+        element.style.setProperty('position', 'absolute');
+        element.style.setProperty('margin-left', '-1px');
+        cursor[cursorSymbol] = element;
+        element.style.setProperty('visibility', this._cursorsVisible ? 'visible' : 'hidden');
+        this._overlay.appendChild(element);
       }
-      for (let element of this._cursorElements) {
-        if (!elements.has(element))
-          this._canvas.removeChild(element);
-      }
-      this._cursorElements = elements;
+      elements.add(element);
     }
+    for (let element of this._cursorElements) {
+      if (!elements.has(element))
+        this._overlay.removeChild(element);
+    }
+    this._cursorElements = elements;
+  }
 
+  _moveCursors() {
     for (let cursor of this._text.cursors()) {
       let element = cursor[cursorSymbol];
       let point = this._text.positionToPoint(cursor.position);

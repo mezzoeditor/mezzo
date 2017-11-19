@@ -14,7 +14,7 @@ export class Editor {
     this._setupCursors();
 
     let cursor = new Cursor({lineNumber: 0, columnNumber: 0});
-    this._renderer.invalidate(this._text.addCursor(cursor));
+    this._operation(this._text.addCursor(cursor));
   }
 
   /**
@@ -22,6 +22,8 @@ export class Editor {
    */
   setText(text) {
     this._operation(this._text.setText(text));
+    let cursor = new Cursor({lineNumber: 0, columnNumber: 0});
+    this._operation(this._text.addCursor(cursor));
   }
 
   /**
@@ -76,7 +78,10 @@ export class Editor {
       this._renderer.setCursorsVisible(cursorsVisible);
     };
     this._input.addEventListener('focus', event => {
-      toggleCursors();
+      if (cursorsTimeout)
+        document.defaultView.clearInterval(cursorsTimeout);
+      if (!cursorsVisible)
+        toggleCursors();
       cursorsTimeout = document.defaultView.setInterval(toggleCursors, 500);
     });
     this._input.addEventListener('blur', event => {
@@ -146,11 +151,23 @@ export class Editor {
           this._operation(this._text.moveDown());
           handled = true;
           break;
-      }
+        case 'Enter':
+          this._operation(this._text.insertNewLineAtCursors());
+          handled = true;
+          break;
+    }
       if (handled) {
         event.preventDefault();
         event.stopPropagation();
       }
+    });
+    this._input.addEventListener('paste', event => {
+      let data = event.clipboardData;
+      if (data.types.indexOf('text/plain') === -1)
+        return;
+      this._operation(this._text.insertAtCursors(data.getData('text/plain')));
+      event.preventDefault();
+      event.stopPropagation();
     });
   }
 

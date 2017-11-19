@@ -1,9 +1,5 @@
 export class Operation {
-  /**
-   * @param {!Operaion.Type} type
-   */
-  constructor(type) {
-    this.type = type;
+  constructor() {
   }
 
   /**
@@ -11,15 +7,10 @@ export class Operation {
    * @return {!Operation}
    */
   static cursors(moveOnly) {
-    let op = new Operation(Operation.Type.Cursors);
-    op.moveOnly = moveOnly;
+    let op = new Operation();
+    op.cursorsMoved = true;
+    if (!moveOnly)
+      op.cursorsChanged = true;
     return op;
   }
 }
-
-/** @enum {string} */
-Operation.Type = {
-  Cursors: 'Cursors',
-  Replace: 'Replace',
-};
-

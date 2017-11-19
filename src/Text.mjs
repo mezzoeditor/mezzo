@@ -29,8 +29,9 @@ export class Text {
    */
   setText(text) {
     this._lines = text.split('\n');
-    this._resetCursorUpDownColumns();
-    return new Operation(Operation.Type.Replace);
+    this._cursors = [];
+    // TODO: the operation is incorrect.
+    return Operation.cursors(false /* moveOnly */);
   }
 
   /**
@@ -69,6 +70,7 @@ export class Text {
   addCursor(cursor) {
     this._resetCursorUpDownColumns();
     this._cursors.push(cursor);
+    this._sortCursors();
     return Operation.cursors(false /* moveOnly */);
   }
 
@@ -88,6 +90,7 @@ export class Text {
         pos.columnNumber--;
       }
     }
+    this._sortCursors();
     return Operation.cursors(true /* moveOnly */);
   }
 
@@ -98,15 +101,16 @@ export class Text {
     this._resetCursorUpDownColumns();
     for (let cursor of this._cursors) {
       let pos = cursor.position;
-      if (pos.lineNumber !== this._lines.length) {
-        if (pos.columnNumber === this._lines[pos.lineNumber].length) {
-          pos.lineNumber++;
-          pos.columnNumber = 0;
-        } else {
-          pos.columnNumber++;
+      if (pos.columnNumber === this._lines[pos.lineNumber].length) {
+        if (pos.lineNumber !== this._lines.length - 1) {
+            pos.lineNumber++;
+            pos.columnNumber = 0;
         }
+      } else {
+        pos.columnNumber++;
       }
     }
+    this._sortCursors();
     return Operation.cursors(true /* moveOnly */);
   }
 
@@ -125,6 +129,7 @@ export class Text {
       if (pos.columnNumber > this._lines[pos.lineNumber].length)
         pos.columnNumber = this._lines[pos.lineNumber].length;
     }
+    this._sortCursors();
     return Operation.cursors(true /* moveOnly */);
   }
 
@@ -134,17 +139,16 @@ export class Text {
   moveDown() {
     for (let cursor of this._cursors) {
       let pos = cursor.position;
-      if (pos.lineNumber === this._lines.length)
+      if (pos.lineNumber === this._lines.length - 1)
         continue;
       if (cursor.upDownColumn === -1)
         cursor.upDownColumn = pos.columnNumber;
       pos.lineNumber++;
       pos.columnNumber = cursor.upDownColumn;
-      if (pos.lineNumber === this._lines.length)
-        pos.columnNumber = 0;
-      else if (pos.columnNumber > this._lines[pos.lineNumber].length)
+      if (pos.columnNumber > this._lines[pos.lineNumber].length)
         pos.columnNumber = this._lines[pos.lineNumber].length;
     }
+    this._sortCursors();
     return Operation.cursors(true /* moveOnly */);
   }
 
@@ -153,13 +157,69 @@ export class Text {
       cursor.upDownColumn = -1;
   }
 
+  _sortCursors() {
+    this._cursors.sort((a, b) => {
+      return (a.position.lineNumber - b.position.lineNumber) ||
+             (a.position.columnNumber - b.position.columnNumber);
+    });
+  }
+
   /**
    * @param {string} s
    * @return {!Operation}
    */
   insertAtCursors(s) {
     this._resetCursorUpDownColumns();
-    return this.setText(this.text() + s);
+
+    let lines = s.split('\n');
+    let single = lines.length === 1;
+    let first = lines[0];
+    let last = lines[lines.length - 1];
+    if (!single) {
+      lines.shift();
+      lines.pop();
+    }
+
+    let deltaLine = 0;
+    let deltaColumn = 0;
+    let lastLine = -1;
+    for (let cursor of this._cursors) {
+      let pos = cursor.position;
+      pos.lineNumber += deltaLine;
+      if (!single)
+        deltaLine += lines.length + 1;
+      if (pos.lineNumber === lastLine) {
+        pos.columnNumber += deltaColumn;
+        deltaColumn = single ? deltaColumn + last.length : last.length - pos.columnNumber;
+      } else {
+        deltaColumn = single ? last.length : last.length - pos.columnNumber;
+      }
+
+      let line = this._lines[pos.lineNumber];
+      if (single) {
+        line = line.substring(0, pos.columnNumber) + first + line.substring(pos.columnNumber);
+        this._lines[pos.lineNumber] = line;
+        pos.columnNumber += first.length;
+      } else {
+        let end = last + line.substring(pos.columnNumber);
+        this._lines[pos.lineNumber] = line.substring(0, pos.columnNumber) + first;
+        this._lines.splice(pos.lineNumber + 1, 0, ...lines, end);
+        pos.lineNumber += lines.length + 1;
+        pos.columnNumber = last.length;
+      }
+      lastLine = pos.lineNumber;
+    }
+
+    // TODO: this is incorrect.
+    return Operation.cursors(true /* moveOnly */);
+  }
+
+  /**
+   * @return {!Operation}
+   */
+  insertNewLineAtCursors() {
+    // TODO: this should be reimplemented, e.g. for indentation.
+    return this.insertAtCursors("\n");
   }
 
   /**
@@ -169,7 +229,7 @@ export class Text {
   positionToPoint(position) {
     return {
       x: position.columnNumber * this._metrics.charWidth,
-      y: position.lineNumber * this._metrics.charHeight
+      y: position.lineNumber * this._metrics.lineHeight
     };
   }
 
@@ -180,7 +240,7 @@ export class Text {
   pointToPosition(point) {
     return {
       columnNumber: Math.floor(point.x / this._metrics.charWidth),
-      lineNumber: Math.floor(point.y / this._netrics.charHeight)
+      lineNumber: Math.floor(point.y / this._netrics.lineHeight)
     };
   }
 
