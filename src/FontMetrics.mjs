@@ -7,7 +7,7 @@ export class FontMetrics {
 
   static createSimple() {
     const metrics = new FontMetrics();
-    metrics.charWidth = 9;
+    metrics.charWidth = 8.42;
     metrics.charHeight = 16;
     metrics.lineHeight = 21;
 
@@ -28,4 +28,3 @@ export class FontMetrics {
     `;
   }
 }
-

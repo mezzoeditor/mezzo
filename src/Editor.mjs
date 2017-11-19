@@ -1,5 +1,7 @@
-import {Text} from "./Text.mjs"
-import {SimpleRenderer} from "./SimpleRenderer.mjs"
+import { Text } from "./Text.mjs";
+import { SimpleRenderer } from "./SimpleRenderer.mjs";
+import { Operation } from "./Operation.mjs";
+import { Cursor } from "./Cursor.mjs";
 
 export class Editor {
   /**
@@ -9,14 +11,17 @@ export class Editor {
     this._createDOM(document);
     this._text = new Text();
     this._createRenderer(document);
+    this._setupCursors();
+
+    let cursor = new Cursor({lineNumber: 0, columnNumber: 0});
+    this._renderer.invalidate(this._text.addCursor(cursor));
   }
 
   /**
    * @param {string} text
    */
   setText(text) {
-    this._text.setText(text);
-    this._render();
+    this._operation(this._text.setText(text));
   }
 
   /**
@@ -27,7 +32,10 @@ export class Editor {
   }
 
   resize() {
-    this._renderer.setSize(this._element.clientWidth, this._element.clientHeight);
+    this._renderer.setViewport({
+      origin: {x: 0, y: 0},
+      size: {width: this._element.clientWidth, height: this._element.clientHeight}
+    });
   }
 
   /**
@@ -38,10 +46,10 @@ export class Editor {
   }
 
   /**
-   * @param {function()} callback
+   * @param {function(!Operation)} callback
    */
-  setTextChangedCallback(callback) {
-    this._textChangedCallback = callback;
+  setOperationCallback(callback) {
+    this._operationCallback = callback;
   }
 
   focus() {
@@ -49,10 +57,51 @@ export class Editor {
   }
 
   /**
+   * @param {?Operation} op
+   */
+  _operation(op) {
+    if (!op)
+      return;
+    this._revealCursors();
+    this._renderer.invalidate(op);
+    if (this._operationCallback)
+      this._operationCallback.call(null, op);
+  }
+
+  _setupCursors() {
+    let cursorsVisible = false;
+    let cursorsTimeout;
+    let toggleCursors = () => {
+      cursorsVisible = !cursorsVisible;
+      this._renderer.setCursorsVisible(cursorsVisible);
+    };
+    this._input.addEventListener('focus', event => {
+      toggleCursors();
+      cursorsTimeout = document.defaultView.setInterval(toggleCursors, 500);
+    });
+    this._input.addEventListener('blur', event => {
+      if (cursorsVisible)
+        toggleCursors();
+      if (cursorsTimeout) {
+        document.defaultView.clearInterval(cursorsTimeout);
+        cursorsTimeout = null;
+      }
+    });
+    this._revealCursors = () => {
+      if (!cursorsTimeout)
+        return;
+      document.defaultView.clearInterval(cursorsTimeout);
+      if (!cursorsVisible)
+        toggleCursors();
+      cursorsTimeout = document.defaultView.setInterval(toggleCursors, 500);
+    };
+  }
+
+  /**
    * @param {!Document} document 
    */
   _createDOM(document) {
-    //TODO: shadow dom!
+    //TODO: shadow dom?
     this._element = document.createElement('div');
     this._element.style.cssText = `
       border: 1px solid black;
@@ -74,10 +123,34 @@ export class Editor {
     `;
     this._element.appendChild(this._input);
     this._input.addEventListener('input', event => {
-      // this._text.insert(this._input.value);
-      // this._renderer.render(text, x,
-      this.setText(this.text() + this._input.value);
+      let op = this._text.insertAtCursors(this._input.value);
       this._input.value = '';
+      this._operation(op);
+    });
+    this._input.addEventListener('keydown', event => {
+      let handled = false;
+      switch (event.key) {
+        case 'ArrowLeft':
+          this._operation(this._text.moveLeft());
+          handled = true;
+          break;
+        case 'ArrowRight':
+          this._operation(this._text.moveRight());
+          handled = true;
+          break;
+        case 'ArrowUp':
+          this._operation(this._text.moveUp());
+          handled = true;
+          break;
+        case 'ArrowDown':
+          this._operation(this._text.moveDown());
+          handled = true;
+          break;
+      }
+      if (handled) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
     });
   }
 
@@ -88,9 +161,6 @@ export class Editor {
     canvas.style.setProperty('top', '0');
     canvas.style.setProperty('left', '0');
     this._element.appendChild(canvas);
-  }
-
-  _render() {
-    this._renderer.invalidate();
+    this._element.appendChild(this._renderer.overlay());
   }
 }
