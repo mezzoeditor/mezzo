@@ -77,7 +77,7 @@ export class Text {
   /**
    * @return {!Operation}
    */
-  moveLeft() {
+  performLeft() {
     this._resetCursorUpDownColumns();
     for (let cursor of this._cursors) {
       let pos = cursor.position;
@@ -97,7 +97,7 @@ export class Text {
   /**
    * @return {!Operation}
    */
-  moveRight() {
+  performRight() {
     this._resetCursorUpDownColumns();
     for (let cursor of this._cursors) {
       let pos = cursor.position;
@@ -117,7 +117,7 @@ export class Text {
   /**
    * @return {!Operation}
    */
-  moveUp() {
+  performUp() {
     for (let cursor of this._cursors) {
       let pos = cursor.position;
       if (!pos.lineNumber)
@@ -136,7 +136,7 @@ export class Text {
   /**
    * @return {!Operation}
    */
-  moveDown() {
+  performDown() {
     for (let cursor of this._cursors) {
       let pos = cursor.position;
       if (pos.lineNumber === this._lines.length - 1)
@@ -168,7 +168,7 @@ export class Text {
    * @param {string} s
    * @return {!Operation}
    */
-  insertAtCursors(s) {
+  _insertAtCursors(s) {
     this._resetCursorUpDownColumns();
 
     let lines = s.split('\n');
@@ -217,9 +217,38 @@ export class Text {
   /**
    * @return {!Operation}
    */
-  insertNewLineAtCursors() {
-    // TODO: this should be reimplemented, e.g. for indentation.
-    return this.insertAtCursors("\n");
+  performNewLine() {
+    return this._insertAtCursors("\n");
+  }
+
+  /**
+   * @param {string} s
+   * @return {!Operation}
+   */
+  performType(s) {
+    return this._insertAtCursors(s);
+  }
+
+  /**
+   * @param {string} s
+   * @return {!Operation}
+   */
+  performPaste(s) {
+    return this._insertAtCursors(s);
+  }
+
+  /**
+   * @return {!Operation}
+   */
+  performDelete() {
+    return this._insertAtCursors("delete");
+  }
+
+  /**
+   * @return {!Operation}
+   */
+  performBackspace() {
+    return this._insertAtCursors("backspace");
   }
 
   /**

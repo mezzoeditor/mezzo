@@ -128,7 +128,7 @@ export class Editor {
     `;
     this._element.appendChild(this._input);
     this._input.addEventListener('input', event => {
-      let op = this._text.insertAtCursors(this._input.value);
+      let op = this._text.performType(this._input.value);
       this._input.value = '';
       this._operation(op);
     });
@@ -136,26 +136,36 @@ export class Editor {
       let handled = false;
       switch (event.key) {
         case 'ArrowLeft':
-          this._operation(this._text.moveLeft());
+          this._operation(this._text.performLeft());
           handled = true;
           break;
         case 'ArrowRight':
-          this._operation(this._text.moveRight());
+          this._operation(this._text.performRight());
           handled = true;
           break;
         case 'ArrowUp':
-          this._operation(this._text.moveUp());
+          this._operation(this._text.performUp());
           handled = true;
           break;
         case 'ArrowDown':
-          this._operation(this._text.moveDown());
+          this._operation(this._text.performDown());
           handled = true;
           break;
         case 'Enter':
-          this._operation(this._text.insertNewLineAtCursors());
+          this._operation(this._text.performNewLine());
           handled = true;
           break;
-    }
+      }
+      switch (event.keyCode) {
+        case 8: /* backspace */
+          this._operation(this._text.performBackspace());
+          handled = true;
+          break;
+        case 46: /* delete */
+          this._operation(this._text.performDelete());
+          handled = true;
+          break;
+      }
       if (handled) {
         event.preventDefault();
         event.stopPropagation();
@@ -165,7 +175,7 @@ export class Editor {
       let data = event.clipboardData;
       if (data.types.indexOf('text/plain') === -1)
         return;
-      this._operation(this._text.insertAtCursors(data.getData('text/plain')));
+      this._operation(this._text.performPaste(data.getData('text/plain')));
       event.preventDefault();
       event.stopPropagation();
     });
