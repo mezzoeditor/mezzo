@@ -2,51 +2,69 @@
  * @typedef {{
  *   lineNumber: number,
  *   columnNumber: number
- * }}
+ * }} TextPosition;
  */
-TextPosition;
 
 /**
- * @typedef {number}
+ * @typedef {number} TextOffset;
  */
-TextOffset;
+
+/**
+ * @typedef {{
+ *   lineDelta: number,
+ *   columnDelta: number,
+ *   startLine: number,
+ *   startColumn: number
+ * }} TextDelta;
+ */
+
+/**
+ * @typedef {{
+ *   from: !TextPosition,
+ *   to: !TextPosition
+ * }} TextRange;
+ */
 
 /**
  * @typedef {{
  *   x: number,
  *   y: number
- * }}
+ * }} TextPoint;
  */
-TextPoint;
 
 /**
  * @typedef {{
  *   x: number,
  *   y: number
- * }}
+ * }} ViewportPoint;
  */
-ViewportPoint;
 
 /**
  * @typedef {{
  *   width: number,
  *   height: number
- * }}
+ * }} Size;
  */
-Size;
 
 /**
  * @typedef {{
  *   x: number,
  *   y: number
- * }}
+ * }} Delta;
  */
-Delta;
 
 /**
  * @typedef {{
  *   origin: !TextPoint,
  *   size: !Size
- * }}
+ * }} TextRect;
  */
-TextRect;
+
+/**
+ * @param {!TextPosition} a
+ * @param {!TextPosition} b
+ * @return {number}
+ */
+export function compareTextPositions(a, b) {
+  return (a.lineNumber - b.lineNumber) || (a.columnNumber - b.columnNumber);
+}

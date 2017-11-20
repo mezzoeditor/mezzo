@@ -1,6 +1,7 @@
 import { FontMetrics } from "./FontMetrics.mjs";
 import { Operation } from "./Operation.mjs";
 import { Cursor } from "./Cursor.mjs";
+import { compareTextPositions } from "./Types.mjs";
 
 export class Text {
   constructor() {
@@ -103,8 +104,8 @@ export class Text {
       let pos = cursor.position;
       if (pos.columnNumber === this._lines[pos.lineNumber].length) {
         if (pos.lineNumber !== this._lines.length - 1) {
-            pos.lineNumber++;
-            pos.columnNumber = 0;
+          pos.lineNumber++;
+          pos.columnNumber = 0;
         }
       } else {
         pos.columnNumber++;
@@ -159,18 +160,85 @@ export class Text {
 
   _sortCursors() {
     this._cursors.sort((a, b) => {
-      return (a.position.lineNumber - b.position.lineNumber) ||
-             (a.position.columnNumber - b.position.columnNumber);
+      return compareTextPositions(a.position, b.position);
     });
   }
 
   /**
-   * @param {string} s
-   * @return {!Operation}
+   * @param {!TextRange} range
+   * @param {{lines: !Array<string>, single: boolean, first: string, last: string}} insertion
+   * @return {!TextDelta}
    */
-  _insertAtCursors(s) {
-    this._resetCursorUpDownColumns();
+  _replaceRange(range, insertion) {
+    let {from, to} = range;
+    if (compareTextPositions(from, to) > 0)
+      throw 'Passed reverse range to replace';
+    let {lines, single, first, last} = insertion;
 
+    let delta = {
+      startLine: to.lineNumber,
+      startColumn: to.columnNumber,
+      lineDelta: from.lineNumber + (single ? 0 : lines.length + 1) - to.lineNumber,
+      columnDelta: (single ? from.columnNumber + first.length : last.length) - to.columnNumber
+    };
+
+    if (from.lineNumber === to.lineNumber) {
+      if (single) {
+        let line = this._lines[from.lineNumber];
+        line = line.substring(0, from.columnNumber) + first + line.substring(to.columnNumber);
+        this._lines[from.lineNumber] = line;
+      } else {
+        let line = this._lines[from.lineNumber];
+        let end = last + line.substring(to.columnNumber);
+        this._lines[from.lineNumber] = line.substring(0, from.columnNumber) + first;
+        this._lines.splice(from.lineNumber + 1, 0, ...lines, end);
+      }
+    } else {
+      if (single) {
+        let line = this._lines[from.lineNumber].substring(0, from.columnNumber) + first +
+                   this._lines[to.lineNumber].substring(to.columnNumber);
+        this._lines.splice(from.lineNumber, to.lineNumber - from.lineNumber + 1, line);
+      } else {
+        this._lines[from.lineNumber] = this._lines[from.lineNumber].substring(0, from.columnNumber) + first;
+        this._lines[to.lineNumber] = last + this._lines[to.lineNumber].substring(to.columnNumber);
+        this._lines.splice(from.lineNumber + 1, to.lineNumber - from.lineNumber - 1, ...lines);
+      }
+    }
+
+    return delta;
+  }
+
+  /**
+   * @param {!TextPosition} position
+   * @param {!TextDelta} delta
+   */
+  _applyTextDelta(position, delta) {
+    if (position.lineNumber === delta.startLine && position.columnNumber >= delta.startColumn) {
+      position.lineNumber += delta.lineDelta;
+      position.columnNumber += delta.columnDelta;
+    } else if (position.lineNumber > delta.startLine) {
+      position.lineNumber += delta.lineDelta;
+    }
+  }
+
+  /**
+   * @param {!TextDelta} a
+   * @param {!TextDelta} b
+   */
+  _combineTextDeltas(a, b) {
+    return {
+      lineDelta: a.lineDelta + b.lineDelta,
+      startLine: b.startLine,
+      startColumn: b.startColumn,
+      columnDelta: a.startLine === b.startLine ? a.columnDelta + b.columnDelta : b.columnDelta
+    };
+  }
+
+  /**
+   * @param {string} s
+   * @return {{lines: !Array<string>, single: boolean, first: string, last: string}}
+   */
+  _prepareInsertion(s) {
     let lines = s.split('\n');
     let single = lines.length === 1;
     let first = lines[0];
@@ -179,45 +247,49 @@ export class Text {
       lines.shift();
       lines.pop();
     }
+    return {lines, single, first, last};
+  }
 
-    let deltaLine = 0;
-    let deltaColumn = 0;
-    let lastLine = -1;
+  /**
+   * @param {string} s
+   * @param {function(!TextPosition):!TextRange} rangeCallback
+   * @return {!Operation}
+   */
+  _performReplaceAtCursors(s, rangeCallback) {
+    let insertion = this._prepareInsertion(s);
+    let delta = {
+      startLine: 0,
+      startColumn: 0,
+      lineDelta: 0,
+      columnDelta: 0
+    };
+
     for (let cursor of this._cursors) {
       let pos = cursor.position;
-      pos.lineNumber += deltaLine;
-      if (!single)
-        deltaLine += lines.length + 1;
-      if (pos.lineNumber === lastLine) {
-        pos.columnNumber += deltaColumn;
-        deltaColumn = single ? deltaColumn + last.length : last.length - pos.columnNumber;
-      } else {
-        deltaColumn = single ? last.length : last.length - pos.columnNumber;
-      }
-
-      let line = this._lines[pos.lineNumber];
-      if (single) {
-        line = line.substring(0, pos.columnNumber) + first + line.substring(pos.columnNumber);
-        this._lines[pos.lineNumber] = line;
-        pos.columnNumber += first.length;
-      } else {
-        let end = last + line.substring(pos.columnNumber);
-        this._lines[pos.lineNumber] = line.substring(0, pos.columnNumber) + first;
-        this._lines.splice(pos.lineNumber + 1, 0, ...lines, end);
-        pos.lineNumber += lines.length + 1;
-        pos.columnNumber = last.length;
-      }
-      lastLine = pos.lineNumber;
+      this._applyTextDelta(pos, delta);
+      this._clampPosition(pos);
+      let range = rangeCallback.call(null, pos);
+      let nextDelta = this._replaceRange(range, insertion);
+      this._applyTextDelta(pos, nextDelta);
+      delta = this._combineTextDeltas(delta, nextDelta);
     }
 
     // TODO: this is incorrect.
-    return Operation.cursors(true /* moveOnly */);
+    return Operation.cursors(true /* moveOnly */);  }
+
+  /**
+   * @param {string} s
+   * @return {!Operation}
+   */
+  _insertAtCursors(s) {
+    return this._performReplaceAtCursors(s, pos => ({from: pos, to: pos}));
   }
 
   /**
    * @return {!Operation}
    */
   performNewLine() {
+    this._resetCursorUpDownColumns();
     return this._insertAtCursors("\n");
   }
 
@@ -226,6 +298,7 @@ export class Text {
    * @return {!Operation}
    */
   performType(s) {
+    this._resetCursorUpDownColumns();
     return this._insertAtCursors(s);
   }
 
@@ -234,6 +307,7 @@ export class Text {
    * @return {!Operation}
    */
   performPaste(s) {
+    this._resetCursorUpDownColumns();
     return this._insertAtCursors(s);
   }
 
@@ -241,14 +315,34 @@ export class Text {
    * @return {!Operation}
    */
   performDelete() {
-    return this._insertAtCursors("delete");
+    this._resetCursorUpDownColumns();
+    return this._performReplaceAtCursors("", pos => {
+      if (pos.columnNumber === this._lines[pos.lineNumber].length) {
+        if (pos.lineNumber !== this._lines.length - 1)
+          return {from: pos, to: {lineNumber: pos.lineNumber + 1, columnNumber: 0}};
+        else
+          return {from: pos, to: pos};
+      } else {
+        return {from: pos, to: {lineNumber: pos.lineNumber, columnNumber: pos.columnNumber + 1}};
+      }
+    });
   }
 
   /**
    * @return {!Operation}
    */
   performBackspace() {
-    return this._insertAtCursors("backspace");
+    this._resetCursorUpDownColumns();
+    return this._performReplaceAtCursors("", pos => {
+      if (!pos.columnNumber) {
+        if (pos.lineNumber)
+          return {from: {lineNumber: pos.lineNumber - 1, columnNumber: this._lines[pos.lineNumber - 1].length}, to: pos};
+        else
+          return {from: pos, to: pos};
+      } else {
+        return {from: {lineNumber: pos.lineNumber, columnNumber: pos.columnNumber - 1}, to: pos};
+      }
+    });
   }
 
   /**
@@ -271,6 +365,20 @@ export class Text {
       columnNumber: Math.floor(point.x / this._metrics.charWidth),
       lineNumber: Math.floor(point.y / this._netrics.lineHeight)
     };
+  }
+
+  /**
+   * @param {!TextPosition} pos
+   */
+  _clampPosition(pos) {
+    if (pos.lineNumber < 0)
+      pos.lineNumber = 0;
+    else if (pos.lineNumber >= this._lines.length)
+      pos.lineNumber = this._lines.length - 1;
+    if (pos.columnNumber < 0)
+      pos.columnNumber = 0;
+    else if (pos.columnNumber > this._lines[pos.lineNumber].length)
+      pos.columnNumber = this._lines[pos.lineNumber].length;
   }
 
   /**

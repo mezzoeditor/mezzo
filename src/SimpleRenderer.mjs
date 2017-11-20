@@ -80,6 +80,7 @@ export class SimpleRenderer {
     for (let i = 0; i < this._text.lineCount(); i++) {
       let line = this._canvas.ownerDocument.createElement('div');
       line.style.setProperty('height', this._text.fontMetrics().lineHeight + 'px');
+      line.style.setProperty('white-space', 'pre');
       line.textContent = this._text.line(i);
       this._canvas.appendChild(line);
     }
