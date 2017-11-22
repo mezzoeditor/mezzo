@@ -1,5 +1,5 @@
 import { Editor } from "../src/Editor.mjs";
-import { Cursor } from "../src/Cursor.mjs";
+import { Selection } from "../src/Selection.mjs";
 
 const editor = new Editor(document);
 document.body.appendChild(editor.element());
@@ -14,6 +14,6 @@ editor.focus();
 
 // hack:
 for (let i = 0; i < 20; i++) {
-  let cursor = new Cursor({lineNumber: 2 * i, columnNumber: 3});
-  editor._renderer.invalidate(editor._text.addCursor(cursor));
+  let selection = new Selection({lineNumber: 2 * i, columnNumber: 3});
+  editor._renderer.invalidate(editor._text.addSelection(selection));
 }

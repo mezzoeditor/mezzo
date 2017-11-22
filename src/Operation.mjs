@@ -3,14 +3,14 @@ export class Operation {
   }
 
   /**
-   * @param {boolean} moveOnly
+   * @param {boolean} structure
    * @return {!Operation}
    */
-  static cursors(moveOnly) {
+  static selection(structure) {
     let op = new Operation();
-    op.cursorsMoved = true;
-    if (!moveOnly)
-      op.cursorsChanged = true;
+    op.selection = true;
+    if (structure)
+      op.selectionStructure = true;
     return op;
   }
 }

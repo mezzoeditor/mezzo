@@ -1,4 +1,4 @@
-export class Cursor {
+export class Selection {
   /**
    * @param {!TextPosition} position
    */

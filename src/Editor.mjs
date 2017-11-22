@@ -1,7 +1,7 @@
 import { Text } from "./Text.mjs";
 import { SimpleRenderer } from "./SimpleRenderer.mjs";
 import { Operation } from "./Operation.mjs";
-import { Cursor } from "./Cursor.mjs";
+import { Selection } from "./Selection.mjs";
 
 export class Editor {
   /**
@@ -12,9 +12,7 @@ export class Editor {
     this._text = new Text();
     this._createRenderer(document);
     this._setupCursors();
-
-    let cursor = new Cursor({lineNumber: 0, columnNumber: 0});
-    this._operation(this._text.addCursor(cursor));
+    this.setText('');
   }
 
   /**
@@ -22,8 +20,8 @@ export class Editor {
    */
   setText(text) {
     this._operation(this._text.setText(text));
-    let cursor = new Cursor({lineNumber: 0, columnNumber: 0});
-    this._operation(this._text.addCursor(cursor));
+    let selection = new Selection({lineNumber: 0, columnNumber: 0});
+    this._operation(this._text.addSelection(selection));
   }
 
   /**

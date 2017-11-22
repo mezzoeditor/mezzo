@@ -1,5 +1,5 @@
 import { Text } from "./Text.mjs";
-import { Cursor } from "./Cursor.mjs";
+import { Selection } from "./Selection.mjs";
 import { Operation } from "./Operation.mjs";
 
 let cursorSymbol = Symbol('cursorElement');
@@ -45,10 +45,10 @@ export class SimpleRenderer {
    * @param {!Operation} op
    */
   invalidate(op) {
-    if (op.cursorsChanged)
-      this._updateCursors();
-    if (op.cursorsMoved)
-      this._moveCursors();
+    if (op.selectionStructure)
+      this._updateCursorElements();
+    if (op.selection)
+      this._moveCursorElements();
 
     if (!this._text.operationAffectsRect(op, this._viewport))
       return;
@@ -74,8 +74,8 @@ export class SimpleRenderer {
    */
   setCursorsVisible(visible) {
     this._cursorsVisible = visible;
-    for (let cursor of this._text.cursors()) {
-      let element = cursor[cursorSymbol];
+    for (let selection of this._text.selections()) {
+      let element = selection[cursorSymbol];
       element.style.setProperty('visibility', this._cursorsVisible ? 'visible' : 'hidden');
     }
   }
@@ -92,10 +92,10 @@ export class SimpleRenderer {
     }
   }
 
-  _updateCursors() {
+  _updateCursorElements() {
     let elements = new Set();
-    for (let cursor of this._text.cursors()) {
-      let element = cursor[cursorSymbol];
+    for (let selection of this._text.selections()) {
+      let element = selection[cursorSymbol];
       if (!element) {
         element = this._canvas.ownerDocument.createElement('div');
         element.style.setProperty('width', '2px');
@@ -103,7 +103,7 @@ export class SimpleRenderer {
         element.style.setProperty('background', 'red');
         element.style.setProperty('position', 'absolute');
         element.style.setProperty('margin-left', '-1px');
-        cursor[cursorSymbol] = element;
+        selection[cursorSymbol] = element;
         element.style.setProperty('visibility', this._cursorsVisible ? 'visible' : 'hidden');
         this._overlay.appendChild(element);
       }
@@ -116,10 +116,10 @@ export class SimpleRenderer {
     this._cursorElements = elements;
   }
 
-  _moveCursors() {
-    for (let cursor of this._text.cursors()) {
-      let element = cursor[cursorSymbol];
-      let point = this._text.positionToPoint(cursor.position);
+  _moveCursorElements() {
+    for (let selection of this._text.selections()) {
+      let element = selection[cursorSymbol];
+      let point = this._text.positionToPoint(selection.position);
       element.style.setProperty('left', (point.x - this._viewport.origin.x) + 'px');
       element.style.setProperty('top', (point.y - this._viewport.origin.y) + 'px');
     }

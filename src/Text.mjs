@@ -1,13 +1,13 @@
 import { FontMetrics } from "./FontMetrics.mjs";
 import { Operation } from "./Operation.mjs";
-import { Cursor } from "./Cursor.mjs";
+import { Selection } from "./Selection.mjs";
 import { compareTextPositions } from "./Types.mjs";
 
 export class Text {
   constructor() {
     this._lines = [""];
     this._metrics = FontMetrics.createSimple();
-    this._cursors = [];
+    this._selections = [];
   }
 
   /**
@@ -30,9 +30,9 @@ export class Text {
    */
   setText(text) {
     this._lines = text.split('\n');
-    this._cursors = [];
+    this._selections = [];
     // TODO: the operation is incorrect.
-    return Operation.cursors(false /* moveOnly */);
+    return Operation.selection(true /* structure */);
   }
 
   /**
@@ -58,30 +58,30 @@ export class Text {
   }
 
   /**
-   * @return {!Array<{!Cursor}>}
+   * @return {!Array<{!Selection}>}
    */
-  cursors() {
-    return this._cursors;
+  selections() {
+    return this._selections;
   }
 
   /**
-   * @param {!Cursor} cursor
+   * @param {!Selection} selection
    * @return {!Operation}
    */
-  addCursor(cursor) {
-    this._resetCursorUpDownColumns();
-    this._cursors.push(cursor);
-    this._sortCursors();
-    return Operation.cursors(false /* moveOnly */);
+  addSelection(selection) {
+    this._resetSelectionUpDownColumns();
+    this._selections.push(selection);
+    this._sortSelections();
+    return Operation.selection(true /* structure */);
   }
 
   /**
    * @return {!Operation}
    */
   performLeft() {
-    this._resetCursorUpDownColumns();
-    for (let cursor of this._cursors) {
-      let pos = cursor.position;
+    this._resetSelectionUpDownColumns();
+    for (let selection of this._selections) {
+      let pos = selection.position;
       if (!pos.columnNumber) {
         if (pos.lineNumber) {
           pos.lineNumber--;
@@ -91,17 +91,17 @@ export class Text {
         pos.columnNumber--;
       }
     }
-    this._sortCursors();
-    return Operation.cursors(true /* moveOnly */);
+    this._sortSelections();
+    return Operation.selection(false /* structure */);
   }
 
   /**
    * @return {!Operation}
    */
   performRight() {
-    this._resetCursorUpDownColumns();
-    for (let cursor of this._cursors) {
-      let pos = cursor.position;
+    this._resetSelectionUpDownColumns();
+    for (let selection of this._selections) {
+      let pos = selection.position;
       if (pos.columnNumber === this._lines[pos.lineNumber].length) {
         if (pos.lineNumber !== this._lines.length - 1) {
           pos.lineNumber++;
@@ -111,55 +111,55 @@ export class Text {
         pos.columnNumber++;
       }
     }
-    this._sortCursors();
-    return Operation.cursors(true /* moveOnly */);
+    this._sortSelections();
+    return Operation.selection(false /* structure */);
   }
 
   /**
    * @return {!Operation}
    */
   performUp() {
-    for (let cursor of this._cursors) {
-      let pos = cursor.position;
+    for (let selection of this._selections) {
+      let pos = selection.position;
       if (!pos.lineNumber)
         continue;
-      if (cursor.upDownColumn === -1)
-        cursor.upDownColumn = pos.columnNumber;
+      if (selection.upDownColumn === -1)
+        selection.upDownColumn = pos.columnNumber;
       pos.lineNumber--;
-      pos.columnNumber = cursor.upDownColumn;
+      pos.columnNumber = selection.upDownColumn;
       if (pos.columnNumber > this._lines[pos.lineNumber].length)
         pos.columnNumber = this._lines[pos.lineNumber].length;
     }
-    this._sortCursors();
-    return Operation.cursors(true /* moveOnly */);
+    this._sortSelections();
+    return Operation.selection(false /* structure */);
   }
 
   /**
    * @return {!Operation}
    */
   performDown() {
-    for (let cursor of this._cursors) {
-      let pos = cursor.position;
+    for (let selection of this._selections) {
+      let pos = selection.position;
       if (pos.lineNumber === this._lines.length - 1)
         continue;
-      if (cursor.upDownColumn === -1)
-        cursor.upDownColumn = pos.columnNumber;
+      if (selection.upDownColumn === -1)
+        selection.upDownColumn = pos.columnNumber;
       pos.lineNumber++;
-      pos.columnNumber = cursor.upDownColumn;
+      pos.columnNumber = selection.upDownColumn;
       if (pos.columnNumber > this._lines[pos.lineNumber].length)
         pos.columnNumber = this._lines[pos.lineNumber].length;
     }
-    this._sortCursors();
-    return Operation.cursors(true /* moveOnly */);
+    this._sortSelections();
+    return Operation.selection(false /* structure */);
   }
 
-  _resetCursorUpDownColumns() {
-    for (let cursor of this._cursors)
-      cursor.upDownColumn = -1;
+  _resetSelectionUpDownColumns() {
+    for (let selection of this._selections)
+    selection.upDownColumn = -1;
   }
 
-  _sortCursors() {
-    this._cursors.sort((a, b) => {
+  _sortSelections() {
+    this._selections.sort((a, b) => {
       return compareTextPositions(a.position, b.position);
     });
   }
@@ -222,19 +222,6 @@ export class Text {
   }
 
   /**
-   * @param {!TextDelta} a
-   * @param {!TextDelta} b
-   */
-  _combineTextDeltas(a, b) {
-    return {
-      lineDelta: a.lineDelta + b.lineDelta,
-      startLine: b.startLine,
-      startColumn: b.startColumn,
-      columnDelta: a.startLine === b.startLine ? a.columnDelta + b.columnDelta : b.columnDelta
-    };
-  }
-
-  /**
    * @param {string} s
    * @return {{lines: !Array<string>, single: boolean, first: string, last: string}}
    */
@@ -255,7 +242,7 @@ export class Text {
    * @param {function(!TextPosition):!TextRange} rangeCallback
    * @return {!Operation}
    */
-  _performReplaceAtCursors(s, rangeCallback) {
+  _performReplaceAtSelections(s, rangeCallback) {
     let insertion = this._prepareInsertion(s);
     let delta = {
       startLine: 0,
@@ -264,33 +251,42 @@ export class Text {
       columnDelta: 0
     };
 
-    for (let cursor of this._cursors) {
-      let pos = cursor.position;
+    for (let selection of this._selections) {
+      let pos = selection.position;
       this._applyTextDelta(pos, delta);
       this._clampPosition(pos);
       let range = rangeCallback.call(null, pos);
-      let nextDelta = this._replaceRange(range, insertion);
-      this._applyTextDelta(pos, nextDelta);
-      delta = this._combineTextDeltas(delta, nextDelta);
+      let next = this._replaceRange(range, insertion);
+      this._applyTextDelta(pos, next);
+
+      if (next.startLine - delta.lineDelta === delta.startLine) {
+        delta.startColumn = next.startColumn - delta.columnDelta;
+        delta.columnDelta += next.columnDelta;
+      } else {
+        delta.startColumn = next.startColumn;
+        delta.columnDelta = next.columnDelta;
+      }
+      delta.startLine = next.startLine - delta.lineDelta;
+      delta.lineDelta += next.lineDelta;
     }
 
     // TODO: this is incorrect.
-    return Operation.cursors(true /* moveOnly */);  }
+    return Operation.selection(false /* structure */);  }
 
   /**
    * @param {string} s
    * @return {!Operation}
    */
-  _insertAtCursors(s) {
-    return this._performReplaceAtCursors(s, pos => ({from: pos, to: pos}));
+  _insertAtSelections(s) {
+    return this._performReplaceAtSelections(s, pos => ({from: pos, to: pos}));
   }
 
   /**
    * @return {!Operation}
    */
   performNewLine() {
-    this._resetCursorUpDownColumns();
-    return this._insertAtCursors("\n");
+    this._resetSelectionUpDownColumns();
+    return this._insertAtSelections("\n");
   }
 
   /**
@@ -298,8 +294,8 @@ export class Text {
    * @return {!Operation}
    */
   performType(s) {
-    this._resetCursorUpDownColumns();
-    return this._insertAtCursors(s);
+    this._resetSelectionUpDownColumns();
+    return this._insertAtSelections(s);
   }
 
   /**
@@ -307,16 +303,16 @@ export class Text {
    * @return {!Operation}
    */
   performPaste(s) {
-    this._resetCursorUpDownColumns();
-    return this._insertAtCursors(s);
+    this._resetSelectionUpDownColumns();
+    return this._insertAtSelections(s);
   }
 
   /**
    * @return {!Operation}
    */
   performDelete() {
-    this._resetCursorUpDownColumns();
-    return this._performReplaceAtCursors("", pos => {
+    this._resetSelectionUpDownColumns();
+    return this._performReplaceAtSelections("", pos => {
       if (pos.columnNumber === this._lines[pos.lineNumber].length) {
         if (pos.lineNumber !== this._lines.length - 1)
           return {from: pos, to: {lineNumber: pos.lineNumber + 1, columnNumber: 0}};
@@ -332,8 +328,8 @@ export class Text {
    * @return {!Operation}
    */
   performBackspace() {
-    this._resetCursorUpDownColumns();
-    return this._performReplaceAtCursors("", pos => {
+    this._resetSelectionUpDownColumns();
+    return this._performReplaceAtSelections("", pos => {
       if (!pos.columnNumber) {
         if (pos.lineNumber)
           return {from: {lineNumber: pos.lineNumber - 1, columnNumber: this._lines[pos.lineNumber - 1].length}, to: pos};
