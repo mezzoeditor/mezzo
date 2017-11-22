@@ -20,8 +20,7 @@ export class Editor {
    */
   setText(text) {
     this._operation(this._text.setText(text));
-    let selection = new Selection({lineNumber: 0, columnNumber: 0});
-    this._operation(this._text.addSelection(selection));
+    this._operation(this._text.addSelection(new Selection()));
   }
 
   /**

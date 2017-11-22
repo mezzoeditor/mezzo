@@ -4,6 +4,25 @@
  *   columnNumber: number
  * }} TextPosition;
  */
+export let TextPosition = {};
+
+/**
+ * @param {!TextPosition} a
+ * @param {!TextPosition} b
+ * @return {number}
+ */
+TextPosition.compare = function(a, b) {
+  return (a.lineNumber - b.lineNumber) || (a.columnNumber - b.columnNumber);
+};
+
+/**
+ * @param {!TextPosition} a
+ * @param {!TextPosition} b
+ * @return {!TextPosition}
+ */
+TextPosition.larger = function(a, b) {
+  return TextPosition.compare(a, b) >= 0 ? a : b;
+};
 
 /**
  * @typedef {number} TextOffset;
@@ -24,6 +43,36 @@
  *   to: !TextPosition
  * }} TextRange;
  */
+export let TextRange = {};
+
+/**
+ * @param {!TextRange} a
+ * @param {!TextRange} b
+ * @return {number}
+ */
+TextRange.compare = function(a, b) {
+  return TextPosition.compare(a.from, b.from) || TextPosition.compare(a.to, b.to);
+};
+
+/**
+ * Assumes TextRange.compare(a, b) <= 0.
+ * @param {!TextRange} a
+ * @param {!TextRange} b
+ * @return {?TextRange}
+ */
+TextRange.joinIfIntersecting = function(a, b) {
+  if (TextPosition.compare(a.to, b.from) < 0)
+    return null;
+  return {from: a.from, to: TextPosition.larger(a.to, b.to)};
+};
+
+/**
+ * @param {!TextRange} r
+ * @return {boolean}
+ */
+TextRange.isEmpty = function(r) {
+  return TextPosition.compare(r.from, r.to) === 0;
+};
 
 /**
  * @typedef {{
@@ -59,12 +108,3 @@
  *   size: !Size
  * }} TextRect;
  */
-
-/**
- * @param {!TextPosition} a
- * @param {!TextPosition} b
- * @return {number}
- */
-export function compareTextPositions(a, b) {
-  return (a.lineNumber - b.lineNumber) || (a.columnNumber - b.columnNumber);
-}

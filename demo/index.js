@@ -14,6 +14,7 @@ editor.focus();
 
 // hack:
 for (let i = 0; i < 20; i++) {
-  let selection = new Selection({lineNumber: 2 * i, columnNumber: 3});
+  let selection = new Selection();
+  selection.focus = {lineNumber: 2 * i, columnNumber: 3};
   editor._renderer.invalidate(editor._text.addSelection(selection));
 }

@@ -1,7 +1,7 @@
 import { FontMetrics } from "./FontMetrics.mjs";
 import { Operation } from "./Operation.mjs";
 import { Selection } from "./Selection.mjs";
-import { compareTextPositions } from "./Types.mjs";
+import { TextPosition, TextRange } from "./Types.mjs";
 
 export class Text {
   constructor() {
@@ -71,8 +71,7 @@ export class Text {
   addSelection(selection) {
     this._resetSelectionUpDownColumns();
     this._selections.push(selection);
-    this._sortSelections();
-    return Operation.selection(true /* structure */);
+    return this._normalizeSelections(Operation.selection(true /* structure */));
   }
 
   /**
@@ -81,7 +80,7 @@ export class Text {
   performLeft() {
     this._resetSelectionUpDownColumns();
     for (let selection of this._selections) {
-      let pos = selection.position;
+      let pos = selection.focus;
       if (!pos.columnNumber) {
         if (pos.lineNumber) {
           pos.lineNumber--;
@@ -91,8 +90,7 @@ export class Text {
         pos.columnNumber--;
       }
     }
-    this._sortSelections();
-    return Operation.selection(false /* structure */);
+    return this._normalizeSelections(Operation.selection(false /* structure */));
   }
 
   /**
@@ -101,7 +99,7 @@ export class Text {
   performRight() {
     this._resetSelectionUpDownColumns();
     for (let selection of this._selections) {
-      let pos = selection.position;
+      let pos = selection.focus;
       if (pos.columnNumber === this._lines[pos.lineNumber].length) {
         if (pos.lineNumber !== this._lines.length - 1) {
           pos.lineNumber++;
@@ -111,8 +109,7 @@ export class Text {
         pos.columnNumber++;
       }
     }
-    this._sortSelections();
-    return Operation.selection(false /* structure */);
+    return this._normalizeSelections(Operation.selection(false /* structure */));
   }
 
   /**
@@ -120,7 +117,7 @@ export class Text {
    */
   performUp() {
     for (let selection of this._selections) {
-      let pos = selection.position;
+      let pos = selection.focus;
       if (!pos.lineNumber)
         continue;
       if (selection.upDownColumn === -1)
@@ -130,8 +127,7 @@ export class Text {
       if (pos.columnNumber > this._lines[pos.lineNumber].length)
         pos.columnNumber = this._lines[pos.lineNumber].length;
     }
-    this._sortSelections();
-    return Operation.selection(false /* structure */);
+    return this._normalizeSelections(Operation.selection(false /* structure */));
   }
 
   /**
@@ -139,7 +135,7 @@ export class Text {
    */
   performDown() {
     for (let selection of this._selections) {
-      let pos = selection.position;
+      let pos = selection.focus;
       if (pos.lineNumber === this._lines.length - 1)
         continue;
       if (selection.upDownColumn === -1)
@@ -149,8 +145,7 @@ export class Text {
       if (pos.columnNumber > this._lines[pos.lineNumber].length)
         pos.columnNumber = this._lines[pos.lineNumber].length;
     }
-    this._sortSelections();
-    return Operation.selection(false /* structure */);
+    return this._normalizeSelections(Operation.selection(false /* structure */));
   }
 
   _resetSelectionUpDownColumns() {
@@ -158,10 +153,33 @@ export class Text {
     selection.upDownColumn = -1;
   }
 
-  _sortSelections() {
-    this._selections.sort((a, b) => {
-      return compareTextPositions(a.position, b.position);
-    });
+  /**
+   * @param {!Operation} op
+   * @return {!Operation}
+   */
+  _normalizeSelections(op) {
+    for (let selection of this._selections) {
+      if (this._clampPosition(selection.focus))
+        op.selection = true;
+      if (selection.anchor && this._clampPosition(selection.anchor))
+        op.selection = true;
+    }
+    this._selections.sort((a, b) => TextRange.compare(a.range(), b.range()));
+    let length = 1;
+    for (let i = 1; i < this._selections.length; i++) {
+      let last = this._selections[length - 1];
+      let selection = this._selections[i];
+      let joined = TextRange.joinIfIntersecting(last.range(), selection.range());
+      if (joined)
+        last.setRange(joined);
+      else
+        this._selections[length++] = selection;
+    }
+    if (length !== this._selections.length) {
+      this._selections.splice(length, this._selections.length - length);
+      op.selectionStructure = true;
+    }
+    return op;
   }
 
   /**
@@ -171,8 +189,6 @@ export class Text {
    */
   _replaceRange(range, insertion) {
     let {from, to} = range;
-    if (compareTextPositions(from, to) > 0)
-      throw 'Passed reverse range to replace';
     let {lines, single, first, last} = insertion;
 
     let delta = {
@@ -252,7 +268,7 @@ export class Text {
     };
 
     for (let selection of this._selections) {
-      let pos = selection.position;
+      let pos = selection.focus;
       this._applyTextDelta(pos, delta);
       this._clampPosition(pos);
       let range = rangeCallback.call(null, pos);
@@ -365,16 +381,25 @@ export class Text {
 
   /**
    * @param {!TextPosition} pos
+   * @return {boolean}
    */
   _clampPosition(pos) {
-    if (pos.lineNumber < 0)
+    let clamped = false;
+    if (pos.lineNumber < 0) {
       pos.lineNumber = 0;
-    else if (pos.lineNumber >= this._lines.length)
+      clamped = true;
+    } else if (pos.lineNumber >= this._lines.length) {
       pos.lineNumber = this._lines.length - 1;
-    if (pos.columnNumber < 0)
+      clamped = true;
+    }
+    if (pos.columnNumber < 0) {
       pos.columnNumber = 0;
-    else if (pos.columnNumber > this._lines[pos.lineNumber].length)
+      clamped = true;
+    } else if (pos.columnNumber > this._lines[pos.lineNumber].length) {
       pos.columnNumber = this._lines[pos.lineNumber].length;
+      clamped = true;
+    }
+    return clamped;
   }
 
   /**

@@ -76,7 +76,7 @@ export class SimpleRenderer {
     this._cursorsVisible = visible;
     for (let selection of this._text.selections()) {
       let element = selection[cursorSymbol];
-      element.style.setProperty('visibility', this._cursorsVisible ? 'visible' : 'hidden');
+      element.style.setProperty('visibility', (this._cursorsVisible && selection.isCollapsed()) ? 'visible' : 'hidden');
     }
   }
 
@@ -104,7 +104,7 @@ export class SimpleRenderer {
         element.style.setProperty('position', 'absolute');
         element.style.setProperty('margin-left', '-1px');
         selection[cursorSymbol] = element;
-        element.style.setProperty('visibility', this._cursorsVisible ? 'visible' : 'hidden');
+        element.style.setProperty('visibility', (this._cursorsVisible && selection.isCollapsed()) ? 'visible' : 'hidden');
         this._overlay.appendChild(element);
       }
       elements.add(element);
@@ -119,9 +119,10 @@ export class SimpleRenderer {
   _moveCursorElements() {
     for (let selection of this._text.selections()) {
       let element = selection[cursorSymbol];
-      let point = this._text.positionToPoint(selection.position);
+      let point = this._text.positionToPoint(selection.focus);
       element.style.setProperty('left', (point.x - this._viewport.origin.x) + 'px');
       element.style.setProperty('top', (point.y - this._viewport.origin.y) + 'px');
+      element.style.setProperty('visibility', (this._cursorsVisible && selection.isCollapsed()) ? 'visible' : 'hidden');
     }
   }
 }
