@@ -14,11 +14,17 @@ export class SimpleRenderer {
     this._canvas = document.createElement('div');
     this._canvas.style.cssText = this._text.fontMetrics().css();
     this._canvas.style.setProperty('position', 'relative');
+    this._canvas.style.setProperty('overflow', 'auto');
     this._overlay = document.createElement('div');
     this._overlay.style.setProperty('position', 'relative');
+    this._overlay.style.setProperty('overflow', 'hidden');
     this._viewport = {origin: {x: 0, y: 0}, size: {width: 0, height: 0}};
     this._cursorsVisible = false;
     this._cursorElements = new Set();
+
+    this._canvas.addEventListener('scroll', event => {
+      this._overlay.scrollTop = this._canvas.scrollTop;
+    });
   }
 
   /**

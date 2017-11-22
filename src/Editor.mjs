@@ -111,6 +111,7 @@ export class Editor {
     this._element.style.cssText = `
       border: 1px solid black;
       position: relative;
+      overflow: hidden;
     `;
     this._element.addEventListener('click', event => {
       this._input.focus();

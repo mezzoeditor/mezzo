@@ -6,11 +6,14 @@ document.body.appendChild(editor.element());
 editor.element().style.width = '500px';
 editor.element().style.height = '400px';
 editor.resize();
-editor.setText('short\nlonggggggggg\nshort\nlonggggggggg\nshort\nlonggggggg');
+let text = [];
+for (let i = 0; i < 100; i++)
+  text.push('short\nlonggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg\n');
+editor.setText(text.join(''));
 editor.focus();
 
 // hack:
-let cursor = new Cursor({lineNumber: 2, columnNumber: 2});
-editor._renderer.invalidate(editor._text.addCursor(cursor));
-cursor = new Cursor({lineNumber: 4, columnNumber: 4});
-editor._renderer.invalidate(editor._text.addCursor(cursor));
+for (let i = 0; i < 20; i++) {
+  let cursor = new Cursor({lineNumber: 2 * i, columnNumber: 3});
+  editor._renderer.invalidate(editor._text.addCursor(cursor));
+}
