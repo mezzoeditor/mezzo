@@ -134,19 +134,19 @@ export class Editor {
       let handled = false;
       switch (event.key) {
         case 'ArrowLeft':
-          this._operation(this._text.performMoveLeft());
+          this._operation(event.shiftKey ? this._text.performSelectLeft() : this._text.performMoveLeft());
           handled = true;
           break;
         case 'ArrowRight':
-          this._operation(this._text.performMoveRight());
+          this._operation(event.shiftKey ? this._text.performSelectRight() : this._text.performMoveRight());
           handled = true;
           break;
         case 'ArrowUp':
-          this._operation(this._text.performMoveUp());
+          this._operation(event.shiftKey ? this._text.performSelectUp() : this._text.performMoveUp());
           handled = true;
           break;
         case 'ArrowDown':
-          this._operation(this._text.performMoveDown());
+          this._operation(event.shiftKey ? this._text.performSelectDown() : this._text.performMoveDown());
           handled = true;
           break;
         case 'Enter':

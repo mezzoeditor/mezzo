@@ -76,7 +76,7 @@ export class SimpleRenderer {
     this._cursorsVisible = visible;
     for (let selection of this._text.selections()) {
       let element = selection[cursorSymbol];
-      element.style.setProperty('visibility', (this._cursorsVisible && selection.isCollapsed()) ? 'visible' : 'hidden');
+      element.style.setProperty('visibility', this._cursorVisible(selection) ? 'visible' : 'hidden');
     }
   }
 
@@ -98,13 +98,12 @@ export class SimpleRenderer {
       let element = selection[cursorSymbol];
       if (!element) {
         element = this._canvas.ownerDocument.createElement('div');
-        element.style.setProperty('width', '2px');
         element.style.setProperty('height', this._text.fontMetrics().lineHeight + 'px');
-        element.style.setProperty('background', 'red');
+        element.style.setProperty('box-sizing', 'border-box');
         element.style.setProperty('position', 'absolute');
+        element.style.setProperty('background', 'rgba(0, 0, 128, 0.2)');
         element.style.setProperty('margin-left', '-1px');
         selection[cursorSymbol] = element;
-        element.style.setProperty('visibility', (this._cursorsVisible && selection.isCollapsed()) ? 'visible' : 'hidden');
         this._overlay.appendChild(element);
       }
       elements.add(element);
@@ -119,10 +118,35 @@ export class SimpleRenderer {
   _moveCursorElements() {
     for (let selection of this._text.selections()) {
       let element = selection[cursorSymbol];
-      let point = this._text.positionToPoint(selection.caret());
+
+      // TODO(dgozman): all this is a hack.
+      let range = selection.range();
+      let width = (range.to.columnNumber - range.from.columnNumber) * this._text.fontMetrics().charWidth + 2;
+      element.style.setProperty('width', width + 'px');
+      let point = this._text.positionToPoint(range.from);
       element.style.setProperty('left', (point.x - this._viewport.origin.x) + 'px');
+      point = this._text.positionToPoint(selection.focus());
       element.style.setProperty('top', (point.y - this._viewport.origin.y) + 'px');
-      element.style.setProperty('visibility', (this._cursorsVisible && selection.isCollapsed()) ? 'visible' : 'hidden');
+      element.style.setProperty('visibility', this._cursorVisible(selection) ? 'visible' : 'hidden');
+      if (selection.isReversed()) {
+        element.style.setProperty('border-left', '2px solid red');
+        element.style.setProperty('border-right', 'none');
+      } else {
+        element.style.setProperty('border-left', 'none');
+        element.style.setProperty('border-right', '2px solid red');
+      }
     }
+  }
+
+  /**
+   * @param {!Selection} selection
+   * @return {boolean}
+   */
+  _cursorVisible(selection) {
+    let visible = this._cursorsVisible;
+    // TODO(dgozman): should be a setting.
+    if (false)
+      visible &= seleciton.isCollapsed();
+    return visible;
   }
 }

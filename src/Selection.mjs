@@ -28,10 +28,29 @@ export class Selection {
   }
 
   /**
-   * @return {?TextPosition}
+   * @return {!TextPositon}
    */
-  caret() {
-    return this.isCollapsed() ? this._focus : null;
+  focus() {
+    return this._focus;
+  }
+
+  /**
+   * @param {!TextPositon} focus
+   */
+  moveFocus(focus) {
+    if (TextPosition.compare(focus, this._focus) === 0)
+      return;
+    if (!this._anchor)
+      this._anchor = this._focus;
+    this._focus = focus;
+  }
+
+  /**
+   * @param {!TextPosition} caret
+   */
+  setCaret(caret) {
+    this._anchor = null;
+    this._focus = caret;
   }
 
   /**

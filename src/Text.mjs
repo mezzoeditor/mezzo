@@ -80,12 +80,21 @@ export class Text {
   performMoveLeft() {
     this._clearUpDown();
     for (let selection of this._selections) {
-      let range = selection.range();
       if (selection.isCollapsed())
-        range.from = this._previousPosition(range.from);
-      range.to = range.from;
-      selection.setRange(range);
+        selection.setCaret(this._previousPosition(selection.focus()));
+      else
+        selection.setCaret(selection.range().from);
     }
+    return this._normalizeSelections(Operation.selection(false /* structure */));
+  }
+
+  /**
+   * @return {!Operation}
+   */
+  performSelectLeft() {
+    this._clearUpDown();
+    for (let selection of this._selections)
+      selection.moveFocus(this._previousPosition(selection.focus()));
     return this._normalizeSelections(Operation.selection(false /* structure */));
   }
 
@@ -95,12 +104,21 @@ export class Text {
   performMoveRight() {
     this._clearUpDown();
     for (let selection of this._selections) {
-      let range = selection.range();
       if (selection.isCollapsed())
-        range.to = this._nextPosition(range.to);
-      range.from = range.to;
-      selection.setRange(range);
+        selection.setCaret(this._nextPosition(selection.focus()));
+      else
+        selection.setCaret(selection.range().to);
     }
+    return this._normalizeSelections(Operation.selection(false /* structure */));
+  }
+
+  /**
+   * @return {!Operation}
+   */
+  performSelectRight() {
+    this._clearUpDown();
+    for (let selection of this._selections)
+      selection.moveFocus(this._nextPosition(selection.focus()));
     return this._normalizeSelections(Operation.selection(false /* structure */));
   }
 
@@ -109,13 +127,23 @@ export class Text {
    */
   performMoveUp() {
     for (let selection of this._selections) {
-      let range = selection.range();
       if (selection.isCollapsed()) {
-        let from = {lineNumber: range.from.lineNumber - 1, columnNumber: selection.saveUpDown()};
-        range.from = this._clampPositionIfNeeded(from) || from;
+        let position = {lineNumber: selection.focus().lineNumber - 1, columnNumber: selection.saveUpDown()};
+        selection.setCaret(this._clampPositionIfNeeded(position) || position);
+      } else {
+        selection.setCaret(selection.range().from);
       }
-      range.to = range.from;
-      selection.setRange(range);
+    }
+    return this._normalizeSelections(Operation.selection(false /* structure */));
+  }
+
+  /**
+   * @return {!Operation}
+   */
+  performSelectUp() {
+    for (let selection of this._selections) {
+      let position = {lineNumber: selection.focus().lineNumber - 1, columnNumber: selection.saveUpDown()};
+      selection.moveFocus(this._clampPositionIfNeeded(position) || position);
     }
     return this._normalizeSelections(Operation.selection(false /* structure */));
   }
@@ -125,13 +153,23 @@ export class Text {
    */
   performMoveDown() {
     for (let selection of this._selections) {
-      let range = selection.range();
       if (selection.isCollapsed()) {
-        let from = {lineNumber: range.from.lineNumber + 1, columnNumber: selection.saveUpDown()};
-        range.from = this._clampPositionIfNeeded(from) || from;
+        let position = {lineNumber: selection.focus().lineNumber + 1, columnNumber: selection.saveUpDown()};
+        selection.setCaret(this._clampPositionIfNeeded(position) || position);
+      } else {
+        selection.setCaret(selection.range().to);
       }
-      range.to = range.from;
-      selection.setRange(range);
+    }
+    return this._normalizeSelections(Operation.selection(false /* structure */));
+  }
+
+  /**
+   * @return {!Operation}
+   */
+  performSelectDown() {
+    for (let selection of this._selections) {
+      let position = {lineNumber: selection.focus().lineNumber + 1, columnNumber: selection.saveUpDown()};
+      selection.moveFocus(this._clampPositionIfNeeded(position) || position);
     }
     return this._normalizeSelections(Operation.selection(false /* structure */));
   }
