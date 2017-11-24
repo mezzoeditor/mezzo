@@ -134,19 +134,19 @@ export class Editor {
       let handled = false;
       switch (event.key) {
         case 'ArrowLeft':
-          this._operation(this._text.performLeft());
+          this._operation(this._text.performMoveLeft());
           handled = true;
           break;
         case 'ArrowRight':
-          this._operation(this._text.performRight());
+          this._operation(this._text.performMoveRight());
           handled = true;
           break;
         case 'ArrowUp':
-          this._operation(this._text.performUp());
+          this._operation(this._text.performMoveUp());
           handled = true;
           break;
         case 'ArrowDown':
-          this._operation(this._text.performDown());
+          this._operation(this._text.performMoveDown());
           handled = true;
           break;
         case 'Enter':
@@ -156,11 +156,11 @@ export class Editor {
       }
       switch (event.keyCode) {
         case 8: /* backspace */
-          this._operation(this._text.performBackspace());
+          this._operation(this._text.performDeleteBefore());
           handled = true;
           break;
         case 46: /* delete */
-          this._operation(this._text.performDelete());
+          this._operation(this._text.performDeleteAfter());
           handled = true;
           break;
       }

@@ -119,7 +119,7 @@ export class SimpleRenderer {
   _moveCursorElements() {
     for (let selection of this._text.selections()) {
       let element = selection[cursorSymbol];
-      let point = this._text.positionToPoint(selection.focus);
+      let point = this._text.positionToPoint(selection.caret());
       element.style.setProperty('left', (point.x - this._viewport.origin.x) + 'px');
       element.style.setProperty('top', (point.y - this._viewport.origin.y) + 'px');
       element.style.setProperty('visibility', (this._cursorsVisible && selection.isCollapsed()) ? 'visible' : 'hidden');

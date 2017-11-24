@@ -2,34 +2,54 @@ import { TextPosition, TextRange } from "./Types.mjs";
 
 export class Selection {
   constructor() {
-    this.anchor = null;
-    this.focus = {lineNumber: 0, columnNumber: 0};
-    this.upDownColumn = -1;
+    this._anchor = null;
+    this._focus = {lineNumber: 0, columnNumber: 0};
+    this._upDownColumn = -1;
+  }
+
+  clearUpDown() {
+    this._upDownColumn = -1;
+  }
+
+  /**
+   * @return {number}
+   */
+  saveUpDown() {
+    if (this._upDownColumn === -1)
+      this._upDownColumn = this._focus.columnNumber;
+    return this._upDownColumn;
   }
 
   /**
    * @return {boolean}
    */
   isCollapsed() {
-    return !this.anchor;
+    return !this._anchor;
+  }
+
+  /**
+   * @return {?TextPosition}
+   */
+  caret() {
+    return this.isCollapsed() ? this._focus : null;
   }
 
   /**
    * @return {!TextRange}
    */
   range() {
-    if (!this.anchor)
-      return {from: this.focus, to: this.focus};
-    if (TextPosition.compare(this.anchor, this.focus) > 0)
-      return {from: this.focus, to: this.anchor};
-    return {from: this.anchor, to: this.focus};
+    if (this.isCollapsed())
+      return {from: this._focus, to: this._focus};
+    if (this.isReversed())
+      return {from: this._focus, to: this._anchor};
+    return {from: this._anchor, to: this._focus};
   }
 
   /**
    * @return {boolean}
    */
-  _isReverse() {
-    return ;
+  isReversed() {
+    return !this.isCollapsed() && TextPosition.compare(this._anchor, this._focus) > 0;
   }
 
   /**
@@ -37,14 +57,14 @@ export class Selection {
    */
   setRange(range) {
     if (TextRange.isEmpty(range)) {
-      this.anchor = null;
-      this.focus = range.from;
-    } else if (this.anchor && TextPosition.compare(this.anchor, this.focus) > 0) {
-      this.focus = range.from;
-      this.anchor = range.to;
+      this._anchor = null;
+      this._focus = range.from;
+    } else if (this.isReversed()) {
+      this._focus = range.from;
+      this._anchor = range.to;
     } else {
-      this.anchor = range.from;
-      this.focus = range.to;
+      this._anchor = range.from;
+      this._focus = range.to;
     }
   }
 }

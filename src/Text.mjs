@@ -31,7 +31,7 @@ export class Text {
   setText(text) {
     this._lines = text.split('\n');
     this._selections = [];
-    // TODO: the operation is incorrect.
+    // TODO: add replace information to operation.
     return Operation.selection(true /* structure */);
   }
 
@@ -69,7 +69,7 @@ export class Text {
    * @return {!Operation}
    */
   addSelection(selection) {
-    this._resetSelectionUpDownColumns();
+    this._clearUpDown();
     this._selections.push(selection);
     return this._normalizeSelections(Operation.selection(true /* structure */));
   }
@@ -77,18 +77,45 @@ export class Text {
   /**
    * @return {!Operation}
    */
-  performLeft() {
-    this._resetSelectionUpDownColumns();
+  performMoveLeft() {
+    this._clearUpDown();
     for (let selection of this._selections) {
-      let pos = selection.focus;
-      if (!pos.columnNumber) {
-        if (pos.lineNumber) {
-          pos.lineNumber--;
-          pos.columnNumber = this._lines[pos.lineNumber].length;
-        }
-      } else {
-        pos.columnNumber--;
+      let range = selection.range();
+      if (selection.isCollapsed())
+        range.from = this._previousPosition(range.from);
+      range.to = range.from;
+      selection.setRange(range);
+    }
+    return this._normalizeSelections(Operation.selection(false /* structure */));
+  }
+
+  /**
+   * @return {!Operation}
+   */
+  performMoveRight() {
+    this._clearUpDown();
+    for (let selection of this._selections) {
+      let range = selection.range();
+      if (selection.isCollapsed())
+        range.to = this._nextPosition(range.to);
+      range.from = range.to;
+      selection.setRange(range);
+    }
+    return this._normalizeSelections(Operation.selection(false /* structure */));
+  }
+
+  /**
+   * @return {!Operation}
+   */
+  performMoveUp() {
+    for (let selection of this._selections) {
+      let range = selection.range();
+      if (selection.isCollapsed()) {
+        let from = {lineNumber: range.from.lineNumber - 1, columnNumber: selection.saveUpDown()};
+        range.from = this._clampPositionIfNeeded(from) || from;
       }
+      range.to = range.from;
+      selection.setRange(range);
     }
     return this._normalizeSelections(Operation.selection(false /* structure */));
   }
@@ -96,61 +123,22 @@ export class Text {
   /**
    * @return {!Operation}
    */
-  performRight() {
-    this._resetSelectionUpDownColumns();
+  performMoveDown() {
     for (let selection of this._selections) {
-      let pos = selection.focus;
-      if (pos.columnNumber === this._lines[pos.lineNumber].length) {
-        if (pos.lineNumber !== this._lines.length - 1) {
-          pos.lineNumber++;
-          pos.columnNumber = 0;
-        }
-      } else {
-        pos.columnNumber++;
+      let range = selection.range();
+      if (selection.isCollapsed()) {
+        let from = {lineNumber: range.from.lineNumber + 1, columnNumber: selection.saveUpDown()};
+        range.from = this._clampPositionIfNeeded(from) || from;
       }
+      range.to = range.from;
+      selection.setRange(range);
     }
     return this._normalizeSelections(Operation.selection(false /* structure */));
   }
 
-  /**
-   * @return {!Operation}
-   */
-  performUp() {
-    for (let selection of this._selections) {
-      let pos = selection.focus;
-      if (!pos.lineNumber)
-        continue;
-      if (selection.upDownColumn === -1)
-        selection.upDownColumn = pos.columnNumber;
-      pos.lineNumber--;
-      pos.columnNumber = selection.upDownColumn;
-      if (pos.columnNumber > this._lines[pos.lineNumber].length)
-        pos.columnNumber = this._lines[pos.lineNumber].length;
-    }
-    return this._normalizeSelections(Operation.selection(false /* structure */));
-  }
-
-  /**
-   * @return {!Operation}
-   */
-  performDown() {
-    for (let selection of this._selections) {
-      let pos = selection.focus;
-      if (pos.lineNumber === this._lines.length - 1)
-        continue;
-      if (selection.upDownColumn === -1)
-        selection.upDownColumn = pos.columnNumber;
-      pos.lineNumber++;
-      pos.columnNumber = selection.upDownColumn;
-      if (pos.columnNumber > this._lines[pos.lineNumber].length)
-        pos.columnNumber = this._lines[pos.lineNumber].length;
-    }
-    return this._normalizeSelections(Operation.selection(false /* structure */));
-  }
-
-  _resetSelectionUpDownColumns() {
+  _clearUpDown() {
     for (let selection of this._selections)
-    selection.upDownColumn = -1;
+      selection.clearUpDown();
   }
 
   /**
@@ -159,10 +147,12 @@ export class Text {
    */
   _normalizeSelections(op) {
     for (let selection of this._selections) {
-      if (this._clampPosition(selection.focus))
+      let range = selection.range();
+      let clamped = this._clampRangeIfNeeded(range);
+      if (clamped) {
+        selection.setRange(clamped);
         op.selection = true;
-      if (selection.anchor && this._clampPosition(selection.anchor))
-        op.selection = true;
+      }
     }
     this._selections.sort((a, b) => TextRange.compare(a.range(), b.range()));
     let length = 1;
@@ -227,14 +217,17 @@ export class Text {
   /**
    * @param {!TextPosition} position
    * @param {!TextDelta} delta
+   * @return {!TextPosition}
    */
   _applyTextDelta(position, delta) {
-    if (position.lineNumber === delta.startLine && position.columnNumber >= delta.startColumn) {
-      position.lineNumber += delta.lineDelta;
-      position.columnNumber += delta.columnDelta;
-    } else if (position.lineNumber > delta.startLine) {
-      position.lineNumber += delta.lineDelta;
+    let {lineNumber, columnNumber} = position;
+    if (lineNumber === delta.startLine && columnNumber >= delta.startColumn) {
+      lineNumber += delta.lineDelta;
+      columnNumber += delta.columnDelta;
+    } else if (lineNumber > delta.startLine) {
+      lineNumber += delta.lineDelta;
     }
+    return {lineNumber, columnNumber};
   }
 
   /**
@@ -255,7 +248,7 @@ export class Text {
 
   /**
    * @param {string} s
-   * @param {function(!TextPosition):!TextRange} rangeCallback
+   * @param {function(!Selection):!TextRange} rangeCallback
    * @return {!Operation}
    */
   _performReplaceAtSelections(s, rangeCallback) {
@@ -268,13 +261,17 @@ export class Text {
     };
 
     for (let selection of this._selections) {
-      let pos = selection.focus;
-      this._applyTextDelta(pos, delta);
-      this._clampPosition(pos);
-      let range = rangeCallback.call(null, pos);
-      let next = this._replaceRange(range, insertion);
-      this._applyTextDelta(pos, next);
+      let range = selection.range();
+      range.from = this._applyTextDelta(range.from, delta);
+      range.to = this._applyTextDelta(range.to, delta);
+      range = this._clampRangeIfNeeded(range) || range;
+      selection.setRange(range);
 
+      let next = this._replaceRange(rangeCallback.call(null, selection), insertion);
+      range.from = this._applyTextDelta(range.from, next);
+      range.to = this._applyTextDelta(range.to, next);
+      selection.setRange(range);
+      
       if (next.startLine - delta.lineDelta === delta.startLine) {
         delta.startColumn = next.startColumn - delta.columnDelta;
         delta.columnDelta += next.columnDelta;
@@ -286,23 +283,16 @@ export class Text {
       delta.lineDelta += next.lineDelta;
     }
 
-    // TODO: this is incorrect.
-    return Operation.selection(false /* structure */);  }
-
-  /**
-   * @param {string} s
-   * @return {!Operation}
-   */
-  _insertAtSelections(s) {
-    return this._performReplaceAtSelections(s, pos => ({from: pos, to: pos}));
+    // TODO: add replacement info to operation.
+    return this._normalizeSelections(Operation.selection(false /* structure */));
   }
 
   /**
    * @return {!Operation}
    */
   performNewLine() {
-    this._resetSelectionUpDownColumns();
-    return this._insertAtSelections("\n");
+    this._clearUpDown();
+    return this._performReplaceAtSelections("\n", selection => selection.range());
   }
 
   /**
@@ -310,8 +300,8 @@ export class Text {
    * @return {!Operation}
    */
   performType(s) {
-    this._resetSelectionUpDownColumns();
-    return this._insertAtSelections(s);
+    this._clearUpDown();
+    return this._performReplaceAtSelections(s, selection => selection.range());
   }
 
   /**
@@ -319,41 +309,33 @@ export class Text {
    * @return {!Operation}
    */
   performPaste(s) {
-    this._resetSelectionUpDownColumns();
-    return this._insertAtSelections(s);
+    this._clearUpDown();
+    return this._performReplaceAtSelections(s, selection => selection.range());
   }
 
   /**
    * @return {!Operation}
    */
-  performDelete() {
-    this._resetSelectionUpDownColumns();
-    return this._performReplaceAtSelections("", pos => {
-      if (pos.columnNumber === this._lines[pos.lineNumber].length) {
-        if (pos.lineNumber !== this._lines.length - 1)
-          return {from: pos, to: {lineNumber: pos.lineNumber + 1, columnNumber: 0}};
-        else
-          return {from: pos, to: pos};
-      } else {
-        return {from: pos, to: {lineNumber: pos.lineNumber, columnNumber: pos.columnNumber + 1}};
-      }
+  performDeleteAfter() {
+    this._clearUpDown();
+    return this._performReplaceAtSelections("", selection => {
+      let range = selection.range();
+      if (selection.isCollapsed())
+        range.to = this._nextPosition(range.to);
+      return range;
     });
   }
 
   /**
    * @return {!Operation}
    */
-  performBackspace() {
-    this._resetSelectionUpDownColumns();
-    return this._performReplaceAtSelections("", pos => {
-      if (!pos.columnNumber) {
-        if (pos.lineNumber)
-          return {from: {lineNumber: pos.lineNumber - 1, columnNumber: this._lines[pos.lineNumber - 1].length}, to: pos};
-        else
-          return {from: pos, to: pos};
-      } else {
-        return {from: {lineNumber: pos.lineNumber, columnNumber: pos.columnNumber - 1}, to: pos};
-      }
+  performDeleteBefore() {
+    this._clearUpDown();
+    return this._performReplaceAtSelections("", selection => {
+      let range = selection.range();
+      if (selection.isCollapsed())
+        range.from = this._previousPosition(range.from);
+      return range;
     });
   }
 
@@ -380,26 +362,70 @@ export class Text {
   }
 
   /**
-   * @param {!TextPosition} pos
-   * @return {boolean}
+   * @param {!TextPosition} position
+   * @return {?TextPosition}
    */
-  _clampPosition(pos) {
+  _clampPositionIfNeeded(position) {
+    let {lineNumber, columnNumber} = position;
     let clamped = false;
-    if (pos.lineNumber < 0) {
-      pos.lineNumber = 0;
+    if (lineNumber < 0) {
+      lineNumber = 0;
+      columnNumber = 0;
       clamped = true;
-    } else if (pos.lineNumber >= this._lines.length) {
-      pos.lineNumber = this._lines.length - 1;
+    } else if (lineNumber >= this._lines.length) {
+      lineNumber = this._lines.length - 1;
+      columnNumber = this._lines[this._lines.length - 1].length;
+      clamped = true;
+    } else if (columnNumber < 0) {
+      columnNumber = 0;
+      clamped = true;
+    } else if (columnNumber > this._lines[lineNumber].length) {
+      columnNumber = this._lines[lineNumber].length;
       clamped = true;
     }
-    if (pos.columnNumber < 0) {
-      pos.columnNumber = 0;
-      clamped = true;
-    } else if (pos.columnNumber > this._lines[pos.lineNumber].length) {
-      pos.columnNumber = this._lines[pos.lineNumber].length;
-      clamped = true;
+    return clamped ? {lineNumber, columnNumber} : null;
+  }
+
+  /**
+   * @param {!TextRange} range
+   * @return {?TextRange}
+   */
+  _clampRangeIfNeeded(range) {
+    let from = this._clampPositionIfNeeded(range.from);
+    let to = this._clampPositionIfNeeded(range.to);
+    if (!from && !to)
+      return null;
+    return {from: from || range.from, to: to || range.to};
+  }
+
+  /**
+   * @param {!TextPosition} pos
+   * @return {!TextPosition}
+   */
+  _nextPosition(pos) {
+    if (pos.columnNumber === this._lines[pos.lineNumber].length) {
+      if (pos.lineNumber !== this._lines.length - 1)
+        return {lineNumber: pos.lineNumber + 1, columnNumber: 0};
+      else
+        return {lineNumber: pos.lineNumber, columnNumber: pos.columnNumber};
+    } else {
+      return {lineNumber: pos.lineNumber, columnNumber: pos.columnNumber + 1};
     }
-    return clamped;
+  }
+
+  /**
+   * @param {!TextPosition} pos
+   * @return {!TextPosition}
+   */
+  _previousPosition(pos) {
+    if (!pos.columnNumber) {
+      if (pos.lineNumber)
+        return {lineNumber: pos.lineNumber - 1, columnNumber: this._lines[pos.lineNumber - 1].length};
+      else
+        return {lineNumber: pos.lineNumber, columnNumber: pos.columnNumber};
+    } else {
+      return {lineNumber: pos.lineNumber, columnNumber: pos.columnNumber - 1};
+    }
   }
 
   /**
