@@ -17,6 +17,9 @@ export class FontMetrics {
     return metrics;
   }
 
+  /**
+   * @return {string}
+   */
   css() {
     return `
       font-family: ${this.fontFamily};

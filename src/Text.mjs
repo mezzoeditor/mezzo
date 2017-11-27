@@ -2,10 +2,11 @@ import { FontMetrics } from "./FontMetrics.mjs";
 import { Operation } from "./Operation.mjs";
 import { Selection } from "./Selection.mjs";
 import { TextPosition, TextRange } from "./Types.mjs";
+import { Line } from "./Line.mjs";
 
 export class Text {
   constructor() {
-    this._lines = [""];
+    this._lines = [new Line("")];
     this._metrics = FontMetrics.createSimple();
     this._selections = [];
   }
@@ -29,7 +30,7 @@ export class Text {
    * @return {!Operation}
    */
   setText(text) {
-    this._lines = text.split('\n');
+    this._lines = text.split('\n').map(s => new Line(s));
     this._selections = [];
     // TODO: add replace information to operation.
     return Operation.selection(true /* structure */);
@@ -39,7 +40,7 @@ export class Text {
    * @return {string}
    */
   text() {
-    return this._lines.join('\n');
+    return this._lines.map(line => line.lineContent()).join('\n');
   }
 
   /**
@@ -51,10 +52,19 @@ export class Text {
 
   /**
    * @param {number} lineNumber
-   * @return {string}
+   * @return {!Line}
    */
   line(lineNumber) {
     return this._lines[lineNumber];
+  }
+
+  /**
+   * @param {number} fromLine
+   * @param {number} toLine
+   * @return {!Array<!Line>}
+   */
+  lines(fromLine, toLine) {
+    return this._lines.slice(fromLine, toLine);
   }
 
   /**
@@ -228,23 +238,24 @@ export class Text {
 
     if (from.lineNumber === to.lineNumber) {
       if (single) {
-        let line = this._lines[from.lineNumber];
-        line = line.substring(0, from.columnNumber) + first + line.substring(to.columnNumber);
-        this._lines[from.lineNumber] = line;
+        this._lines[from.lineNumber].replace(from.columnNumber, to.columnNumber, first);
       } else {
         let line = this._lines[from.lineNumber];
-        let end = last + line.substring(to.columnNumber);
-        this._lines[from.lineNumber] = line.substring(0, from.columnNumber) + first;
-        this._lines.splice(from.lineNumber + 1, 0, ...lines, end);
+        let end = line.split(to.columnNumber);
+        end.replace(0, 0, last);
+        line.replace(from.columnNumber, line.length(), first);
+        this._lines.splice(from.lineNumber + 1, 0, ...(lines.map(s => new Line(s))), end);
       }
     } else {
       if (single) {
-        let line = this._lines[from.lineNumber].substring(0, from.columnNumber) + first +
-                   this._lines[to.lineNumber].substring(to.columnNumber);
-        this._lines.splice(from.lineNumber, to.lineNumber - from.lineNumber + 1, line);
+        let fromLine = this._lines[from.lineNumber];
+        fromLine.replace(from.columnNumber, fromLine.length(), first);
+        let endLine = this._lines[to.lineNumber];
+        endLine.replace(0, to.columnNumber, "");
+        this._lines.splice(from.lineNumber, to.lineNumber - from.lineNumber + 1, fromLine.merge(endLine));
       } else {
-        this._lines[from.lineNumber] = this._lines[from.lineNumber].substring(0, from.columnNumber) + first;
-        this._lines[to.lineNumber] = last + this._lines[to.lineNumber].substring(to.columnNumber);
+        this._lines[from.lineNumber].replace(from.columnNumber, this._lines[from.lineNumber].length(), first);
+        this._lines[to.lineNumber].replace(0, to.columnNumber, last);
         this._lines.splice(from.lineNumber + 1, to.lineNumber - from.lineNumber - 1, ...lines);
       }
     }
@@ -412,13 +423,13 @@ export class Text {
       clamped = true;
     } else if (lineNumber >= this._lines.length) {
       lineNumber = this._lines.length - 1;
-      columnNumber = this._lines[this._lines.length - 1].length;
+      columnNumber = this._lines[this._lines.length - 1].length();
       clamped = true;
     } else if (columnNumber < 0) {
       columnNumber = 0;
       clamped = true;
-    } else if (columnNumber > this._lines[lineNumber].length) {
-      columnNumber = this._lines[lineNumber].length;
+    } else if (columnNumber > this._lines[lineNumber].length()) {
+      columnNumber = this._lines[lineNumber].length();
       clamped = true;
     }
     return clamped ? {lineNumber, columnNumber} : null;
@@ -441,7 +452,7 @@ export class Text {
    * @return {!TextPosition}
    */
   _nextPosition(pos) {
-    if (pos.columnNumber === this._lines[pos.lineNumber].length) {
+    if (pos.columnNumber === this._lines[pos.lineNumber].length()) {
       if (pos.lineNumber !== this._lines.length - 1)
         return {lineNumber: pos.lineNumber + 1, columnNumber: 0};
       else
@@ -458,7 +469,7 @@ export class Text {
   _previousPosition(pos) {
     if (!pos.columnNumber) {
       if (pos.lineNumber)
-        return {lineNumber: pos.lineNumber - 1, columnNumber: this._lines[pos.lineNumber - 1].length};
+        return {lineNumber: pos.lineNumber - 1, columnNumber: this._lines[pos.lineNumber - 1].length()};
       else
         return {lineNumber: pos.lineNumber, columnNumber: pos.columnNumber};
     } else {
