@@ -49,9 +49,6 @@ export class SimpleRenderer {
       this._updateCursorElements();
     if (op.selection)
       this._moveCursorElements();
-
-    if (!this._text.operationAffectsRect(op, this._viewport))
-      return;
     this._invalidateViewport();
   }
 

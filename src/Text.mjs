@@ -6,7 +6,7 @@ import { Line } from "./Line.mjs";
 
 export class Text {
   constructor() {
-    this._lines = [new Line("")];
+    this._lines = [Line.empty()];
     this._metrics = FontMetrics.createSimple();
     this._selections = [];
   }
@@ -32,8 +32,7 @@ export class Text {
   setText(text) {
     this._lines = text.split('\n').map(s => new Line(s));
     this._selections = [];
-    // TODO: add replace information to operation.
-    return Operation.selection(true /* structure */);
+    return Operation.full();
   }
 
   /**
@@ -222,7 +221,7 @@ export class Text {
 
   /**
    * @param {!TextRange} range
-   * @param {{lines: !Array<string>, single: boolean, first: string, last: string}} insertion
+   * @param {{lines: !Array<!Line>, single: boolean, first: string, last: string}} insertion
    * @return {!TextDelta}
    */
   _replaceRange(range, insertion) {
@@ -238,24 +237,25 @@ export class Text {
 
     if (from.lineNumber === to.lineNumber) {
       if (single) {
-        this._lines[from.lineNumber].replace(from.columnNumber, to.columnNumber, first);
-      } else {
         let line = this._lines[from.lineNumber];
-        let end = line.split(to.columnNumber);
-        end.replace(0, 0, last);
-        line.replace(from.columnNumber, line.length(), first);
-        this._lines.splice(from.lineNumber + 1, 0, ...(lines.map(s => new Line(s))), end);
+        this._lines[from.lineNumber] = line.replace(from.columnNumber, to.columnNumber, first);
+      } else {
+        let {left, right} = this._lines[from.lineNumber].split(to.columnNumber);
+        this._lines[from.lineNumber] = left.replace(from.columnNumber, left.length(), first);
+        this._lines.splice(from.lineNumber + 1, 0, ...lines, right.replace(0, 0, last));
       }
     } else {
       if (single) {
         let fromLine = this._lines[from.lineNumber];
-        fromLine.replace(from.columnNumber, fromLine.length(), first);
-        let endLine = this._lines[to.lineNumber];
-        endLine.replace(0, to.columnNumber, "");
-        this._lines.splice(from.lineNumber, to.lineNumber - from.lineNumber + 1, fromLine.merge(endLine));
+        fromLine = fromLine.replace(from.columnNumber, fromLine.length(), first);
+        let toLine = this._lines[to.lineNumber];
+        toLine = toLine.replace(0, to.columnNumber, "");
+        this._lines.splice(from.lineNumber, to.lineNumber - from.lineNumber + 1, fromLine.merge(toLine));
       } else {
-        this._lines[from.lineNumber].replace(from.columnNumber, this._lines[from.lineNumber].length(), first);
-        this._lines[to.lineNumber].replace(0, to.columnNumber, last);
+        let line = this._lines[from.lineNumber];
+        this._lines[from.lineNumber] = line.replace(from.columnNumber, line.length(), first);
+        line = this._lines[to.lineNumber];
+        this._lines[to.lineNumber] = line.replace(0, to.columnNumber, last);
         this._lines.splice(from.lineNumber + 1, to.lineNumber - from.lineNumber - 1, ...lines);
       }
     }
@@ -281,17 +281,17 @@ export class Text {
 
   /**
    * @param {string} s
-   * @return {{lines: !Array<string>, single: boolean, first: string, last: string}}
+   * @return {{lines: !Array<!Line>, single: boolean, first: string, last: string}}
    */
   _prepareInsertion(s) {
     let lines = s.split('\n');
     let single = lines.length === 1;
     let first = lines[0];
     let last = lines[lines.length - 1];
-    if (!single) {
-      lines.shift();
+    lines.shift();
+    if (!single)
       lines.pop();
-    }
+    lines = lines.map(s => new Line(s));
     return {lines, single, first, last};
   }
 
@@ -475,14 +475,5 @@ export class Text {
     } else {
       return {lineNumber: pos.lineNumber, columnNumber: pos.columnNumber - 1};
     }
-  }
-
-  /**
-   * @param {!Operation} operation
-   * @param {!TextRect} rect
-   * @return {boolean}
-   */
-  operationAffectsRect(operation, rect) {
-    return true;
   }
 }

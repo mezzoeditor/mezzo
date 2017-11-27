@@ -13,4 +13,15 @@ export class Operation {
       op.selectionStructure = true;
     return op;
   }
+
+  /**
+   * @return {!Operation}
+   */
+  static full() {
+    let op = new Operation();
+    op.selection = true;
+    op.selectionStructure = true;
+    op.full = true;
+    return op;
+  }
 }
