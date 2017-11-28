@@ -153,7 +153,22 @@ export class Editor {
           this._operation(this._text.performNewLine());
           handled = true;
           break;
-      }
+        case 'Home':
+          this._operation(event.shiftKey ? this._text.performSelectLineStart() : this._text.performMoveLineStart());
+          handled = true;
+          break;
+        case 'End':
+          this._operation(event.shiftKey ? this._text.performSelectLineEnd() : this._text.performMoveLineEnd());
+          handled = true;
+          break;
+        case 'a':
+          // TODO(dgozman): handle shortcuts properly.
+          if (!event.shiftKey && (event.metaKey || event.ctrlKey)) {
+            this._operation(this._text.selectAll());
+            handled = true;
+          }
+          break;
+        }
       switch (event.keyCode) {
         case 8: /* backspace */
           this._operation(this._text.performDeleteBefore());
@@ -163,6 +178,14 @@ export class Editor {
           this._operation(this._text.performDeleteAfter());
           handled = true;
           break;
+        case 27: /* escape */ {
+          let operation = this._text.clearSelectionsIfPossible();
+          if (operation) {
+            this._operation(operation);
+            handled = true;
+          }
+          break;
+        }
       }
       if (handled) {
         event.preventDefault();

@@ -84,6 +84,33 @@ export class Text {
   }
 
   /**
+   * @return {?Operation}
+   */
+  clearSelectionsIfPossible() {
+    this._clearUpDown();
+    let cleared = false;
+    for (let selection of this._selections)
+      cleared |= selection.clear();
+    if (cleared)
+      return this._normalizeSelections(Operation.selection(false /* structure */));
+    return null;
+  }
+
+  /**
+   * @return {!Operation}
+   */
+  selectAll() {
+    this._clearUpDown();
+    let selection = new Selection();
+    selection.setRange({
+      from: {lineNumber: 0, columnNumber: 0},
+      to: {lineNumber: this._lines.length - 1, columnNumber: this._lines[this._lines.length - 1].length()}
+    });
+    this._selections.push(selection);
+    return this._normalizeSelections(Operation.selection(true /* structure */));
+  }
+
+  /**
    * @return {!Operation}
    */
   performMoveLeft() {
@@ -180,6 +207,46 @@ export class Text {
       let position = {lineNumber: selection.focus().lineNumber + 1, columnNumber: selection.saveUpDown()};
       selection.moveFocus(this._clampPositionIfNeeded(position) || position);
     }
+    return this._normalizeSelections(Operation.selection(false /* structure */));
+  }
+
+  /**
+   * @return {!Operation}
+   */
+  performMoveLineStart() {
+    this._clearUpDown();
+    for (let selection of this._selections)
+      selection.setCaret(this._lineStartPosition(selection.focus()));
+    return this._normalizeSelections(Operation.selection(false /* structure */));
+  }
+
+  /**
+   * @return {!Operation}
+   */
+  performSelectLineStart() {
+    this._clearUpDown();
+    for (let selection of this._selections)
+      selection.moveFocus(this._lineStartPosition(selection.focus()));
+    return this._normalizeSelections(Operation.selection(false /* structure */));
+  }
+
+  /**
+   * @return {!Operation}
+   */
+  performMoveLineEnd() {
+    this._clearUpDown();
+    for (let selection of this._selections)
+      selection.setCaret(this._lineEndPosition(selection.focus()));
+    return this._normalizeSelections(Operation.selection(false /* structure */));
+  }
+
+  /**
+   * @return {!Operation}
+   */
+  performSelectLineEnd() {
+    this._clearUpDown();
+    for (let selection of this._selections)
+      selection.moveFocus(this._lineEndPosition(selection.focus()));
     return this._normalizeSelections(Operation.selection(false /* structure */));
   }
 
@@ -475,5 +542,21 @@ export class Text {
     } else {
       return {lineNumber: pos.lineNumber, columnNumber: pos.columnNumber - 1};
     }
+  }
+
+  /**
+   * @param {!TextPosition} pos
+   * @return {!TextPosition}
+   */
+  _lineStartPosition(pos) {
+    return {lineNumber: pos.lineNumber, columnNumber: 0};
+  }
+
+  /**
+   * @param {!TextPosition} pos
+   * @return {!TextPosition}
+   */
+  _lineEndPosition(pos) {
+    return {lineNumber: pos.lineNumber, columnNumber: this._lines[pos.lineNumber].length()};
   }
 }

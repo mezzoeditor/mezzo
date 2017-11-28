@@ -35,6 +35,17 @@ export class Selection {
   }
 
   /**
+   * @return {boolean}
+   */
+  clear() {
+    if (!this._anchor)
+      return false;
+    this._focus = this._anchor;
+    this._anchor = null;
+    return true;
+  }
+
+  /**
    * @param {!TextPositon} focus
    */
   moveFocus(focus) {
