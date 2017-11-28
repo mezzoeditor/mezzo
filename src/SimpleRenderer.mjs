@@ -2,29 +2,60 @@ import { Text } from "./Text.mjs";
 import { Selection } from "./Selection.mjs";
 import { Operation } from "./Operation.mjs";
 
-let cursorSymbol = Symbol('cursorElement');
-
 export class SimpleRenderer {
   /**
    * @param {!Document} document
    * @param {!Text} text
    */
   constructor(document, text) {
-    this._text = text;
     this._canvas = document.createElement('div');
-    this._canvas.style.cssText = this._text.fontMetrics().css();
     this._canvas.style.setProperty('position', 'relative');
-    this._canvas.style.setProperty('overflow', 'auto');
-    this._overlay = document.createElement('div');
-    this._overlay.style.setProperty('position', 'relative');
-    this._overlay.style.setProperty('overflow', 'hidden');
-    this._viewport = {origin: {x: 0, y: 0}, size: {width: 0, height: 0}};
-    this._cursorsVisible = false;
-    this._cursorElements = new Set();
+    this._canvas.style.setProperty('overflow', 'hidden');
 
-    this._canvas.addEventListener('scroll', event => {
-      this._overlay.scrollTop = this._canvas.scrollTop;
-    });
+    let style = document.createElement('style');
+    style.textContent = `
+      .simple-renderer {
+        position: absolute;
+        overflow: auto;
+        left: 0;
+        top: 0;
+        right: 0;
+        bottom: 0;
+      }
+
+      .cursor {
+        visibility: hidden;
+        height: ${text.fontMetrics().lineHeight}px;
+        margin-left: -1px;
+        width: 2px;
+        background: #333;
+        position: absolute;
+      }
+
+      .simple-renderer.cursors-visible .cursor {
+        visibility: visible;
+      }
+
+      .text-line {
+        white-space: pre;
+        height: ${text.fontMetrics().lineHeight}px;
+      }
+
+      .selection {
+        background: rgba(0, 0, 128, 0.2);
+        position: absolute;
+        height: ${text.fontMetrics().lineHeight}px;
+      }
+    `;
+    this._canvas.appendChild(style);
+    
+    this._inner = document.createElement('div');
+    this._inner.className = 'simple-renderer';
+    this._inner.style.cssText = text.fontMetrics().css();
+    this._canvas.appendChild(this._inner);
+
+    this._text = text;
+    this._viewport = {origin: {x: 0, y: 0}, size: {width: 0, height: 0}};
   }
 
   /**
@@ -35,20 +66,9 @@ export class SimpleRenderer {
   }
 
   /**
-   * @return {!Element}
-   */
-  overlay() {
-    return this._overlay;
-  }
-
-  /**
    * @param {!Operation} op
    */
   invalidate(op) {
-    if (op.selectionStructure)
-      this._updateCursorElements();
-    if (op.selection)
-      this._moveCursorElements();
     this._invalidateViewport();
   }
 
@@ -59,8 +79,6 @@ export class SimpleRenderer {
     if (this._viewport.size.width !== viewport.size.width || this._viewport.size.height !== viewport.size.height) {
       this._canvas.style.setProperty('width', viewport.size.width + 'px');
       this._canvas.style.setProperty('height', viewport.size.height + 'px');
-      this._overlay.style.setProperty('width', viewport.size.width + 'px');
-      this._overlay.style.setProperty('height', viewport.size.height + 'px');
     }
     this._viewport = viewport;
     this._invalidateViewport();
@@ -70,80 +88,38 @@ export class SimpleRenderer {
    * @param {boolean} visible
    */
   setCursorsVisible(visible) {
-    this._cursorsVisible = visible;
-    for (let selection of this._text.selections()) {
-      let element = selection[cursorSymbol];
-      element.style.setProperty('visibility', this._cursorVisible(selection) ? 'visible' : 'hidden');
-    }
+    this._inner.classList.toggle('cursors-visible', !!visible);
   }
 
   _invalidateViewport() {
-    while (this._canvas.lastChild)
-      this._canvas.removeChild(this._canvas.lastChild);
+    while (this._inner.lastChild)
+      this._inner.removeChild(this._inner.lastChild);
     for (let i = 0; i < this._text.lineCount(); i++) {
-      let line = this._canvas.ownerDocument.createElement('div');
-      line.style.setProperty('height', this._text.fontMetrics().lineHeight + 'px');
-      line.style.setProperty('white-space', 'pre');
+      let line = this._inner.ownerDocument.createElement('div');
+      line.classList.add('text-line');
       line.textContent = this._text.line(i).lineContent();
-      this._canvas.appendChild(line);
+      this._inner.appendChild(line);
     }
-  }
 
-  _updateCursorElements() {
-    let elements = new Set();
     for (let selection of this._text.selections()) {
-      let element = selection[cursorSymbol];
-      if (!element) {
-        element = this._canvas.ownerDocument.createElement('div');
-        element.style.setProperty('height', this._text.fontMetrics().lineHeight + 'px');
-        element.style.setProperty('box-sizing', 'border-box');
-        element.style.setProperty('position', 'absolute');
-        element.style.setProperty('background', 'rgba(0, 0, 128, 0.2)');
-        element.style.setProperty('margin-left', '-1px');
-        selection[cursorSymbol] = element;
-        this._overlay.appendChild(element);
-      }
-      elements.add(element);
-    }
-    for (let element of this._cursorElements) {
-      if (!elements.has(element))
-        this._overlay.removeChild(element);
-    }
-    this._cursorElements = elements;
-  }
-
-  _moveCursorElements() {
-    for (let selection of this._text.selections()) {
-      let element = selection[cursorSymbol];
-
-      // TODO(dgozman): all this is a hack.
       let range = selection.range();
-      let width = (range.to.columnNumber - range.from.columnNumber) * this._text.fontMetrics().charWidth + 2;
-      element.style.setProperty('width', width + 'px');
-      let point = this._text.positionToPoint(range.from);
-      element.style.setProperty('left', (point.x - this._viewport.origin.x) + 'px');
-      point = this._text.positionToPoint(selection.focus());
-      element.style.setProperty('top', (point.y - this._viewport.origin.y) + 'px');
-      element.style.setProperty('visibility', this._cursorVisible(selection) ? 'visible' : 'hidden');
-      if (selection.isReversed()) {
-        element.style.setProperty('border-left', '2px solid red');
-        element.style.setProperty('border-right', 'none');
-      } else {
-        element.style.setProperty('border-left', 'none');
-        element.style.setProperty('border-right', '2px solid red');
+      for (let line = range.from.lineNumber; line <= range.to.lineNumber; line++) {
+        let from = line === range.from.lineNumber ? range.from.columnNumber : 0;
+        let to = line === range.to.lineNumber ? range.to.columnNumber : this._text.line(line).length();
+        let element = this._inner.ownerDocument.createElement('div');
+        element.classList.add('selection');
+        element.style.setProperty('top', (this._text.fontMetrics().lineHeight * line) + 'px');
+        element.style.setProperty('left', (this._text.fontMetrics().charWidth * from) + 'px');
+        element.style.setProperty('width', (this._text.fontMetrics().charWidth * (to - from)) + 'px');
+        this._inner.appendChild(element);
       }
-    }
-  }
 
-  /**
-   * @param {!Selection} selection
-   * @return {boolean}
-   */
-  _cursorVisible(selection) {
-    let visible = this._cursorsVisible;
-    // TODO(dgozman): should be a setting.
-    if (false)
-      visible &= seleciton.isCollapsed();
-    return visible;
+      let pos = selection.focus();
+      let element = this._inner.ownerDocument.createElement('div');
+      element.classList.add('cursor');
+      element.style.setProperty('top', (this._text.fontMetrics().lineHeight * pos.lineNumber) + 'px');
+      element.style.setProperty('left', (this._text.fontMetrics().charWidth * pos.columnNumber) + 'px');
+      this._inner.appendChild(element);
+    }
   }
 }

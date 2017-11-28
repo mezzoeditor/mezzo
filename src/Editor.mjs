@@ -186,10 +186,5 @@ export class Editor {
     canvas.style.setProperty('top', '0');
     canvas.style.setProperty('left', '0');
     this._element.appendChild(canvas);
-    let overlay = this._renderer.overlay();
-    overlay.style.setProperty('position', 'absolute');
-    overlay.style.setProperty('top', '0');
-    overlay.style.setProperty('left', '0');
-    this._element.appendChild(overlay);
   }
 }
