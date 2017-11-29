@@ -181,7 +181,6 @@ export class Editor {
   }
 
   _onScroll(event) {
-    console.log(event);
     this._renderer.advanceScroll(event.deltaX, event.deltaY);
     event.preventDefault(true);
   }

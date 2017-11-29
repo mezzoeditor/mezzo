@@ -48,8 +48,6 @@ export class SimpleRenderer {
 
   advanceScroll(dx, dy) {
     const maxScrollLeft = Math.max(0, this._text.longestLineLength() * this._metrics.charWidth - this._cssWidth);
-
-    console.log(maxScrollLeft);
     this._scrollLeft += dx;
     this._scrollLeft = Math.max(this._scrollLeft, 0);
     this._scrollLeft = Math.min(this._scrollLeft, maxScrollLeft);
