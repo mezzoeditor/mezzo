@@ -11,8 +11,9 @@ export class Editor {
     this._createDOM(document);
     this._text = new Text();
     this._createRenderer(document);
-    this._setupCursors();
     this.setText('');
+    this._input.addEventListener('focus', event => this._renderer.setCursorsVisible(true));
+    this._input.addEventListener('blur', event => this._renderer.setCursorsVisible(false));
   }
 
   /**
@@ -31,10 +32,7 @@ export class Editor {
   }
 
   resize() {
-    this._renderer.setViewport({
-      origin: {x: 0, y: 0},
-      size: {width: this._element.clientWidth, height: this._element.clientHeight}
-    });
+    this._renderer.setSize(this._element.clientWidth, this._element.clientHeight);
   }
 
   /**
@@ -61,42 +59,9 @@ export class Editor {
   _operation(op) {
     if (!op)
       return;
-    this._revealCursors();
     this._renderer.invalidate(op);
     if (this._operationCallback)
       this._operationCallback.call(null, op);
-  }
-
-  _setupCursors() {
-    let cursorsVisible = false;
-    let cursorsTimeout;
-    let toggleCursors = () => {
-      cursorsVisible = !cursorsVisible;
-      this._renderer.setCursorsVisible(cursorsVisible);
-    };
-    this._input.addEventListener('focus', event => {
-      if (cursorsTimeout)
-        document.defaultView.clearInterval(cursorsTimeout);
-      if (!cursorsVisible)
-        toggleCursors();
-      cursorsTimeout = document.defaultView.setInterval(toggleCursors, 500);
-    });
-    this._input.addEventListener('blur', event => {
-      if (cursorsVisible)
-        toggleCursors();
-      if (cursorsTimeout) {
-        document.defaultView.clearInterval(cursorsTimeout);
-        cursorsTimeout = null;
-      }
-    });
-    this._revealCursors = () => {
-      if (!cursorsTimeout)
-        return;
-      document.defaultView.clearInterval(cursorsTimeout);
-      if (!cursorsVisible)
-        toggleCursors();
-      cursorsTimeout = document.defaultView.setInterval(toggleCursors, 500);
-    };
   }
 
   /**
@@ -210,6 +175,17 @@ export class Editor {
     canvas.style.setProperty('position', 'absolute');
     canvas.style.setProperty('top', '0');
     canvas.style.setProperty('left', '0');
+    canvas.addEventListener('mousedown', event => this._onMouseDown(event));
     this._element.appendChild(canvas);
+  }
+
+  _onMouseDown(event) {
+    const textPosition = this._renderer.mouseEventToTextPosition(event);
+    textPosition.lineNumber = Math.min(textPosition.lineNumber, this._text.lineCount() - 1);
+    textPosition.columnNumber = Math.min(textPosition.columnNumber, this._text.lineLength(textPosition.lineNumber));
+    const selection = new Selection();
+    selection.setCaret(textPosition);
+    this._text.setSelections([selection]);
+    this._renderer.invalidate();
   }
 }

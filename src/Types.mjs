@@ -25,6 +25,15 @@ TextPosition.larger = function(a, b) {
 };
 
 /**
+ * @param {!TextPosition} a
+ * @param {!TextPosition} b
+ * @return {!TextPosition}
+ */
+TextPosition.smaller = function(a, b) {
+  return TextPosition.compare(a, b) >= 0 ? b : a;
+};
+
+/**
  * @typedef {number} TextOffset;
  */
 

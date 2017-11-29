@@ -1,6 +1,7 @@
+import { FontMetrics } from "./FontMetrics.mjs";
 import { Text } from "./Text.mjs";
 import { Selection } from "./Selection.mjs";
-import { Operation } from "./Operation.mjs";
+import { TextPosition } from "./Types.mjs";
 
 export class SimpleRenderer {
   /**
@@ -8,54 +9,30 @@ export class SimpleRenderer {
    * @param {!Text} text
    */
   constructor(document, text) {
-    this._canvas = document.createElement('div');
-    this._canvas.style.setProperty('position', 'relative');
-    this._canvas.style.setProperty('overflow', 'hidden');
-
-    let style = document.createElement('style');
-    style.textContent = `
-      .simple-renderer {
-        position: absolute;
-        overflow: auto;
-        left: 0;
-        top: 0;
-        right: 0;
-        bottom: 0;
-      }
-
-      .cursor {
-        visibility: hidden;
-        height: ${text.fontMetrics().lineHeight}px;
-        margin-left: -1px;
-        width: 2px;
-        background: #333;
-        position: absolute;
-      }
-
-      .simple-renderer.cursors-visible .cursor {
-        visibility: visible;
-      }
-
-      .text-line {
-        white-space: pre;
-        height: ${text.fontMetrics().lineHeight}px;
-      }
-
-      .selection {
-        background: rgba(0, 0, 128, 0.2);
-        position: absolute;
-        height: ${text.fontMetrics().lineHeight}px;
-      }
-    `;
-    this._canvas.appendChild(style);
-    
-    this._inner = document.createElement('div');
-    this._inner.className = 'simple-renderer';
-    this._inner.style.cssText = text.fontMetrics().css();
-    this._canvas.appendChild(this._inner);
-
+    this._canvas = document.createElement('canvas');
     this._text = text;
-    this._viewport = {origin: {x: 0, y: 0}, size: {width: 0, height: 0}};
+    this._drawCursors = true;
+
+    this._width = 0;
+    this._height = 0;
+    this._ratio = getPixelRatio();
+    this._scrollLeft = 0;
+    this._scrollTop = 0;
+
+    this._render = this._render.bind(this);
+  }
+
+  _initializeMetrics() {
+    const ctx = this._canvas.getContext('2d');
+    ctx.font = '14px menlo';
+    ctx.textBaseline = 'top';
+
+    const metrics = ctx.measureText('M');
+    const fontHeight = 20;
+    // The following will be shipped soon.
+    // const fontHeight = metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent;
+
+    this._metrics = new FontMetrics(metrics.width, fontHeight);
   }
 
   /**
@@ -65,61 +42,139 @@ export class SimpleRenderer {
     return this._canvas;
   }
 
-  /**
-   * @param {!Operation} op
-   */
-  invalidate(op) {
-    this._invalidateViewport();
+  invalidate() {
+    requestAnimationFrame(this._render);
   }
 
   /**
-   * @param {!TextRect} viewport
+   * @param {number} cssWidth
+   * @param {number} cssHeight
    */
-  setViewport(viewport) {
-    if (this._viewport.size.width !== viewport.size.width || this._viewport.size.height !== viewport.size.height) {
-      this._canvas.style.setProperty('width', viewport.size.width + 'px');
-      this._canvas.style.setProperty('height', viewport.size.height + 'px');
-    }
-    this._viewport = viewport;
-    this._invalidateViewport();
+  setSize(cssWidth, cssHeight) {
+    const width = cssWidth * this._ratio;
+    const height = cssHeight * this._ratio;
+    if (this._width === width && this._height === height)
+      return;
+    this._width = width;
+    this._height = height;
+    this._canvas.width = width;
+    this._canvas.height = height
+    this._canvas.style.width = cssWidth + 'px';
+    this._canvas.style.height = cssHeight + 'px';
+    this._initializeMetrics();
   }
 
   /**
    * @param {boolean} visible
    */
   setCursorsVisible(visible) {
-    this._inner.classList.toggle('cursors-visible', !!visible);
+    this._drawCursors = visible;
+    this.invalidate();
   }
 
-  _invalidateViewport() {
-    while (this._inner.lastChild)
-      this._inner.removeChild(this._inner.lastChild);
-    for (let i = 0; i < this._text.lineCount(); i++) {
-      let line = this._inner.ownerDocument.createElement('div');
-      line.classList.add('text-line');
-      line.textContent = this._text.line(i).lineContent();
-      this._inner.appendChild(line);
+  mouseEventToTextPosition(event) {
+    const bounds = this._canvas.getBoundingClientRect();
+    const x = event.clientX - bounds.left + this._scrollLeft;
+    const y = event.clientY - bounds.top + this._scrollTop;
+    return {
+      lineNumber: Math.floor(y / this._metrics.lineHeight),
+      columnNumber: Math.floor(x / this._metrics.charWidth),
+    };
+  }
+
+  _render() {
+    const ctx = this._canvas.getContext('2d');
+    const {lineHeight, charWidth} = this._metrics;
+
+    ctx.setTransform(this._ratio, 0, 0, this._ratio, 0, 0);
+    ctx.clearRect(0, 0, this._width, this._height);
+    ctx.translate(this._scrollLeft, this._scrollTop);
+
+    const viewportStart = {
+      lineNumber: Math.floor(this._scrollTop / lineHeight),
+      columnNumber: Math.floor(this._scrollLeft / charWidth)
+    };
+    const viewportEnd = {
+      lineNumber: Math.ceil((this._scrollTop + this._height) / lineHeight),
+      columnNumber: Math.ceil((this._scrollLeft + this._width) / charWidth)
+    };
+
+    // Get selections that intersect with viewport.
+    const omitCursours = !this._drawCursors;
+    const selections = omitCursours ? [] : this._text.selections().filter(selection => {
+      const range = selection.range();
+      return !(TextPosition.compare(viewportStart, range.to) > 0 || TextPosition.compare(viewportEnd, range.from) < 0);
+    });
+
+    ctx.fillStyle = 'rgba(126, 188, 254, 0.6)';
+    ctx.stokeStyle = 'rgb(33, 33, 33)';
+    for (let selection of selections)
+      this._drawSelection(ctx, viewportStart, viewportEnd, selection);
+
+    this._drawText(ctx, viewportStart, viewportEnd);
+  }
+
+  _drawText(ctx, viewportStart, viewportEnd) {
+    const {lineHeight, charWidth} = this._metrics;
+    ctx.fillStyle = 'rgb(33, 33, 33)';
+    const textX = viewportStart.columnNumber * charWidth;
+    const lines = this._text.lines(viewportStart.lineNumber, viewportEnd.lineNumber);
+    for (let i = 0; i < lines.length; ++i) {
+      const line = lines[i].lineContent();
+      ctx.fillText(line.substring(viewportStart.columnNumber, viewportEnd.columnNumber), textX, (i + viewportStart.lineNumber) * lineHeight);
+    }
+  }
+
+  _drawSelection(ctx, viewportStart, viewportEnd, selection) {
+    const {lineHeight, charWidth} = this._metrics;
+
+    if (selection.isCollapsed()) {
+      const focus = selection.focus();
+      ctx.beginPath();
+      ctx.moveTo(focus.columnNumber * charWidth, focus.lineNumber * lineHeight);
+      ctx.lineTo(focus.columnNumber * charWidth, focus.lineNumber * lineHeight + lineHeight);
+      ctx.stroke();
+      return;
     }
 
-    for (let selection of this._text.selections()) {
-      let range = selection.range();
-      for (let line = range.from.lineNumber; line <= range.to.lineNumber; line++) {
-        let from = line === range.from.lineNumber ? range.from.columnNumber : 0;
-        let to = line === range.to.lineNumber ? range.to.columnNumber : this._text.line(line).length();
-        let element = this._inner.ownerDocument.createElement('div');
-        element.classList.add('selection');
-        element.style.setProperty('top', (this._text.fontMetrics().lineHeight * line) + 'px');
-        element.style.setProperty('left', (this._text.fontMetrics().charWidth * from) + 'px');
-        element.style.setProperty('width', (this._text.fontMetrics().charWidth * (to - from)) + 'px');
-        this._inner.appendChild(element);
-      }
+    const range = selection.range();
+    const from = TextPosition.larger(range.from, viewportStart);
+    const to = TextPosition.smaller(range.to, viewportEnd);
 
-      let pos = selection.focus();
-      let element = this._inner.ownerDocument.createElement('div');
-      element.classList.add('cursor');
-      element.style.setProperty('top', (this._text.fontMetrics().lineHeight * pos.lineNumber) + 'px');
-      element.style.setProperty('left', (this._text.fontMetrics().charWidth * pos.columnNumber) + 'px');
-      this._inner.appendChild(element);
+    // Selection consists at most of three rectangles.
+    // Draw first one.
+    if (from.columnNumber < viewportEnd.columnNumber) {
+      const rEnd = TextPosition.smaller({lineNumber: from.lineNumber, columnNumber: viewportEnd.columnNumber}, to);
+      const rWidth = rEnd.columnNumber - from.columnNumber;
+      ctx.fillRect(from.columnNumber * charWidth, from.lineNumber * lineHeight, charWidth * rWidth, lineHeight);
+    }
+
+    if (from.lineNumber < to.lineNumber && to.columnNumber > viewportStart.columnNumber) {
+      const rWidth = to.columnNumber - viewportStart.columnNumber;
+      ctx.fillRect(viewportStart.columnNumber * charWidth, to.lineNumber * lineHeight, charWidth * rWidth, lineHeight);
+    }
+
+    if (to.lineNumber - from.lineNumber > 1) {
+      const rWidth = viewportEnd.columnNumber - viewportStart.columnNumber;
+      const rHeight = to.lineNumber - from.lineNumber -1;
+      ctx.fillRect(viewportStart.columnNumber * charWidth, (from.lineNumber + 1) * lineHeight, charWidth * rWidth, lineHeight * rHeight);
     }
   }
 }
+
+let pixel_ratio = 0;
+
+function getPixelRatio() {
+  if (!pixel_ratio) {
+    let ctx = document.createElement('canvas').getContext('2d'),
+        dpr = window.devicePixelRatio || 1,
+        bsr = ctx.webkitBackingStorePixelRatio ||
+              ctx.mozBackingStorePixelRatio ||
+              ctx.msBackingStorePixelRatio ||
+              ctx.oBackingStorePixelRatio ||
+              ctx.backingStorePixelRatio || 1;
+    pixel_ratio = dpr / bsr;
+  }
+  return pixel_ratio;
+}
+

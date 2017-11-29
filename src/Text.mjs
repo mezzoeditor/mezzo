@@ -1,4 +1,3 @@
-import { FontMetrics } from "./FontMetrics.mjs";
 import { Operation } from "./Operation.mjs";
 import { Selection } from "./Selection.mjs";
 import { TextPosition, TextRange } from "./Types.mjs";
@@ -7,22 +6,7 @@ import { Line } from "./Line.mjs";
 export class Text {
   constructor() {
     this._lines = [Line.empty()];
-    this._metrics = FontMetrics.createSimple();
     this._selections = [];
-  }
-
-  /**
-   * @param {!Editor.FontMetrics} metrics
-   */
-  setFontMetrics(metrics) {
-    this._metrics = metrics;
-  }
-
-  /**
-   * @return {!Editor.FontMetrics}
-   */
-  fontMetrics() {
-    return this._metrics;
   }
 
   /**
@@ -51,10 +35,18 @@ export class Text {
 
   /**
    * @param {number} lineNumber
-   * @return {!Line}
+   * @return {?Line}
    */
   line(lineNumber) {
-    return this._lines[lineNumber];
+    return this._lines.length > lineNumber ? this._lines[lineNumber] : null;
+  }
+
+  /**
+   * @param {number} lineNumber
+   * @return {number}
+   */
+  lineLength(lineNumber) {
+    return this._lines.length > lineNumber ? this._lines[lineNumber].length() : 0;
   }
 
   /**
@@ -81,6 +73,15 @@ export class Text {
     this._clearUpDown();
     this._selections.push(selection);
     return this._normalizeSelections(Operation.selection(true /* structure */));
+  }
+
+  /**
+   * @param {!Array<!Selection>} selections
+   * @return {!Operation}
+   */
+  setSelections(selections) {
+    this._selections = selections;
+    return Operation.full();
   }
 
   /**
@@ -453,28 +454,6 @@ export class Text {
         range.from = this._previousPosition(range.from);
       return range;
     });
-  }
-
-  /**
-   * @param {!TextPosition} position
-   * @return {?TextPoint}
-   */
-  positionToPoint(position) {
-    return {
-      x: position.columnNumber * this._metrics.charWidth,
-      y: position.lineNumber * this._metrics.lineHeight
-    };
-  }
-
-  /**
-   * @param {!TextPoint}
-   * @return {?TextPosition}
-   */
-  pointToPosition(point) {
-    return {
-      columnNumber: Math.floor(point.x / this._metrics.charWidth),
-      lineNumber: Math.floor(point.y / this._netrics.lineHeight)
-    };
   }
 
   /**
