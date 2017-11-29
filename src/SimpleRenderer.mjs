@@ -47,16 +47,20 @@ export class SimpleRenderer {
   }
 
   advanceScroll(dx, dy) {
-    const maxScrollLeft = Math.max(0, this._text.longestLineLength() * this._metrics.charWidth - this._cssWidth);
     this._scrollLeft += dx;
+    this._scrollTop += dy;
+    this._clipScrollPosition();
+    this.invalidate();
+  }
+
+  _clipScrollPosition() {
+    const maxScrollLeft = Math.max(0, this._text.longestLineLength() * this._metrics.charWidth - this._cssWidth);
     this._scrollLeft = Math.max(this._scrollLeft, 0);
     this._scrollLeft = Math.min(this._scrollLeft, maxScrollLeft);
 
     const maxScrollTop = Math.max(0, (this._text.lineCount() - 1) * this._metrics.lineHeight);
-    this._scrollTop += dy;
     this._scrollTop = Math.max(this._scrollTop, 0);
     this._scrollTop = Math.min(this._scrollTop, maxScrollTop);
-    this.invalidate();
   }
 
   /**
@@ -100,6 +104,8 @@ export class SimpleRenderer {
     ctx.setTransform(this._ratio, 0, 0, this._ratio, 0, 0);
     ctx.clearRect(0, 0, this._cssWidth, this._cssHeight);
     ctx.translate(-this._scrollLeft, -this._scrollTop);
+
+    this._clipScrollPosition();
 
     const viewportStart = {
       lineNumber: Math.floor(this._scrollTop / lineHeight),
