@@ -98,14 +98,14 @@ export class SimpleRenderer {
   }
 
   _render() {
+    this._clipScrollPosition();
+
     const ctx = this._canvas.getContext('2d');
     const {lineHeight, charWidth} = this._metrics;
 
     ctx.setTransform(this._ratio, 0, 0, this._ratio, 0, 0);
     ctx.clearRect(0, 0, this._cssWidth, this._cssHeight);
     ctx.translate(-this._scrollLeft, -this._scrollTop);
-
-    this._clipScrollPosition();
 
     const viewportStart = {
       lineNumber: Math.floor(this._scrollTop / lineHeight),
