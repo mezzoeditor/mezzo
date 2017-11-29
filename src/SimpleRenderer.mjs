@@ -118,10 +118,7 @@ export class SimpleRenderer {
 
     // Get selections that intersect with viewport.
     const omitCursours = !this._drawCursors;
-    const selections = omitCursours ? [] : this._text.selections().filter(selection => {
-      const range = selection.range();
-      return !(TextPosition.compare(viewportStart, range.to) > 0 || TextPosition.compare(viewportEnd, range.from) < 0);
-    });
+    const selections = omitCursours ? [] : this._text.selectionsInTextRange({from: viewportStart, to: viewportEnd});
 
     ctx.fillStyle = 'rgba(126, 188, 254, 0.6)';
     ctx.stokeStyle = 'rgb(33, 33, 33)';

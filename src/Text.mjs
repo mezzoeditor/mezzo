@@ -92,6 +92,19 @@ export class Text {
   }
 
   /**
+   * @param {!TextRange} range
+   * @return {!Array<!Selection>}
+   */
+  selectionsInTextRange(range) {
+    const from = TextPosition.smaller(range.from, range.to);
+    const to = TextPosition.larger(range.from, range.to);
+    return this._selections.filter(selection => {
+      const selectionRange = selection.range();
+      return !(TextPosition.compare(from, selectionRange.to) > 0 || TextPosition.compare(to, selectionRange.from) < 0);
+    });
+  }
+
+  /**
    * @return {?Operation}
    */
   clearSelectionsIfPossible() {
