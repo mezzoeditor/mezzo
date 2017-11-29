@@ -13,8 +13,8 @@ export class SimpleRenderer {
     this._text = text;
     this._drawCursors = true;
 
-    this._width = 0;
-    this._height = 0;
+    this._cssWidth = 0;
+    this._cssHeight = 0;
     this._ratio = getPixelRatio();
     this._scrollLeft = 0;
     this._scrollTop = 0;
@@ -46,19 +46,32 @@ export class SimpleRenderer {
     requestAnimationFrame(this._render);
   }
 
+  advanceScroll(dx, dy) {
+    const maxScrollLeft = Math.max(0, this._text.longestLineLength() * this._metrics.charWidth - this._cssWidth);
+
+    console.log(maxScrollLeft);
+    this._scrollLeft += dx;
+    this._scrollLeft = Math.max(this._scrollLeft, 0);
+    this._scrollLeft = Math.min(this._scrollLeft, maxScrollLeft);
+
+    const maxScrollTop = Math.max(0, (this._text.lineCount() - 1) * this._metrics.lineHeight);
+    this._scrollTop += dy;
+    this._scrollTop = Math.max(this._scrollTop, 0);
+    this._scrollTop = Math.min(this._scrollTop, maxScrollTop);
+    this.invalidate();
+  }
+
   /**
    * @param {number} cssWidth
    * @param {number} cssHeight
    */
   setSize(cssWidth, cssHeight) {
-    const width = cssWidth * this._ratio;
-    const height = cssHeight * this._ratio;
-    if (this._width === width && this._height === height)
+    if (this._cssWidth === cssWidth && this._cssHeight === cssHeight)
       return;
-    this._width = width;
-    this._height = height;
-    this._canvas.width = width;
-    this._canvas.height = height
+    this._cssWidth = cssWidth;
+    this._cssHeight = cssHeight;
+    this._canvas.width = cssWidth * this._ratio;
+    this._canvas.height = cssHeight * this._ratio;
     this._canvas.style.width = cssWidth + 'px';
     this._canvas.style.height = cssHeight + 'px';
     this._initializeMetrics();
@@ -87,16 +100,16 @@ export class SimpleRenderer {
     const {lineHeight, charWidth} = this._metrics;
 
     ctx.setTransform(this._ratio, 0, 0, this._ratio, 0, 0);
-    ctx.clearRect(0, 0, this._width, this._height);
-    ctx.translate(this._scrollLeft, this._scrollTop);
+    ctx.clearRect(0, 0, this._cssWidth, this._cssHeight);
+    ctx.translate(-this._scrollLeft, -this._scrollTop);
 
     const viewportStart = {
       lineNumber: Math.floor(this._scrollTop / lineHeight),
       columnNumber: Math.floor(this._scrollLeft / charWidth)
     };
     const viewportEnd = {
-      lineNumber: Math.ceil((this._scrollTop + this._height) / lineHeight),
-      columnNumber: Math.ceil((this._scrollLeft + this._width) / charWidth)
+      lineNumber: Math.ceil((this._scrollTop + this._cssHeight) / lineHeight),
+      columnNumber: Math.ceil((this._scrollLeft + this._cssWidth) / charWidth)
     };
 
     // Get selections that intersect with viewport.
@@ -121,7 +134,7 @@ export class SimpleRenderer {
     const lines = this._text.lines(viewportStart.lineNumber, viewportEnd.lineNumber);
     for (let i = 0; i < lines.length; ++i) {
       const line = lines[i].lineContent();
-      ctx.fillText(line.substring(viewportStart.columnNumber, viewportEnd.columnNumber), textX, (i + viewportStart.lineNumber) * lineHeight);
+      ctx.fillText(line.substring(viewportStart.columnNumber, viewportEnd.columnNumber + 1), textX, (i + viewportStart.lineNumber) * lineHeight);
     }
   }
 

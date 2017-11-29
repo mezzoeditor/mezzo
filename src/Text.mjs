@@ -50,6 +50,13 @@ export class Text {
   }
 
   /**
+   * @return {number}
+   */
+  longestLineLength() {
+    return Math.max(...this._lines.map(line => line.length()));
+  }
+
+  /**
    * @param {number} fromLine
    * @param {number} toLine
    * @return {!Array<!Line>}

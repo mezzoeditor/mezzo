@@ -176,7 +176,14 @@ export class Editor {
     canvas.style.setProperty('top', '0');
     canvas.style.setProperty('left', '0');
     canvas.addEventListener('mousedown', event => this._onMouseDown(event));
+    canvas.addEventListener('wheel', event => this._onScroll(event));
     this._element.appendChild(canvas);
+  }
+
+  _onScroll(event) {
+    console.log(event);
+    this._renderer.advanceScroll(event.deltaX, event.deltaY);
+    event.preventDefault(true);
   }
 
   _onMouseDown(event) {
