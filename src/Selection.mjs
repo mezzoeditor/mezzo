@@ -37,7 +37,7 @@ export class Selection {
   /**
    * @return {boolean}
    */
-  clear() {
+  collapse() {
     if (!this._anchor)
       return false;
     this._focus = this._anchor;

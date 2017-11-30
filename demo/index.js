@@ -12,9 +12,10 @@ for (let i = 0; i < 100; i++)
 editor.setText(text.join(''));
 editor.focus();
 
-// hack:
+let selections = [];
 for (let i = 0; i < 20; i++) {
   let selection = new Selection();
-  selection._focus = {lineNumber: 2 * i, columnNumber: 3};
-  editor._renderer.invalidate(editor._text.addSelection(selection));
+  selection.setCaret({lineNumber: 2 * i, columnNumber: 3});
+  selections.push(selection);
 }
+editor.setSelections(selections);

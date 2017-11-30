@@ -1,7 +1,7 @@
 import { FontMetrics } from "./FontMetrics.mjs";
 import { Text } from "./Text.mjs";
 import { Selection } from "./Selection.mjs";
-import { TextPosition } from "./Types.mjs";
+import { TextPosition, TextRange } from "./Types.mjs";
 
 export class SimpleRenderer {
   /**
@@ -116,14 +116,15 @@ export class SimpleRenderer {
       columnNumber: Math.ceil((this._scrollLeft + this._cssWidth) / charWidth)
     };
 
-    // Get selections that intersect with viewport.
-    const omitCursours = !this._drawCursors;
-    const selections = omitCursours ? [] : this._text.selectionsInTextRange({from: viewportStart, to: viewportEnd});
-
     ctx.fillStyle = 'rgba(126, 188, 254, 0.6)';
     ctx.stokeStyle = 'rgb(33, 33, 33)';
-    for (let selection of selections)
-      this._drawSelection(ctx, viewportStart, viewportEnd, selection);
+    if (this._drawCursors) {
+      const viewportRange = {from: viewportStart, to: viewportEnd};
+      for (let selection of this._text.selections()) {
+        if (TextRange.intersects(selection.range(), viewportRange))
+          this._drawSelection(ctx, viewportStart, viewportEnd, selection);
+      }
+    }
 
     this._drawText(ctx, viewportStart, viewportEnd);
   }
@@ -151,9 +152,7 @@ export class SimpleRenderer {
       return;
     }
 
-    const range = selection.range();
-    const from = TextPosition.larger(range.from, viewportStart);
-    const to = TextPosition.smaller(range.to, viewportEnd);
+    const {from, to} = selection.range();
 
     // Selection consists at most of three rectangles.
     // Draw first one.

@@ -21,7 +21,7 @@ export class Editor {
    */
   setText(text) {
     this._operation(this._text.setText(text));
-    this._operation(this._text.addSelection(new Selection()));
+    this._operation(this._text.setSelections([new Selection()]));
   }
 
   /**
@@ -29,6 +29,13 @@ export class Editor {
    */
   text() {
     return this._text.text();
+  }
+
+  /**
+   * @param {!Array<!Selection>} selections
+   */
+  setSelections(selections) {
+    this._operation(this._text.setSelections(selections));
   }
 
   resize() {
@@ -146,7 +153,7 @@ export class Editor {
           handled = true;
           break;
         case 27: /* escape */ {
-          let operation = this._text.clearSelectionsIfPossible();
+          let operation = this._text.collapseSelections();
           if (operation) {
             this._operation(operation);
             handled = true;
@@ -187,8 +194,7 @@ export class Editor {
 
   _onMouseDown(event) {
     const textPosition = this._renderer.mouseEventToTextPosition(event);
-    textPosition.lineNumber = Math.min(textPosition.lineNumber, this._text.lineCount() - 1);
-    textPosition.columnNumber = Math.min(textPosition.columnNumber, this._text.lineLength(textPosition.lineNumber));
+    textPosition = this._text.clampPosition(textPosition);
     const selection = new Selection();
     selection.setCaret(textPosition);
     this._text.setSelections([selection]);

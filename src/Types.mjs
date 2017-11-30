@@ -64,15 +64,12 @@ TextRange.compare = function(a, b) {
 };
 
 /**
- * Assumes TextRange.compare(a, b) <= 0.
  * @param {!TextRange} a
  * @param {!TextRange} b
  * @return {?TextRange}
  */
-TextRange.joinIfIntersecting = function(a, b) {
-  if (TextPosition.compare(a.to, b.from) < 0)
-    return null;
-  return {from: a.from, to: TextPosition.larger(a.to, b.to)};
+TextRange.join = function(a, b) {
+  return {from: TextPosition.smaller(a.from, b.from), to: TextPosition.larger(a.to, b.to)};
 };
 
 /**
@@ -81,6 +78,15 @@ TextRange.joinIfIntersecting = function(a, b) {
  */
 TextRange.isEmpty = function(r) {
   return TextPosition.compare(r.from, r.to) === 0;
+};
+
+/**
+ * @param {!TextRange} a
+ * @param {!TextRange} b
+ * @return {boolean}
+ */
+TextRange.intersects = function(a, b) {
+  return !(TextPosition.compare(a.from, b.to) > 0 || TextPosition.compare(b.from, a.to) > 0);
 };
 
 /**

@@ -34,22 +34,6 @@ export class Text {
   }
 
   /**
-   * @param {number} lineNumber
-   * @return {?Line}
-   */
-  line(lineNumber) {
-    return this._lines.length > lineNumber ? this._lines[lineNumber] : null;
-  }
-
-  /**
-   * @param {number} lineNumber
-   * @return {number}
-   */
-  lineLength(lineNumber) {
-    return this._lines.length > lineNumber ? this._lines[lineNumber].length() : 0;
-  }
-
-  /**
    * @return {number}
    */
   longestLineLength() {
@@ -73,46 +57,24 @@ export class Text {
   }
 
   /**
-   * @param {!Selection} selection
-   * @return {!Operation}
-   */
-  addSelection(selection) {
-    this._clearUpDown();
-    this._selections.push(selection);
-    return this._normalizeSelections(Operation.selection(true /* structure */));
-  }
-
-  /**
    * @param {!Array<!Selection>} selections
    * @return {!Operation}
    */
   setSelections(selections) {
     this._selections = selections;
-    return Operation.full();
-  }
-
-  /**
-   * @param {!TextRange} range
-   * @return {!Array<!Selection>}
-   */
-  selectionsInTextRange(range) {
-    const from = TextPosition.smaller(range.from, range.to);
-    const to = TextPosition.larger(range.from, range.to);
-    return this._selections.filter(selection => {
-      const selectionRange = selection.range();
-      return !(TextPosition.compare(from, selectionRange.to) > 0 || TextPosition.compare(to, selectionRange.from) < 0);
-    });
+    this._clearUpDown();
+    return this._normalizeSelections(Operation.selection(true /* structure */));
   }
 
   /**
    * @return {?Operation}
    */
-  clearSelectionsIfPossible() {
+  collapseSelections() {
     this._clearUpDown();
-    let cleared = false;
+    let collapsed = false;
     for (let selection of this._selections)
-      cleared |= selection.clear();
-    if (cleared)
+      collapsed |= selection.collapse();
+    if (collapsed)
       return this._normalizeSelections(Operation.selection(false /* structure */));
     return null;
   }
@@ -186,7 +148,7 @@ export class Text {
     for (let selection of this._selections) {
       if (selection.isCollapsed()) {
         let position = {lineNumber: selection.focus().lineNumber - 1, columnNumber: selection.saveUpDown()};
-        selection.setCaret(this._clampPositionIfNeeded(position) || position);
+        selection.setCaret(this.clampPositionIfNeeded(position) || position);
       } else {
         selection.setCaret(selection.range().from);
       }
@@ -200,7 +162,7 @@ export class Text {
   performSelectUp() {
     for (let selection of this._selections) {
       let position = {lineNumber: selection.focus().lineNumber - 1, columnNumber: selection.saveUpDown()};
-      selection.moveFocus(this._clampPositionIfNeeded(position) || position);
+      selection.moveFocus(this.clampPositionIfNeeded(position) || position);
     }
     return this._normalizeSelections(Operation.selection(false /* structure */));
   }
@@ -212,7 +174,7 @@ export class Text {
     for (let selection of this._selections) {
       if (selection.isCollapsed()) {
         let position = {lineNumber: selection.focus().lineNumber + 1, columnNumber: selection.saveUpDown()};
-        selection.setCaret(this._clampPositionIfNeeded(position) || position);
+        selection.setCaret(this.clampPositionIfNeeded(position) || position);
       } else {
         selection.setCaret(selection.range().to);
       }
@@ -226,7 +188,7 @@ export class Text {
   performSelectDown() {
     for (let selection of this._selections) {
       let position = {lineNumber: selection.focus().lineNumber + 1, columnNumber: selection.saveUpDown()};
-      selection.moveFocus(this._clampPositionIfNeeded(position) || position);
+      selection.moveFocus(this.clampPositionIfNeeded(position) || position);
     }
     return this._normalizeSelections(Operation.selection(false /* structure */));
   }
@@ -293,12 +255,13 @@ export class Text {
     let length = 1;
     for (let i = 1; i < this._selections.length; i++) {
       let last = this._selections[length - 1];
-      let selection = this._selections[i];
-      let joined = TextRange.joinIfIntersecting(last.range(), selection.range());
-      if (joined)
-        last.setRange(joined);
+      let lastRange = last.range();
+      let next = this._selections[i];
+      let nextRange = next.range();
+      if (TextRange.intersects(lastRange, nextRange))
+        last.setRange(TextRange.join(lastRange, nextRange));
       else
-        this._selections[length++] = selection;
+        this._selections[length++] = next;
     }
     if (length !== this._selections.length) {
       this._selections.splice(length, this._selections.length - length);
@@ -480,7 +443,7 @@ export class Text {
    * @param {!TextPosition} position
    * @return {?TextPosition}
    */
-  _clampPositionIfNeeded(position) {
+  clampPositionIfNeeded(position) {
     let {lineNumber, columnNumber} = position;
     let clamped = false;
     if (lineNumber < 0) {
@@ -502,12 +465,20 @@ export class Text {
   }
 
   /**
+   * @param {!TextPosition} position
+   * @return {!TextPosition}
+   */
+  clampPosition(position) {
+    return this.clampPositionIfNeeded(position) || position;
+  }
+
+  /**
    * @param {!TextRange} range
    * @return {?TextRange}
    */
   _clampRangeIfNeeded(range) {
-    let from = this._clampPositionIfNeeded(range.from);
-    let to = this._clampPositionIfNeeded(range.to);
+    let from = this.clampPositionIfNeeded(range.from);
+    let to = this.clampPositionIfNeeded(range.to);
     if (!from && !to)
       return null;
     return {from: from || range.from, to: to || range.to};
