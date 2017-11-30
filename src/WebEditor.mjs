@@ -20,7 +20,7 @@ export class WebEditor {
    * @param {string} text
    */
   setText(text) {
-    this._operation(this._editor.setText(text));
+    this._operation(this._editor.setContent(text));
     this._operation(this._editor.setSelections([new Selection()]));
   }
 
@@ -28,7 +28,7 @@ export class WebEditor {
    * @return {string}
    */
   text() {
-    return this._editor.text();
+    return this._editor.content();
   }
 
   /**
@@ -72,7 +72,7 @@ export class WebEditor {
   }
 
   /**
-   * @param {!Document} document 
+   * @param {!Document} document
    */
   _createDOM(document) {
     //TODO: shadow dom?

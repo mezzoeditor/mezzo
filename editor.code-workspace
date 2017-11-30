@@ -9,6 +9,8 @@
 		"editor.tabSize": 2,
 		"editor.formatOnSave": false,
 		"editor.formatOnType": false,
-		"editor.formatOnPaste": false
+		"editor.formatOnPaste": false,
+		"files.trimTrailingWhitespace": true,
+		"editor.trimAutoWhitespace": true
 	}
 }

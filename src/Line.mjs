@@ -14,6 +14,14 @@ export class Line {
   }
 
   /**
+   * @param {string} s
+   * @return {!Line}
+   */
+  static from(s) {
+    return s ? new Line(s) : Line._empty;
+  }
+
+  /**
    * @return {string}
    */
   lineContent() {
@@ -34,7 +42,7 @@ export class Line {
    * @return {!Line}
    */
   replace(from, to, s) {
-    return new Line(this._s.substring(0, from) + s + this._s.substring(to));
+    return Line.from(this._s.substring(0, from) + s + this._s.substring(to));
   }
 
   /**
@@ -42,8 +50,8 @@ export class Line {
    * @return {{left: !Line, right: !Line}}
    */
   split(pos) {
-    let left = new Line(this._s.substring(0, pos));
-    let right = new Line(this._s.substring(pos));
+    let left = Line.from(this._s.substring(0, pos));
+    let right = Line.from(this._s.substring(pos));
     return {left, right};
   }
 
@@ -52,7 +60,7 @@ export class Line {
    * @return {!Line}
    */
   merge(line) {
-    return new Line(this._s + line._s);
+    return Line.from(this._s + line._s);
   }
 }
 

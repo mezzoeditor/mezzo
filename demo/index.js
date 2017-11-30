@@ -15,7 +15,7 @@ editor.focus();
 let selections = [];
 for (let i = 0; i < 20; i++) {
   let selection = new Selection();
-  selection.setCaret({lineNumber: 2 * i, columnNumber: 3});
+  selection.setCaret({lineNumber: 4 * i, columnNumber: 3});
   selections.push(selection);
 }
 editor.setSelections(selections);
