@@ -78,7 +78,6 @@ export class WebEditor {
     //TODO: shadow dom?
     this._element = document.createElement('div');
     this._element.style.cssText = `
-      border: 1px solid black;
       position: relative;
       overflow: hidden;
       user-select: none;

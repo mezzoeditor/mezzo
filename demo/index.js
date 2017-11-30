@@ -3,9 +3,10 @@ import { Selection } from "../src/Selection.mjs";
 
 const editor = new WebEditor(document);
 document.body.appendChild(editor.element());
-editor.element().style.width = '500px';
-editor.element().style.height = '400px';
+editor.element().style.width = '100%';
+editor.element().style.height = '100%';
 editor.resize();
+window.onresize = () => editor.resize();
 let text = [];
 for (let i = 0; i < 100; i++)
   text.push('short\nlonggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg\n');

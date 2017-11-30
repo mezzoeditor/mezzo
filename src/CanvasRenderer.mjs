@@ -77,6 +77,7 @@ export class CanvasRenderer {
     this._canvas.style.width = cssWidth + 'px';
     this._canvas.style.height = cssHeight + 'px';
     this._initializeMetrics();
+    this.invalidate();
   }
 
   /**
