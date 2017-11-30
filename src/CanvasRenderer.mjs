@@ -1,16 +1,16 @@
 import { FontMetrics } from "./FontMetrics.mjs";
-import { Text } from "./Text.mjs";
+import { Editor } from "./Editor.mjs";
 import { Selection } from "./Selection.mjs";
 import { TextPosition, TextRange } from "./Types.mjs";
 
-export class SimpleRenderer {
+export class CanvasRenderer {
   /**
    * @param {!Document} document
-   * @param {!Text} text
+   * @param {!Editor} editor
    */
-  constructor(document, text) {
+  constructor(document, editor) {
     this._canvas = document.createElement('canvas');
-    this._text = text;
+    this._editor = editor;
     this._drawCursors = true;
 
     this._cssWidth = 0;
@@ -54,11 +54,11 @@ export class SimpleRenderer {
   }
 
   _clipScrollPosition() {
-    const maxScrollLeft = Math.max(0, this._text.longestLineLength() * this._metrics.charWidth - this._cssWidth);
+    const maxScrollLeft = Math.max(0, this._editor.longestLineLength() * this._metrics.charWidth - this._cssWidth);
     this._scrollLeft = Math.max(this._scrollLeft, 0);
     this._scrollLeft = Math.min(this._scrollLeft, maxScrollLeft);
 
-    const maxScrollTop = Math.max(0, (this._text.lineCount() - 1) * this._metrics.lineHeight);
+    const maxScrollTop = Math.max(0, (this._editor.lineCount() - 1) * this._metrics.lineHeight);
     this._scrollTop = Math.max(this._scrollTop, 0);
     this._scrollTop = Math.min(this._scrollTop, maxScrollTop);
   }
@@ -120,7 +120,7 @@ export class SimpleRenderer {
     ctx.stokeStyle = 'rgb(33, 33, 33)';
     if (this._drawCursors) {
       const viewportRange = {from: viewportStart, to: viewportEnd};
-      for (let selection of this._text.selections()) {
+      for (let selection of this._editor.selections()) {
         if (TextRange.intersects(selection.range(), viewportRange))
           this._drawSelection(ctx, viewportStart, viewportEnd, selection);
       }
@@ -133,7 +133,7 @@ export class SimpleRenderer {
     const {lineHeight, charWidth} = this._metrics;
     ctx.fillStyle = 'rgb(33, 33, 33)';
     const textX = viewportStart.columnNumber * charWidth;
-    const lines = this._text.lines(viewportStart.lineNumber, viewportEnd.lineNumber);
+    const lines = this._editor.lines(viewportStart.lineNumber, viewportEnd.lineNumber);
     for (let i = 0; i < lines.length; ++i) {
       const line = lines[i].lineContent();
       ctx.fillText(line.substring(viewportStart.columnNumber, viewportEnd.columnNumber + 1), textX, (i + viewportStart.lineNumber) * lineHeight);
@@ -143,6 +143,7 @@ export class SimpleRenderer {
   _drawSelection(ctx, viewportStart, viewportEnd, selection) {
     const {lineHeight, charWidth} = this._metrics;
 
+    // TODO(dgozman): some editors show cursor even for non-collapsed selection.
     if (selection.isCollapsed()) {
       const focus = selection.focus();
       ctx.beginPath();

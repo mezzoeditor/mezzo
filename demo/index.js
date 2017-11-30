@@ -1,7 +1,7 @@
-import { Editor } from "../src/Editor.mjs";
+import { WebEditor } from "../src/WebEditor.mjs";
 import { Selection } from "../src/Selection.mjs";
 
-const editor = new Editor(document);
+const editor = new WebEditor(document);
 document.body.appendChild(editor.element());
 editor.element().style.width = '500px';
 editor.element().style.height = '400px';

@@ -1,3 +1,3 @@
-import { Text } from "../src/Text.mjs";
+import { Editor } from "../src/Editor.mjs";
 
-const text = new Text();
+const editor = new Editor();

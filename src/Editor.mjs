@@ -1,203 +1,532 @@
-import { Text } from "./Text.mjs";
-import { SimpleRenderer } from "./SimpleRenderer.mjs";
 import { Operation } from "./Operation.mjs";
 import { Selection } from "./Selection.mjs";
+import { TextPosition, TextRange } from "./Types.mjs";
+import { Line } from "./Line.mjs";
 
 export class Editor {
-  /**
-   * @param {!Document} document
-   */
-  constructor(document) {
-    this._createDOM(document);
-    this._text = new Text();
-    this._createRenderer(document);
-    this.setText('');
-    this._input.addEventListener('focus', event => this._renderer.setCursorsVisible(true));
-    this._input.addEventListener('blur', event => this._renderer.setCursorsVisible(false));
+  constructor() {
+    this._lines = [Line.empty()];
+    this._selections = [];
   }
 
   /**
    * @param {string} text
+   * @return {!Operation}
    */
   setText(text) {
-    this._operation(this._text.setText(text));
-    this._operation(this._text.setSelections([new Selection()]));
+    this._lines = text.split('\n').map(s => new Line(s));
+    this._selections = [];
+    return Operation.full();
   }
 
   /**
    * @return {string}
    */
   text() {
-    return this._text.text();
+    return this._lines.map(line => line.lineContent()).join('\n');
+  }
+
+  /**
+   * @return {number}
+   */
+  lineCount() {
+    return this._lines.length;
+  }
+
+  /**
+   * @return {number}
+   */
+  longestLineLength() {
+    return Math.max(...this._lines.map(line => line.length()));
+  }
+
+  /**
+   * @param {number} fromLine
+   * @param {number} toLine
+   * @return {!Array<!Line>}
+   */
+  lines(fromLine, toLine) {
+    return this._lines.slice(fromLine, toLine);
+  }
+
+  /**
+   * @return {!Array<{!Selection}>}
+   */
+  selections() {
+    return this._selections;
   }
 
   /**
    * @param {!Array<!Selection>} selections
+   * @return {!Operation}
    */
   setSelections(selections) {
-    this._operation(this._text.setSelections(selections));
-  }
-
-  resize() {
-    this._renderer.setSize(this._element.clientWidth, this._element.clientHeight);
-  }
-
-  /**
-   * @return {!Element}
-   */
-  element() {
-    return this._element;
+    this._selections = selections;
+    this._clearUpDown();
+    return this._normalizeSelections(Operation.selection(true /* structure */));
   }
 
   /**
-   * @param {function(!Operation)} callback
+   * @return {?Operation}
    */
-  setOperationCallback(callback) {
-    this._operationCallback = callback;
-  }
-
-  focus() {
-    this._input.focus();
-  }
-
-  /**
-   * @param {?Operation} op
-   */
-  _operation(op) {
-    if (!op)
-      return;
-    this._renderer.invalidate(op);
-    if (this._operationCallback)
-      this._operationCallback.call(null, op);
+  collapseSelections() {
+    this._clearUpDown();
+    let collapsed = false;
+    for (let selection of this._selections)
+      collapsed |= selection.collapse();
+    if (collapsed)
+      return this._normalizeSelections(Operation.selection(false /* structure */));
+    return null;
   }
 
   /**
-   * @param {!Document} document 
+   * @return {!Operation}
    */
-  _createDOM(document) {
-    //TODO: shadow dom?
-    this._element = document.createElement('div');
-    this._element.style.cssText = `
-      border: 1px solid black;
-      position: relative;
-      overflow: hidden;
-      user-select: none;
-      cursor: text;
-    `;
-    this._element.addEventListener('click', event => {
-      this._input.focus();
+  selectAll() {
+    this._clearUpDown();
+    let selection = new Selection();
+    selection.setRange({
+      from: {lineNumber: 0, columnNumber: 0},
+      to: {lineNumber: this._lines.length - 1, columnNumber: this._lines[this._lines.length - 1].length()}
     });
+    this._selections.push(selection);
+    return this._normalizeSelections(Operation.selection(true /* structure */));
+  }
 
-    this._input = document.createElement('input');
-    this._input.style.cssText = `
-      outline: none;
-      border: none;
-      width: 0;
-      height: 0;
-      position: absolute;
-      top: 0;
-      left: 0;
-    `;
-    this._element.appendChild(this._input);
-    this._input.addEventListener('input', event => {
-      let op = this._text.performType(this._input.value);
-      this._input.value = '';
-      this._operation(op);
-    });
-    this._input.addEventListener('keydown', event => {
-      let handled = false;
-      switch (event.key) {
-        case 'ArrowLeft':
-          this._operation(event.shiftKey ? this._text.performSelectLeft() : this._text.performMoveLeft());
-          handled = true;
-          break;
-        case 'ArrowRight':
-          this._operation(event.shiftKey ? this._text.performSelectRight() : this._text.performMoveRight());
-          handled = true;
-          break;
-        case 'ArrowUp':
-          this._operation(event.shiftKey ? this._text.performSelectUp() : this._text.performMoveUp());
-          handled = true;
-          break;
-        case 'ArrowDown':
-          this._operation(event.shiftKey ? this._text.performSelectDown() : this._text.performMoveDown());
-          handled = true;
-          break;
-        case 'Enter':
-          this._operation(this._text.performNewLine());
-          handled = true;
-          break;
-        case 'Home':
-          this._operation(event.shiftKey ? this._text.performSelectLineStart() : this._text.performMoveLineStart());
-          handled = true;
-          break;
-        case 'End':
-          this._operation(event.shiftKey ? this._text.performSelectLineEnd() : this._text.performMoveLineEnd());
-          handled = true;
-          break;
-        case 'a':
-          // TODO(dgozman): handle shortcuts properly.
-          if (!event.shiftKey && (event.metaKey || event.ctrlKey)) {
-            this._operation(this._text.selectAll());
-            handled = true;
-          }
-          break;
-        }
-      switch (event.keyCode) {
-        case 8: /* backspace */
-          this._operation(this._text.performDeleteBefore());
-          handled = true;
-          break;
-        case 46: /* delete */
-          this._operation(this._text.performDeleteAfter());
-          handled = true;
-          break;
-        case 27: /* escape */ {
-          let operation = this._text.collapseSelections();
-          if (operation) {
-            this._operation(operation);
-            handled = true;
-          }
-          break;
-        }
+  /**
+   * @return {!Operation}
+   */
+  performMoveLeft() {
+    this._clearUpDown();
+    for (let selection of this._selections) {
+      if (selection.isCollapsed())
+        selection.setCaret(this._previousPosition(selection.focus()));
+      else
+        selection.setCaret(selection.range().from);
+    }
+    return this._normalizeSelections(Operation.selection(false /* structure */));
+  }
+
+  /**
+   * @return {!Operation}
+   */
+  performSelectLeft() {
+    this._clearUpDown();
+    for (let selection of this._selections)
+      selection.moveFocus(this._previousPosition(selection.focus()));
+    return this._normalizeSelections(Operation.selection(false /* structure */));
+  }
+
+  /**
+   * @return {!Operation}
+   */
+  performMoveRight() {
+    this._clearUpDown();
+    for (let selection of this._selections) {
+      if (selection.isCollapsed())
+        selection.setCaret(this._nextPosition(selection.focus()));
+      else
+        selection.setCaret(selection.range().to);
+    }
+    return this._normalizeSelections(Operation.selection(false /* structure */));
+  }
+
+  /**
+   * @return {!Operation}
+   */
+  performSelectRight() {
+    this._clearUpDown();
+    for (let selection of this._selections)
+      selection.moveFocus(this._nextPosition(selection.focus()));
+    return this._normalizeSelections(Operation.selection(false /* structure */));
+  }
+
+  /**
+   * @return {!Operation}
+   */
+  performMoveUp() {
+    for (let selection of this._selections) {
+      if (selection.isCollapsed()) {
+        let position = {lineNumber: selection.focus().lineNumber - 1, columnNumber: selection.saveUpDown()};
+        selection.setCaret(this.clampPositionIfNeeded(position) || position);
+      } else {
+        selection.setCaret(selection.range().from);
       }
-      if (handled) {
-        event.preventDefault();
-        event.stopPropagation();
+    }
+    return this._normalizeSelections(Operation.selection(false /* structure */));
+  }
+
+  /**
+   * @return {!Operation}
+   */
+  performSelectUp() {
+    for (let selection of this._selections) {
+      let position = {lineNumber: selection.focus().lineNumber - 1, columnNumber: selection.saveUpDown()};
+      selection.moveFocus(this.clampPositionIfNeeded(position) || position);
+    }
+    return this._normalizeSelections(Operation.selection(false /* structure */));
+  }
+
+  /**
+   * @return {!Operation}
+   */
+  performMoveDown() {
+    for (let selection of this._selections) {
+      if (selection.isCollapsed()) {
+        let position = {lineNumber: selection.focus().lineNumber + 1, columnNumber: selection.saveUpDown()};
+        selection.setCaret(this.clampPositionIfNeeded(position) || position);
+      } else {
+        selection.setCaret(selection.range().to);
       }
+    }
+    return this._normalizeSelections(Operation.selection(false /* structure */));
+  }
+
+  /**
+   * @return {!Operation}
+   */
+  performSelectDown() {
+    for (let selection of this._selections) {
+      let position = {lineNumber: selection.focus().lineNumber + 1, columnNumber: selection.saveUpDown()};
+      selection.moveFocus(this.clampPositionIfNeeded(position) || position);
+    }
+    return this._normalizeSelections(Operation.selection(false /* structure */));
+  }
+
+  /**
+   * @return {!Operation}
+   */
+  performMoveLineStart() {
+    this._clearUpDown();
+    for (let selection of this._selections)
+      selection.setCaret(this._lineStartPosition(selection.focus()));
+    return this._normalizeSelections(Operation.selection(false /* structure */));
+  }
+
+  /**
+   * @return {!Operation}
+   */
+  performSelectLineStart() {
+    this._clearUpDown();
+    for (let selection of this._selections)
+      selection.moveFocus(this._lineStartPosition(selection.focus()));
+    return this._normalizeSelections(Operation.selection(false /* structure */));
+  }
+
+  /**
+   * @return {!Operation}
+   */
+  performMoveLineEnd() {
+    this._clearUpDown();
+    for (let selection of this._selections)
+      selection.setCaret(this._lineEndPosition(selection.focus()));
+    return this._normalizeSelections(Operation.selection(false /* structure */));
+  }
+
+  /**
+   * @return {!Operation}
+   */
+  performSelectLineEnd() {
+    this._clearUpDown();
+    for (let selection of this._selections)
+      selection.moveFocus(this._lineEndPosition(selection.focus()));
+    return this._normalizeSelections(Operation.selection(false /* structure */));
+  }
+
+  _clearUpDown() {
+    for (let selection of this._selections)
+      selection.clearUpDown();
+  }
+
+  /**
+   * @param {!Operation} op
+   * @return {!Operation}
+   */
+  _normalizeSelections(op) {
+    for (let selection of this._selections) {
+      let range = selection.range();
+      let clamped = this._clampRangeIfNeeded(range);
+      if (clamped) {
+        selection.setRange(clamped);
+        op.selection = true;
+      }
+    }
+    this._selections.sort((a, b) => TextRange.compare(a.range(), b.range()));
+    let length = 1;
+    for (let i = 1; i < this._selections.length; i++) {
+      let last = this._selections[length - 1];
+      let lastRange = last.range();
+      let next = this._selections[i];
+      let nextRange = next.range();
+      if (TextRange.intersects(lastRange, nextRange))
+        last.setRange(TextRange.join(lastRange, nextRange));
+      else
+        this._selections[length++] = next;
+    }
+    if (length !== this._selections.length) {
+      this._selections.splice(length, this._selections.length - length);
+      op.selectionStructure = true;
+    }
+    return op;
+  }
+
+  /**
+   * @param {!TextRange} range
+   * @param {{lines: !Array<!Line>, single: boolean, first: string, last: string}} insertion
+   * @return {!TextDelta}
+   */
+  _replaceRange(range, insertion) {
+    let {from, to} = range;
+    let {lines, single, first, last} = insertion;
+
+    let delta = {
+      startLine: to.lineNumber,
+      startColumn: to.columnNumber,
+      lineDelta: from.lineNumber + (single ? 0 : lines.length + 1) - to.lineNumber,
+      columnDelta: (single ? from.columnNumber + first.length : last.length) - to.columnNumber
+    };
+
+    if (from.lineNumber === to.lineNumber) {
+      if (single) {
+        let line = this._lines[from.lineNumber];
+        this._lines[from.lineNumber] = line.replace(from.columnNumber, to.columnNumber, first);
+      } else {
+        let {left, right} = this._lines[from.lineNumber].split(to.columnNumber);
+        this._lines[from.lineNumber] = left.replace(from.columnNumber, left.length(), first);
+        this._lines.splice(from.lineNumber + 1, 0, ...lines, right.replace(0, 0, last));
+      }
+    } else {
+      if (single) {
+        let fromLine = this._lines[from.lineNumber];
+        fromLine = fromLine.replace(from.columnNumber, fromLine.length(), first);
+        let toLine = this._lines[to.lineNumber];
+        toLine = toLine.replace(0, to.columnNumber, "");
+        this._lines.splice(from.lineNumber, to.lineNumber - from.lineNumber + 1, fromLine.merge(toLine));
+      } else {
+        let line = this._lines[from.lineNumber];
+        this._lines[from.lineNumber] = line.replace(from.columnNumber, line.length(), first);
+        line = this._lines[to.lineNumber];
+        this._lines[to.lineNumber] = line.replace(0, to.columnNumber, last);
+        this._lines.splice(from.lineNumber + 1, to.lineNumber - from.lineNumber - 1, ...lines);
+      }
+    }
+
+    return delta;
+  }
+
+  /**
+   * @param {!TextPosition} position
+   * @param {!TextDelta} delta
+   * @return {!TextPosition}
+   */
+  _applyTextDelta(position, delta) {
+    let {lineNumber, columnNumber} = position;
+    if (lineNumber === delta.startLine && columnNumber >= delta.startColumn) {
+      lineNumber += delta.lineDelta;
+      columnNumber += delta.columnDelta;
+    } else if (lineNumber > delta.startLine) {
+      lineNumber += delta.lineDelta;
+    }
+    return {lineNumber, columnNumber};
+  }
+
+  /**
+   * @param {string} s
+   * @return {{lines: !Array<!Line>, single: boolean, first: string, last: string}}
+   */
+  _prepareInsertion(s) {
+    let lines = s.split('\n');
+    let single = lines.length === 1;
+    let first = lines[0];
+    let last = lines[lines.length - 1];
+    lines.shift();
+    if (!single)
+      lines.pop();
+    lines = lines.map(s => new Line(s));
+    return {lines, single, first, last};
+  }
+
+  /**
+   * @param {string} s
+   * @param {function(!Selection):!TextRange} rangeCallback
+   * @return {!Operation}
+   */
+  _performReplaceAtSelections(s, rangeCallback) {
+    let insertion = this._prepareInsertion(s);
+    let delta = {
+      startLine: 0,
+      startColumn: 0,
+      lineDelta: 0,
+      columnDelta: 0
+    };
+
+    for (let selection of this._selections) {
+      let range = selection.range();
+      range.from = this._applyTextDelta(range.from, delta);
+      range.to = this._applyTextDelta(range.to, delta);
+      range = this._clampRangeIfNeeded(range) || range;
+      selection.setRange(range);
+
+      let next = this._replaceRange(rangeCallback.call(null, selection), insertion);
+      range.from = this._applyTextDelta(range.from, next);
+      range.to = this._applyTextDelta(range.to, next);
+      selection.setRange(range);
+      
+      if (next.startLine - delta.lineDelta === delta.startLine) {
+        delta.startColumn = next.startColumn - delta.columnDelta;
+        delta.columnDelta += next.columnDelta;
+      } else {
+        delta.startColumn = next.startColumn;
+        delta.columnDelta = next.columnDelta;
+      }
+      delta.startLine = next.startLine - delta.lineDelta;
+      delta.lineDelta += next.lineDelta;
+    }
+
+    // TODO: add replacement info to operation.
+    return this._normalizeSelections(Operation.selection(false /* structure */));
+  }
+
+  /**
+   * @return {!Operation}
+   */
+  performNewLine() {
+    this._clearUpDown();
+    return this._performReplaceAtSelections("\n", selection => selection.range());
+  }
+
+  /**
+   * @param {string} s
+   * @return {!Operation}
+   */
+  performType(s) {
+    this._clearUpDown();
+    return this._performReplaceAtSelections(s, selection => selection.range());
+  }
+
+  /**
+   * @param {string} s
+   * @return {!Operation}
+   */
+  performPaste(s) {
+    this._clearUpDown();
+    return this._performReplaceAtSelections(s, selection => selection.range());
+  }
+
+  /**
+   * @return {!Operation}
+   */
+  performDeleteAfter() {
+    this._clearUpDown();
+    return this._performReplaceAtSelections("", selection => {
+      let range = selection.range();
+      if (selection.isCollapsed())
+        range.to = this._nextPosition(range.to);
+      return range;
     });
-    this._input.addEventListener('paste', event => {
-      let data = event.clipboardData;
-      if (data.types.indexOf('text/plain') === -1)
-        return;
-      this._operation(this._text.performPaste(data.getData('text/plain')));
-      event.preventDefault();
-      event.stopPropagation();
+  }
+
+  /**
+   * @return {!Operation}
+   */
+  performDeleteBefore() {
+    this._clearUpDown();
+    return this._performReplaceAtSelections("", selection => {
+      let range = selection.range();
+      if (selection.isCollapsed())
+        range.from = this._previousPosition(range.from);
+      return range;
     });
   }
 
-  _createRenderer(document) {
-    this._renderer = new SimpleRenderer(document, this._text);
-    const canvas = this._renderer.canvas();
-    canvas.style.setProperty('position', 'absolute');
-    canvas.style.setProperty('top', '0');
-    canvas.style.setProperty('left', '0');
-    canvas.addEventListener('mousedown', event => this._onMouseDown(event));
-    canvas.addEventListener('wheel', event => this._onScroll(event));
-    this._element.appendChild(canvas);
+  /**
+   * @param {!TextPosition} position
+   * @return {?TextPosition}
+   */
+  clampPositionIfNeeded(position) {
+    let {lineNumber, columnNumber} = position;
+    let clamped = false;
+    if (lineNumber < 0) {
+      lineNumber = 0;
+      columnNumber = 0;
+      clamped = true;
+    } else if (lineNumber >= this._lines.length) {
+      lineNumber = this._lines.length - 1;
+      columnNumber = this._lines[this._lines.length - 1].length();
+      clamped = true;
+    } else if (columnNumber < 0) {
+      columnNumber = 0;
+      clamped = true;
+    } else if (columnNumber > this._lines[lineNumber].length()) {
+      columnNumber = this._lines[lineNumber].length();
+      clamped = true;
+    }
+    return clamped ? {lineNumber, columnNumber} : null;
   }
 
-  _onScroll(event) {
-    this._renderer.advanceScroll(event.deltaX, event.deltaY);
-    event.preventDefault(true);
+  /**
+   * @param {!TextPosition} position
+   * @return {!TextPosition}
+   */
+  clampPosition(position) {
+    return this.clampPositionIfNeeded(position) || position;
   }
 
-  _onMouseDown(event) {
-    const textPosition = this._renderer.mouseEventToTextPosition(event);
-    textPosition = this._text.clampPosition(textPosition);
-    const selection = new Selection();
-    selection.setCaret(textPosition);
-    this._text.setSelections([selection]);
-    this._renderer.invalidate();
+  /**
+   * @param {!TextRange} range
+   * @return {?TextRange}
+   */
+  _clampRangeIfNeeded(range) {
+    let from = this.clampPositionIfNeeded(range.from);
+    let to = this.clampPositionIfNeeded(range.to);
+    if (!from && !to)
+      return null;
+    return {from: from || range.from, to: to || range.to};
+  }
+
+  /**
+   * @param {!TextPosition} pos
+   * @return {!TextPosition}
+   */
+  _nextPosition(pos) {
+    if (pos.columnNumber === this._lines[pos.lineNumber].length()) {
+      if (pos.lineNumber !== this._lines.length - 1)
+        return {lineNumber: pos.lineNumber + 1, columnNumber: 0};
+      else
+        return {lineNumber: pos.lineNumber, columnNumber: pos.columnNumber};
+    } else {
+      return {lineNumber: pos.lineNumber, columnNumber: pos.columnNumber + 1};
+    }
+  }
+
+  /**
+   * @param {!TextPosition} pos
+   * @return {!TextPosition}
+   */
+  _previousPosition(pos) {
+    if (!pos.columnNumber) {
+      if (pos.lineNumber)
+        return {lineNumber: pos.lineNumber - 1, columnNumber: this._lines[pos.lineNumber - 1].length()};
+      else
+        return {lineNumber: pos.lineNumber, columnNumber: pos.columnNumber};
+    } else {
+      return {lineNumber: pos.lineNumber, columnNumber: pos.columnNumber - 1};
+    }
+  }
+
+  /**
+   * @param {!TextPosition} pos
+   * @return {!TextPosition}
+   */
+  _lineStartPosition(pos) {
+    return {lineNumber: pos.lineNumber, columnNumber: 0};
+  }
+
+  /**
+   * @param {!TextPosition} pos
+   * @return {!TextPosition}
+   */
+  _lineEndPosition(pos) {
+    return {lineNumber: pos.lineNumber, columnNumber: this._lines[pos.lineNumber].length()};
   }
 }
