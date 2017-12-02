@@ -1,12 +1,11 @@
 import { Operation } from "./Operation.mjs";
 import { Selection } from "./Selection.mjs";
 import { TextPosition, TextRange } from "./Types.mjs";
-import { Line } from "./Line.mjs";
 import { Text } from "./Text.mjs";
 
 export class Editor {
   constructor() {
-    this._text = new Text("");
+    this._text = Text.withContent('');
     this._selections = [];
   }
 
@@ -15,7 +14,7 @@ export class Editor {
    * @return {!Operation}
    */
   setContent(text) {
-    this._text = new Text(text);
+    this._text = Text.withContent(text);
     this._selections = [];
     return Operation.full();
   }
@@ -42,12 +41,11 @@ export class Editor {
   }
 
   /**
-   * @param {number} fromLine
-   * @param {number} toLine
-   * @return {!Array<!Line>}
+   * @param {number} lineNumber
+   * @return {?string}
    */
-  lines(fromLine, toLine) {
-    return this._text.lines(fromLine, toLine);
+  line(lineNumber) {
+    return this._text.line(lineNumber);
   }
 
   /**
@@ -282,7 +280,7 @@ export class Editor {
     let last = null;
     if (lines.length)
       last = lines.pop();
-    let middle = lines.map(Line.from);
+    let middle = lines.length ? Text.withLines(lines) : null;
 
     let delta = {
       startLine: 0,
@@ -302,10 +300,10 @@ export class Editor {
       let next = {
         startLine: to.lineNumber,
         startColumn: to.columnNumber,
-        lineDelta: from.lineNumber + (last === null ? 0 : middle.length + 1) - to.lineNumber,
+        lineDelta: from.lineNumber + (last === null ? 0 : lines.length + 1) - to.lineNumber,
         columnDelta: (last === null ? from.columnNumber + first.length : last.length) - to.columnNumber
       };
-      this._text.replaceRange({from, to}, first, middle, last);
+      this._text = this._text.replaceRange({from, to}, first, middle, last);
       range.from = applyTextDelta(range.from, next);
       range.to = applyTextDelta(range.to, next);
       selection.setCaret(range.to);

@@ -134,10 +134,10 @@ export class CanvasRenderer {
     const {lineHeight, charWidth} = this._metrics;
     ctx.fillStyle = 'rgb(33, 33, 33)';
     const textX = viewportStart.columnNumber * charWidth;
-    const lines = this._editor.lines(viewportStart.lineNumber, viewportEnd.lineNumber);
-    for (let i = 0; i < lines.length; ++i) {
-      const line = lines[i].lineContent();
-      ctx.fillText(line.substring(viewportStart.columnNumber, viewportEnd.columnNumber + 1), textX, (i + viewportStart.lineNumber) * lineHeight);
+    const lineCount = this._editor.lineCount();
+    for (let i = viewportStart.lineNumber; i < viewportEnd.lineNumber && i < lineCount; ++i) {
+      const line = this._editor.line(i);
+      ctx.fillText(line.substring(viewportStart.columnNumber, viewportEnd.columnNumber + 1), textX, i * lineHeight);
     }
   }
 
