@@ -7,6 +7,17 @@ export class Selection {
     this._upDownColumn = -1;
   }
 
+  /**
+   * @return {!Selection}
+   */
+  clone() {
+    let selection = new Selection();
+    selection._anchor = this._anchor;
+    selection._focus = this._focus;
+    selection._upDownColumn = this._upDownColumn;
+    return selection;
+  }
+
   clearUpDown() {
     this._upDownColumn = -1;
   }
@@ -70,16 +81,9 @@ export class Selection {
   range() {
     if (this.isCollapsed())
       return {from: this._focus, to: this._focus};
-    if (this.isReversed())
+    if (TextPosition.compare(this._anchor, this._focus) > 0)
       return {from: this._focus, to: this._anchor};
     return {from: this._anchor, to: this._focus};
-  }
-
-  /**
-   * @return {boolean}
-   */
-  isReversed() {
-    return !this.isCollapsed() && TextPosition.compare(this._anchor, this._focus) > 0;
   }
 
   /**
@@ -89,7 +93,7 @@ export class Selection {
     if (TextRange.isEmpty(range)) {
       this._anchor = null;
       this._focus = range.from;
-    } else if (this.isReversed()) {
+    } else if (this._anchor && TextPosition.compare(this._anchor, this._focus) > 0) {
       this._focus = range.from;
       this._anchor = range.to;
     } else {

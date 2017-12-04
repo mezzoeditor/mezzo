@@ -1,6 +1,5 @@
 import { Editor } from "./Editor.mjs";
 import { CanvasRenderer } from "./CanvasRenderer.mjs";
-import { Operation } from "./Operation.mjs";
 import { Selection } from "./Selection.mjs";
 
 export class WebEditor {
@@ -20,8 +19,9 @@ export class WebEditor {
    * @param {string} text
    */
   setText(text) {
-    this._operation(this._editor.setContent(text));
-    this._operation(this._editor.setSelections([new Selection()]));
+    this._editor.setContent(text);
+    this._editor.setSelections([new Selection()]);
+    this._renderer.invalidate();
   }
 
   /**
@@ -35,7 +35,8 @@ export class WebEditor {
    * @param {!Array<!Selection>} selections
    */
   setSelections(selections) {
-    this._operation(this._editor.setSelections(selections));
+    this._editor.setSelections(selections);
+    this._renderer.invalidate();
   }
 
   resize() {
@@ -49,26 +50,8 @@ export class WebEditor {
     return this._element;
   }
 
-  /**
-   * @param {function(!Operation)} callback
-   */
-  setOperationCallback(callback) {
-    this._operationCallback = callback;
-  }
-
   focus() {
     this._input.focus();
-  }
-
-  /**
-   * @param {?Operation} op
-   */
-  _operation(op) {
-    if (!op)
-      return;
-    this._renderer.invalidate(op);
-    if (this._operationCallback)
-      this._operationCallback.call(null, op);
   }
 
   /**
@@ -99,68 +82,93 @@ export class WebEditor {
     `;
     this._element.appendChild(this._input);
     this._input.addEventListener('input', event => {
-      let op = this._editor.performType(this._input.value);
+      this._editor.performType(this._input.value);
       this._input.value = '';
-      this._operation(op);
+      this._renderer.invalidate();
     });
     this._input.addEventListener('keydown', event => {
       let handled = false;
       switch (event.key) {
         case 'ArrowLeft':
-          this._operation(event.shiftKey ? this._editor.performSelectLeft() : this._editor.performMoveLeft());
+          if (event.shiftKey)
+            this._editor.performSelectLeft();
+          else
+            this._editor.performMoveLeft();
           handled = true;
           break;
         case 'ArrowRight':
-          this._operation(event.shiftKey ? this._editor.performSelectRight() : this._editor.performMoveRight());
+          if (event.shiftKey)
+            this._editor.performSelectRight();
+          else
+            this._editor.performMoveRight();
           handled = true;
           break;
         case 'ArrowUp':
-          this._operation(event.shiftKey ? this._editor.performSelectUp() : this._editor.performMoveUp());
+          if (event.shiftKey)
+            this._editor.performSelectUp();
+          else
+            this._editor.performMoveUp();
           handled = true;
           break;
         case 'ArrowDown':
-          this._operation(event.shiftKey ? this._editor.performSelectDown() : this._editor.performMoveDown());
+          if (event.shiftKey)
+            this._editor.performSelectDown();
+          else
+            this._editor.performMoveDown();
           handled = true;
           break;
         case 'Enter':
-          this._operation(this._editor.performNewLine());
+          this._editor.performNewLine();
           handled = true;
           break;
         case 'Home':
-          this._operation(event.shiftKey ? this._editor.performSelectLineStart() : this._editor.performMoveLineStart());
+          if (event.shiftKey)
+            this._editor.performSelectLineStart();
+          else
+            this._editor.performMoveLineStart();
           handled = true;
           break;
         case 'End':
-          this._operation(event.shiftKey ? this._editor.performSelectLineEnd() : this._editor.performMoveLineEnd());
+          if (event.shiftKey)
+            this._editor.performSelectLineEnd();
+          else
+            this._editor.performMoveLineEnd();
           handled = true;
           break;
         case 'a':
-          // TODO(dgozman): handle shortcuts properly.
+        case 'A':
+          // TODO: handle shortcuts properly.
           if (!event.shiftKey && (event.metaKey || event.ctrlKey)) {
-            this._operation(this._editor.selectAll());
+            this._editor.selectAll();
             handled = true;
           }
           break;
-        }
+        case 'z':
+        case 'Z':
+          // TODO: handle shortcuts properly.
+          if (event.metaKey || event.ctrlKey) {
+            if (event.shiftKey)
+              handled = this._editor.redo();
+            else
+              handled = this._editor.undo();
+          }
+          break;
+      }
       switch (event.keyCode) {
         case 8: /* backspace */
-          this._operation(this._editor.performDeleteBefore());
+          this._editor.performDeleteBefore();
           handled = true;
           break;
         case 46: /* delete */
-          this._operation(this._editor.performDeleteAfter());
+          this._editor.performDeleteAfter();
           handled = true;
           break;
-        case 27: /* escape */ {
-          let operation = this._editor.collapseSelections();
-          if (operation) {
-            this._operation(operation);
-            handled = true;
-          }
+        case 27: /* escape */
+          handled = this._editor.collapseSelections();
           break;
-        }
       }
       if (handled) {
+        this._renderer.invalidate();
         event.preventDefault();
         event.stopPropagation();
       }
@@ -169,7 +177,8 @@ export class WebEditor {
       let data = event.clipboardData;
       if (data.types.indexOf('text/plain') === -1)
         return;
-      this._operation(this._editor.performPaste(data.getData('text/plain')));
+      this._editor.performPaste(data.getData('text/plain'));
+      this._renderer.invalidate();
       event.preventDefault();
       event.stopPropagation();
     });

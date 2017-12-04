@@ -379,6 +379,18 @@ export class Text {
   }
 
   /**
+   * @param {!TextRange} range
+   * @return {?TextRange}
+   */
+  clampRangeIfNeeded(range) {
+    let from = this.clampPositionIfNeeded(range.from);
+    let to = this.clampPositionIfNeeded(range.to);
+    if (!from && !to)
+      return null;
+    return {from: from || range.from, to: to || range.to};
+  }
+
+  /**
    * @param {!TextPosition} pos
    * @return {!TextPosition}
    */

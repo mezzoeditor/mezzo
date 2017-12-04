@@ -1,43 +1,87 @@
-import { Operation } from "./Operation.mjs";
+import { State } from "./State.mjs";
 import { Selection } from "./Selection.mjs";
 import { TextPosition, TextRange } from "./Types.mjs";
 import { Text } from "./Text.mjs";
 
 export class Editor {
   constructor() {
-    this._text = Text.withContent('');
-    this._selections = [];
+    this._state = new State();
+    this._state.text = Text.withContent('');
+    this._state.selections = [];
+
+    this._history = [this._state];
+    this._historyPosition = 0;
+  }
+
+  /**
+   * @param {!State} state
+   */
+  _pushState(state) {
+    // TODO: report diff.
+    if (!this._state.coalesce(state)) {
+      if (this._historyPosition === this._history.length - 1) {
+        this._history.push(state);
+        ++this._historyPosition;
+      } else {
+        this._history[++this._historyPosition] = state;
+      }
+      this._state = state;
+    }
+    if (this._history.length > this._historyPosition + 1)
+      this._history.splice(this._historyPosition + 1, this._history.length - this._historyPosition + 1);
+  }
+
+  /**
+   * @return {boolean}
+   */
+  undo() {
+    if (this._historyPosition === 0)
+      return false;
+    this._state = this._history[--this._historyPosition];
+    // TODO: report reversed diff.
+    return true;
+  }
+
+  /**
+   * @return {boolean}
+   */
+  redo() {
+    if (this._historyPosition === this._history.length - 1)
+      return false;
+    this._state = this._history[++this._historyPosition];
+    // TODO: report diff.
+    return true;
   }
 
   /**
    * @param {string} text
-   * @return {!Operation}
    */
   setContent(text) {
-    this._text = Text.withContent(text);
-    this._selections = [];
-    return Operation.full();
+    let state = this._state.clone('special');
+    state.text = Text.withContent(text);
+    state.selections = [];
+    this._pushState(state);
   }
 
   /**
    * @return {string}
    */
   content() {
-    return this._text.content();
+    return this._state.text.content();
   }
 
   /**
    * @return {number}
    */
   lineCount() {
-    return this._text.lineCount();
+    return this._state.text.lineCount();
   }
 
   /**
    * @return {number}
    */
   longestLineLength() {
-    return this._text.longestLineLength();
+    return this._state.text.longestLineLength();
   }
 
   /**
@@ -45,236 +89,227 @@ export class Editor {
    * @return {?string}
    */
   line(lineNumber) {
-    return this._text.line(lineNumber);
+    return this._state.text.line(lineNumber);
   }
 
   /**
    * @return {!Array<{!Selection}>}
    */
   selections() {
-    return this._selections;
+    return this._state.selections;
   }
 
   /**
    * @param {!Array<!Selection>} selections
-   * @return {!Operation}
    */
   setSelections(selections) {
-    this._selections = selections;
-    this._clearUpDown();
-    return this._normalizeSelections(Operation.selection(true /* structure */));
+    let state = this._state.clone('selection');
+    state.selections = selections;
+    this._clearUpDown(state);
+    this._rebuildSelections(state);
+    this._pushState(state);
   }
 
   /**
-   * @return {?Operation}
+   * @return {boolean}
    */
   collapseSelections() {
-    this._clearUpDown();
+    let state = this._state.clone('selection');
+    this._clearUpDown(state);
     let collapsed = false;
     for (let selection of this._selections)
       collapsed |= selection.collapse();
-    if (collapsed)
-      return this._normalizeSelections(Operation.selection(false /* structure */));
-    return null;
+    if (!collapsed)
+      return false;
+    this._pushState(state);
+    return true;
   }
 
-  /**
-   * @return {!Operation}
-   */
   selectAll() {
-    this._clearUpDown();
+    let state = this._state.clone('selection');
     let selection = new Selection();
     selection.setRange({
-      from: {lineNumber: 0, columnNumber: 0},
-      to: this._text.lastPosition()
+      from: this._state.text.firstPosition(),
+      to: this._state.text.lastPosition()
     });
-    this._selections.push(selection);
-    return this._normalizeSelections(Operation.selection(true /* structure */));
+    state.selections = [selection];
+    this._pushState(state);
   }
 
-  /**
-   * @return {!Operation}
-   */
   performMoveLeft() {
-    this._clearUpDown();
-    for (let selection of this._selections) {
+    let state = this._state.clone('selection');
+    this._clearUpDown(state);
+    for (let selection of state.selections) {
       if (selection.isCollapsed())
-        selection.setCaret(this._text.previousPosition(selection.focus()));
+        selection.setCaret(state.text.previousPosition(selection.focus()));
       else
         selection.setCaret(selection.range().from);
     }
-    return this._normalizeSelections(Operation.selection(false /* structure */));
+    this._joinSelections(state);
+    this._pushState(state);
   }
 
-  /**
-   * @return {!Operation}
-   */
   performSelectLeft() {
-    this._clearUpDown();
-    for (let selection of this._selections)
-      selection.moveFocus(this._text.previousPosition(selection.focus()));
-    return this._normalizeSelections(Operation.selection(false /* structure */));
+    let state = this._state.clone('selection');
+    this._clearUpDown(state);
+    for (let selection of state.selections)
+      selection.moveFocus(state.text.previousPosition(selection.focus()));
+    this._joinSelections(state);
+    this._pushState(state);
   }
 
-  /**
-   * @return {!Operation}
-   */
   performMoveRight() {
-    this._clearUpDown();
-    for (let selection of this._selections) {
+    let state = this._state.clone('selection');
+    this._clearUpDown(state);
+    for (let selection of state.selections) {
       if (selection.isCollapsed())
-        selection.setCaret(this._text.nextPosition(selection.focus()));
+        selection.setCaret(state.text.nextPosition(selection.focus()));
       else
         selection.setCaret(selection.range().to);
     }
-    return this._normalizeSelections(Operation.selection(false /* structure */));
+    this._joinSelections(state);
+    this._pushState(state);
   }
 
-  /**
-   * @return {!Operation}
-   */
   performSelectRight() {
-    this._clearUpDown();
-    for (let selection of this._selections)
-      selection.moveFocus(this._text.nextPosition(selection.focus()));
-    return this._normalizeSelections(Operation.selection(false /* structure */));
+    let state = this._state.clone('selection');
+    this._clearUpDown(state);
+    for (let selection of state.selections)
+      selection.moveFocus(state.text.nextPosition(selection.focus()));
+    this._joinSelections(state);
+    this._pushState(state);
   }
 
-  /**
-   * @return {!Operation}
-   */
   performMoveUp() {
-    for (let selection of this._selections) {
+    let state = this._state.clone('selection');
+    for (let selection of state.selections) {
       if (selection.isCollapsed()) {
         let position = {lineNumber: selection.focus().lineNumber - 1, columnNumber: selection.saveUpDown()};
-        selection.setCaret(this._text.clampPositionIfNeeded(position) || position);
+        selection.setCaret(state.text.clampPositionIfNeeded(position) || position);
       } else {
         selection.setCaret(selection.range().from);
       }
     }
-    return this._normalizeSelections(Operation.selection(false /* structure */));
+    this._joinSelections(state);
+    this._pushState(state);
   }
 
-  /**
-   * @return {!Operation}
-   */
   performSelectUp() {
-    for (let selection of this._selections) {
+    let state = this._state.clone('selection');
+    for (let selection of state.selections) {
       let position = {lineNumber: selection.focus().lineNumber - 1, columnNumber: selection.saveUpDown()};
-      selection.moveFocus(this._text.clampPositionIfNeeded(position) || position);
+      selection.moveFocus(state.text.clampPositionIfNeeded(position) || position);
     }
-    return this._normalizeSelections(Operation.selection(false /* structure */));
+    this._joinSelections(state);
+    this._pushState(state);
   }
 
-  /**
-   * @return {!Operation}
-   */
   performMoveDown() {
-    for (let selection of this._selections) {
+    let state = this._state.clone('selection');
+    for (let selection of state.selections) {
       if (selection.isCollapsed()) {
         let position = {lineNumber: selection.focus().lineNumber + 1, columnNumber: selection.saveUpDown()};
-        selection.setCaret(this._text.clampPositionIfNeeded(position) || position);
+        selection.setCaret(state.text.clampPositionIfNeeded(position) || position);
       } else {
         selection.setCaret(selection.range().to);
       }
     }
-    return this._normalizeSelections(Operation.selection(false /* structure */));
+    this._joinSelections(state);
+    this._pushState(state);
   }
 
-  /**
-   * @return {!Operation}
-   */
   performSelectDown() {
-    for (let selection of this._selections) {
+    let state = this._state.clone('selection');
+    for (let selection of state.selections) {
       let position = {lineNumber: selection.focus().lineNumber + 1, columnNumber: selection.saveUpDown()};
-      selection.moveFocus(this._text.clampPositionIfNeeded(position) || position);
+      selection.moveFocus(state.text.clampPositionIfNeeded(position) || position);
     }
-    return this._normalizeSelections(Operation.selection(false /* structure */));
+    this._joinSelections(state);
+    this._pushState(state);
   }
 
-  /**
-   * @return {!Operation}
-   */
   performMoveLineStart() {
-    this._clearUpDown();
-    for (let selection of this._selections)
-      selection.setCaret(this._text.lineStartPosition(selection.focus()));
-    return this._normalizeSelections(Operation.selection(false /* structure */));
+    let state = this._state.clone('selection');
+    this._clearUpDown(state);
+    for (let selection of state.selections)
+      selection.setCaret(state.text.lineStartPosition(selection.focus()));
+    this._joinSelections(state);
+    this._pushState(state);
   }
 
-  /**
-   * @return {!Operation}
-   */
   performSelectLineStart() {
-    this._clearUpDown();
-    for (let selection of this._selections)
-      selection.moveFocus(this._text.lineStartPosition(selection.focus()));
-    return this._normalizeSelections(Operation.selection(false /* structure */));
+    let state = this._state.clone('selection');
+    this._clearUpDown(state);
+    for (let selection of state.selections)
+      selection.moveFocus(state.text.lineStartPosition(selection.focus()));
+    this._joinSelections(state);
+    this._pushState(state);
   }
 
-  /**
-   * @return {!Operation}
-   */
   performMoveLineEnd() {
-    this._clearUpDown();
-    for (let selection of this._selections)
-      selection.setCaret(this._text.lineEndPosition(selection.focus()));
-    return this._normalizeSelections(Operation.selection(false /* structure */));
+    let state = this._state.clone('selection');
+    this._clearUpDown(state);
+    for (let selection of state.selections)
+      selection.setCaret(state.text.lineEndPosition(selection.focus()));
+    this._joinSelections(state);
+    this._pushState(state);
+  }
+
+  performSelectLineEnd() {
+    let state = this._state.clone('selection');
+    this._clearUpDown(state);
+    for (let selection of state.selections)
+      selection.moveFocus(state.text.lineEndPosition(selection.focus()));
+    this._joinSelections(state);
+    this._pushState(state);
   }
 
   /**
-   * @return {!Operation}
+   * @param {!State} state
    */
-  performSelectLineEnd() {
-    this._clearUpDown();
-    for (let selection of this._selections)
-      selection.moveFocus(this._text.lineEndPosition(selection.focus()));
-    return this._normalizeSelections(Operation.selection(false /* structure */));
-  }
-
-  _clearUpDown() {
-    for (let selection of this._selections)
+  _clearUpDown(state) {
+    // TODO: do this when cloning state with opt-out?
+    for (let selection of state.selections)
       selection.clearUpDown();
   }
 
   /**
-   * @param {!Operation} op
-   * @return {!Operation}
+   * @param {!State} state
    */
-  _normalizeSelections(op) {
-    for (let selection of this._selections) {
-      let range = selection.range();
-      let clamped = this._clampRangeIfNeeded(range);
-      if (clamped) {
-        selection.setRange(clamped);
-        op.selection = true;
-      }
-    }
-    this._selections.sort((a, b) => TextRange.compare(a.range(), b.range()));
+  _joinSelections(state) {
     let length = 1;
-    for (let i = 1; i < this._selections.length; i++) {
-      let last = this._selections[length - 1];
+    for (let i = 1; i < state.selections.length; i++) {
+      let last = state.selections[length - 1];
       let lastRange = last.range();
-      let next = this._selections[i];
+      let next = state.selections[i];
       let nextRange = next.range();
       if (TextRange.intersects(lastRange, nextRange))
         last.setRange(TextRange.join(lastRange, nextRange));
       else
-        this._selections[length++] = next;
+        state.selections[length++] = next;
     }
-    if (length !== this._selections.length) {
-      this._selections.splice(length, this._selections.length - length);
-      op.selectionStructure = true;
-    }
-    return op;
+    if (length !== state.selections.length)
+      state.selections.splice(length, state.selections.length - length);
   }
 
   /**
+   * @param {!State} state
+   */
+  _rebuildSelections(state) {
+    for (let selection of state.selections) {
+      let range = selection.range();
+      selection.setRange(state.text.clampRangeIfNeeded(range) || range);
+    }
+    state.selections.sort((a, b) => TextRange.compare(a.range(), b.range()));
+    this._joinSelections(state);
+  }
+
+  /**
+   * @param {!State}
    * @param {string} s
    * @param {function(!Selection):!TextRange} rangeCallback
-   * @return {!Operation}
    */
-  _performReplaceAtSelections(s, rangeCallback) {
+  _performReplaceAtSelections(state, s, rangeCallback) {
     let lines = s.split('\n');
     let first = lines.shift();
     let last = null;
@@ -289,11 +324,11 @@ export class Editor {
       columnDelta: 0
     };
 
-    for (let selection of this._selections) {
+    for (let selection of state.selections) {
       let range = selection.range();
       range.from = applyTextDelta(range.from, delta);
       range.to = applyTextDelta(range.to, delta);
-      range = this._clampRangeIfNeeded(range) || range;
+      range = state.text.clampRangeIfNeeded(range) || range;
       selection.setRange(range);
 
       let {from, to} = rangeCallback.call(null, selection);
@@ -303,7 +338,7 @@ export class Editor {
         lineDelta: from.lineNumber + (last === null ? 0 : lines.length + 1) - to.lineNumber,
         columnDelta: (last === null ? from.columnNumber + first.length : last.length) - to.columnNumber
       };
-      this._text = this._text.replaceRange({from, to}, first, middle, last);
+      state.text = state.text.replaceRange({from, to}, first, middle, last);
       range.from = applyTextDelta(range.from, next);
       range.to = applyTextDelta(range.to, next);
       selection.setCaret(range.to);
@@ -318,9 +353,6 @@ export class Editor {
       delta.startLine = next.startLine - delta.lineDelta;
       delta.lineDelta += next.lineDelta;
     }
-
-    // TODO: add replacement info to operation.
-    return this._normalizeSelections(Operation.selection(false /* structure */));
 
     /**
      * @param {!TextPosition} position
@@ -339,56 +371,60 @@ export class Editor {
     }
   }
 
-  /**
-   * @return {!Operation}
-   */
   performNewLine() {
-    this._clearUpDown();
-    return this._performReplaceAtSelections("\n", selection => selection.range());
+    let state = this._state.clone('text');
+    this._clearUpDown(state);
+    this._performReplaceAtSelections(state, "\n", selection => selection.range());
+    this._joinSelections(state);
+    this._pushState(state);
   }
 
   /**
    * @param {string} s
-   * @return {!Operation}
    */
   performType(s) {
-    this._clearUpDown();
-    return this._performReplaceAtSelections(s, selection => selection.range());
+    let state = this._state.clone('text');
+    this._clearUpDown(state);
+    this._performReplaceAtSelections(state, s, selection => selection.range());
+    this._joinSelections(state);
+    this._pushState(state);
   }
 
   /**
    * @param {string} s
-   * @return {!Operation}
    */
   performPaste(s) {
-    this._clearUpDown();
-    return this._performReplaceAtSelections(s, selection => selection.range());
+    let state = this._state.clone('special');
+    this._clearUpDown(state);
+    this._performReplaceAtSelections(state, s, selection => selection.range());
+    this._joinSelections(state);
+    this._pushState(state);
   }
 
-  /**
-   * @return {!Operation}
-   */
   performDeleteAfter() {
-    this._clearUpDown();
-    return this._performReplaceAtSelections("", selection => {
+    let state = this._state.clone('text');
+    this._clearUpDown(state);
+    this._performReplaceAtSelections(state, "", selection => {
       let range = selection.range();
       if (selection.isCollapsed())
-        range.to = this._text.nextPosition(range.to);
+        range.to = state.text.nextPosition(range.to);
       return range;
     });
+    this._joinSelections(state);
+    this._pushState(state);
   }
 
-  /**
-   * @return {!Operation}
-   */
   performDeleteBefore() {
-    this._clearUpDown();
-    return this._performReplaceAtSelections("", selection => {
+    let state = this._state.clone('text');
+    this._clearUpDown(state);
+    this._performReplaceAtSelections(state, "", selection => {
       let range = selection.range();
       if (selection.isCollapsed())
-        range.from = this._text.previousPosition(range.from);
+        range.from = state.text.previousPosition(range.from);
       return range;
     });
+    this._joinSelections(state);
+    this._pushState(state);
   }
 
   /**
@@ -396,18 +432,6 @@ export class Editor {
    * @return {!TextPosition}
    */
   clampPosition(position) {
-    return this._text.clampPositionIfNeeded(position) || position;
-  }
-
-  /**
-   * @param {!TextRange} range
-   * @return {?TextRange}
-   */
-  _clampRangeIfNeeded(range) {
-    let from = this._text.clampPositionIfNeeded(range.from);
-    let to = this._text.clampPositionIfNeeded(range.to);
-    if (!from && !to)
-      return null;
-    return {from: from || range.from, to: to || range.to};
+    return this._state.text.clampPositionIfNeeded(position) || position;
   }
 }
