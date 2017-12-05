@@ -114,7 +114,7 @@ export class Editor {
     let state = this._state.clone('selection');
     this._clearUpDown(state);
     let collapsed = false;
-    for (let selection of this._selections)
+    for (let selection of state.selections)
       collapsed |= selection.collapse();
     if (!collapsed)
       return false;
