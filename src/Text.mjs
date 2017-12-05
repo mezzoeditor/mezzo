@@ -26,13 +26,6 @@ let random = function() {
  * }} LineNode;
  */
 
-/**
- * @typedef {{
- *   node: !TextNode,
- *   position: number
- * }} TextNodePosition;
- */
-
 
 /**
  * @param {!LineNode} node
@@ -145,33 +138,11 @@ let build = function(lines) {
 
 /**
  * @param {!LineNode} root
- * @return {!LineNode}
- */
-let traverseLeft = function(root) {
-  while (root.left)
-    root = root.left;
-  return root;
-};
-
-
-/**
- * @param {!LineNode} root
- * @return {!LineNode}
- */
-let traverseRight = function(root) {
-  while (root.right)
-    root = root.right;
-  return root;
-};
-
-
-/**
- * @param {!LineNode} root
  * @param {function(!LineNode):*} visitor
  * @param {boolean=} reverse
  * @return {*}
  */
-let traverseTree = function(root, visitor, reverse) {
+let visit = function(root, visitor, reverse) {
   let {left, right} = root;
   if (reverse) {
     let tmp = left;
@@ -181,7 +152,7 @@ let traverseTree = function(root, visitor, reverse) {
   let result;
 
   if (left) {
-    result = traverseTree(left, visitor, reverse);
+    result = visit(left, visitor, reverse);
     if (result)
       return result;
   }
@@ -191,7 +162,7 @@ let traverseTree = function(root, visitor, reverse) {
     return result;
 
   if (right)
-    result = traverseTree(right, visitor, reverse);
+    result = visit(right, visitor, reverse);
   return result;
 };
 
@@ -316,7 +287,7 @@ export class Text {
    */
   content() {
     let result = [];
-    traverseTree(this._root, node => {
+    visit(this._root, node => {
       if (node.line)
         result.push(node.line.s);
     });

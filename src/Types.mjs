@@ -34,19 +34,6 @@ TextPosition.smaller = function(a, b) {
 };
 
 /**
- * @typedef {number} TextOffset;
- */
-
-/**
- * @typedef {{
- *   lineDelta: number,
- *   columnDelta: number,
- *   startLine: number,
- *   startColumn: number
- * }} TextDelta;
- */
-
-/**
  * @typedef {{
  *   from: !TextPosition,
  *   to: !TextPosition
@@ -88,38 +75,3 @@ TextRange.isEmpty = function(r) {
 TextRange.intersects = function(a, b) {
   return !(TextPosition.compare(a.from, b.to) > 0 || TextPosition.compare(b.from, a.to) > 0);
 };
-
-/**
- * @typedef {{
- *   x: number,
- *   y: number
- * }} TextPoint;
- */
-
-/**
- * @typedef {{
- *   x: number,
- *   y: number
- * }} ViewportPoint;
- */
-
-/**
- * @typedef {{
- *   width: number,
- *   height: number
- * }} Size;
- */
-
-/**
- * @typedef {{
- *   x: number,
- *   y: number
- * }} Delta;
- */
-
-/**
- * @typedef {{
- *   origin: !TextPoint,
- *   size: !Size
- * }} TextRect;
- */

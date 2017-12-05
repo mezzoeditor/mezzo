@@ -139,7 +139,7 @@ export class WebEditor {
         case 'A':
           // TODO: handle shortcuts properly.
           if (!event.shiftKey && (event.metaKey || event.ctrlKey)) {
-            this._editor.selectAll();
+            this._editor.performSelectAll();
             handled = true;
           }
           break;
@@ -148,9 +148,9 @@ export class WebEditor {
           // TODO: handle shortcuts properly.
           if (event.metaKey || event.ctrlKey) {
             if (event.shiftKey)
-              handled = this._editor.redo();
+              handled = this._editor.performRedo();
             else
-              handled = this._editor.undo();
+              handled = this._editor.performUndo();
           }
           break;
       }
@@ -164,7 +164,7 @@ export class WebEditor {
           handled = true;
           break;
         case 27: /* escape */
-          handled = this._editor.collapseSelections();
+          handled = this._editor.performCollapseSelections();
           break;
       }
       if (handled) {

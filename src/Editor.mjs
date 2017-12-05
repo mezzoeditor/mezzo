@@ -13,50 +13,21 @@ export class Editor {
     this._historyPosition = 0;
   }
 
-  /**
-   * @param {!State} state
-   */
-  _pushState(state) {
-    // TODO: report diff.
-    if (!this._state.coalesce(state)) {
-      if (this._historyPosition === this._history.length - 1) {
-        this._history.push(state);
-        ++this._historyPosition;
-      } else {
-        this._history[++this._historyPosition] = state;
-      }
-      this._state = state;
-    }
-    if (this._history.length > this._historyPosition + 1)
-      this._history.splice(this._historyPosition + 1, this._history.length - this._historyPosition + 1);
-  }
+  // ---------- Misc API ----------
 
   /**
-   * @return {boolean}
+   * @param {!TextPosition} position
+   * @return {!TextPosition}
    */
-  undo() {
-    if (this._historyPosition === 0)
-      return false;
-    this._state = this._history[--this._historyPosition];
-    // TODO: report reversed diff.
-    return true;
-  }
-
-  /**
-   * @return {boolean}
-   */
-  redo() {
-    if (this._historyPosition === this._history.length - 1)
-      return false;
-    this._state = this._history[++this._historyPosition];
-    // TODO: report diff.
-    return true;
+  clampPosition(position) {
+    return this._state.text.clampPositionIfNeeded(position) || position;
   }
 
   /**
    * @param {string} text
    */
   setContent(text) {
+    // TODO: need API to reset history.
     let state = this._state.clone('special');
     state.text = Text.withContent(text);
     state.selections = [];
@@ -110,10 +81,36 @@ export class Editor {
     this._pushState(state);
   }
 
+  // ---------- History API ----------
+
   /**
    * @return {boolean}
    */
-  collapseSelections() {
+  performUndo() {
+    if (this._historyPosition === 0)
+      return false;
+    this._state = this._history[--this._historyPosition];
+    // TODO: report reversed diff.
+    return true;
+  }
+
+  /**
+   * @return {boolean}
+   */
+  performRedo() {
+    if (this._historyPosition === this._history.length - 1)
+      return false;
+    this._state = this._history[++this._historyPosition];
+    // TODO: report diff.
+    return true;
+  }
+
+  // ---------- Selection API ----------
+
+  /**
+   * @return {boolean}
+   */
+  performCollapseSelections() {
     let state = this._state.clone('selection');
     this._clearUpDown(state);
     let collapsed = false;
@@ -125,7 +122,7 @@ export class Editor {
     return true;
   }
 
-  selectAll() {
+  performSelectAll() {
     let state = this._state.clone('selection');
     let selection = new Selection();
     selection.setRange({
@@ -264,6 +261,66 @@ export class Editor {
     this._pushState(state);
   }
 
+  // ---------- Editing API ----------
+
+  performNewLine() {
+    let state = this._state.clone('text');
+    this._clearUpDown(state);
+    this._replaceAtSelections(state, "\n", selection => selection.range());
+    this._joinSelections(state);
+    this._pushState(state);
+  }
+
+  /**
+   * @param {string} s
+   */
+  performType(s) {
+    let state = this._state.clone('text');
+    this._clearUpDown(state);
+    this._replaceAtSelections(state, s, selection => selection.range());
+    this._joinSelections(state);
+    this._pushState(state);
+  }
+
+  /**
+   * @param {string} s
+   */
+  performPaste(s) {
+    let state = this._state.clone('special');
+    this._clearUpDown(state);
+    this._replaceAtSelections(state, s, selection => selection.range());
+    this._joinSelections(state);
+    this._pushState(state);
+  }
+
+  performDeleteAfter() {
+    let state = this._state.clone('text');
+    this._clearUpDown(state);
+    this._replaceAtSelections(state, "", selection => {
+      let range = selection.range();
+      if (selection.isCollapsed())
+        range.to = state.text.nextPosition(range.to);
+      return range;
+    });
+    this._joinSelections(state);
+    this._pushState(state);
+  }
+
+  performDeleteBefore() {
+    let state = this._state.clone('text');
+    this._clearUpDown(state);
+    this._replaceAtSelections(state, "", selection => {
+      let range = selection.range();
+      if (selection.isCollapsed())
+        range.from = state.text.previousPosition(range.from);
+      return range;
+    });
+    this._joinSelections(state);
+    this._pushState(state);
+  }
+
+  // ---------- Internal ----------
+
   /**
    * @param {!State} state
    */
@@ -309,7 +366,7 @@ export class Editor {
    * @param {string} s
    * @param {function(!Selection):!TextRange} rangeCallback
    */
-  _performReplaceAtSelections(state, s, rangeCallback) {
+  _replaceAtSelections(state, s, rangeCallback) {
     let lines = s.split('\n');
     let first = lines.shift();
     let last = null;
@@ -356,7 +413,7 @@ export class Editor {
 
     /**
      * @param {!TextPosition} position
-     * @param {!TextDelta} delta
+     * @param {!{lineDelta: number, columnDelta: number, startLine: number, startColumn: number}} delta
      * @return {!TextPosition}
      */
     function applyTextDelta(position, delta) {
@@ -371,67 +428,23 @@ export class Editor {
     }
   }
 
-  performNewLine() {
-    let state = this._state.clone('text');
-    this._clearUpDown(state);
-    this._performReplaceAtSelections(state, "\n", selection => selection.range());
-    this._joinSelections(state);
-    this._pushState(state);
-  }
-
   /**
-   * @param {string} s
+   * @param {!State} state
    */
-  performType(s) {
-    let state = this._state.clone('text');
-    this._clearUpDown(state);
-    this._performReplaceAtSelections(state, s, selection => selection.range());
-    this._joinSelections(state);
-    this._pushState(state);
-  }
-
-  /**
-   * @param {string} s
-   */
-  performPaste(s) {
-    let state = this._state.clone('special');
-    this._clearUpDown(state);
-    this._performReplaceAtSelections(state, s, selection => selection.range());
-    this._joinSelections(state);
-    this._pushState(state);
-  }
-
-  performDeleteAfter() {
-    let state = this._state.clone('text');
-    this._clearUpDown(state);
-    this._performReplaceAtSelections(state, "", selection => {
-      let range = selection.range();
-      if (selection.isCollapsed())
-        range.to = state.text.nextPosition(range.to);
-      return range;
-    });
-    this._joinSelections(state);
-    this._pushState(state);
-  }
-
-  performDeleteBefore() {
-    let state = this._state.clone('text');
-    this._clearUpDown(state);
-    this._performReplaceAtSelections(state, "", selection => {
-      let range = selection.range();
-      if (selection.isCollapsed())
-        range.from = state.text.previousPosition(range.from);
-      return range;
-    });
-    this._joinSelections(state);
-    this._pushState(state);
-  }
-
-  /**
-   * @param {!TextPosition} position
-   * @return {!TextPosition}
-   */
-  clampPosition(position) {
-    return this._state.text.clampPositionIfNeeded(position) || position;
+  _pushState(state) {
+    // TODO: report diff.
+    if (!this._state.coalesce(state)) {
+      if (this._historyPosition === this._history.length - 1) {
+        this._history.push(state);
+        ++this._historyPosition;
+      } else {
+        this._history[++this._historyPosition] = state;
+      }
+      if (state.text !== this._state.text)
+        this._state.text.resetCache();
+      this._state = state;
+    }
+    if (this._history.length > this._historyPosition + 1)
+      this._history.splice(this._historyPosition + 1, this._history.length - this._historyPosition + 1);
   }
 }
