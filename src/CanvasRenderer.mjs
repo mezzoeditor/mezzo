@@ -3,6 +3,9 @@ import { Editor } from "./Editor.mjs";
 import { Selection } from "./Selection.mjs";
 import { TextPosition, TextRange } from "./Types.mjs";
 
+const GUTTER_PADDING_LEFT_RIGHT = 4;
+const EDITOR_PADDING_LEFT = 4;
+
 export class CanvasRenderer {
   /**
    * @param {!Document} document
@@ -23,11 +26,19 @@ export class CanvasRenderer {
 
     this._canvas.addEventListener('mousedown', event => this._onMouseDown(event));
     this._canvas.addEventListener('wheel', event => this._onScroll(event));
+
+    this._gutterRect = {
+      x: 0, y: 0, width: 0, height: 0
+    };
+    this._editorRect = {
+      x: 0, y: 0, width: 0, height: 0
+    };
+    this._initializeMetrics();
   }
 
   _onScroll(event) {
-    this._scrollLeft += dx;
-    this._scrollTop += dy;
+    this._scrollLeft += event.deltaX;
+    this._scrollTop += event.deltaY;
     this._clipScrollPosition();
     event.preventDefault(true);
     this.invalidate();
@@ -62,6 +73,15 @@ export class CanvasRenderer {
   }
 
   invalidate() {
+    // To properly handle input events, we have to update rects synchronously.
+    const length = (this._editor.lineCount() + '').length;
+    this._gutterRect.width = length * this._metrics.charWidth + 2 * GUTTER_PADDING_LEFT_RIGHT;
+    this._gutterRect.height = this._cssHeight;
+
+    this._editorRect.x = this._gutterRect.width + EDITOR_PADDING_LEFT;
+    this._editorRect.width = this._cssWidth - this._editorRect.x;
+    this._editorRect.height = this._cssHeight;
+
     requestAnimationFrame(this._render);
   }
 
@@ -102,11 +122,11 @@ export class CanvasRenderer {
 
   _mouseEventToTextPosition(event) {
     const bounds = this._canvas.getBoundingClientRect();
-    const x = event.clientX - bounds.left + this._scrollLeft;
-    const y = event.clientY - bounds.top + this._scrollTop;
+    const x = event.clientX - bounds.left + this._scrollLeft - this._editorRect.x;
+    const y = event.clientY - bounds.top + this._scrollTop - this._editorRect.y;
     const textPosition = {
       lineNumber: Math.floor(y / this._metrics.lineHeight),
-      columnNumber: Math.floor(x / this._metrics.charWidth),
+      columnNumber: Math.round(x / this._metrics.charWidth),
     };
     return this._editor.clampPosition(textPosition);
   }
@@ -119,7 +139,6 @@ export class CanvasRenderer {
 
     ctx.setTransform(this._ratio, 0, 0, this._ratio, 0, 0);
     ctx.clearRect(0, 0, this._cssWidth, this._cssHeight);
-    ctx.translate(-this._scrollLeft, -this._scrollTop);
 
     const viewportStart = {
       lineNumber: Math.floor(this._scrollTop / lineHeight),
@@ -130,17 +149,43 @@ export class CanvasRenderer {
       columnNumber: Math.ceil((this._scrollLeft + this._cssWidth) / charWidth)
     };
 
-    ctx.fillStyle = 'rgba(126, 188, 254, 0.6)';
-    ctx.stokeStyle = 'rgb(33, 33, 33)';
-    if (this._drawCursors) {
-      const viewportRange = {from: viewportStart, to: viewportEnd};
-      for (let selection of this._editor.selections()) {
-        if (TextRange.intersects(selection.range(), viewportRange))
-          this._drawSelection(ctx, viewportStart, viewportEnd, selection);
-      }
-    }
+    ctx.save();
+    clipRect(this._gutterRect);
+    this._drawGutter(ctx, viewportStart, viewportEnd);
+    ctx.restore();
 
+    ctx.save();
+    clipRect(this._editorRect);
+    ctx.translate(-this._scrollLeft + this._editorRect.x, -this._scrollTop + this._editorRect.y);
+    this._drawSelections(ctx, viewportStart, viewportEnd);
     this._drawText(ctx, viewportStart, viewportEnd);
+    ctx.restore();
+
+    function clipRect(rect) {
+      ctx.rect(rect.x, rect.y, rect.width, rect.height);
+      ctx.clip();
+    }
+  }
+
+  _drawGutter(ctx, viewportStart, viewportEnd) {
+    const {lineHeight, charWidth} = this._metrics;
+    ctx.fillStyle = '#eee';
+    ctx.fillRect(0, 0, this._gutterRect.width, this._gutterRect.height);
+    ctx.strokeStyle = 'rgb(187, 187, 187)';
+    ctx.beginPath();
+    ctx.moveTo(this._gutterRect.width, 0);
+    ctx.lineTo(this._gutterRect.width, this._gutterRect.height);
+    ctx.stroke();
+
+    ctx.translate(0, -this._scrollTop);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = 'rgb(128, 128, 128)';
+    const textX = this._gutterRect.width - GUTTER_PADDING_LEFT_RIGHT;
+    const lineCount = this._editor.lineCount();
+    for (let i = viewportStart.lineNumber; i < viewportEnd.lineNumber && i < lineCount; ++i) {
+      const number = (i + 1) + '';
+      ctx.fillText(number, textX, i * lineHeight);
+    }
   }
 
   _drawText(ctx, viewportStart, viewportEnd) {
@@ -152,6 +197,19 @@ export class CanvasRenderer {
       const line = this._editor.line(i);
       ctx.fillText(line.substring(viewportStart.columnNumber, viewportEnd.columnNumber + 1), textX, i * lineHeight);
     }
+  }
+
+  _drawSelections(ctx, viewportStart, viewportEnd) {
+    ctx.fillStyle = 'rgba(126, 188, 254, 0.6)';
+    ctx.stokeStyle = 'rgb(33, 33, 33)';
+    if (this._drawCursors) {
+      const viewportRange = {from: viewportStart, to: viewportEnd};
+      for (let selection of this._editor.selections()) {
+        if (TextRange.intersects(selection.range(), viewportRange))
+          this._drawSelection(ctx, viewportStart, viewportEnd, selection);
+      }
+    }
+
   }
 
   _drawSelection(ctx, viewportStart, viewportEnd, selection) {
