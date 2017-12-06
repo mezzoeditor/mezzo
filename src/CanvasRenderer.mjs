@@ -27,6 +27,7 @@ export class CanvasRenderer {
     this._canvas.addEventListener('mousedown', event => this._onMouseDown(event));
     this._canvas.addEventListener('wheel', event => this._onScroll(event));
 
+    // Rects are in css pixels, in canvas coordinates.
     this._gutterRect = {
       x: 0, y: 0, width: 0, height: 0
     };
@@ -74,11 +75,12 @@ export class CanvasRenderer {
 
   invalidate() {
     // To properly handle input events, we have to update rects synchronously.
-    const length = (this._editor.lineCount() + '').length;
+    const lineCount = this._editor.lineCount();
+    const length = lineCount < 100 ? 3 : (this._editor.lineCount() + '').length;
     this._gutterRect.width = length * this._metrics.charWidth + 2 * GUTTER_PADDING_LEFT_RIGHT;
     this._gutterRect.height = this._cssHeight;
 
-    this._editorRect.x = this._gutterRect.width + EDITOR_PADDING_LEFT;
+    this._editorRect.x = this._gutterRect.width;
     this._editorRect.width = this._cssWidth - this._editorRect.x;
     this._editorRect.height = this._cssHeight;
 
@@ -86,7 +88,7 @@ export class CanvasRenderer {
   }
 
   _clipScrollPosition() {
-    const maxScrollLeft = Math.max(0, this._editor.longestLineLength() * this._metrics.charWidth - this._cssWidth);
+    const maxScrollLeft = Math.max(0, this._editor.longestLineLength() * this._metrics.charWidth - this._editorRect.width + EDITOR_PADDING_LEFT);
     this._scrollLeft = Math.max(this._scrollLeft, 0);
     this._scrollLeft = Math.min(this._scrollLeft, maxScrollLeft);
 
@@ -122,7 +124,7 @@ export class CanvasRenderer {
 
   _mouseEventToTextPosition(event) {
     const bounds = this._canvas.getBoundingClientRect();
-    const x = event.clientX - bounds.left + this._scrollLeft - this._editorRect.x;
+    const x = event.clientX - bounds.left + this._scrollLeft - this._editorRect.x + EDITOR_PADDING_LEFT;
     const y = event.clientY - bounds.top + this._scrollTop - this._editorRect.y;
     const textPosition = {
       lineNumber: Math.floor(y / this._metrics.lineHeight),
@@ -150,21 +152,18 @@ export class CanvasRenderer {
     };
 
     ctx.save();
-    clipRect(this._gutterRect);
+    ctx.rect(this._gutterRect.x, this._gutterRect.y, this._gutterRect.width, this._gutterRect.height);
+    ctx.clip();
     this._drawGutter(ctx, viewportStart, viewportEnd);
     ctx.restore();
 
     ctx.save();
-    clipRect(this._editorRect);
-    ctx.translate(-this._scrollLeft + this._editorRect.x, -this._scrollTop + this._editorRect.y);
+    ctx.rect(this._editorRect.x, this._editorRect.y, this._editorRect.width, this._editorRect.height);
+    ctx.clip();
+    ctx.translate(-this._scrollLeft + this._editorRect.x + EDITOR_PADDING_LEFT, -this._scrollTop + this._editorRect.y);
     this._drawSelections(ctx, viewportStart, viewportEnd);
     this._drawText(ctx, viewportStart, viewportEnd);
     ctx.restore();
-
-    function clipRect(rect) {
-      ctx.rect(rect.x, rect.y, rect.width, rect.height);
-      ctx.clip();
-    }
   }
 
   _drawGutter(ctx, viewportStart, viewportEnd) {
