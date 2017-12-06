@@ -20,6 +20,25 @@ export class CanvasRenderer {
     this._scrollTop = 0;
 
     this._render = this._render.bind(this);
+
+    this._canvas.addEventListener('mousedown', event => this._onMouseDown(event));
+    this._canvas.addEventListener('wheel', event => this._onScroll(event));
+  }
+
+  _onScroll(event) {
+    this._scrollLeft += dx;
+    this._scrollTop += dy;
+    this._clipScrollPosition();
+    event.preventDefault(true);
+    this.invalidate();
+  }
+
+  _onMouseDown(event) {
+    let textPosition = this._mouseEventToTextPosition(event);
+    const selection = new Selection();
+    selection.setCaret(textPosition);
+    this._editor.setSelections([selection]);
+    this.invalidate();
   }
 
   _initializeMetrics() {
@@ -44,13 +63,6 @@ export class CanvasRenderer {
 
   invalidate() {
     requestAnimationFrame(this._render);
-  }
-
-  advanceScroll(dx, dy) {
-    this._scrollLeft += dx;
-    this._scrollTop += dy;
-    this._clipScrollPosition();
-    this.invalidate();
   }
 
   _clipScrollPosition() {
@@ -88,14 +100,15 @@ export class CanvasRenderer {
     this.invalidate();
   }
 
-  mouseEventToTextPosition(event) {
+  _mouseEventToTextPosition(event) {
     const bounds = this._canvas.getBoundingClientRect();
     const x = event.clientX - bounds.left + this._scrollLeft;
     const y = event.clientY - bounds.top + this._scrollTop;
-    return {
+    const textPosition = {
       lineNumber: Math.floor(y / this._metrics.lineHeight),
       columnNumber: Math.floor(x / this._metrics.charWidth),
     };
+    return this._editor.clampPosition(textPosition);
   }
 
   _render() {
