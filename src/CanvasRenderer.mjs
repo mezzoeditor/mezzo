@@ -16,6 +16,8 @@ export class CanvasRenderer {
     this._editor = editor;
     this._drawCursors = true;
 
+    this._animationFrameId = 0;
+
     this._cssWidth = 0;
     this._cssHeight = 0;
     this._ratio = getPixelRatio();
@@ -43,6 +45,9 @@ export class CanvasRenderer {
     this._clipScrollPosition();
     event.preventDefault(true);
     this.invalidate();
+
+    event.stopPropagation();
+    event.preventDefault();
   }
 
   _onMouseDown(event) {
@@ -51,6 +56,9 @@ export class CanvasRenderer {
     selection.setCaret(textPosition);
     this._editor.setSelections([selection]);
     this.invalidate();
+
+    event.stopPropagation();
+    event.preventDefault();
   }
 
   _initializeMetrics() {
@@ -84,7 +92,8 @@ export class CanvasRenderer {
     this._editorRect.width = this._cssWidth - this._editorRect.x;
     this._editorRect.height = this._cssHeight;
 
-    requestAnimationFrame(this._render);
+    if (!this._animationFrameId)
+      this._animationFrameId = requestAnimationFrame(this._render);
   }
 
   _clipScrollPosition() {
@@ -134,6 +143,7 @@ export class CanvasRenderer {
   }
 
   _render() {
+    this._animationFrameId = 0;
     this._clipScrollPosition();
 
     const ctx = this._canvas.getContext('2d');
@@ -208,7 +218,6 @@ export class CanvasRenderer {
           this._drawSelection(ctx, viewportStart, viewportEnd, selection);
       }
     }
-
   }
 
   _drawSelection(ctx, viewportStart, viewportEnd, selection) {
