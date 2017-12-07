@@ -5,6 +5,8 @@ import { TextPosition, TextRange } from "./Types.mjs";
 
 const GUTTER_PADDING_LEFT_RIGHT = 4;
 const EDITOR_PADDING_LEFT = 4;
+const SCROLLBAR_WIDTH = 15;
+const MIN_SCROLLBAR_HEIGHT = 30;
 
 export class CanvasRenderer {
   /**
@@ -36,13 +38,14 @@ export class CanvasRenderer {
     this._editorRect = {
       x: 0, y: 0, width: 0, height: 0
     };
+    this._vScrollbar = new Scrollbar(true /** isVertical */);
+    this._hScrollbar = new Scrollbar(false /** isVertical */);
     this._initializeMetrics();
   }
 
   _onScroll(event) {
     this._scrollLeft += event.deltaX;
     this._scrollTop += event.deltaY;
-    this._clipScrollPosition();
     event.preventDefault(true);
     this.invalidate();
 
@@ -84,26 +87,39 @@ export class CanvasRenderer {
   invalidate() {
     // To properly handle input events, we have to update rects synchronously.
     const lineCount = this._editor.lineCount();
-    const length = lineCount < 100 ? 3 : (this._editor.lineCount() + '').length;
-    this._gutterRect.width = length * this._metrics.charWidth + 2 * GUTTER_PADDING_LEFT_RIGHT;
+
+    this._maxScrollTop = Math.max(0, (lineCount - 1) * this._metrics.lineHeight);
+    this._maxScrollLeft = Math.max(0, this._editor.longestLineLength() * this._metrics.charWidth - this._editorRect.width + EDITOR_PADDING_LEFT);
+    if (this._maxScrollTop)
+      this._maxScrollLeft += SCROLLBAR_WIDTH;
+
+    this._scrollLeft = Math.max(this._scrollLeft, 0);
+    this._scrollLeft = Math.min(this._scrollLeft, this._maxScrollLeft);
+    this._scrollTop = Math.max(this._scrollTop, 0);
+    this._scrollTop = Math.min(this._scrollTop, this._maxScrollTop);
+
+    const gutterLength = lineCount < 100 ? 3 : (this._editor.lineCount() + '').length;
+    this._gutterRect.width = gutterLength * this._metrics.charWidth + 2 * GUTTER_PADDING_LEFT_RIGHT;
     this._gutterRect.height = this._cssHeight;
 
     this._editorRect.x = this._gutterRect.width;
     this._editorRect.width = this._cssWidth - this._editorRect.x;
     this._editorRect.height = this._cssHeight;
 
+    this._vScrollbar.rect.x = this._cssWidth - SCROLLBAR_WIDTH;
+    this._vScrollbar.rect.y = 0;
+    this._vScrollbar.rect.width = this._maxScrollTop ? SCROLLBAR_WIDTH : 0;
+    this._vScrollbar.rect.height = this._cssHeight - (this._maxScrollLeft ? SCROLLBAR_WIDTH : 0);
+    this._vScrollbar.updateThumbRect(this._cssHeight, lineCount * this._metrics.lineHeight, this._scrollTop, this._maxScrollTop);
+
+    this._hScrollbar.rect.x = this._gutterRect.width;
+    this._hScrollbar.rect.y = this._cssHeight - SCROLLBAR_WIDTH;
+    this._hScrollbar.rect.width = this._cssWidth - this._gutterRect.width - this._vScrollbar.rect.width;
+    this._hScrollbar.rect.height = this._maxScrollLeft ? SCROLLBAR_WIDTH : 0;
+    this._hScrollbar.updateThumbRect(this._editorRect.width, this._editor.longestLineLength() * this._metrics.charWidth, this._scrollLeft, this._maxScrollLeft);
+
     if (!this._animationFrameId)
       this._animationFrameId = requestAnimationFrame(this._render);
-  }
-
-  _clipScrollPosition() {
-    const maxScrollLeft = Math.max(0, this._editor.longestLineLength() * this._metrics.charWidth - this._editorRect.width + EDITOR_PADDING_LEFT);
-    this._scrollLeft = Math.max(this._scrollLeft, 0);
-    this._scrollLeft = Math.min(this._scrollLeft, maxScrollLeft);
-
-    const maxScrollTop = Math.max(0, (this._editor.lineCount() - 1) * this._metrics.lineHeight);
-    this._scrollTop = Math.max(this._scrollTop, 0);
-    this._scrollTop = Math.min(this._scrollTop, maxScrollTop);
   }
 
   /**
@@ -144,7 +160,6 @@ export class CanvasRenderer {
 
   _render() {
     this._animationFrameId = 0;
-    this._clipScrollPosition();
 
     const ctx = this._canvas.getContext('2d');
     const {lineHeight, charWidth} = this._metrics;
@@ -174,6 +189,9 @@ export class CanvasRenderer {
     this._drawSelections(ctx, viewportStart, viewportEnd);
     this._drawText(ctx, viewportStart, viewportEnd);
     ctx.restore();
+
+    this._vScrollbar.draw(ctx);
+    this._hScrollbar.draw(ctx);
   }
 
   _drawGutter(ctx, viewportStart, viewportEnd) {
@@ -256,6 +274,42 @@ export class CanvasRenderer {
   }
 }
 
+class Scrollbar {
+  constructor(isVertical) {
+    this._vertical = !!isVertical;
+
+    this.rect = {x: 0, y: 0, width: 0, height: 0};
+    this.contentSize = 0;
+    this.thumbRect = {x: 0, y: 0, width: 0, height: 0};
+  }
+
+  draw(ctx) {
+    ctx.fillStyle = 'rgba(100, 100, 100, 0.4)';
+    ctx.fillRect(this.rect.x, this.rect.y, this.rect.width, this.rect.height);
+
+    ctx.fillStyle = 'rgba(100, 100, 100, 0.85)';
+    ctx.fillRect(this.thumbRect.x, this.thumbRect.y, this.thumbRect.width, this.thumbRect.height);
+  }
+
+  updateThumbRect(visibleContentSize, totalContentSize, offset, maxOffset) {
+    if (this._vertical) {
+      this.thumbRect.x = this.rect.x;
+      this.thumbRect.width = this.rect.width;
+
+      this.thumbRect.height = Math.round(this.rect.height * visibleContentSize / totalContentSize);
+      this.thumbRect.height = Math.max(MIN_SCROLLBAR_HEIGHT, this.thumbRect.height);
+      this.thumbRect.y = Math.round((this.rect.height - this.thumbRect.height) * offset / maxOffset);
+    } else {
+      this.thumbRect.y = this.rect.y;
+      this.thumbRect.height = this.rect.height;
+
+      this.thumbRect.width = Math.round(this.rect.width * visibleContentSize / totalContentSize);
+      this.thumbRect.width = Math.max(MIN_SCROLLBAR_HEIGHT, this.thumbRect.width);
+      this.thumbRect.x = this.rect.x + Math.round((this.rect.width - this.thumbRect.width) * offset / maxOffset);
+    }
+  }
+}
+
 let pixel_ratio = 0;
 
 function getPixelRatio() {
@@ -271,4 +325,3 @@ function getPixelRatio() {
   }
   return pixel_ratio;
 }
-
