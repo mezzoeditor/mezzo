@@ -75,3 +75,13 @@ TextRange.isEmpty = function(r) {
 TextRange.intersects = function(a, b) {
   return !(TextPosition.compare(a.from, b.to) > 0 || TextPosition.compare(b.from, a.to) > 0);
 };
+
+/**
+ * @param {number} seed
+ * @return {function():number}
+ */
+export let Random = function(seed) {
+  return function() {
+    return seed = seed * 48271 % 2147483647;
+  };
+};
