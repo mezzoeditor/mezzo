@@ -4,7 +4,7 @@ import { Selection } from "./Selection.mjs";
 import { TextPosition, TextRange } from "./Types.mjs";
 
 const GUTTER_PADDING_LEFT_RIGHT = 4;
-const EDITOR_PADDING_LEFT = 4;
+const EDITOR_MARGIN_LEFT = 4;
 const SCROLLBAR_WIDTH = 15;
 const MIN_SCROLLBAR_HEIGHT = 30;
 
@@ -89,7 +89,7 @@ export class CanvasRenderer {
     const lineCount = this._editor.lineCount();
 
     this._maxScrollTop = Math.max(0, (lineCount - 1) * this._metrics.lineHeight);
-    this._maxScrollLeft = Math.max(0, this._editor.longestLineLength() * this._metrics.charWidth - this._editorRect.width + EDITOR_PADDING_LEFT);
+    this._maxScrollLeft = Math.max(0, this._editor.longestLineLength() * this._metrics.charWidth - this._editorRect.width);
     if (this._maxScrollTop)
       this._maxScrollLeft += SCROLLBAR_WIDTH;
 
@@ -102,7 +102,7 @@ export class CanvasRenderer {
     this._gutterRect.width = gutterLength * this._metrics.charWidth + 2 * GUTTER_PADDING_LEFT_RIGHT;
     this._gutterRect.height = this._cssHeight;
 
-    this._editorRect.x = this._gutterRect.width;
+    this._editorRect.x = this._gutterRect.width + EDITOR_MARGIN_LEFT;
     this._editorRect.width = this._cssWidth - this._editorRect.x;
     this._editorRect.height = this._cssHeight;
 
@@ -149,7 +149,7 @@ export class CanvasRenderer {
 
   _mouseEventToTextPosition(event) {
     const bounds = this._canvas.getBoundingClientRect();
-    const x = event.clientX - bounds.left + this._scrollLeft - this._editorRect.x - EDITOR_PADDING_LEFT;
+    const x = event.clientX - bounds.left + this._scrollLeft - this._editorRect.x;
     const y = event.clientY - bounds.top + this._scrollTop - this._editorRect.y;
     const textPosition = {
       lineNumber: Math.floor(y / this._metrics.lineHeight),
@@ -183,9 +183,9 @@ export class CanvasRenderer {
     ctx.restore();
 
     ctx.save();
-    ctx.rect(this._editorRect.x, this._editorRect.y, this._editorRect.width, this._editorRect.height);
+    ctx.rect(this._editorRect.x - EDITOR_MARGIN_LEFT, this._editorRect.y, this._editorRect.width + EDITOR_MARGIN_LEFT, this._editorRect.height);
     ctx.clip();
-    ctx.translate(-this._scrollLeft + this._editorRect.x + EDITOR_PADDING_LEFT, -this._scrollTop + this._editorRect.y);
+    ctx.translate(-this._scrollLeft + this._editorRect.x, -this._scrollTop + this._editorRect.y);
     this._drawSelections(ctx, viewportStart, viewportEnd);
     this._drawText(ctx, viewportStart, viewportEnd);
     ctx.restore();
