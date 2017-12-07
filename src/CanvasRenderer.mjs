@@ -124,7 +124,7 @@ export class CanvasRenderer {
 
   _mouseEventToTextPosition(event) {
     const bounds = this._canvas.getBoundingClientRect();
-    const x = event.clientX - bounds.left + this._scrollLeft - this._editorRect.x + EDITOR_PADDING_LEFT;
+    const x = event.clientX - bounds.left + this._scrollLeft - this._editorRect.x - EDITOR_PADDING_LEFT;
     const y = event.clientY - bounds.top + this._scrollTop - this._editorRect.y;
     const textPosition = {
       lineNumber: Math.floor(y / this._metrics.lineHeight),
