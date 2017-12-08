@@ -6,7 +6,7 @@ import { TextPosition, TextRange } from "./Types.mjs";
 const GUTTER_PADDING_LEFT_RIGHT = 4;
 const EDITOR_MARGIN_LEFT = 4;
 const SCROLLBAR_WIDTH = 15;
-const MIN_SCROLLBAR_HEIGHT = 30;
+const MIN_THUMB_SIZE = 30;
 
 export class CanvasRenderer {
   /**
@@ -89,9 +89,7 @@ export class CanvasRenderer {
     const lineCount = this._editor.lineCount();
 
     this._maxScrollTop = Math.max(0, (lineCount - 1) * this._metrics.lineHeight);
-    this._maxScrollLeft = Math.max(0, this._editor.longestLineLength() * this._metrics.charWidth - this._editorRect.width);
-    if (this._maxScrollTop)
-      this._maxScrollLeft += SCROLLBAR_WIDTH;
+    this._maxScrollLeft = Math.max(0, this._editor.longestLineLength() * this._metrics.charWidth - this._editorRect.width + (this._maxScrollTop ? SCROLLBAR_WIDTH : 0));
 
     this._scrollLeft = Math.max(this._scrollLeft, 0);
     this._scrollLeft = Math.min(this._scrollLeft, this._maxScrollLeft);
@@ -292,19 +290,21 @@ class Scrollbar {
   }
 
   updateThumbRect(visibleContentSize, totalContentSize, offset, maxOffset) {
+    totalContentSize = Math.max(totalContentSize, visibleContentSize + maxOffset);
+    const ratio = Math.min(visibleContentSize / totalContentSize, 1.0);
     if (this._vertical) {
       this.thumbRect.x = this.rect.x;
       this.thumbRect.width = this.rect.width;
 
-      this.thumbRect.height = Math.round(this.rect.height * visibleContentSize / totalContentSize);
-      this.thumbRect.height = Math.max(MIN_SCROLLBAR_HEIGHT, this.thumbRect.height);
+      this.thumbRect.height = Math.round(this.rect.height * ratio);
+      this.thumbRect.height = Math.max(MIN_THUMB_SIZE, this.thumbRect.height);
       this.thumbRect.y = Math.round((this.rect.height - this.thumbRect.height) * offset / maxOffset);
     } else {
       this.thumbRect.y = this.rect.y;
       this.thumbRect.height = this.rect.height;
 
-      this.thumbRect.width = Math.round(this.rect.width * visibleContentSize / totalContentSize);
-      this.thumbRect.width = Math.max(MIN_SCROLLBAR_HEIGHT, this.thumbRect.width);
+      this.thumbRect.width = Math.round(this.rect.width * ratio);
+      this.thumbRect.width = Math.max(MIN_THUMB_SIZE, this.thumbRect.width);
       this.thumbRect.x = this.rect.x + Math.round((this.rect.width - this.thumbRect.width) * offset / maxOffset);
     }
   }
