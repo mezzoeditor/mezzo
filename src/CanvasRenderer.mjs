@@ -106,7 +106,7 @@ export class CanvasRenderer {
 
     this._vScrollbar.rect.x = this._cssWidth - SCROLLBAR_WIDTH;
     this._vScrollbar.rect.y = 0;
-    this._vScrollbar.rect.width = this._maxScrollTop ? SCROLLBAR_WIDTH : 0;
+    this._vScrollbar.rect.width = SCROLLBAR_WIDTH;
     this._vScrollbar.rect.height = this._cssHeight - (this._maxScrollLeft ? SCROLLBAR_WIDTH : 0);
     this._vScrollbar.updateThumbRect(this._cssHeight, lineCount * this._metrics.lineHeight, this._scrollTop, this._maxScrollTop);
 
