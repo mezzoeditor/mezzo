@@ -23,4 +23,6 @@ async function setupEditor() {
     selections.push(selection);
   }
   editor.setSelections(selections);
+
+  editor.addLineWidget(5, 7, null);
 }

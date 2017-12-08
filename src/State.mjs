@@ -52,11 +52,9 @@ export class State {
 // Type of operation designates what has changed and affects how
 // operations may be collapsed for history.
 // Each operation may include preceeding ones.
-//   - Internal does not affect user-editable text/selection,
+//   - Marker does not affect user-editable text/selection,
 //     but may affect what's visible.
-//     Example: widget, highlight, decoration.
-//   - Special is meant to be never coalesced with the rest.
-//     Example: cut, paste.
+//   - Special is meant to be never coalesced with the rest, e.g. cut or paste.
 // TODO: typing should be collapsed per token?
 // TODO: switch to mask if needed?
-State.Operations = ['internal', 'selection', 'text', 'special'];
+State.Operations = ['marker', 'selection', 'text', 'special'];

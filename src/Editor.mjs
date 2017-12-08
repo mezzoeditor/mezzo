@@ -51,6 +51,13 @@ export class Editor {
   /**
    * @return {number}
    */
+  renderLineCount() {
+    return this._state.text.renderLineCount();
+  }
+
+  /**
+   * @return {number}
+   */
   longestLineLength() {
     return this._state.text.longestLineLength();
   }
@@ -61,6 +68,15 @@ export class Editor {
    */
   line(lineNumber) {
     return this._state.text.line(lineNumber);
+  }
+
+  /**
+   * @param {number} from
+   * @param {number} to
+   * @return {{lineNumber: !Array<string|!Marker>}}
+   */
+  renderLines(from, to) {
+    return this._state.text.renderLines(from, to);
   }
 
   /**
@@ -316,6 +332,18 @@ export class Editor {
       return range;
     });
     this._joinSelections(state);
+    this._pushState(state);
+  }
+
+  // ---------- Markers API ----------
+
+  /**
+   * @param {!Marker} marker
+   * @param {number} lineNumber
+   */
+  insertLineMarker(marker, lineNumber) {
+    let state = this._state.clone('marker');
+    state.text = state.text.insertLineMarker(marker, lineNumber);
     this._pushState(state);
   }
 

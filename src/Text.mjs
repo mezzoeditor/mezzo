@@ -236,6 +236,7 @@ export class Text {
   constructor(root) {
     this._root = root;
     this._lineCount = this._root.lineCount;
+    this._renderLineCount = this._root.lineCount + (this._root.markerLineCount || 0);
     this._lineCache = [];
   }
 
@@ -303,12 +304,62 @@ export class Text {
   }
 
   /**
+   * @return {number}
+   */
+  renderLineCount() {
+    return this._renderLineCount;
+  }
+
+  /**
    * @param {number} lineNumber
    * @return {?string}
    */
   line(lineNumber) {
     let line = this._line(lineNumber);
     return line ? line.s : null;
+  }
+
+  /**
+   * @param {number} from
+   * @param {number} to
+   * @return {!{startLineNumber: number, startRenderLineNumber: number, items: !Array<string|!Marker>}}
+   */
+  renderLines(from, to) {
+    let items = [];
+    let startLineNumber = 0;
+    let startRenderLineNumber = 0;
+
+    /**
+     * @param {!LineNode} root
+     * @param {number} add
+     */
+    let visit = function(root, add) {
+      let size = root.left ? root.left.lineCount + (root.left.markerLineCount || 0) : 0;
+      if (root.left && size + add > from) {
+        visit(root.left, add);
+      } else {
+        startLineNumber += root.left ? root.left.lineCount : 0;
+        startRenderLineNumber += size;
+      }
+      if (size + add >= to)
+        return;
+
+      size += root.marker ? root.marker.size : 1;
+      if (size + add > from) {
+        items.push(root.marker ? root.marker : root.line.s);
+      } else {
+        startLineNumber += root.marker ? 0 : 1;
+        startRenderLineNumber += root.marker ? root.marker.size : 1;
+      }
+      if (size + add >= to)
+        return;
+
+      if (root.right)
+        visit(root.right, add + size);
+    };
+
+    visit(this._root, 0);
+    return {startLineNumber, startRenderLineNumber, items};
   }
 
   /**
@@ -476,7 +527,7 @@ export class Text {
         break;
       node = node.right;
     }
-    marker.id = Marker.generateId(tmp.left.lastMarkerId, nextMarker ? nextMarker.lastMarkerId : undefined);
+    marker.id = Marker.generateId(tmp.left.lastMarkerId, node ? node.lastMarkerId : undefined);
 
     return new Text(merge(tmp.left, merge(markerNode(marker), tmp.right)));
   }

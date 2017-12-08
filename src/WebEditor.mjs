@@ -1,6 +1,7 @@
 import { Editor } from "./Editor.mjs";
 import { CanvasRenderer } from "./CanvasRenderer.mjs";
 import { Selection } from "./Selection.mjs";
+import { Marker } from "./Marker.mjs";
 
 export class WebEditor {
   /**
@@ -37,6 +38,18 @@ export class WebEditor {
   setSelections(selections) {
     this._editor.setSelections(selections);
     this._renderer.invalidate();
+  }
+
+  /**
+   * @param {number} linNumber
+   * @param {number} linesTaken
+   * @param {?Element} element
+   * @return {*}
+   */
+  addLineWidget(lineNumber, linesTaken, element) {
+    let marker = Marker.createLineWidget(linesTaken, element);
+    this._editor.insertLineMarker(marker, lineNumber);
+    return marker;
   }
 
   resize() {
