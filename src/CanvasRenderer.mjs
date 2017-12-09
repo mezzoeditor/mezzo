@@ -89,7 +89,7 @@ export class CanvasRenderer {
     const lineCount = this._editor.lineCount();
 
     this._maxScrollTop = Math.max(0, (lineCount - 1) * this._metrics.lineHeight);
-    this._maxScrollLeft = Math.max(0, this._editor.longestLineLength() * this._metrics.charWidth - this._editorRect.width + (this._maxScrollTop ? SCROLLBAR_WIDTH : 0));
+    this._maxScrollLeft = Math.max(0, (this._editor.longestLineLength() + 3) * this._metrics.charWidth - this._editorRect.width);
 
     this._scrollLeft = Math.max(this._scrollLeft, 0);
     this._scrollLeft = Math.min(this._scrollLeft, this._maxScrollLeft);
@@ -101,13 +101,13 @@ export class CanvasRenderer {
     this._gutterRect.height = this._cssHeight;
 
     this._editorRect.x = this._gutterRect.width + EDITOR_MARGIN_LEFT;
-    this._editorRect.width = this._cssWidth - this._editorRect.x;
+    this._editorRect.width = this._cssWidth - this._editorRect.x - SCROLLBAR_WIDTH;
     this._editorRect.height = this._cssHeight;
 
     this._vScrollbar.rect.x = this._cssWidth - SCROLLBAR_WIDTH;
     this._vScrollbar.rect.y = 0;
     this._vScrollbar.rect.width = SCROLLBAR_WIDTH;
-    this._vScrollbar.rect.height = this._cssHeight - (this._maxScrollLeft ? SCROLLBAR_WIDTH : 0);
+    this._vScrollbar.rect.height = this._cssHeight;
     this._vScrollbar.updateThumbRect(this._cssHeight, lineCount * this._metrics.lineHeight, this._scrollTop, this._maxScrollTop);
 
     this._hScrollbar.rect.x = this._gutterRect.width;
@@ -188,8 +188,10 @@ export class CanvasRenderer {
     this._drawText(ctx, viewportStart, viewportEnd);
     ctx.restore();
 
+    ctx.save();
     this._vScrollbar.draw(ctx);
     this._hScrollbar.draw(ctx);
+    ctx.restore();
   }
 
   _drawGutter(ctx, viewportStart, viewportEnd) {
@@ -282,10 +284,14 @@ class Scrollbar {
   }
 
   draw(ctx) {
-    ctx.fillStyle = 'rgba(100, 100, 100, 0.4)';
-    ctx.fillRect(this.rect.x, this.rect.y, this.rect.width, this.rect.height);
+    if (!this.rect.width || !this.rect.height)
+      return;
+    if (this._vertical) {
+      ctx.strokeStyle = 'rgba(100, 100, 100, 0.2)';
+      ctx.strokeRect(this.rect.x, this.rect.y, this.rect.width, this.rect.height);
+    }
 
-    ctx.fillStyle = 'rgba(100, 100, 100, 0.85)';
+    ctx.fillStyle = 'rgba(100, 100, 100, 0.4)';
     ctx.fillRect(this.thumbRect.x, this.thumbRect.y, this.thumbRect.width, this.thumbRect.height);
   }
 
