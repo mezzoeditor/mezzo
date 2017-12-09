@@ -45,19 +45,21 @@ document.addEventListener('DOMContentLoaded', () => {
   window.editor = editor;
 
   editor.addViewportBuilder(viewport => {
+    let s = window.highlight;
+    let from = viewport.range().from.columnNumber - s.length;
+    if (from < 0)
+      from = 0;
+    let to = viewport.range().to.columnNumber + s.length;
     for (let line = viewport.range().from.lineNumber; line < viewport.range().to.lineNumber; line++) {
-      let text = viewport.lineChunk(line, viewport.range().from.columnNumber, viewport.range().to.columnNumber);
-      let index = text.indexOf(window.highlight);
+      let text = viewport.lineChunk(line, from, to);
+      let index = text.indexOf(s);
       while (index !== -1) {
-        let from = index;
-        let to = index + window.highlight.length;
-        let name = 'background';
         let value = ['rgba(0, 0, 255, 0.2)', 'rgba(0, 255, 0, 0.2)', 'rgba(255, 0, 0, 0.2)'][line % 3];
         viewport.addDecorations([
-            {lineNumber: line, from, to, name: 'background', value: value},
-            {lineNumber: line, from, to, name: 'underline', value: 'rgb(50, 50, 50)'},
+            {lineNumber: line, from: from + index, to: from + index + s.length, name: 'background', value: value},
+            {lineNumber: line, from: from + index, to: from + index + s.length, name: 'underline', value: 'rgb(50, 50, 50)'},
           ]);
-        index = text.indexOf(window.highlight, index + window.highlight.length);
+        index = text.indexOf(s, index + s.length);
       }
     }
   });

@@ -246,7 +246,7 @@ export class CanvasRenderer {
         case 'background': {
           ctx.fillStyle = decoration.value;
           ctx.fillRect(
-              (viewportStart.columnNumber + decoration.from) * charWidth,
+              decoration.from * charWidth,
               decoration.lineNumber * lineHeight,
               (decoration.to - decoration.from) * charWidth,
               lineHeight);
@@ -255,8 +255,8 @@ export class CanvasRenderer {
         case 'underline': {
           ctx.strokeStyle = decoration.value;
           ctx.beginPath();
-          ctx.moveTo((viewportStart.columnNumber + decoration.from) * charWidth, decoration.lineNumber * lineHeight + charHeight);
-          ctx.lineTo((viewportStart.columnNumber + decoration.to) * charWidth, decoration.lineNumber * lineHeight + charHeight);
+          ctx.moveTo(decoration.from * charWidth, decoration.lineNumber * lineHeight + charHeight);
+          ctx.lineTo(decoration.to * charWidth, decoration.lineNumber * lineHeight + charHeight);
           ctx.stroke();
           break;
         }
