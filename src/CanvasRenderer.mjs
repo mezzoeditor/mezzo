@@ -31,6 +31,7 @@ export class CanvasRenderer {
     this._builders = [];
 
     this._canvas.addEventListener('mousedown', event => this._onMouseDown(event));
+    this._canvas.addEventListener('mousemove', event => this._onMouseMove(event));
     this._canvas.addEventListener('wheel', event => this._onScroll(event));
 
     // Rects are in css pixels, in canvas coordinates.
@@ -52,25 +53,36 @@ export class CanvasRenderer {
     this._builders.push(builder);
   }
 
-  _onScroll(event) {
-    this._scrollLeft += event.deltaX;
-    this._scrollTop += event.deltaY;
-    event.preventDefault(true);
+  /**
+   * @param {number} cssWidth
+   * @param {number} cssHeight
+   */
+  setSize(cssWidth, cssHeight) {
+    if (this._cssWidth === cssWidth && this._cssHeight === cssHeight)
+      return;
+    this._cssWidth = cssWidth;
+    this._cssHeight = cssHeight;
+    this._canvas.width = cssWidth * this._ratio;
+    this._canvas.height = cssHeight * this._ratio;
+    this._canvas.style.width = cssWidth + 'px';
+    this._canvas.style.height = cssHeight + 'px';
+    this._initializeMetrics();
     this.invalidate();
-
-    event.stopPropagation();
-    event.preventDefault();
   }
 
-  _onMouseDown(event) {
-    let textPosition = this._mouseEventToTextPosition(event);
-    const selection = new Selection();
-    selection.setCaret(textPosition);
-    this._editor.setSelections([selection]);
+  /**
+   * @param {boolean} visible
+   */
+  setCursorsVisible(visible) {
+    this._drawCursors = visible;
     this.invalidate();
+  }
 
-    event.stopPropagation();
-    event.preventDefault();
+  /**
+   * @return {!Element}
+   */
+  canvas() {
+    return this._canvas;
   }
 
   _initializeMetrics() {
@@ -86,11 +98,52 @@ export class CanvasRenderer {
     this._metrics = new FontMetrics(metrics.width, fontHeight - 5, fontHeight);
   }
 
-  /**
-   * @return {!Element}
-   */
-  canvas() {
-    return this._canvas;
+  _mouseEventToCanvas(event) {
+    const bounds = this._canvas.getBoundingClientRect();
+    const x = event.clientX - bounds.left;
+    const y = event.clientY - bounds.top;
+    return {x, y};
+  }
+
+  _canvasToTextPosition(x, y) {
+    x += this._scrollLeft - this._editorRect.x;
+    y += this._scrollTop - this._editorRect.y;
+
+    const textPosition = {
+      lineNumber: Math.floor(y / this._metrics.lineHeight),
+      columnNumber: Math.round(x / this._metrics.charWidth),
+    };
+    return this._editor.text().clampPositionIfNeeded(textPosition) || textPosition;
+  }
+
+  _onScroll(event) {
+    this._scrollTop += event.deltaY;
+    this._scrollLeft += event.deltaX && event.deltaY / event.deltaX > 2 ? 0 : event.deltaX;
+    event.preventDefault(true);
+    this.invalidate();
+
+    event.stopPropagation();
+    event.preventDefault();
+  }
+
+  _onMouseDown(event) {
+    const canvasPosition = this._mouseEventToCanvas(event);
+    let textPosition = this._canvasToTextPosition(canvasPosition.x, canvasPosition.y);
+    const selection = new Selection();
+    selection.setCaret(textPosition);
+    this._editor.setSelections([selection]);
+    this.invalidate();
+
+    event.stopPropagation();
+    event.preventDefault();
+  }
+
+  _onMouseMove(event) {
+    const canvasPosition = this._mouseEventToCanvas(event);
+    this._vScrollbar.hovered = rectHasPoint(this._vScrollbar.thumbRect, canvasPosition.x, canvasPosition.y);
+    this._hScrollbar.hovered = rectHasPoint(this._hScrollbar.thumbRect, canvasPosition.x, canvasPosition.y);
+    
+    this._scheduleRender();
   }
 
   invalidate() {
@@ -125,44 +178,12 @@ export class CanvasRenderer {
     this._hScrollbar.rect.height = this._maxScrollLeft ? SCROLLBAR_WIDTH : 0;
     this._hScrollbar.updateThumbRect(this._editorRect.width, this._editor.text().longestLineLength() * this._metrics.charWidth, this._scrollLeft, this._maxScrollLeft);
 
+    this._scheduleRender();
+  }
+
+  _scheduleRender() {
     if (!this._animationFrameId)
       this._animationFrameId = requestAnimationFrame(this._render);
-  }
-
-  /**
-   * @param {number} cssWidth
-   * @param {number} cssHeight
-   */
-  setSize(cssWidth, cssHeight) {
-    if (this._cssWidth === cssWidth && this._cssHeight === cssHeight)
-      return;
-    this._cssWidth = cssWidth;
-    this._cssHeight = cssHeight;
-    this._canvas.width = cssWidth * this._ratio;
-    this._canvas.height = cssHeight * this._ratio;
-    this._canvas.style.width = cssWidth + 'px';
-    this._canvas.style.height = cssHeight + 'px';
-    this._initializeMetrics();
-    this.invalidate();
-  }
-
-  /**
-   * @param {boolean} visible
-   */
-  setCursorsVisible(visible) {
-    this._drawCursors = visible;
-    this.invalidate();
-  }
-
-  _mouseEventToTextPosition(event) {
-    const bounds = this._canvas.getBoundingClientRect();
-    const x = event.clientX - bounds.left + this._scrollLeft - this._editorRect.x;
-    const y = event.clientY - bounds.top + this._scrollTop - this._editorRect.y;
-    const textPosition = {
-      lineNumber: Math.floor(y / this._metrics.lineHeight),
-      columnNumber: Math.round(x / this._metrics.charWidth),
-    };
-    return this._editor.text().clampPositionIfNeeded(textPosition) || textPosition;
   }
 
   _render() {
@@ -173,6 +194,7 @@ export class CanvasRenderer {
 
     ctx.setTransform(this._ratio, 0, 0, this._ratio, 0, 0);
     ctx.clearRect(0, 0, this._cssWidth, this._cssHeight);
+    ctx.lineWidth = 1 / this._ratio;
 
     const viewportStart = {
       lineNumber: Math.floor(this._scrollTop / lineHeight),
@@ -315,6 +337,7 @@ export class CanvasRenderer {
 class Scrollbar {
   constructor(isVertical) {
     this._vertical = !!isVertical;
+    this.hovered = false;
 
     this.rect = {x: 0, y: 0, width: 0, height: 0};
     this.contentSize = 0;
@@ -329,7 +352,7 @@ class Scrollbar {
       ctx.strokeRect(this.rect.x, this.rect.y, this.rect.width, this.rect.height);
     }
 
-    ctx.fillStyle = 'rgba(100, 100, 100, 0.4)';
+    ctx.fillStyle = this.hovered ? 'rgba(100, 100, 100, 0.8)' : 'rgba(100, 100, 100, 0.4)';
     ctx.fillRect(this.thumbRect.x, this.thumbRect.y, this.thumbRect.width, this.thumbRect.height);
   }
 
@@ -368,4 +391,8 @@ function getPixelRatio() {
     pixel_ratio = dpr / bsr;
   }
   return pixel_ratio;
+}
+
+function rectHasPoint(rect, x, y) {
+  return rect.x <= x && x <= rect.x + rect.width && rect.y <= y && y <= rect.y + rect.height;
 }
