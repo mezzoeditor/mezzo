@@ -88,7 +88,7 @@ export class Text {
     if (lineNumber >= this._lineCount)
       return null;
     if (this._lineCache[lineNumber] === undefined) {
-      let found = tree.findLine(this._root, lineNumber);
+      let found = tree.findLineColumn(this._root, lineNumber, 0);
       this._lineCache[lineNumber] = found ? found.node.line : null;
     }
     return this._lineCache[lineNumber];
@@ -275,5 +275,62 @@ export class Text {
     }
 
     return new Text(tree.merge(leftText, tree.merge(middleText, rightText)));
+  }
+
+  /**
+   * @param {number} offset
+   * @return {?TextPosition}
+   */
+  offsetToPosition(offset) {
+    let found = tree.findChar(this._root, offset);
+    if (!found)
+      return null;
+
+    if (found.node.line.length < offset - found.position.char)
+      throw 'Inconsistent';
+    let chunk = found.node.line.substring(0, offset - found.position.char);
+    let lineNumber = found.position.line;
+    let columnNumber = found.position.column;
+    let index = 0;
+    while (true) {
+      let nextLine = chunk.indexOf('\n', index);
+      if (nextLine !== -1) {
+        lineNumber++;
+        columnNumber = 0;
+        index = nextLine + 1;
+      } else {
+        columnNumber += chunk.length - index;
+        break;
+      }
+    }
+    return {lineNumber, columnNumber};
+  }
+
+  /**
+   * @param {TextPosition} position
+   * @return {?number}
+   */
+  positionToOffset(position) {
+    let found = tree.findLineColumn(this._root, position.lineNumber, position.columnNumber);
+    if (!found)
+      return null;
+
+    let chunk = found.node.line;
+    let lineNumber = found.position.line;
+    let columnNumber = found.position.column;
+    let offset = found.position.offset;
+    let index = 0;
+    while (lineNumber < position.lineNumber) {
+      let nextLine = chunk.indexOf('\n', index);
+      if (nextLine === -1)
+        throw 'Inconsistent';
+      offset += (nextLine - index + 1);
+      index = nextLine + 1;
+      lineNumber++;
+      columnNumber = 0;
+    }
+    if (chunk.length < index + (position.columnNumber - columnNumber))
+      throw 'Inconsistent';
+    return offset + position.columnNumber - columnNumber;
   }
 }

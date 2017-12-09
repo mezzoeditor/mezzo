@@ -194,43 +194,47 @@ export let Tree = function(initFrom, combineTo, selfMetrics) {
   /**
    * @param {!Position} position
    * @param {!Metrics} metrics
+   * @return {!Position}
    */
-  let updatePosition = function(position, metrics) {
-    position.column = metrics.last + (metrics.lines ? 0 : position.column);
-    position.line += metrics.lines;
-    position.char += metrics.chars;
+  let advancePosition = function(position, metrics) {
+    return {
+      char: position.char + metrics.chars,
+      line: position.line + metrics.lines,
+      column: metrics.last + (metrics.lines ? 0 : position.column)
+    };
   };
 
 
   /**
+   * @param {!TreeNode} node
    * @param {number} line
+   * @param {number} column
    * @return {{node: !TreeNode, position: !Position}|undefined}
    */
-  let findLine = function(root, line) {
+  let findLineColumn = function(node, line, column) {
     let position = { char: 0, line: 0, column: 0 };
     while (true) {
-      if (root.left) {
-        let left = root.left.metrics;
-        if (left.lines > line) {
-          root = root.left;
+      if (node.left) {
+        let nextPosition = advancePosition(position, node.left.metrics);
+        if (nextPosition.line > line || (nextPosition.line === line && nextPosition.column > column)) {
+          node = node.left;
           continue;
         }
-        line -= left.lines;
-        updatePosition(position, left);
+        position = nextPosition;
       }
-      let self = selfMetrics(root);
-      if (self.lines > line)
-        return {node: root, position};
-      line -= self.lines;
-      updatePosition(position, self);
-      if (!root.right)
+      let nextPosition = advancePosition(position, selfMetrics(node));
+      if (nextPosition.line > line || (nextPosition.line === line && nextPosition.column > column))
+        return {node, position};
+      position = nextPosition;
+      if (!node.right)
         return;
-      root = root.right;
+      node = node.right;
     }
   };
 
 
   /**
+   * @param {!TreeNode} root
    * @param {number} char
    * @return {{node: !TreeNode, position: !Position}|undefined}
    */
@@ -244,13 +248,13 @@ export let Tree = function(initFrom, combineTo, selfMetrics) {
           continue;
         }
         char -= left.chars;
-        updatePosition(position, left);
+        position = advancePosition(position, left);
       }
       let self = selfMetrics(root);
       if (self.chars > char)
         return {node: root, position};
       char -= self.chars;
-      updatePosition(position, self);
+      position = advancePosition(position, self);
       if (!root.right)
         return;
       root = root.right;
@@ -284,5 +288,5 @@ export let Tree = function(initFrom, combineTo, selfMetrics) {
   };
 
 
-  return { wrap, build, splitLine, splitChar, merge, findLine, findChar, visit, endPosition };
+  return { wrap, build, splitLine, splitChar, merge, findLineColumn, findChar, visit, endPosition };
 };
