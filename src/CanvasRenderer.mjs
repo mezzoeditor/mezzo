@@ -28,7 +28,7 @@ export class CanvasRenderer {
 
     this._cssWidth = 0;
     this._cssHeight = 0;
-    this._ratio = getPixelRatio();
+    this._ratio = this._getRatio();
     this._scrollLeft = 0;
     this._scrollTop = 0;
 
@@ -63,6 +63,17 @@ export class CanvasRenderer {
     };
   }
 
+  _getRatio() {
+    const ctx = this._canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const bsr = ctx.webkitBackingStorePixelRatio ||
+      ctx.mozBackingStorePixelRatio ||
+      ctx.msBackingStorePixelRatio ||
+      ctx.oBackingStorePixelRatio ||
+      ctx.backingStorePixelRatio || 1;
+    return dpr / bsr;
+  }
+
   /**
    * @param {!ViewportBuilder} builder
    */
@@ -77,6 +88,7 @@ export class CanvasRenderer {
   setSize(cssWidth, cssHeight) {
     if (this._cssWidth === cssWidth && this._cssHeight === cssHeight)
       return;
+    this._ratio = this._getRatio();
     this._cssWidth = cssWidth;
     this._cssHeight = cssHeight;
     this._canvas.width = cssWidth * this._ratio;
@@ -298,7 +310,6 @@ export class CanvasRenderer {
     ctx.fillStyle = '#eee';
     ctx.fillRect(0, 0, this._gutterRect.width, this._gutterRect.height);
     ctx.strokeStyle = 'rgb(187, 187, 187)';
-    ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(this._gutterRect.width, 0);
     ctx.lineTo(this._gutterRect.width, this._gutterRect.height);
@@ -324,38 +335,42 @@ export class CanvasRenderer {
       const line = this._editor.text().line(i);
       ctx.fillText(line.substring(viewportStart.columnNumber, viewportEnd.columnNumber + 1), textX, i * lineHeight);
     }
-    for (let decoration of viewport._decorations) {
-      switch (decoration.name) {
-        case 'background': {
-          ctx.fillStyle = decoration.value;
-          ctx.fillRect(
-              decoration.from * charWidth,
-              decoration.lineNumber * lineHeight,
-              (decoration.to - decoration.from) * charWidth,
-              lineHeight);
-          break;
-        }
-        case 'underline': {
-          ctx.strokeStyle = decoration.value;
-          ctx.lineWidth = 1;
-          ctx.beginPath();
-          ctx.moveTo(decoration.from * charWidth, decoration.lineNumber * lineHeight + charHeight);
-          ctx.lineTo(decoration.to * charWidth, decoration.lineNumber * lineHeight + charHeight);
-          ctx.stroke();
-          break;
-        }
+
+    const backgroundDecorations = viewport._decorations.filter(decoration => decoration.name === 'background');
+    const underlineDecorations = viewport._decorations.filter(decoration => decoration.name === 'underline');
+
+    for (const decoration of backgroundDecorations) {
+      ctx.fillStyle = decoration.value;
+      ctx.fillRect(
+          decoration.from * charWidth,
+          decoration.lineNumber * lineHeight,
+          (decoration.to - decoration.from) * charWidth,
+          lineHeight);
+    }
+
+    if (underlineDecorations.length) {
+      //TODO: cluster decorations by stoke style
+      ctx.strokeStyle = underlineDecorations[0].value;
+      ctx.beginPath();
+      for (const decoration of underlineDecorations) {
+        ctx.moveTo(decoration.from * charWidth, decoration.lineNumber * lineHeight + charHeight);
+        ctx.lineTo(decoration.to * charWidth, decoration.lineNumber * lineHeight + charHeight);
       }
+      ctx.stroke();
     }
   }
 
   _drawSelections(ctx, viewportStart, viewportEnd) {
+    ctx.save();
     ctx.fillStyle = 'rgba(126, 188, 254, 0.6)';
     ctx.stokeStyle = 'rgb(33, 33, 33)';
+    ctx.lineWidth = 2 / this._ratio;
     const viewportRange = {from: viewportStart, to: viewportEnd};
     for (let selection of this._editor.selections()) {
       if (TextRange.intersects(selection.range(), viewportRange))
         this._drawSelection(ctx, viewportStart, viewportEnd, selection);
     }
+    ctx.restore();
   }
 
   _drawSelection(ctx, viewportStart, viewportEnd, selection) {
@@ -363,7 +378,6 @@ export class CanvasRenderer {
 
     if (this._drawCursors) {
       const focus = selection.focus();
-      ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(focus.columnNumber * charWidth, focus.lineNumber * lineHeight);
       ctx.lineTo(focus.columnNumber * charWidth, focus.lineNumber * lineHeight + lineHeight);
@@ -439,22 +453,6 @@ class Scrollbar {
       this.thumbRect.x = this.rect.x + Math.round((this.rect.width - this.thumbRect.width) * offset / maxOffset);
     }
   }
-}
-
-let pixel_ratio = 0;
-
-function getPixelRatio() {
-  if (!pixel_ratio) {
-    let ctx = document.createElement('canvas').getContext('2d'),
-        dpr = window.devicePixelRatio || 1,
-        bsr = ctx.webkitBackingStorePixelRatio ||
-              ctx.mozBackingStorePixelRatio ||
-              ctx.msBackingStorePixelRatio ||
-              ctx.oBackingStorePixelRatio ||
-              ctx.backingStorePixelRatio || 1;
-    pixel_ratio = dpr / bsr;
-  }
-  return pixel_ratio;
 }
 
 function rectHasPoint(rect, x, y) {
