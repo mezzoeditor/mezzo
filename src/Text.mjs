@@ -1,7 +1,5 @@
-let seed = 42;
-let random = function() {
-  return seed = seed * 48271 % 2147483647;
-};
+import { Random } from "./Types.mjs";
+let random = Random(42);
 
 /**
  * @typedef {{
@@ -259,6 +257,26 @@ export class Text {
    */
   longestLineLength() {
     return this._root.longestLine;
+  }
+
+  /**
+   * @param {number} lineNumber
+   * @return {number}
+   */
+  lineLength(lineNumber) {
+    let line = this._line(lineNumber);
+    return line ? line.length : 0;
+  }
+
+  /**
+   * @param {number} lineNumber
+   * @param {number} from
+   * @param {number} to
+   * @return {?string}
+   */
+  lineChunk(lineNumber, from, to) {
+    let line = this._line(lineNumber);
+    return line !== null ? line.substring(from, to) : null;
   }
 
   /**

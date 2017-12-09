@@ -1,6 +1,7 @@
 import { Editor } from "./Editor.mjs";
 import { CanvasRenderer } from "./CanvasRenderer.mjs";
 import { Selection } from "./Selection.mjs";
+import { Viewport } from "./Viewport.mjs";
 
 export class WebEditor {
   /**
@@ -13,6 +14,17 @@ export class WebEditor {
     this.setText('');
     this._input.addEventListener('focus', event => this._renderer.setCursorsVisible(true));
     this._input.addEventListener('blur', event => this._renderer.setCursorsVisible(false));
+  }
+
+  /**
+   * @param {!ViewportBuilder} builder
+   */
+  addViewportBuilder(builder) {
+    this._renderer.addBuilder(builder);
+  }
+
+  invalidate() {
+    this._renderer.invalidate();
   }
 
   /**
@@ -193,14 +205,3 @@ export class WebEditor {
     this._element.appendChild(canvas);
   }
 }
-
-/*
-buildViewport(viewport) {
-  viewport.addDecorations(...);
-  viewport.addAutosizeWidget(...);
-  viewport.addWidgetFixedWidth(...);
-  viewport.addErrorLine(...);
-  viewport.addGutterWidget(...);
-}
-setLineMarker(line, marker, value)
-*/

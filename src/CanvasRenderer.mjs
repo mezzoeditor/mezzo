@@ -2,6 +2,7 @@ import { FontMetrics } from "./FontMetrics.mjs";
 import { Editor } from "./Editor.mjs";
 import { Selection } from "./Selection.mjs";
 import { TextPosition, TextRange } from "./Types.mjs";
+import { Viewport } from "./Viewport.mjs";
 
 const GUTTER_PADDING_LEFT_RIGHT = 4;
 const EDITOR_MARGIN_LEFT = 4;
@@ -27,6 +28,7 @@ export class CanvasRenderer {
     this._scrollTop = 0;
 
     this._render = this._render.bind(this);
+    this._builders = [];
 
     this._canvas.addEventListener('mousedown', event => this._onMouseDown(event));
     this._canvas.addEventListener('wheel', event => this._onScroll(event));
@@ -41,6 +43,13 @@ export class CanvasRenderer {
     this._vScrollbar = new Scrollbar(true /** isVertical */);
     this._hScrollbar = new Scrollbar(false /** isVertical */);
     this._initializeMetrics();
+  }
+
+  /**
+   * @param {!ViewportBuilder} builder
+   */
+  addBuilder(builder) {
+    this._builders.push(builder);
   }
 
   _onScroll(event) {
@@ -74,7 +83,7 @@ export class CanvasRenderer {
     // The following will be shipped soon.
     // const fontHeight = metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent;
 
-    this._metrics = new FontMetrics(metrics.width, fontHeight);
+    this._metrics = new FontMetrics(metrics.width, fontHeight - 5, fontHeight);
   }
 
   /**
@@ -174,6 +183,14 @@ export class CanvasRenderer {
       columnNumber: Math.ceil((this._scrollLeft + this._cssWidth) / charWidth)
     };
 
+    let fromLine = Math.min(viewportStart.lineNumber, this._editor.lineCount());
+    let toLine = Math.min(viewportEnd.lineNumber, this._editor.lineCount());
+    const viewport = new Viewport(this._editor.text(),
+        {from: {lineNumber: fromLine, columnNumber: viewportStart.columnNumber},
+         to: {lineNumber: toLine, columnNumber: viewportEnd.columnNumber}});
+    for (let builder of this._builders)
+      builder(viewport);
+
     ctx.save();
     ctx.rect(this._gutterRect.x, this._gutterRect.y, this._gutterRect.width, this._gutterRect.height);
     ctx.clip();
@@ -185,7 +202,7 @@ export class CanvasRenderer {
     ctx.clip();
     ctx.translate(-this._scrollLeft + this._editorRect.x, -this._scrollTop + this._editorRect.y);
     this._drawSelections(ctx, viewportStart, viewportEnd);
-    this._drawText(ctx, viewportStart, viewportEnd);
+    this._drawText(ctx, viewportStart, viewportEnd, viewport);
     ctx.restore();
 
     ctx.save();
@@ -215,14 +232,35 @@ export class CanvasRenderer {
     }
   }
 
-  _drawText(ctx, viewportStart, viewportEnd) {
-    const {lineHeight, charWidth} = this._metrics;
+  _drawText(ctx, viewportStart, viewportEnd, viewport) {
+    const {lineHeight, charWidth, charHeight} = this._metrics;
     ctx.fillStyle = 'rgb(33, 33, 33)';
     const textX = viewportStart.columnNumber * charWidth;
     const lineCount = this._editor.lineCount();
     for (let i = viewportStart.lineNumber; i < viewportEnd.lineNumber && i < lineCount; ++i) {
       const line = this._editor.line(i);
       ctx.fillText(line.substring(viewportStart.columnNumber, viewportEnd.columnNumber + 1), textX, i * lineHeight);
+    }
+    for (let decoration of viewport._decorations) {
+      switch (decoration.name) {
+        case 'background': {
+          ctx.fillStyle = decoration.value;
+          ctx.fillRect(
+              (viewportStart.columnNumber + decoration.from) * charWidth,
+              decoration.lineNumber * lineHeight,
+              (decoration.to - decoration.from) * charWidth,
+              lineHeight);
+          break;
+        }
+        case 'underline': {
+          ctx.strokeStyle = decoration.value;
+          ctx.beginPath();
+          ctx.moveTo((viewportStart.columnNumber + decoration.from) * charWidth, decoration.lineNumber * lineHeight + charHeight);
+          ctx.lineTo((viewportStart.columnNumber + decoration.to) * charWidth, decoration.lineNumber * lineHeight + charHeight);
+          ctx.stroke();
+          break;
+        }
+      }
     }
   }
 

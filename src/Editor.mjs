@@ -64,6 +64,13 @@ export class Editor {
   }
 
   /**
+   * @return {!Text}
+   */
+  text() {
+    return this._state.text;
+  }
+
+  /**
    * @return {!Array<{!Selection}>}
    */
   selections() {
