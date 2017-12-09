@@ -12,8 +12,37 @@ export class WebEditor {
     this._editor = new Editor();
     this._createRenderer(document);
     this.setText('');
-    this._input.addEventListener('focus', event => this._renderer.setCursorsVisible(true));
-    this._input.addEventListener('blur', event => this._renderer.setCursorsVisible(false));
+    this._setupCursors();
+  }
+
+  _setupCursors() {
+    let cursorsVisible = false;
+    let cursorsTimeout;
+    let toggleCursors = () => {
+      cursorsVisible = !cursorsVisible;
+      this._renderer.setCursorsVisible(cursorsVisible);
+    };
+    this._input.addEventListener('focus', event => {
+      toggleCursors();
+      cursorsTimeout = document.defaultView.setInterval(toggleCursors, 500);
+    });
+    this._input.addEventListener('blur', event => {
+      if (cursorsVisible)
+        toggleCursors();
+      if (cursorsTimeout) {
+        document.defaultView.clearInterval(cursorsTimeout);
+        cursorsTimeout = null;
+      }
+    });
+    this._revealCursors = () => {
+      if (!cursorsTimeout)
+        return;
+      document.defaultView.clearInterval(cursorsTimeout);
+      if (!cursorsVisible)
+        toggleCursors();
+      cursorsTimeout = document.defaultView.setInterval(toggleCursors, 500);
+    };
+    this._revealCursors();
   }
 
   /**
@@ -96,6 +125,7 @@ export class WebEditor {
     this._input.addEventListener('input', event => {
       this._editor.performType(this._input.value);
       this._input.value = '';
+      this._revealCursors();
       this._renderer.invalidate();
     });
     this._input.addEventListener('keydown', event => {
