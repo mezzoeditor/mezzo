@@ -135,8 +135,7 @@ export class CanvasRenderer {
 
   _onScroll(event) {
     this._scrollTop += event.deltaY;
-    this._scrollLeft += event.deltaX && event.deltaY / event.deltaX > 2 ? 0 : event.deltaX;
-    event.preventDefault(true);
+    this._scrollLeft += event.deltaX;
     this.invalidate();
 
     event.stopPropagation();
