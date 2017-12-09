@@ -1,7 +1,7 @@
-import { Random } from "./Types.mjs";
-import { Marker } from "./Marker.mjs";
-
-let random = Random(42);
+let seed = 42;
+let random = function() {
+  return seed = seed * 48271 % 2147483647;
+};
 
 /**
  * @typedef {{
@@ -14,12 +14,11 @@ let random = Random(42);
 /**
  * @typedef {{
  *   line: !Line|undefined,
- *   marker: !Marker|undefined,
+ *   lineWidget: Object|undefined,
  *
  *   longestLine: number,
  *   lineCount: number,
- *   markerLineCount: number|undefined,
- *   lastMarkerId: string|undefined,
+ *   widgetLineCount: number|undefined,
  *
  *   left: !LineNode|undefined,
  *   right: !LineNode|undefined,
@@ -39,19 +38,15 @@ let setChildren = function(node, left, right) {
     node.left = left;
     node.lineCount += left.lineCount;
     node.longestLine = Math.max(node.longestLine, left.longestLine);
-    if (left.markerLineCount)
-      node.markerLineCount = (node.markerLineCount || 0) + left.markerLineCount;
-    if (left.lastMarkerId && !node.lastMarkerId)
-      node.lastMarkerId = left.lastMarkerId;
+    if (left.widgetLineCount)
+      node.widgetLineCount = (node.widgetLineCount || 0) + left.widgetLineCount;
   }
   if (right) {
     node.right = right;
     node.lineCount += right.lineCount;
     node.longestLine = Math.max(node.longestLine, right.longestLine);
-    if (right.markerLineCount)
-      node.markerLineCount = (node.markerLineCount || 0) + right.markerLineCount;
-    if (right.lastMarkerId)
-      node.lastMarkerId = right.lastMarkerId;
+    if (right.widgetLineCount)
+      node.widgetLineCount = (node.widgetLineCount || 0) + right.widgetLineCount;
   }
   return node;
 };
@@ -72,9 +67,9 @@ let clone = function(node) {
     result.lineCount = 1;
     result.longestLine = node.line.s.length;
   }
-  if (node.marker) {
-    result.marker = node.marker;
-    result.markerLineCount = node.marker.size;
+  if (node.lineWidget) {
+    result.lineWidget = node.lineWidget;
+    result.widgetLineCount = 1;
   }
   return result;
 };
@@ -90,23 +85,6 @@ let lineNode = function(s, h) {
     line: s ? {s} : emptyLine,
     longestLine: s.length,
     lineCount: 1,
-    h: h === undefined ? random() : h
-  };
-};
-
-
-/**
- * @param {!Marker} marker
- * @param {number=} h
- * @return {!LineNode}
- */
-let markerNode = function(marker, h) {
-  return {
-    marker: marker,
-    longestLine: 0,
-    lineCount: 0,
-    markerLineCount: marker.size,
-    lastMarkerId: marker.id,
     h: h === undefined ? random() : h
   };
 };
@@ -160,6 +138,37 @@ let build = function(lines) {
 
 /**
  * @param {!LineNode} root
+ * @param {function(!LineNode):*} visitor
+ * @param {boolean=} reverse
+ * @return {*}
+ */
+let visit = function(root, visitor, reverse) {
+  let {left, right} = root;
+  if (reverse) {
+    let tmp = left;
+    left = right;
+    right = tmp;
+  }
+  let result;
+
+  if (left) {
+    result = visit(left, visitor, reverse);
+    if (result)
+      return result;
+  }
+
+  result = visitor(root);
+  if (result)
+    return result;
+
+  if (right)
+    result = visit(right, visitor, reverse);
+  return result;
+};
+
+
+/**
+ * @param {!LineNode} root
  * @param {number} lineNumber
  * @return {!LineNode|undefined}
  */
@@ -186,13 +195,13 @@ let find = function(root, lineNumber) {
 
 /**
  * Left part contains:
- *   - all lines and markers up to (lineNumber - 1)
- *   - if |markersToLeft| is true, all markers between (lineNumber - 1) and (lineNumber)
+ *   - all lines and widgets up to (lineNumber - 1)
+ *   - if |widgetsToLeft| is true, all widgets between (lineNumber - 1) and (lineNumber)
  * @param {!LineNode|undefined} root
  * @param {number} lineNumber
  * @return {{left: !LineNode|undefined, right: !LineNode|undefined}}
  */
-let split = function(root, lineNumber, markersToLeft) {
+let split = function(root, lineNumber, widgetsToLeft) {
   if (!root)
     return {};
   if (lineNumber >= root.lineCount)
@@ -201,12 +210,12 @@ let split = function(root, lineNumber, markersToLeft) {
     return {right: root};
 
   let leftCount = root.left ? root.left.lineCount : 0;
-  let rootToLeft = (root.line || markersToLeft) ? leftCount < lineNumber : leftCount <= lineNumber;
+  let rootToLeft = (root.line || widgetsToLeft) ? leftCount < lineNumber : leftCount <= lineNumber;
   if (rootToLeft) {
-    let tmp = split(root.right, lineNumber - leftCount - (root.line ? 1 : 0), markersToLeft);
+    let tmp = split(root.right, lineNumber - leftCount - (root.line ? 1 : 0), widgetsToLeft);
     return {left: setChildren(clone(root), root.left, tmp.left), right: tmp.right};
   } else {
-    let tmp = split(root.left, lineNumber, markersToLeft);
+    let tmp = split(root.left, lineNumber, widgetsToLeft);
     return {left: tmp.left, right: setChildren(clone(root), tmp.right, root.right)};
   }
 };
@@ -278,20 +287,10 @@ export class Text {
    */
   content() {
     let result = [];
-
-    /**
-     * @param {!LineNode} node
-     */
-    function visit(node) {
-      if (node.left)
-        visit(node.left);
+    visit(this._root, node => {
       if (node.line)
         result.push(node.line.s);
-      if (node.right)
-        visit(node.right);
-    }
-
-    visit(this._root);
+    });
     return result.join('\n');
   }
 
@@ -419,12 +418,12 @@ export class Text {
     let {from, to} = range;
     let insertion = insertionText ? insertionText._root : undefined;
 
-    let tmp = split(this._root, to.lineNumber + 1, false /* markersToLeft */);
+    let tmp = split(this._root, to.lineNumber + 1, false /* widgetsToLeft */);
     let rightText = tmp.right;
-    tmp = split(tmp.left, from.lineNumber, true /* markersToLeft */);
+    tmp = split(tmp.left, from.lineNumber, true /* widgetsToLeft */);
     let leftText = tmp.left;
 
-    // No markers on the sides in |middleText|.
+    // No widgets on the sides in |middleText|.
     let middleText = tmp.right;
 
     let fromLine, toLine;
@@ -432,9 +431,9 @@ export class Text {
       // |middleText| must contain exactly one node.
       fromLine = toLine = middleText.line.s;
     } else {
-      tmp = split(middleText, to.lineNumber - from.lineNumber, true /* markersToLeft */);
+      tmp = split(middleText, to.lineNumber - from.lineNumber, true /* widgetsToLeft */);
       toLine = tmp.right.line.s;
-      tmp = split(tmp.left, 1, false /* markersToLeft */);
+      tmp = split(tmp.left, 1, false /* widgetsToLeft */);
       fromLine = tmp.left.line.s;
       // tmp.right is dropped altogether.
     }
@@ -449,60 +448,5 @@ export class Text {
     }
 
     return new Text(merge(leftText, merge(middleText, rightText)));
-  }
-
-  /**
-   * Inserts |marker| immediately before |lineNumber|, but after
-   * other markers at the same position.
-   * Marker cannot be inserted to any other text, because this
-   * function assings a text-specific |id| to it.
-   * @param {!Marker} marker
-   * @param {number} lineNumber
-   * @return {!Text}
-   */
-  insertLineMarker(marker, lineNumber) {
-    if (marker.id)
-      throw 'Marker already has id';
-
-    let tmp = split(this._root, lineNumber, false /* markersToLeft */);
-
-    let node = tmp.right;
-    while (node) {
-      if (node.left && node.left.lastMarkerId) {
-        node = node.left;
-        continue;
-      }
-      if (node.marker)
-        break;
-      node = node.right;
-    }
-    marker.id = Marker.generateId(tmp.left.lastMarkerId, nextMarker ? nextMarker.lastMarkerId : undefined);
-
-    return new Text(merge(tmp.left, merge(markerNode(marker), tmp.right)));
-  }
-
-  /**
-   * @param {!Marker} marker
-   * @return {number}
-   */
-  findLineNumberForLineMarker(marker) {
-    if (!marker.id)
-      throw 'Marker must be in the text';
-    let node = this._root;
-    let lineNumber = 0;
-    while (node) {
-      if (node.left && node.left.lastMarkerId && node.left.lastMarkerId >= marker.id) {
-        node = node.left;
-        continue;
-      }
-      if (node.marker && node.marker.id === marker.id)
-        break;
-      lineNumber += node.left ? node.left.lineCount : 0;
-      lineNumber += node.line ? 1 : 0;
-      node = node.right;
-    }
-    if (!node || !node.marker || node.marker.id !== marker.id)
-      throw 'Marker must be in the text';
-    return lineNumber;
   }
 }
