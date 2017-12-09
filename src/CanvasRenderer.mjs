@@ -298,6 +298,7 @@ export class CanvasRenderer {
     ctx.fillStyle = '#eee';
     ctx.fillRect(0, 0, this._gutterRect.width, this._gutterRect.height);
     ctx.strokeStyle = 'rgb(187, 187, 187)';
+    ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(this._gutterRect.width, 0);
     ctx.lineTo(this._gutterRect.width, this._gutterRect.height);
@@ -336,6 +337,7 @@ export class CanvasRenderer {
         }
         case 'underline': {
           ctx.strokeStyle = decoration.value;
+          ctx.lineWidth = 1;
           ctx.beginPath();
           ctx.moveTo(decoration.from * charWidth, decoration.lineNumber * lineHeight + charHeight);
           ctx.lineTo(decoration.to * charWidth, decoration.lineNumber * lineHeight + charHeight);
@@ -349,26 +351,23 @@ export class CanvasRenderer {
   _drawSelections(ctx, viewportStart, viewportEnd) {
     ctx.fillStyle = 'rgba(126, 188, 254, 0.6)';
     ctx.stokeStyle = 'rgb(33, 33, 33)';
-    if (this._drawCursors) {
-      const viewportRange = {from: viewportStart, to: viewportEnd};
-      for (let selection of this._editor.selections()) {
-        if (TextRange.intersects(selection.range(), viewportRange))
-          this._drawSelection(ctx, viewportStart, viewportEnd, selection);
-      }
+    const viewportRange = {from: viewportStart, to: viewportEnd};
+    for (let selection of this._editor.selections()) {
+      if (TextRange.intersects(selection.range(), viewportRange))
+        this._drawSelection(ctx, viewportStart, viewportEnd, selection);
     }
   }
 
   _drawSelection(ctx, viewportStart, viewportEnd, selection) {
     const {lineHeight, charWidth} = this._metrics;
 
-    // TODO(dgozman): some editors show cursor even for non-collapsed selection.
-    if (selection.isCollapsed()) {
+    if (this._drawCursors) {
       const focus = selection.focus();
+      ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(focus.columnNumber * charWidth, focus.lineNumber * lineHeight);
       ctx.lineTo(focus.columnNumber * charWidth, focus.lineNumber * lineHeight + lineHeight);
       ctx.stroke();
-      return;
     }
 
     const {from, to} = selection.range();
