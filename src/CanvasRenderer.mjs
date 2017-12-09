@@ -87,9 +87,8 @@ export class CanvasRenderer {
   invalidate() {
     // To properly handle input events, we have to update rects synchronously.
     const lineCount = this._editor.lineCount();
-    const renderLineCount = this._editor.renderLineCount();
 
-    this._maxScrollTop = Math.max(0, (renderLineCount - 1) * this._metrics.lineHeight);
+    this._maxScrollTop = Math.max(0, (lineCount - 1) * this._metrics.lineHeight);
     this._maxScrollLeft = Math.max(0, this._editor.longestLineLength() * this._metrics.charWidth - this._editorRect.width + (this._maxScrollTop ? SCROLLBAR_WIDTH : 0));
 
     this._scrollLeft = Math.max(this._scrollLeft, 0);
@@ -109,7 +108,7 @@ export class CanvasRenderer {
     this._vScrollbar.rect.y = 0;
     this._vScrollbar.rect.width = SCROLLBAR_WIDTH;
     this._vScrollbar.rect.height = this._cssHeight - (this._maxScrollLeft ? SCROLLBAR_WIDTH : 0);
-    this._vScrollbar.updateThumbRect(this._cssHeight, renderLineCount * this._metrics.lineHeight, this._scrollTop, this._maxScrollTop);
+    this._vScrollbar.updateThumbRect(this._cssHeight, lineCount * this._metrics.lineHeight, this._scrollTop, this._maxScrollTop);
 
     this._hScrollbar.rect.x = this._gutterRect.width;
     this._hScrollbar.rect.y = this._cssHeight - SCROLLBAR_WIDTH;
@@ -174,12 +173,11 @@ export class CanvasRenderer {
       lineNumber: Math.ceil((this._scrollTop + this._cssHeight) / lineHeight),
       columnNumber: Math.ceil((this._scrollLeft + this._cssWidth) / charWidth)
     };
-    const renderLines = this._editor.renderLines(viewportStart.lineNumber, viewportEnd.lineNumber);
 
     ctx.save();
     ctx.rect(this._gutterRect.x, this._gutterRect.y, this._gutterRect.width, this._gutterRect.height);
     ctx.clip();
-    this._drawGutter(ctx, renderLines, viewportStart, viewportEnd);
+    this._drawGutter(ctx, viewportStart, viewportEnd);
     ctx.restore();
 
     ctx.save();
@@ -187,14 +185,14 @@ export class CanvasRenderer {
     ctx.clip();
     ctx.translate(-this._scrollLeft + this._editorRect.x, -this._scrollTop + this._editorRect.y);
     this._drawSelections(ctx, viewportStart, viewportEnd);
-    this._drawText(ctx, renderLines, viewportStart, viewportEnd);
+    this._drawText(ctx, viewportStart, viewportEnd);
     ctx.restore();
 
     this._vScrollbar.draw(ctx);
     this._hScrollbar.draw(ctx);
   }
 
-  _drawGutter(ctx, renderLines, viewportStart, viewportEnd) {
+  _drawGutter(ctx, viewportStart, viewportEnd) {
     const {lineHeight, charWidth} = this._metrics;
     ctx.fillStyle = '#eee';
     ctx.fillRect(0, 0, this._gutterRect.width, this._gutterRect.height);
@@ -208,36 +206,21 @@ export class CanvasRenderer {
     ctx.textAlign = 'right';
     ctx.fillStyle = 'rgb(128, 128, 128)';
     const textX = this._gutterRect.width - GUTTER_PADDING_LEFT_RIGHT;
-    let lineNumber = renderLines.startLineNumber;
-    let viewportLineNumber = renderLines.startRenderLineNumber;
-    for (let item of renderLines.items) {
-      if (typeof item === 'string') {
-        const number = (lineNumber + 1) + '';
-        ctx.fillText(number, textX, viewportLineNumber * lineHeight);
-        lineNumber++;
-        viewportLineNumber++;
-      } else {
-        viewportLineNumber += item.size;
-      }
+    const lineCount = this._editor.lineCount();
+    for (let i = viewportStart.lineNumber; i < viewportEnd.lineNumber && i < lineCount; ++i) {
+      const number = (i + 1) + '';
+      ctx.fillText(number, textX, i * lineHeight);
     }
   }
 
-  _drawText(ctx, renderLines, viewportStart, viewportEnd) {
+  _drawText(ctx, viewportStart, viewportEnd) {
     const {lineHeight, charWidth} = this._metrics;
     ctx.fillStyle = 'rgb(33, 33, 33)';
     const textX = viewportStart.columnNumber * charWidth;
-    let viewportLineNumber = renderLines.startRenderLineNumber;
-    for (let item of renderLines.items) {
-      if (typeof item === 'string') {
-        ctx.fillText(item.substring(viewportStart.columnNumber, viewportEnd.columnNumber + 1), textX, viewportLineNumber * lineHeight);
-        viewportLineNumber++;
-      } else {
-        ctx.save();
-        ctx.fillStyle = 'rgb(100, 0, 0)';
-        ctx.fillRect(textX - charWidth, viewportLineNumber * lineHeight, (viewportEnd.columnNumber + 1 - viewportStart.columnNumber) * charWidth, item.size * lineHeight);
-        ctx.restore();
-        viewportLineNumber += item.size;
-      }
+    const lineCount = this._editor.lineCount();
+    for (let i = viewportStart.lineNumber; i < viewportEnd.lineNumber && i < lineCount; ++i) {
+      const line = this._editor.line(i);
+      ctx.fillText(line.substring(viewportStart.columnNumber, viewportEnd.columnNumber + 1), textX, i * lineHeight);
     }
   }
 

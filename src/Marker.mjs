@@ -42,15 +42,10 @@ export class Marker {
   }
 
   /**
-   * @param {number} linesTaken
-   * @param {?Element} element
+   * @param {number} size
    */
-  static createLineWidget(linesTaken, element) {
-    let marker = new Marker();
-    marker.size = linesTaken;
-    marker.id = '';
-    marker.element = element;
-    marker.lineWidget = true;
-    return marker;
+  constructor(size) {
+    this.size = size;
+    this.id = '';
   }
 }
