@@ -88,7 +88,7 @@ export class Text {
     if (lineNumber >= this._lineCount)
       return null;
     if (this._lineCache[lineNumber] === undefined) {
-      let found = tree.findLineColumn(this._root, lineNumber, 0);
+      let found = tree.find(this._root, {line: lineNumber, column: 0});
       this._lineCache[lineNumber] = found ? found.node.line : null;
     }
     return this._lineCache[lineNumber];
@@ -282,7 +282,7 @@ export class Text {
    * @return {?TextPosition}
    */
   offsetToPosition(offset) {
-    let found = tree.findChar(this._root, offset);
+    let found = tree.find(this._root, {char: offset});
     if (!found)
       return null;
 
@@ -311,7 +311,7 @@ export class Text {
    * @return {?number}
    */
   positionToOffset(position) {
-    let found = tree.findLineColumn(this._root, position.lineNumber, position.columnNumber);
+    let found = tree.find(this._root, {line: position.lineNumber, column: position.columnNumber});
     if (!found)
       return null;
 
