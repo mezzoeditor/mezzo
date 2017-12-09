@@ -69,7 +69,7 @@ export class WebEditor {
    * @return {string}
    */
   text() {
-    return this._editor.content();
+    return this._editor.text().content();
   }
 
   /**

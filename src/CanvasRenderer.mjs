@@ -95,17 +95,17 @@ export class CanvasRenderer {
 
   invalidate() {
     // To properly handle input events, we have to update rects synchronously.
-    const lineCount = this._editor.lineCount();
+    const lineCount = this._editor.text().lineCount();
 
     this._maxScrollTop = Math.max(0, (lineCount - 1) * this._metrics.lineHeight);
-    this._maxScrollLeft = Math.max(0, (this._editor.longestLineLength() + 3) * this._metrics.charWidth - this._editorRect.width);
+    this._maxScrollLeft = Math.max(0, (this._editor.text().longestLineLength() + 3) * this._metrics.charWidth - this._editorRect.width);
 
     this._scrollLeft = Math.max(this._scrollLeft, 0);
     this._scrollLeft = Math.min(this._scrollLeft, this._maxScrollLeft);
     this._scrollTop = Math.max(this._scrollTop, 0);
     this._scrollTop = Math.min(this._scrollTop, this._maxScrollTop);
 
-    const gutterLength = lineCount < 100 ? 3 : (this._editor.lineCount() + '').length;
+    const gutterLength = lineCount < 100 ? 3 : (this._editor.text().lineCount() + '').length;
     this._gutterRect.width = gutterLength * this._metrics.charWidth + 2 * GUTTER_PADDING_LEFT_RIGHT;
     this._gutterRect.height = this._cssHeight;
 
@@ -123,7 +123,7 @@ export class CanvasRenderer {
     this._hScrollbar.rect.y = this._cssHeight - SCROLLBAR_WIDTH;
     this._hScrollbar.rect.width = this._cssWidth - this._gutterRect.width - this._vScrollbar.rect.width;
     this._hScrollbar.rect.height = this._maxScrollLeft ? SCROLLBAR_WIDTH : 0;
-    this._hScrollbar.updateThumbRect(this._editorRect.width, this._editor.longestLineLength() * this._metrics.charWidth, this._scrollLeft, this._maxScrollLeft);
+    this._hScrollbar.updateThumbRect(this._editorRect.width, this._editor.text().longestLineLength() * this._metrics.charWidth, this._scrollLeft, this._maxScrollLeft);
 
     if (!this._animationFrameId)
       this._animationFrameId = requestAnimationFrame(this._render);
@@ -162,7 +162,7 @@ export class CanvasRenderer {
       lineNumber: Math.floor(y / this._metrics.lineHeight),
       columnNumber: Math.round(x / this._metrics.charWidth),
     };
-    return this._editor.clampPosition(textPosition);
+    return this._editor.text().clampPositionIfNeeded(textPosition) || textPosition;
   }
 
   _render() {
@@ -183,8 +183,8 @@ export class CanvasRenderer {
       columnNumber: Math.ceil((this._scrollLeft + this._cssWidth) / charWidth)
     };
 
-    let fromLine = Math.min(viewportStart.lineNumber, this._editor.lineCount());
-    let toLine = Math.min(viewportEnd.lineNumber, this._editor.lineCount());
+    let fromLine = Math.min(viewportStart.lineNumber, this._editor.text().lineCount());
+    let toLine = Math.min(viewportEnd.lineNumber, this._editor.text().lineCount());
     const viewport = new Viewport(this._editor.text(),
         {from: {lineNumber: fromLine, columnNumber: viewportStart.columnNumber},
          to: {lineNumber: toLine, columnNumber: viewportEnd.columnNumber}});
@@ -225,7 +225,7 @@ export class CanvasRenderer {
     ctx.textAlign = 'right';
     ctx.fillStyle = 'rgb(128, 128, 128)';
     const textX = this._gutterRect.width - GUTTER_PADDING_LEFT_RIGHT;
-    const lineCount = this._editor.lineCount();
+    const lineCount = this._editor.text().lineCount();
     for (let i = viewportStart.lineNumber; i < viewportEnd.lineNumber && i < lineCount; ++i) {
       const number = (i + 1) + '';
       ctx.fillText(number, textX, i * lineHeight);
@@ -236,9 +236,9 @@ export class CanvasRenderer {
     const {lineHeight, charWidth, charHeight} = this._metrics;
     ctx.fillStyle = 'rgb(33, 33, 33)';
     const textX = viewportStart.columnNumber * charWidth;
-    const lineCount = this._editor.lineCount();
+    const lineCount = this._editor.text().lineCount();
     for (let i = viewportStart.lineNumber; i < viewportEnd.lineNumber && i < lineCount; ++i) {
-      const line = this._editor.line(i);
+      const line = this._editor.text().line(i);
       ctx.fillText(line.substring(viewportStart.columnNumber, viewportEnd.columnNumber + 1), textX, i * lineHeight);
     }
     for (let decoration of viewport._decorations) {

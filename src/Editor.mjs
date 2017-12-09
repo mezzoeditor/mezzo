@@ -16,14 +16,6 @@ export class Editor {
   // ---------- Misc API ----------
 
   /**
-   * @param {!TextPosition} position
-   * @return {!TextPosition}
-   */
-  clampPosition(position) {
-    return this._state.text.clampPositionIfNeeded(position) || position;
-  }
-
-  /**
    * @param {string} text
    */
   setContent(text) {
@@ -32,35 +24,6 @@ export class Editor {
     state.text = Text.withContent(text);
     state.selections = [];
     this._pushState(state);
-  }
-
-  /**
-   * @return {string}
-   */
-  content() {
-    return this._state.text.content();
-  }
-
-  /**
-   * @return {number}
-   */
-  lineCount() {
-    return this._state.text.lineCount();
-  }
-
-  /**
-   * @return {number}
-   */
-  longestLineLength() {
-    return this._state.text.longestLineLength();
-  }
-
-  /**
-   * @param {number} lineNumber
-   * @return {?string}
-   */
-  line(lineNumber) {
-    return this._state.text.line(lineNumber);
   }
 
   /**
