@@ -210,6 +210,7 @@ export class WebEditor {
           break;
       }
       if (handled) {
+        this._revealCursors();
         this._renderer.invalidate();
         event.preventDefault();
         event.stopPropagation();
