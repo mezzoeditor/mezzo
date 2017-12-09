@@ -1,19 +1,22 @@
 export class Viewport {
   /**
    * @param {!Text} text
-   * @param {!TextRange} range
+   * @param {!TextPosition} viepwortStart
+   * @param {!TextPosition} viewportEnd
    */
-  constructor(text, range) {
+  constructor(text, viewportStart, viewportEnd) {
     this._text = text;
-    this._range = range;
+    this._viewportStart = viewportStart;
+    this._viewportEnd = viewportEnd;
     this._decorations = [];
   }
 
-  /**
-   * @return {!TextRange}
-   */
-  range() {
-    return this._range;
+  viewportStart() {
+    return this._viewportStart;
+  }
+
+  viewportEnd() {
+    return this._viewportEnd;
   }
 
   /**

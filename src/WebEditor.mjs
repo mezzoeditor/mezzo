@@ -52,6 +52,13 @@ export class WebEditor {
     this._renderer.addBuilder(builder);
   }
 
+  /**
+   * @param {!ViewportBuilder} builder
+   */
+  removeViewportBuilder(builder) {
+    this._renderer.removeBuilder(builder);
+  }
+
   invalidate() {
     this._renderer.invalidate();
   }

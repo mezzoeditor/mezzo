@@ -9,64 +9,83 @@ const examples = [
   'megaline.txt',
 ];
 
-function addExamples() {
+function addExamples(editor) {
   const select = document.querySelector('.examples');
   for (const example of examples) {
     const option = document.createElement('option');
     option.textContent = example;
     select.appendChild(option);
   }
-  select.addEventListener('input', () => setupEditor(window.editor, select.value), false);
+  select.addEventListener('input', () => setupEditor(editor, select.value), false);
 }
 
-function addHighlights() {
+function addHighlights(editor) {
+  const tokenHighlighter = new TokenHighlighter(editor);
+
   const select = document.querySelector('.highlights');
-  for (const highlight of ['the', 'e', '(']) {
-    if (!window.highlight)
-      window.highlight = highlight;
+  const highlights = ['the', 'e', '('];
+  for (const highlight of highlights) {
     const option = document.createElement('option');
     option.textContent = highlight;
     select.appendChild(option);
   }
-  select.addEventListener('input', () => {
-    window.highlight = select.value;
-    window.editor.invalidate();
-  }, false);
+  tokenHighlighter.setToken(highlights[0]);
+  select.addEventListener('input', () => tokenHighlighter.setToken(select.value), false);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  addExamples();
-  addHighlights();
-
   const editor = new WebEditor(document);
+  addExamples(editor);
+  addHighlights(editor);
+
   editor.element().classList.add('editor');
   document.body.appendChild(editor.element());
   editor.resize();
   window.onresize = () => editor.resize();
   window.editor = editor;
 
-  editor.addViewportBuilder(viewport => {
-    let s = window.highlight;
-    let from = viewport.range().from.columnNumber - s.length;
+  setupEditor(editor, examples[0]);
+});
+
+class TokenHighlighter {
+  constructor(editor) {
+    this._editor = editor;
+    this._token = '';
+    this._viewportBuilder = this._viewportBuilder.bind(this);
+  }
+
+  setToken(token) {
+    if (this._token === token)
+      return;
+    this._token = token;
+    if (token)
+      this._editor.addViewportBuilder(this._viewportBuilder);
+    else
+      this._editor.removeViewportBuilder(this._viewportBuilder);
+  }
+
+  _viewportBuilder(viewport, viewportStart, viewportEnd) {
+    if (!this._token)
+      return;
+    let from = viewportStart.columnNumber - this._token.length;
     if (from < 0)
       from = 0;
-    let to = viewport.range().to.columnNumber + s.length;
-    for (let line = viewport.range().from.lineNumber; line < viewport.range().to.lineNumber; line++) {
+    let to = viewportEnd.columnNumber + this._token.length;
+    const toLine = Math.min(viewport.lineCount(), viewportEnd.lineNumber);
+    for (let line = viewportStart.lineNumber; line < toLine; line++) {
       let text = viewport.lineChunk(line, from, to);
-      let index = text.indexOf(s);
+      let index = text.indexOf(this._token);
       while (index !== -1) {
         let value = ['rgba(0, 0, 255, 0.2)', 'rgba(0, 255, 0, 0.2)', 'rgba(255, 0, 0, 0.2)'][line % 3];
         viewport.addDecorations([
-            {lineNumber: line, from: from + index, to: from + index + s.length, name: 'background', value: value},
-            {lineNumber: line, from: from + index, to: from + index + s.length, name: 'underline', value: 'rgb(50, 50, 50)'},
+            {lineNumber: line, from: from + index, to: from + index + this._token.length, name: 'background', value: value},
+            {lineNumber: line, from: from + index, to: from + index + this._token.length, name: 'underline', value: 'rgb(50, 50, 50)'},
           ]);
-        index = text.indexOf(s, index + s.length);
+        index = text.indexOf(this._token, index + this._token.length);
       }
     }
-  });
-
-  setupEditor(editor, examples[0]);
-});
+  }
+}
 
 async function setupEditor(editor, exampleName) {
   const response = await fetch(exampleName);

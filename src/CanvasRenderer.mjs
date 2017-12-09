@@ -33,7 +33,7 @@ export class CanvasRenderer {
     this._scrollTop = 0;
 
     this._render = this._render.bind(this);
-    this._builders = [];
+    this._builders = new Set();
 
     this._canvas.addEventListener('mousedown', event => this._onMouseDown(event));
     this._canvas.addEventListener('mousemove', event => this._onMouseMove(event));
@@ -78,7 +78,20 @@ export class CanvasRenderer {
    * @param {!ViewportBuilder} builder
    */
   addBuilder(builder) {
-    this._builders.push(builder);
+    if (this._builders.has(builder))
+      return;
+    this._builders.add(builder);
+    this._scheduleRender();
+  }
+
+  /**
+   * @param {!ViewportBuilder} builder
+   */
+  removeBuilder(builder) {
+    if (!this._builders.has(builder))
+      return;
+    this._builders.delete(builder);
+    this._scheduleRender();
   }
 
   /**
@@ -277,13 +290,9 @@ export class CanvasRenderer {
       columnNumber: Math.ceil((this._scrollLeft + this._cssWidth) / charWidth)
     };
 
-    let fromLine = Math.min(viewportStart.lineNumber, this._editor.text().lineCount());
-    let toLine = Math.min(viewportEnd.lineNumber, this._editor.text().lineCount());
-    const viewport = new Viewport(this._editor.text(),
-        {from: {lineNumber: fromLine, columnNumber: viewportStart.columnNumber},
-         to: {lineNumber: toLine, columnNumber: viewportEnd.columnNumber}});
+    const viewport = new Viewport(this._editor.text(), viewportStart, viewportEnd);
     for (let builder of this._builders)
-      builder(viewport);
+      builder(viewport, viewportStart, viewportEnd);
 
     ctx.save();
     ctx.rect(this._gutterRect.x, this._gutterRect.y, this._gutterRect.width, this._gutterRect.height);
