@@ -9,6 +9,11 @@ const EDITOR_MARGIN_LEFT = 4;
 const SCROLLBAR_WIDTH = 15;
 const MIN_THUMB_SIZE = 30;
 
+const MouseDownStates = {
+  VSCROLL_DRAG: 'VSCROLL_DRAG',
+  HSCROLL_DRAG: 'HSCROLL_DRAG',
+};
+
 export class CanvasRenderer {
   /**
    * @param {!Document} document
@@ -32,6 +37,7 @@ export class CanvasRenderer {
 
     this._canvas.addEventListener('mousedown', event => this._onMouseDown(event));
     this._canvas.addEventListener('mousemove', event => this._onMouseMove(event));
+    this._canvas.addEventListener('mouseup', event => this._onMouseUp(event));
     this._canvas.addEventListener('wheel', event => this._onScroll(event));
 
     // Rects are in css pixels, in canvas coordinates.
@@ -44,6 +50,17 @@ export class CanvasRenderer {
     this._vScrollbar = new Scrollbar(true /** isVertical */);
     this._hScrollbar = new Scrollbar(false /** isVertical */);
     this._initializeMetrics();
+
+    this._lastCoordinates = {
+      mouseDown: null,
+      mouseMove: null,
+      mouseUp: null,
+    };
+    this._mouseDownState = {
+      name: null,
+      scrollLeft: 0,
+      scrollTop: 0
+    };
   }
 
   /**
@@ -128,6 +145,27 @@ export class CanvasRenderer {
 
   _onMouseDown(event) {
     const canvasPosition = this._mouseEventToCanvas(event);
+    this._lastCoordinates.mouseDown = canvasPosition;
+
+    this._vScrollbar.hovered = rectHasPoint(this._vScrollbar.thumbRect, canvasPosition.x, canvasPosition.y);
+    if (this._vScrollbar.hovered) {
+      this._vScrollbar.dragged = true;
+      this._mouseDownState.name = MouseDownStates.VSCROLL_DRAG;
+      this._mouseDownState.scrollTop = this._scrollTop;
+      this._mouseDownState.scrollLeft = this._scrollLeft;
+      this._scheduleRender();
+      return;
+    }
+    this._hScrollbar.hovered = rectHasPoint(this._hScrollbar.thumbRect, canvasPosition.x, canvasPosition.y);
+    if (this._hScrollbar.hovered) {
+      this._hScrollbar.dragged = true;
+      this._mouseDownState.name = MouseDownStates.HSCROLL_DRAG;
+      this._mouseDownState.scrollTop = this._scrollTop;
+      this._mouseDownState.scrollLeft = this._scrollLeft;
+      this._scheduleRender();
+      return;
+    }
+
     let textPosition = this._canvasToTextPosition(canvasPosition.x, canvasPosition.y);
     const selection = new Selection();
     selection.setCaret(textPosition);
@@ -140,10 +178,33 @@ export class CanvasRenderer {
 
   _onMouseMove(event) {
     const canvasPosition = this._mouseEventToCanvas(event);
+    this._lastCoordinates.mouseMove = canvasPosition;
+
+    if (!this._mouseDownState.name) {
+      this._vScrollbar.hovered = rectHasPoint(this._vScrollbar.thumbRect, canvasPosition.x, canvasPosition.y);
+      this._hScrollbar.hovered = rectHasPoint(this._hScrollbar.thumbRect, canvasPosition.x, canvasPosition.y);
+      this._scheduleRender();
+    } else if (this._mouseDownState.name === MouseDownStates.VSCROLL_DRAG) {
+      const ratio = (canvasPosition.y - this._lastCoordinates.mouseDown.y) / (this._vScrollbar.rect.height - this._vScrollbar.thumbRect.height);
+      this._scrollTop = this._mouseDownState.scrollTop + this._maxScrollTop * ratio;
+      this.invalidate();
+    } else if (this._mouseDownState.name === MouseDownStates.HSCROLL_DRAG) {
+      const ratio = (canvasPosition.x - this._lastCoordinates.mouseDown.x) / (this._hScrollbar.rect.width  - this._hScrollbar.thumbRect.width);
+      this._scrollLeft = this._mouseDownState.scrollLeft + this._maxScrollLeft * ratio;
+      this.invalidate();
+    }
+  }
+
+  _onMouseUp(event) {
+    const canvasPosition = this._mouseEventToCanvas(event);
+    this._lastCoordinates.mouseUp = canvasPosition;
+    this._mouseDownState.name = null;
+    this._vScrollbar.dragged = false;
+    this._hScrollbar.dragged = false;
     this._vScrollbar.hovered = rectHasPoint(this._vScrollbar.thumbRect, canvasPosition.x, canvasPosition.y);
     this._hScrollbar.hovered = rectHasPoint(this._hScrollbar.thumbRect, canvasPosition.x, canvasPosition.y);
-    
     this._scheduleRender();
+
   }
 
   invalidate() {
@@ -352,7 +413,12 @@ class Scrollbar {
       ctx.strokeRect(this.rect.x, this.rect.y, this.rect.width, this.rect.height);
     }
 
-    ctx.fillStyle = this.hovered ? 'rgba(100, 100, 100, 0.8)' : 'rgba(100, 100, 100, 0.4)';
+    if (this.dragged)
+      ctx.fillStyle = 'rgba(100, 100, 100, 0.8)';
+    else if (this.hovered)
+      ctx.fillStyle = 'rgba(100, 100, 100, 0.6)';
+    else
+      ctx.fillStyle = 'rgba(100, 100, 100, 0.4)'
     ctx.fillRect(this.thumbRect.x, this.thumbRect.y, this.thumbRect.width, this.thumbRect.height);
   }
 
