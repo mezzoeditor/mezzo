@@ -193,3 +193,14 @@ export class WebEditor {
     this._element.appendChild(canvas);
   }
 }
+
+/*
+buildViewport(viewport) {
+  viewport.addDecorations(...);
+  viewport.addAutosizeWidget(...);
+  viewport.addWidgetFixedWidth(...);
+  viewport.addErrorLine(...);
+  viewport.addGutterWidget(...);
+}
+setLineMarker(line, marker, value)
+*/
