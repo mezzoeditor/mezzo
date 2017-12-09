@@ -5,20 +5,10 @@ let random = function() {
 
 /**
  * @typedef {{
- *   s: string,
- * }} Line;
- */
-
- let emptyLine = { s: '' };
-
-/**
- * @typedef {{
- *   line: !Line|undefined,
- *   lineWidget: Object|undefined,
+ *   line: string,
  *
  *   longestLine: number,
  *   lineCount: number,
- *   widgetLineCount: number|undefined,
  *
  *   left: !LineNode|undefined,
  *   right: !LineNode|undefined,
@@ -38,15 +28,11 @@ let setChildren = function(node, left, right) {
     node.left = left;
     node.lineCount += left.lineCount;
     node.longestLine = Math.max(node.longestLine, left.longestLine);
-    if (left.widgetLineCount)
-      node.widgetLineCount = (node.widgetLineCount || 0) + left.widgetLineCount;
   }
   if (right) {
     node.right = right;
     node.lineCount += right.lineCount;
     node.longestLine = Math.max(node.longestLine, right.longestLine);
-    if (right.widgetLineCount)
-      node.widgetLineCount = (node.widgetLineCount || 0) + right.widgetLineCount;
   }
   return node;
 };
@@ -57,21 +43,12 @@ let setChildren = function(node, left, right) {
  * @return {!LineNode}
  */
 let clone = function(node) {
-  let result = {
-    lineCount: 0,
-    longestLine: 0,
+  return {
+    line: node.line,
+    lineCount: 1,
+    longestLine: node.line.length,
     h: node.h
   };
-  if (node.line) {
-    result.line = node.line;
-    result.lineCount = 1;
-    result.longestLine = node.line.s.length;
-  }
-  if (node.lineWidget) {
-    result.lineWidget = node.lineWidget;
-    result.widgetLineCount = 1;
-  }
-  return result;
 };
 
 
@@ -82,7 +59,7 @@ let clone = function(node) {
  */
 let lineNode = function(s, h) {
   return {
-    line: s ? {s} : emptyLine,
+    line: s,
     longestLine: s.length,
     lineCount: 1,
     h: h === undefined ? random() : h
@@ -137,71 +114,12 @@ let build = function(lines) {
 
 
 /**
- * @param {!LineNode} root
- * @param {function(!LineNode):*} visitor
- * @param {boolean=} reverse
- * @return {*}
- */
-let visit = function(root, visitor, reverse) {
-  let {left, right} = root;
-  if (reverse) {
-    let tmp = left;
-    left = right;
-    right = tmp;
-  }
-  let result;
-
-  if (left) {
-    result = visit(left, visitor, reverse);
-    if (result)
-      return result;
-  }
-
-  result = visitor(root);
-  if (result)
-    return result;
-
-  if (right)
-    result = visit(right, visitor, reverse);
-  return result;
-};
-
-
-/**
- * @param {!LineNode} root
- * @param {number} lineNumber
- * @return {!LineNode|undefined}
- */
-let find = function(root, lineNumber) {
-  while (true) {
-    if (root.left) {
-      if (root.left.lineCount > lineNumber) {
-        root = root.left;
-        continue;
-      }
-      lineNumber -= root.left.lineCount;
-    }
-    if (root.line) {
-      if (!lineNumber)
-        return root;
-      lineNumber--;
-    }
-    if (!root.right)
-      return;
-    root = root.right;
-  }
-};
-
-
-/**
- * Left part contains:
- *   - all lines and widgets up to (lineNumber - 1)
- *   - if |widgetsToLeft| is true, all widgets between (lineNumber - 1) and (lineNumber)
+ * Left part contains all linesup to (lineNumber - 1)
  * @param {!LineNode|undefined} root
  * @param {number} lineNumber
  * @return {{left: !LineNode|undefined, right: !LineNode|undefined}}
  */
-let split = function(root, lineNumber, widgetsToLeft) {
+let split = function(root, lineNumber) {
   if (!root)
     return {};
   if (lineNumber >= root.lineCount)
@@ -210,12 +128,11 @@ let split = function(root, lineNumber, widgetsToLeft) {
     return {right: root};
 
   let leftCount = root.left ? root.left.lineCount : 0;
-  let rootToLeft = (root.line || widgetsToLeft) ? leftCount < lineNumber : leftCount <= lineNumber;
-  if (rootToLeft) {
-    let tmp = split(root.right, lineNumber - leftCount - (root.line ? 1 : 0), widgetsToLeft);
+  if (leftCount < lineNumber) {
+    let tmp = split(root.right, lineNumber - leftCount - 1);
     return {left: setChildren(clone(root), root.left, tmp.left), right: tmp.right};
   } else {
-    let tmp = split(root.left, lineNumber, widgetsToLeft);
+    let tmp = split(root.left, lineNumber);
     return {left: tmp.left, right: setChildren(clone(root), tmp.right, root.right)};
   }
 };
@@ -272,14 +189,38 @@ export class Text {
 
   /**
    * @param {number} lineNumber
-   * @return {!Line|undefined}
+   * @return {?string}
    */
   _line(lineNumber) {
     if (lineNumber >= this._lineCount)
-      return;
-    if (!this._lineCache[lineNumber])
-      this._lineCache[lineNumber] = find(this._root, lineNumber).line;
+      return null;
+    if (this._lineCache[lineNumber] === undefined)
+      this._lineCache[lineNumber] = this._find(lineNumber);
     return this._lineCache[lineNumber];
+  }
+
+  /**
+   * @param {number} lineNumber
+   * @return {?string}
+   */
+  _find(lineNumber) {
+    let root = this._root;
+    while (true) {
+      if (root.left) {
+        if (root.left.lineCount > lineNumber) {
+          root = root.left;
+          continue;
+        }
+        lineNumber -= root.left.lineCount;
+      }
+      if (!lineNumber)
+        return root.line;
+      lineNumber--;
+      if (!root.right)
+        return null;
+      root = root.right;
+    }
+    return null;
   }
 
   /**
@@ -287,10 +228,14 @@ export class Text {
    */
   content() {
     let result = [];
-    visit(this._root, node => {
-      if (node.line)
-        result.push(node.line.s);
-    });
+    let visit = function(node) {
+      if (node.left)
+        visit(node.left);
+      result.push(node.line);
+      if (node.right)
+        visit(node.right);
+    }
+    visit(this._root);
     return result.join('\n');
   }
 
@@ -306,8 +251,7 @@ export class Text {
    * @return {?string}
    */
   line(lineNumber) {
-    let line = this._line(lineNumber);
-    return line ? line.s : null;
+    return this._line(lineNumber);
   }
 
   /**
@@ -328,7 +272,7 @@ export class Text {
    * @return {!TextPosition}
    */
   lastPosition() {
-    return {lineNumber: this._lineCount - 1, columnNumber: this._line(this._lineCount - 1).s.length};
+    return {lineNumber: this._lineCount - 1, columnNumber: this._line(this._lineCount - 1).length};
   }
 
   /**
@@ -344,8 +288,8 @@ export class Text {
     if (columnNumber < 0)
       return {lineNumber, columnNumber: 0};
     let line = this._line(lineNumber);
-    if (columnNumber > line.s.length)
-      return {lineNumber, columnNumber: line.s.length};
+    if (columnNumber > line.length)
+      return {lineNumber, columnNumber: line.length};
     return null;
   }
 
@@ -366,7 +310,7 @@ export class Text {
    * @return {!TextPosition}
    */
   nextPosition(pos) {
-    if (pos.columnNumber === this._line(pos.lineNumber).s.length) {
+    if (pos.columnNumber === this._line(pos.lineNumber).length) {
       if (pos.lineNumber !== this._lineCount)
         return {lineNumber: pos.lineNumber + 1, columnNumber: 0};
       else
@@ -383,7 +327,7 @@ export class Text {
   previousPosition(pos) {
     if (!pos.columnNumber) {
       if (pos.lineNumber)
-        return {lineNumber: pos.lineNumber - 1, columnNumber: this._line(pos.lineNumber - 1).s.length};
+        return {lineNumber: pos.lineNumber - 1, columnNumber: this._line(pos.lineNumber - 1).length};
       else
         return {lineNumber: pos.lineNumber, columnNumber: pos.columnNumber};
     } else {
@@ -404,7 +348,7 @@ export class Text {
    * @return {!TextPosition}
    */
   lineEndPosition(pos) {
-    return {lineNumber: pos.lineNumber, columnNumber: this._line(pos.lineNumber).s.length};
+    return {lineNumber: pos.lineNumber, columnNumber: this._line(pos.lineNumber).length};
   }
 
   /**
@@ -418,23 +362,22 @@ export class Text {
     let {from, to} = range;
     let insertion = insertionText ? insertionText._root : undefined;
 
-    let tmp = split(this._root, to.lineNumber + 1, false /* widgetsToLeft */);
+    let tmp = split(this._root, to.lineNumber + 1);
     let rightText = tmp.right;
-    tmp = split(tmp.left, from.lineNumber, true /* widgetsToLeft */);
+    tmp = split(tmp.left, from.lineNumber);
     let leftText = tmp.left;
 
-    // No widgets on the sides in |middleText|.
     let middleText = tmp.right;
 
     let fromLine, toLine;
     if (from.lineNumber === to.lineNumber) {
       // |middleText| must contain exactly one node.
-      fromLine = toLine = middleText.line.s;
+      fromLine = toLine = middleText.line;
     } else {
-      tmp = split(middleText, to.lineNumber - from.lineNumber, true /* widgetsToLeft */);
-      toLine = tmp.right.line.s;
-      tmp = split(tmp.left, 1, false /* widgetsToLeft */);
-      fromLine = tmp.left.line.s;
+      tmp = split(middleText, to.lineNumber - from.lineNumber);
+      toLine = tmp.right.line;
+      tmp = split(tmp.left, 1);
+      fromLine = tmp.left.line;
       // tmp.right is dropped altogether.
     }
 
