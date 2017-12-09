@@ -6,7 +6,6 @@ export class State {
 
     // Diff compared to previous state.
     this.operation = 'special';
-    this.lineWidgetsRemoved = [];
   }
 
   /**
@@ -44,7 +43,6 @@ export class State {
       this.operation = 'selection';
     this.text = other.text;
     this.selections = other.selections;
-    this.lineWidgetsRemoved.push(...other.lineWidgetsRemoved);
     return true;
   }
 };
@@ -54,9 +52,9 @@ export class State {
 // Each operation may include preceeding ones.
 //   - Internal does not affect user-editable text/selection,
 //     but may affect what's visible.
-//     Example: widget, highlight, decoration.
+//     Example: line marker.
 //   - Special is meant to be never coalesced with the rest.
-//     Example: cut, paste.
+//     Example: paste.
 // TODO: typing should be collapsed per token?
 // TODO: switch to mask if needed?
 State.Operations = ['internal', 'selection', 'text', 'special'];
