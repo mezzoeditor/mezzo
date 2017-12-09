@@ -6,6 +6,7 @@ let random = Random(17);
 const examples = [
   'shakespeare.txt',
   'jquery.min.js',
+  'megaline.txt',
 ];
 
 function addExamples() {
