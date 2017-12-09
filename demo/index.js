@@ -1,17 +1,35 @@
 import { WebEditor } from "../src/WebEditor.mjs";
 import { Selection } from "../src/Selection.mjs";
 
-const editor = new WebEditor(document);
-document.body.appendChild(editor.element());
-editor.element().style.width = '100%';
-editor.element().style.height = '100%';
-editor.resize();
-window.onresize = () => editor.resize();
+const examples = [
+  'shakespeare.txt',
+  'jquery.min.js',
+];
 
-setupEditor();
+function addExamples() {
+  const select = document.querySelector('.examples select');
+  for (const example of examples) {
+    const option = document.createElement('option');
+    option.textContent = example;
+    select.appendChild(option);
+  }
+  select.addEventListener('input', () => setupEditor(window.editor, select.value), false);
+}
 
-async function setupEditor() {
-  const response = await fetch('shakespeare.txt');
+document.addEventListener('DOMContentLoaded', () => {
+  addExamples();
+
+  const editor = new WebEditor(document);
+  editor.element().classList.add('editor');
+  document.body.appendChild(editor.element());
+  editor.resize();
+  window.onresize = () => editor.resize();
+  window.editor = editor;
+  setupEditor(editor, examples[0]);
+});
+
+async function setupEditor(editor, exampleName) {
+  const response = await fetch(exampleName);
   const text = await response.text();
   editor.setText(text);
   editor.focus();
