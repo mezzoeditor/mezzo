@@ -1,157 +1,51 @@
-import { Random } from "./Types.mjs";
-let random = Random(42);
+import { Tree } from "./Tree.mjs";
 
 /**
  * @typedef {{
  *   line: string,
- *
  *   longestLine: number,
- *   lineCount: number,
- *
- *   left: !LineNode|undefined,
- *   right: !LineNode|undefined,
- *   h: number,
  * }} LineNode;
  */
 
-
-/**
- * @param {!LineNode} node
- * @param {!LineNode|undefined} left
- * @param {!LineNode|undefined} right
- * @return {!LineNode}
+ /**
+ * @param {!LineNode} from
+ * @param {!LineNode} to
  */
-let setChildren = function(node, left, right) {
-  if (left) {
-    node.left = left;
-    node.lineCount += left.lineCount;
-    node.longestLine = Math.max(node.longestLine, left.longestLine);
-  }
-  if (right) {
-    node.right = right;
-    node.lineCount += right.lineCount;
-    node.longestLine = Math.max(node.longestLine, right.longestLine);
-  }
-  return node;
-};
-
+let combineTo = function(from, to) {
+  to.longestLine = Math.max(to.longestLine, from.longestLine);
+}
 
 /**
  * @param {!LineNode} node
  * @return {!LineNode}
  */
-let clone = function(node) {
+let initFrom = function(node) {
   return {
     line: node.line,
-    lineCount: 1,
-    longestLine: node.line.length,
-    h: node.h
+    longestLine: node.line.length
   };
 };
 
+/**
+ * @param {!LineNode} node
+ * @return {!LineNode}
+ */
+let selfSize = function(node) {
+  return 1;
+};
+
+let { wrap, build, split, merge, size, find, visit } = Tree(initFrom, combineTo, selfSize);
 
 /**
  * @param {string} s
- * @param {number=} h
  * @return {!LineNode}
  */
-let lineNode = function(s, h) {
-  return {
+let create = function(s) {
+  return wrap({
     line: s,
-    longestLine: s.length,
-    lineCount: 1,
-    h: h === undefined ? random() : h
-  };
+    longestLine: s.length
+  });
 };
-
-
-/**
- * @param {!Array<string>} lines
- * @return {!Array<!LineNode>}
- */
-let build = function(lines) {
-  let h = lines.map(() => random());
-
-  let stack = [];
-  let p = Array(h.length);
-  for (let i = 0; i < h.length; i++) {
-    while (stack.length && h[stack[stack.length - 1]] <= h[i])
-      stack.pop();
-    p[i] = stack.length ? stack[stack.length - 1] : -1;
-    stack.push(i);
-  }
-  stack = [];
-
-  let l = Array(h.length).fill(-1);
-  let r = Array(h.length).fill(-1);
-  let root = -1;
-  for (let i = h.length - 1; i >= 0; i--) {
-    while (stack.length && h[stack[stack.length - 1]] <= h[i])
-      stack.pop();
-    let parent = stack.length ? stack[stack.length - 1] : -1;
-    if (parent === -1 || (p[i] !== -1 && h[p[i]] < h[parent]))
-      parent = p[i];
-    if (parent === -1)
-      root = i;
-    else if (parent > i)
-      l[parent] = i;
-    else
-      r[parent] = i;
-    stack.push(i);
-  }
-  stack = [];
-
-  function fill(i) {
-    let node = lineNode(lines[i], h[i]);
-    let left = l[i] === -1 ? undefined : fill(l[i]);
-    let right = r[i] === -1 ? undefined : fill(r[i]);
-    return setChildren(node, left, right);
-  }
-  return fill(root);
-};
-
-
-/**
- * Left part contains all linesup to (lineNumber - 1)
- * @param {!LineNode|undefined} root
- * @param {number} lineNumber
- * @return {{left: !LineNode|undefined, right: !LineNode|undefined}}
- */
-let split = function(root, lineNumber) {
-  if (!root)
-    return {};
-  if (lineNumber >= root.lineCount)
-    return {left: root};
-  if (lineNumber < 0)
-    return {right: root};
-
-  let leftCount = root.left ? root.left.lineCount : 0;
-  if (leftCount < lineNumber) {
-    let tmp = split(root.right, lineNumber - leftCount - 1);
-    return {left: setChildren(clone(root), root.left, tmp.left), right: tmp.right};
-  } else {
-    let tmp = split(root.left, lineNumber);
-    return {left: tmp.left, right: setChildren(clone(root), tmp.right, root.right)};
-  }
-};
-
-
-/**
- * @param {!LineNode|undefined} left
- * @param {!LineNode|undefined} right
- * @return {!LineNode|undefined}
- */
-let merge = function(left, right) {
-  if (!left)
-    return right;
-  if (!right)
-    return left;
-  if (left.h > right.h)
-    return setChildren(clone(left), left.left, merge(left.right, right));
-  else
-    return setChildren(clone(right), merge(left, right.left), right.right);
-};
-
 
 export class Text {
   /**
@@ -159,7 +53,7 @@ export class Text {
    */
   constructor(root) {
     this._root = root;
-    this._lineCount = this._root.lineCount;
+    this._lineCount = size(this._root);
     this._lineCache = [];
   }
 
@@ -168,7 +62,7 @@ export class Text {
    * @return {!Text}
    */
   static withContent(content) {
-    return new Text(build(content.split('\n')));
+    return Text.withLines(content.split('\n'));
   }
 
   /**
@@ -178,7 +72,7 @@ export class Text {
   static withLines(lines) {
     if (!lines.length)
       throw 'Text does not support zero lines';
-    return new Text(build(lines));
+    return new Text(build(lines.map(create)));
   }
 
   resetCache() {
@@ -192,33 +86,11 @@ export class Text {
   _line(lineNumber) {
     if (lineNumber >= this._lineCount)
       return null;
-    if (this._lineCache[lineNumber] === undefined)
-      this._lineCache[lineNumber] = this._find(lineNumber);
-    return this._lineCache[lineNumber];
-  }
-
-  /**
-   * @param {number} lineNumber
-   * @return {?string}
-   */
-  _find(lineNumber) {
-    let root = this._root;
-    while (true) {
-      if (root.left) {
-        if (root.left.lineCount > lineNumber) {
-          root = root.left;
-          continue;
-        }
-        lineNumber -= root.left.lineCount;
-      }
-      if (!lineNumber)
-        return root.line;
-      lineNumber--;
-      if (!root.right)
-        return null;
-      root = root.right;
+    if (this._lineCache[lineNumber] === undefined) {
+      let node = find(this._root, lineNumber);
+      this._lineCache[lineNumber] = node ? node.line : null;
     }
-    return null;
+    return this._lineCache[lineNumber];
   }
 
   /**
@@ -226,14 +98,7 @@ export class Text {
    */
   content() {
     let result = [];
-    let visit = function(node) {
-      if (node.left)
-        visit(node.left);
-      result.push(node.line);
-      if (node.right)
-        visit(node.right);
-    }
-    visit(this._root);
+    visit(this._root, node => result.push(node.line));
     return result.join('\n');
   }
 
@@ -401,11 +266,11 @@ export class Text {
 
     if (last === null) {
       let line = fromLine.substring(0, from.columnNumber) + first + toLine.substring(to.columnNumber);
-      middleText = lineNode(line);
+      middleText = create(line);
     } else {
       let leftLine = fromLine.substring(0, from.columnNumber) + first;
       let rightLine = last + toLine.substring(to.columnNumber);
-      middleText = merge(lineNode(leftLine), merge(insertion, lineNode(rightLine)));
+      middleText = merge(create(leftLine), merge(insertion, create(rightLine)));
     }
 
     return new Text(merge(leftText, merge(middleText, rightText)));
