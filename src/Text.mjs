@@ -4,7 +4,6 @@ import { Tree } from "./Tree.mjs";
  * @typedef {{
  *   line: string,
  *   longestLine: number,
- *   lineCount: number
  * }} LineNode;
  */
 
@@ -14,7 +13,6 @@ import { Tree } from "./Tree.mjs";
  */
 let combineTo = function(from, to) {
   to.longestLine = Math.max(to.longestLine, from.longestLine);
-  to.lineCount += from.lineCount;
 }
 
 /**
@@ -24,38 +22,29 @@ let combineTo = function(from, to) {
 let initFrom = function(node) {
   return {
     line: node.line,
-    longestLine: node.line.length,
-    lineCount: 1
+    longestLine: node.line.length
   };
 };
 
-/**
- * @param {!LineNode} node
- * @return {!LineNode}
- */
-let selfSize = function(node) {
-  return 1;
+let selfMetrics = function(node) {
+  return {
+    lines: 1,
+    chars: node.line.length + 1,
+    first: node.line.length + 1,
+    last: 0
+  };
 };
 
-/**
- * @param {!LineNode} node
- * @return {!LineNode}
- */
-let treeSize = function(node) {
-  return node.lineCount;
-};
-
-let { wrap, build, split, merge, find, visit } = Tree(initFrom, combineTo);
+let tree = Tree(initFrom, combineTo, selfMetrics);
 
 /**
  * @param {string} s
  * @return {!LineNode}
  */
-let create = function(s) {
-  return wrap({
+tree.create = function(s) {
+  return tree.wrap({
     line: s,
-    longestLine: s.length,
-    lineCount: 1
+    longestLine: s.length
   });
 };
 
@@ -65,7 +54,7 @@ export class Text {
    */
   constructor(root) {
     this._root = root;
-    this._lineCount = treeSize(this._root);
+    this._lineCount = tree.endPosition(this._root).line;
     this._lineCache = [];
   }
 
@@ -84,7 +73,7 @@ export class Text {
   static withLines(lines) {
     if (!lines.length)
       throw 'Text does not support zero lines';
-    return new Text(build(lines.map(create)));
+    return new Text(tree.build(lines.map(tree.create)));
   }
 
   resetCache() {
@@ -99,8 +88,8 @@ export class Text {
     if (lineNumber >= this._lineCount)
       return null;
     if (this._lineCache[lineNumber] === undefined) {
-      let node = find(this._root, lineNumber, selfSize, treeSize);
-      this._lineCache[lineNumber] = node ? node.line : null;
+      let found = tree.findLine(this._root, lineNumber);
+      this._lineCache[lineNumber] = found ? found.node.line : null;
     }
     return this._lineCache[lineNumber];
   }
@@ -110,7 +99,7 @@ export class Text {
    */
   content() {
     let result = [];
-    visit(this._root, node => result.push(node.line));
+    tree.visit(this._root, node => result.push(node.line));
     return result.join('\n');
   }
 
@@ -257,9 +246,9 @@ export class Text {
     let {from, to} = range;
     let insertion = insertionText ? insertionText._root : undefined;
 
-    let tmp = split(this._root, to.lineNumber + 1, selfSize, treeSize);
+    let tmp = tree.splitLine(this._root, to.lineNumber + 1);
     let rightText = tmp.right;
-    tmp = split(tmp.left, from.lineNumber, selfSize, treeSize);
+    tmp = tree.splitLine(tmp.left, from.lineNumber);
     let leftText = tmp.left;
 
     let middleText = tmp.right;
@@ -269,22 +258,22 @@ export class Text {
       // |middleText| must contain exactly one node.
       fromLine = toLine = middleText.line;
     } else {
-      tmp = split(middleText, to.lineNumber - from.lineNumber, selfSize, treeSize);
+      tmp = tree.splitLine(middleText, to.lineNumber - from.lineNumber);
       toLine = tmp.right.line;
-      tmp = split(tmp.left, 1, selfSize, treeSize);
+      tmp = tree.splitLine(tmp.left, 1);
       fromLine = tmp.left.line;
       // tmp.right is dropped altogether.
     }
 
     if (last === null) {
       let line = fromLine.substring(0, from.columnNumber) + first + toLine.substring(to.columnNumber);
-      middleText = create(line);
+      middleText = tree.create(line);
     } else {
       let leftLine = fromLine.substring(0, from.columnNumber) + first;
       let rightLine = last + toLine.substring(to.columnNumber);
-      middleText = merge(create(leftLine), merge(insertion, create(rightLine)));
+      middleText = tree.merge(tree.create(leftLine), tree.merge(insertion, tree.create(rightLine)));
     }
 
-    return new Text(merge(leftText, merge(middleText, rightText)));
+    return new Text(tree.merge(leftText, tree.merge(middleText, rightText)));
   }
 }
