@@ -1,11 +1,10 @@
 import { Random } from "./Types.mjs";
 
-export let Tree = function(initFrom, combineTo, selfSize) {
+export let Tree = function(initFrom, combineTo) {
   let random = Random(42);
 
   /**
    * @typedef {{
-   *   size: number,
    *   left: !TreeNode|undefined,
    *   right: !TreeNode|undefined,
    *   h: number,
@@ -21,12 +20,10 @@ export let Tree = function(initFrom, combineTo, selfSize) {
   let setChildren = function(node, left, right) {
     if (left) {
       node.left = left;
-      node.size += left.size;
       combineTo(node.left, node);
     }
     if (right) {
       node.right = right;
-      node.size += right.size;
       combineTo(node.right, node);
     }
     return node;
@@ -40,7 +37,6 @@ export let Tree = function(initFrom, combineTo, selfSize) {
   let clone = function(node) {
     let result = initFrom(node);
     result.h = node.h;
-    result.size = selfSize(result);
     return result;
   };
 
@@ -50,7 +46,6 @@ export let Tree = function(initFrom, combineTo, selfSize) {
    * @return {!TreeNode}
    */
   let wrap = function(node) {
-    node.size = selfSize(node);
     node.h = random();
     return node;
   };
@@ -103,22 +98,24 @@ export let Tree = function(initFrom, combineTo, selfSize) {
    * Left part contains all nodes up to (value - 1);
    * @param {!TreeNode|undefined} root
    * @param {number} value
+   * @param {function(!Object):number} selfSize
+   * @param {function(!Object):number} treeSize
    * @return {{left: !TreeNode|undefined, right: !TreeNode|undefined}}
    */
-  let split = function(root, value) {
+  let split = function(root, value, selfSize, treeSize) {
     if (!root)
       return {};
-    if (value >= root.size)
+    if (value >= treeSize(root))
       return {left: root};
     if (value < 0)
       return {right: root};
 
-    let leftSize = root.left ? root.left.size : 0;
+    let leftSize = root.left ? treeSize(root.left) : 0;
     if (leftSize < value) {
-      let tmp = split(root.right, value - leftSize - 1);
+      let tmp = split(root.right, value - leftSize - 1, selfSize, treeSize);
       return {left: setChildren(clone(root), root.left, tmp.left), right: tmp.right};
     } else {
-      let tmp = split(root.left, value);
+      let tmp = split(root.left, value, selfSize, treeSize);
       return {left: tmp.left, right: setChildren(clone(root), tmp.right, root.right)};
     }
   };
@@ -142,25 +139,20 @@ export let Tree = function(initFrom, combineTo, selfSize) {
 
 
   /**
-   * @param {!TreeNode} node
-   * @return {number}
-   */
-  let size = function(node) {
-    return node.size;
-  };
-
-  /**
    * @param {number} value
+   * @param {function(!Object):number} selfSize
+   * @param {function(!Object):number} treeSize
    * @return {!TreeNode|undefined}
    */
-  let find = function(root, value) {
+  let find = function(root, value, selfSize, treeSize) {
     while (true) {
       if (root.left) {
-        if (root.left.size > value) {
+        let leftSize = treeSize(root.left);
+        if (leftSize > value) {
           root = root.left;
           continue;
         }
-        value -= root.left.size;
+        value -= leftSize;
       }
       let self = selfSize(root);
       if (self > value)
@@ -184,5 +176,5 @@ export let Tree = function(initFrom, combineTo, selfSize) {
       visit(node.right);
   }
 
-  return { wrap, build, split, merge, size, find, visit };
+  return { wrap, build, split, merge, find, visit };
 };

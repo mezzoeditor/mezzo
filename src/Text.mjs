@@ -4,6 +4,7 @@ import { Tree } from "./Tree.mjs";
  * @typedef {{
  *   line: string,
  *   longestLine: number,
+ *   lineCount: number
  * }} LineNode;
  */
 
@@ -13,6 +14,7 @@ import { Tree } from "./Tree.mjs";
  */
 let combineTo = function(from, to) {
   to.longestLine = Math.max(to.longestLine, from.longestLine);
+  to.lineCount += from.lineCount;
 }
 
 /**
@@ -22,7 +24,8 @@ let combineTo = function(from, to) {
 let initFrom = function(node) {
   return {
     line: node.line,
-    longestLine: node.line.length
+    longestLine: node.line.length,
+    lineCount: 1
   };
 };
 
@@ -34,7 +37,15 @@ let selfSize = function(node) {
   return 1;
 };
 
-let { wrap, build, split, merge, size, find, visit } = Tree(initFrom, combineTo, selfSize);
+/**
+ * @param {!LineNode} node
+ * @return {!LineNode}
+ */
+let treeSize = function(node) {
+  return node.lineCount;
+};
+
+let { wrap, build, split, merge, find, visit } = Tree(initFrom, combineTo);
 
 /**
  * @param {string} s
@@ -43,7 +54,8 @@ let { wrap, build, split, merge, size, find, visit } = Tree(initFrom, combineTo,
 let create = function(s) {
   return wrap({
     line: s,
-    longestLine: s.length
+    longestLine: s.length,
+    lineCount: 1
   });
 };
 
@@ -53,7 +65,7 @@ export class Text {
    */
   constructor(root) {
     this._root = root;
-    this._lineCount = size(this._root);
+    this._lineCount = treeSize(this._root);
     this._lineCache = [];
   }
 
@@ -87,7 +99,7 @@ export class Text {
     if (lineNumber >= this._lineCount)
       return null;
     if (this._lineCache[lineNumber] === undefined) {
-      let node = find(this._root, lineNumber);
+      let node = find(this._root, lineNumber, selfSize, treeSize);
       this._lineCache[lineNumber] = node ? node.line : null;
     }
     return this._lineCache[lineNumber];
@@ -245,9 +257,9 @@ export class Text {
     let {from, to} = range;
     let insertion = insertionText ? insertionText._root : undefined;
 
-    let tmp = split(this._root, to.lineNumber + 1);
+    let tmp = split(this._root, to.lineNumber + 1, selfSize, treeSize);
     let rightText = tmp.right;
-    tmp = split(tmp.left, from.lineNumber);
+    tmp = split(tmp.left, from.lineNumber, selfSize, treeSize);
     let leftText = tmp.left;
 
     let middleText = tmp.right;
@@ -257,9 +269,9 @@ export class Text {
       // |middleText| must contain exactly one node.
       fromLine = toLine = middleText.line;
     } else {
-      tmp = split(middleText, to.lineNumber - from.lineNumber);
+      tmp = split(middleText, to.lineNumber - from.lineNumber, selfSize, treeSize);
       toLine = tmp.right.line;
-      tmp = split(tmp.left, 1);
+      tmp = split(tmp.left, 1, selfSize, treeSize);
       fromLine = tmp.left.line;
       // tmp.right is dropped altogether.
     }
