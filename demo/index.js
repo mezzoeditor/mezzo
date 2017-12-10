@@ -96,7 +96,7 @@ async function setupEditor(editor, exampleName) {
   let selections = [];
   for (let i = 0; i < 20; i++) {
     let selection = new Selection();
-    selection.setCaret({lineNumber: 4 * i, columnNumber: 3});
+    selection.setCaret(editor.positionToOffset({lineNumber: 4 * i, columnNumber: 3}, true /* clamp */));
     selections.push(selection);
   }
   editor.setSelections(selections);

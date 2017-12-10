@@ -30,7 +30,7 @@ let selfMetrics = function(node) {
   return {
     lines: 1,
     chars: node.line.length + 1,
-    first: node.line.length + 1,
+    first: node.line.length,
     last: 0
   };
 };
@@ -54,7 +54,10 @@ export class Text {
    */
   constructor(root) {
     this._root = root;
-    this._lineCount = tree.end(this._root).line;
+    let position = tree.end(this._root);
+    this._lineCount = position.line + 1;
+    this._lastOffset = position.char;
+    this._lastPosition = {lineNumber: position.line, columnNumber: position.column};
     this._lineCache = [];
   }
 
@@ -88,8 +91,12 @@ export class Text {
     if (lineNumber >= this._lineCount)
       return null;
     if (this._lineCache[lineNumber] === undefined) {
-      let found = tree.find(this._root, {line: lineNumber, column: 0});
-      this._lineCache[lineNumber] = found ? found.node.line : null;
+      if (lineNumber === this._lineCount - 1 && this._lastPosition.columnNumber === 0) {
+        this._lineCache[lineNumber] = '';
+      } else {
+        let found = tree.find(this._root, {line: lineNumber, column: 0});
+        this._lineCache[lineNumber] = found ? found.node.line : null;
+      }
     }
     return this._lineCache[lineNumber];
   }
@@ -146,104 +153,81 @@ export class Text {
   }
 
   /**
-   * @return {!TextPosition}
+   * @return {number}
    */
-  firstPosition() {
-    return {lineNumber: 0, columnNumber: 0};
+  lastOffset() {
+    return this._lastOffset;
   }
 
   /**
-   * @return {!TextPosition}
+   * @return {!OffsetRange}
    */
-  lastPosition() {
-    return {lineNumber: this._lineCount - 1, columnNumber: this._line(this._lineCount - 1).length};
+  fullRange() {
+    return {from: 0, to: this._lastOffset};
   }
 
   /**
-   * @param {!TextPosition} position
-   * @return {?TextPosition}
+   * @param {number} offset
+   * @return {number}
    */
-  clampPositionIfNeeded(position) {
-    let {lineNumber, columnNumber} = position;
-    if (lineNumber < 0)
-      return this.firstPosition();
-    if (lineNumber >= this._lineCount)
-      return this.lastPosition();
-    if (columnNumber < 0)
-      return {lineNumber, columnNumber: 0};
-    let line = this._line(lineNumber);
-    if (columnNumber > line.length)
-      return {lineNumber, columnNumber: line.length};
-    return null;
+  clampOffset(offset) {
+    return offset < 0 ? 0 : (offset > this._lastOffset ? this._lastOffset : offset);
   }
 
   /**
-   * @param {!TextRange} range
-   * @return {?TextRange}
+   * @param {!OffsetRange} range
+   * @return {!OffsetRange}
    */
-  clampRangeIfNeeded(range) {
-    let from = this.clampPositionIfNeeded(range.from);
-    let to = this.clampPositionIfNeeded(range.to);
-    if (!from && !to)
-      return null;
-    return {from: from || range.from, to: to || range.to};
+  clampRange(range) {
+    return {from: this.clampOffset(range.from), to: this.clampOffset(range.to)};
   }
 
   /**
-   * @param {!TextPosition} pos
-   * @return {!TextPosition}
+   * @param {number} offset
+   * @return {number}
    */
-  nextPosition(pos) {
-    if (pos.columnNumber === this._line(pos.lineNumber).length) {
-      if (pos.lineNumber !== this._lineCount)
-        return {lineNumber: pos.lineNumber + 1, columnNumber: 0};
-      else
-        return {lineNumber: pos.lineNumber, columnNumber: pos.columnNumber};
-    } else {
-      return {lineNumber: pos.lineNumber, columnNumber: pos.columnNumber + 1};
-    }
+  previousOffset(offset) {
+    return offset ? offset - 1 : 0;
   }
 
   /**
-   * @param {!TextPosition} pos
-   * @return {!TextPosition}
+   * @param {number} offset
+   * @return {number}
    */
-  previousPosition(pos) {
-    if (!pos.columnNumber) {
-      if (pos.lineNumber)
-        return {lineNumber: pos.lineNumber - 1, columnNumber: this._line(pos.lineNumber - 1).length};
-      else
-        return {lineNumber: pos.lineNumber, columnNumber: pos.columnNumber};
-    } else {
-      return {lineNumber: pos.lineNumber, columnNumber: pos.columnNumber - 1};
-    }
+  nextOffset(offset) {
+    return offset < this._lastOffset ? offset + 1 : this._lastOffset;
   }
 
   /**
-   * @param {!TextPosition} pos
-   * @return {!TextPosition}
+   * @param {number} offset
+   * @return {number}
    */
-  lineStartPosition(pos) {
-    return {lineNumber: pos.lineNumber, columnNumber: 0};
+  lineStartOffset(offset) {
+    let position = this.offsetToPosition(offset);
+    return offset - position.columnNumber;
   }
 
   /**
-   * @param {!TextPosition} pos
-   * @return {!TextPosition}
+   * @param {number} offset
+   * @return {number}
    */
-  lineEndPosition(pos) {
-    return {lineNumber: pos.lineNumber, columnNumber: this._line(pos.lineNumber).length};
+  lineEndOffset(offset) {
+    let position = this.offsetToPosition(offset);
+    if (position.lineNumber == this._lineCount)
+      return this._lastOffset;
+    return this.positionToOffset({lineNumber: position.lineNumber + 1, columnNumber: 0}) - 1;
   }
 
   /**
-   * @param {!TextRange} range
+   * @param {!OffsetRange} range
    * @param {string} first
    * @param {?Text} insertionText
    * @param {?string} last
    * @return {!Text}
    */
   replaceRange(range, first, insertionText, last) {
-    let {from, to} = range;
+    let from = this.offsetToPosition(range.from);
+    let to = this.offsetToPosition(range.to);
     let insertion = insertionText ? insertionText._root : undefined;
 
     let tmp = tree.split(this._root, {line: to.lineNumber + 1, column: 0});
@@ -256,10 +240,10 @@ export class Text {
     let fromLine, toLine;
     if (from.lineNumber === to.lineNumber) {
       // |middleText| must contain exactly one node.
-      fromLine = toLine = middleText.line;
+      fromLine = toLine = middleText ? middleText.line : '';
     } else {
       tmp = tree.split(middleText, {line: to.lineNumber - from.lineNumber, column: 0});
-      toLine = tmp.right.line;
+      toLine = tmp.right ? tmp.right.line : '';
       tmp = tree.split(tmp.left, {line: 1, column: 0});
       fromLine = tmp.left.line;
       // tmp.right is dropped altogether.
@@ -282,9 +266,14 @@ export class Text {
    * @return {?TextPosition}
    */
   offsetToPosition(offset) {
+    if (offset > this._lastOffset)
+      return null;
+    if (offset === this._lastOffset)
+      return this._lastPosition;
+
     let found = tree.find(this._root, {char: offset});
     if (!found)
-      return null;
+      throw 'Inconsistency';
 
     if (found.node.line.length < offset - found.position.char)
       throw 'Inconsistent';
@@ -308,17 +297,21 @@ export class Text {
 
   /**
    * @param {TextPosition} position
-   * @return {?number}
+   * @param {boolean=} clamp
+   * @return {number}
    */
-  positionToOffset(position) {
+  positionToOffset(position, clamp) {
     let found = tree.find(this._root, {line: position.lineNumber, column: position.columnNumber});
-    if (!found)
-      return null;
+    if (!found) {
+      if (clamp)
+        return this._lastOffset;
+      throw 'Position does not belong to text';
+    }
 
     let chunk = found.node.line;
     let lineNumber = found.position.line;
     let columnNumber = found.position.column;
-    let offset = found.position.offset;
+    let offset = found.position.char;
     let index = 0;
     while (lineNumber < position.lineNumber) {
       let nextLine = chunk.indexOf('\n', index);
@@ -329,8 +322,11 @@ export class Text {
       lineNumber++;
       columnNumber = 0;
     }
-    if (chunk.length < index + (position.columnNumber - columnNumber))
-      throw 'Inconsistent';
+    if (chunk.length < index + (position.columnNumber - columnNumber)) {
+      if (clamp)
+        return offset + chunk.length - index;
+      throw 'Position does not belong to text';
+    }
     return offset + position.columnNumber - columnNumber;
   }
 }

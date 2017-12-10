@@ -147,7 +147,7 @@ export class CanvasRenderer {
     return {x, y};
   }
 
-  _canvasToTextPosition(x, y) {
+  _canvasToTextOffset(x, y) {
     x += this._scrollLeft - this._editorRect.x;
     y += this._scrollTop - this._editorRect.y;
 
@@ -155,7 +155,7 @@ export class CanvasRenderer {
       lineNumber: Math.floor(y / this._metrics.lineHeight),
       columnNumber: Math.round(x / this._metrics.charWidth),
     };
-    return this._editor.text().clampPositionIfNeeded(textPosition) || textPosition;
+    return this._editor.text().positionToOffset(textPosition, true /* clamp */);
   }
 
   _onScroll(event) {
@@ -190,9 +190,8 @@ export class CanvasRenderer {
       return;
     }
 
-    let textPosition = this._canvasToTextPosition(canvasPosition.x, canvasPosition.y);
     const selection = new Selection();
-    selection.setCaret(textPosition);
+    selection.setCaret(this._canvasToTextOffset(canvasPosition.x, canvasPosition.y));
     this._editor.setSelections([selection]);
     this.invalidate();
 
@@ -375,10 +374,8 @@ export class CanvasRenderer {
     ctx.stokeStyle = 'rgb(33, 33, 33)';
     ctx.lineWidth = 2 / this._ratio;
     const viewportRange = {from: viewportStart, to: viewportEnd};
-    for (let selection of this._editor.selections()) {
-      if (TextRange.intersects(selection.range(), viewportRange))
-        this._drawSelection(ctx, viewportStart, viewportEnd, selection);
-    }
+    for (let selection of this._editor.selections())
+      this._drawSelection(ctx, viewportStart, viewportEnd, selection);
     ctx.restore();
   }
 
@@ -386,14 +383,24 @@ export class CanvasRenderer {
     const {lineHeight, charWidth} = this._metrics;
 
     if (this._drawCursors) {
-      const focus = selection.focus();
-      ctx.beginPath();
-      ctx.moveTo(focus.columnNumber * charWidth, focus.lineNumber * lineHeight);
-      ctx.lineTo(focus.columnNumber * charWidth, focus.lineNumber * lineHeight + lineHeight);
-      ctx.stroke();
+      const focus = this._editor.text().offsetToPosition(selection.focus());
+      if (focus.lineNumber >= viewportStart.lineNumber &&
+          focus.columnNumber >= viewportStart.columnNumber &&
+          focus.lineNumber < viewportEnd.lineNumber &&
+          focus.columnNumber < viewportEnd.columnNumber) {
+        ctx.beginPath();
+        ctx.moveTo(focus.columnNumber * charWidth, focus.lineNumber * lineHeight);
+        ctx.lineTo(focus.columnNumber * charWidth, focus.lineNumber * lineHeight + lineHeight);
+        ctx.stroke();
+      }
     }
 
-    const {from, to} = selection.range();
+    if (selection.isCollapsed())
+      return;
+
+    let {from, to} = selection.range();
+    from = this._editor.text().offsetToPosition(from);
+    to = this._editor.text().offsetToPosition(to);
 
     // Selection consists at most of three rectangles.
     // Draw first one.

@@ -1,9 +1,7 @@
-import { TextPosition, TextRange } from "./Types.mjs";
-
 export class Selection {
   constructor() {
     this._anchor = null;
-    this._focus = {lineNumber: 0, columnNumber: 0};
+    this._focus = 0;
     this._upDownColumn = -1;
   }
 
@@ -23,11 +21,12 @@ export class Selection {
   }
 
   /**
+   * @param {number} columnNumber
    * @return {number}
    */
-  saveUpDown() {
+  saveUpDown(columnNumber) {
     if (this._upDownColumn === -1)
-      this._upDownColumn = this._focus.columnNumber;
+      this._upDownColumn = columnNumber;
     return this._upDownColumn;
   }
 
@@ -35,11 +34,11 @@ export class Selection {
    * @return {boolean}
    */
   isCollapsed() {
-    return !this._anchor;
+    return this._anchor === null;
   }
 
   /**
-   * @return {!TextPositon}
+   * @return {number}
    */
   focus() {
     return this._focus;
@@ -49,7 +48,7 @@ export class Selection {
    * @return {boolean}
    */
   collapse() {
-    if (!this._anchor)
+    if (this._anchor === null)
       return false;
     this._focus = this._anchor;
     this._anchor = null;
@@ -57,18 +56,18 @@ export class Selection {
   }
 
   /**
-   * @param {!TextPositon} focus
+   * @param {number} focus
    */
   moveFocus(focus) {
-    if (TextPosition.compare(focus, this._focus) === 0)
+    if (focus === this._focus)
       return;
-    if (!this._anchor)
+    if (this._anchor === null)
       this._anchor = this._focus;
     this._focus = focus;
   }
 
   /**
-   * @param {!TextPosition} caret
+   * @param {number} caret
    */
   setCaret(caret) {
     this._anchor = null;
@@ -76,24 +75,24 @@ export class Selection {
   }
 
   /**
-   * @return {!TextRange}
+   * @return {!OffsetRange}
    */
   range() {
     if (this.isCollapsed())
       return {from: this._focus, to: this._focus};
-    if (TextPosition.compare(this._anchor, this._focus) > 0)
+    if (this._anchor > this._focus)
       return {from: this._focus, to: this._anchor};
     return {from: this._anchor, to: this._focus};
   }
 
   /**
-   * @param {!TextRange} range
+   * @param {!OffsetRange} range
    */
   setRange(range) {
-    if (TextRange.isEmpty(range)) {
+    if (range.from === range.to) {
       this._anchor = null;
       this._focus = range.from;
-    } else if (this._anchor && TextPosition.compare(this._anchor, this._focus) > 0) {
+    } else if (this._anchor !== null && this._anchor > this._focus) {
       this._focus = range.from;
       this._anchor = range.to;
     } else {

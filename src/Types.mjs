@@ -1,5 +1,40 @@
 /**
  * @typedef {{
+ *   from: number,
+ *   to: number
+ * }} OffsetRange;
+ */
+export let OffsetRange = {};
+
+/**
+ * @param {!OffsetRange} a
+ * @param {!OffsetRange} b
+ * @return {boolean}
+ */
+OffsetRange.intersects = function(a, b) {
+  return !(a.from > b.to || b.from > a.to);
+};
+
+/**
+ * @param {!OffsetRange} a
+ * @param {!OffsetRange} b
+ * @return {!OffsetRange}
+ */
+OffsetRange.join = function(a, b) {
+  return {from: Math.min(a.from, b.from), to: Math.max(a.to, b.to)};
+};
+
+/**
+ * @param {!OffsetRange} a
+ * @param {!OffsetRange} b
+ * @return {number}
+ */
+OffsetRange.compare = function(a, b) {
+  return (a.from - b.from) || (a.to - b.to);
+};
+
+/**
+ * @typedef {{
  *   lineNumber: number,
  *   columnNumber: number
  * }} TextPosition;

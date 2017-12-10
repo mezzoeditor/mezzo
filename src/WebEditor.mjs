@@ -87,6 +87,15 @@ export class WebEditor {
     this._renderer.invalidate();
   }
 
+  /**
+   * @param {!TextPosition} position
+   * @param {boolean=} clamp
+   * @return {number}
+   */
+  positionToOffset(position, clamp) {
+    return this._editor.text().positionToOffset(position, clamp);
+  }
+
   resize() {
     this._renderer.setSize(this._element.clientWidth, this._element.clientHeight);
   }
