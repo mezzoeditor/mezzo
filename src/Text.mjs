@@ -7,35 +7,42 @@ import { Tree } from "./Tree.mjs";
  * }} LineNode;
  */
 
- /**
- * @param {!LineNode} from
- * @param {!LineNode} to
- */
-let combineTo = function(from, to) {
-  to.longestLine = Math.max(to.longestLine, from.longestLine);
-}
+let tree = Tree(
+  /**
+   * @param {!LineNode} node
+   * @return {!LineNode}
+   */
+  function initFrom(node) {
+    return {
+      line: node.line,
+      longestLine: node.line.length
+    };
+  },
 
-/**
- * @param {!LineNode} node
- * @return {!LineNode}
- */
-let initFrom = function(node) {
-  return {
-    line: node.line,
-    longestLine: node.line.length
-  };
-};
+  /**
+   * @param {!LineNode} node
+   * @param {!LineNode} left
+   * @param {!LineNode} right
+   */
+  function updateData(node, left, right) {
+    if (left)
+      node.longestLine = Math.max(node.longestLine, left.longestLine);
+    if (right)
+      node.longestLine = Math.max(node.longestLine, right.longestLine);
+  },
 
-let selfMetrics = function(node) {
-  return {
-    lines: 1,
-    chars: node.line.length + 1,
-    first: node.line.length,
-    last: 0
-  };
-};
-
-let tree = Tree(initFrom, combineTo, selfMetrics);
+  /**
+   * @param {!LineNode} node
+   * @return {!Metrics}
+   */
+  function selfMetrics(node) {
+    return {
+      lines: 1,
+      chars: node.line.length + 1,
+      first: node.line.length,
+      last: 0
+    };
+  });
 
 /**
  * @param {string} s

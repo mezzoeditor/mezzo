@@ -1,10 +1,23 @@
 import { Random } from "./Types.mjs";
 
-export let Tree = function(initFrom, combineTo, selfMetrics) {
+/**
+ * @param {function(!Object):!Object} initFrom
+ * Inits any auxilary data for the node from another one,
+ * not accounting for any subtrees.
+ *
+ * @param {function(!Object, !Object|undefined, !Object|undefined)} updateData
+ * Updates auxilary data for node from it's left and right
+ * subtree (possibly missing).
+ *
+ * @param {function(!Object):!Metrics} selfMetrics
+ * Returns metrics for the node, not accounting for any subtrees.
+ */
+export let Tree = function(initFrom, updateData, selfMetrics) {
   let random = Random(42);
 
   /**
    * @typedef {{
+   *   TODO: make first and lines optional (defaulting to last and 0).
    *   lines: number,
    *   chars: number,
    *   first: number,
@@ -79,7 +92,6 @@ export let Tree = function(initFrom, combineTo, selfMetrics) {
       node.metrics.last = node.metrics.last + (node.metrics.lines ? 0 : left.metrics.last);
       node.metrics.chars += left.metrics.chars;
       node.metrics.lines += left.metrics.lines;
-      combineTo(node.left, node);
     }
     if (right) {
       node.right = right;
@@ -87,8 +99,8 @@ export let Tree = function(initFrom, combineTo, selfMetrics) {
       node.metrics.last = right.metrics.last + (right.metrics.lines ? 0 : node.metrics.last);
       node.metrics.chars += right.metrics.chars;
       node.metrics.lines += right.metrics.lines;
-      combineTo(node.right, node);
     }
+    updateData(node, left, right);
     return node;
   };
 
