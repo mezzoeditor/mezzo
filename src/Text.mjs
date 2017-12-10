@@ -54,7 +54,7 @@ export class Text {
    */
   constructor(root) {
     this._root = root;
-    this._lineCount = tree.endPosition(this._root).line;
+    this._lineCount = tree.end(this._root).line;
     this._lineCache = [];
   }
 
@@ -246,9 +246,9 @@ export class Text {
     let {from, to} = range;
     let insertion = insertionText ? insertionText._root : undefined;
 
-    let tmp = tree.splitLine(this._root, to.lineNumber + 1);
+    let tmp = tree.split(this._root, {line: to.lineNumber + 1, column: 0});
     let rightText = tmp.right;
-    tmp = tree.splitLine(tmp.left, from.lineNumber);
+    tmp = tree.split(tmp.left, {line: from.lineNumber, column: 0});
     let leftText = tmp.left;
 
     let middleText = tmp.right;
@@ -258,9 +258,9 @@ export class Text {
       // |middleText| must contain exactly one node.
       fromLine = toLine = middleText.line;
     } else {
-      tmp = tree.splitLine(middleText, to.lineNumber - from.lineNumber);
+      tmp = tree.split(middleText, {line: to.lineNumber - from.lineNumber, column: 0});
       toLine = tmp.right.line;
-      tmp = tree.splitLine(tmp.left, 1);
+      tmp = tree.split(tmp.left, {line: 1, column: 0});
       fromLine = tmp.left.line;
       // tmp.right is dropped altogether.
     }

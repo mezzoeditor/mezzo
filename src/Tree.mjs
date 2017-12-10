@@ -29,6 +29,43 @@ export let Tree = function(initFrom, combineTo, selfMetrics) {
    * }} Position;
    */
 
+
+  /**
+   * @param {!Position} position
+   * @param {!Metrics} metrics
+   * @return {!Position}
+   */
+  let advance = function(position, metrics) {
+    return {
+      char: position.char + metrics.chars,
+      line: position.line + metrics.lines,
+      column: metrics.last + (metrics.lines ? 0 : position.column)
+    };
+  };
+
+
+  /**
+   * @param {!Position} position
+   * @param {!Position} key
+   */
+  let greater = function(position, key) {
+    if (key.char !== undefined)
+      return position.char > key.char;
+    return position.line > key.line || (position.line === key.line && position.column > key.column);
+  };
+
+
+  /**
+   * @param {!Position} position
+   * @param {!Position} key
+   */
+  let greaterEqual = function(position, key) {
+    if (key.char !== undefined)
+      return position.char >= key.char;
+    return position.line > key.line || (position.line === key.line && position.column >= key.column);
+  };
+
+
   /**
    * @param {!TreeNode} node
    * @param {!TreeNode|undefined} left
@@ -80,6 +117,23 @@ export let Tree = function(initFrom, combineTo, selfMetrics) {
 
 
   /**
+   * @param {!TreeNode} node
+   * @return {!Position}
+   */
+  let end = function(root) {
+    return {
+      char: root.metrics.chars,
+      line: root.metrics.lines,
+      column: root.metrics.last
+    };
+  };
+
+
+  /** @type {!Position} */
+  let origin = { char: 0, line: 0, column: 0 };
+
+
+  /**
    * @param {!Array<!TreeNode>} nodes
    * @return {!Array<!TreeNode>}
    */
@@ -123,54 +177,40 @@ export let Tree = function(initFrom, combineTo, selfMetrics) {
 
 
   /**
-   * Left part contains all nodes up to (line - 1).
-   * If node spans a split position, it will be returned in right part.
    * @param {!TreeNode|undefined} root
-   * @param {number} line
+   * @param {!Position} current
+   * @param {!Position} key
    * @return {{left: !TreeNode|undefined, right: !TreeNode|undefined}}
    */
-  let splitLine = function(root, line) {
+  let innerSplit = function(root, current, key) {
     if (!root)
       return {};
-    if (line >= root.metrics.lines)
-      return {left: root};
-    if (line < 0)
+    if (greaterEqual(current, key))
       return {right: root};
+    if (!greater(advance(current, root.metrics), key))
+      return {left: root};
 
-    let leftLines = root.left ? root.left.metrics.lines : 0;
-    if (leftLines < line) {
-      let tmp = splitLine(root.right, line - leftLines - selfMetrics(root).lines);
+    let next = root.left ? advance(current, root.left.metrics) : current;
+    next = advance(next, selfMetrics(root));
+    if (!greater(next, key)) {
+      let tmp = innerSplit(root.right, next, key);
       return {left: setChildren(clone(root), root.left, tmp.left), right: tmp.right};
     } else {
-      let tmp = splitLine(root.left, line);
+      let tmp = innerSplit(root.left, current, key);
       return {left: tmp.left, right: setChildren(clone(root), tmp.right, root.right)};
     }
   };
 
 
   /**
-   * Left part contains all nodes up to (char - 1).
-   * If node spans a split position, it will be returned in right part.
+   * Left part contains all nodes up to key.
+   * If node contains a key position inside, it will be returned in right part.
    * @param {!TreeNode|undefined} root
-   * @param {number} char
+   * @param {!Position} key
    * @return {{left: !TreeNode|undefined, right: !TreeNode|undefined}}
    */
-  let splitChar = function(root, char) {
-    if (!root)
-      return {};
-    if (char >= root.metrics.chars)
-      return {left: root};
-    if (char < 0)
-      return {right: root};
-
-    let leftChars = root.left ? root.left.metrics.chars : 0;
-    if (leftChars < char) {
-      let tmp = splitChar(root.right, char - leftChars - selfMetrics(root).chars);
-      return {left: setChildren(clone(root), root.left, tmp.left), right: tmp.right};
-    } else {
-      let tmp = splitChar(root.left, char);
-      return {left: tmp.left, right: setChildren(clone(root), tmp.right, root.right)};
-    }
+  let split = function(root, key) {
+    return innerSplit(root, origin, key);
   };
 
 
@@ -192,37 +232,12 @@ export let Tree = function(initFrom, combineTo, selfMetrics) {
 
 
   /**
-   * @param {!Position} position
-   * @param {!Metrics} metrics
-   * @return {!Position}
-   */
-  let advance = function(position, metrics) {
-    return {
-      char: position.char + metrics.chars,
-      line: position.line + metrics.lines,
-      column: metrics.last + (metrics.lines ? 0 : position.column)
-    };
-  };
-
-
-  /**
-   * @param {!Position} position
-   * @param {!Position} key
-   */
-  let greater = function(position, key) {
-    if (key.char !== undefined)
-      return position.char > key.char;
-    return position.line > key.line || (position.line === key.line && position.column > key.column);
-  };
-
-
-  /**
    * @param {!TreeNode} node
    * @param {!Position} key
    * @return {{node: !TreeNode, position: !Position}|undefined}
    */
   let find = function(node, key) {
-    let current = { char: 0, line: 0, column: 0 };
+    let current = origin;
     while (true) {
       if (node.left) {
         let next = advance(current, node.left.metrics);
@@ -256,18 +271,5 @@ export let Tree = function(initFrom, combineTo, selfMetrics) {
   };
 
 
-  /**
-   * @param {!TreeNode} node
-   * @return {!Position}
-   */
-  let endPosition = function(root) {
-    return {
-      char: root.metrics.chars,
-      line: root.metrics.lines,
-      column: root.metrics.last
-    };
-  };
-
-
-  return { wrap, build, splitLine, splitChar, merge, find, visit, endPosition };
+  return { wrap, build, split, merge, find, visit, end };
 };
