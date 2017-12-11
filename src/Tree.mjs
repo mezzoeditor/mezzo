@@ -17,8 +17,7 @@ export let Tree = function(initFrom, selfMetrics, updateData) {
 
   /**
    * @typedef {{
-   *   TODO: make first and lines optional (defaulting to last and 0).
-   *   lines: number,
+   *   lines: number|undefined,
    *   chars: number,
    *   first: number,
    *   last: number,
@@ -53,7 +52,7 @@ export let Tree = function(initFrom, selfMetrics, updateData) {
   let advance = function(position, metrics) {
     return {
       char: position.char + metrics.chars,
-      line: position.line + metrics.lines,
+      line: position.line + (metrics.lines || 0),
       column: metrics.last + (metrics.lines ? 0 : position.column)
     };
   };
@@ -90,7 +89,6 @@ export let Tree = function(initFrom, selfMetrics, updateData) {
   let setChildren = function(node, left, right) {
     if (left || right) {
       node.selfMetrics = {
-        lines: node.metrics.lines,
         chars: node.metrics.chars,
         last: node.metrics.last
       };
@@ -98,6 +96,8 @@ export let Tree = function(initFrom, selfMetrics, updateData) {
         node.selfMetrics.first = node.metrics.first;
       if (node.metrics.longest !== undefined)
         node.selfMetrics.longest = node.metrics.longest;
+      if (node.metrics.lines !== undefined)
+        node.selfMetrics.lines = node.metrics.lines;
     }
     if (left) {
       node.left = left;
@@ -108,7 +108,8 @@ export let Tree = function(initFrom, selfMetrics, updateData) {
       node.metrics.first = left.metrics.first + (left.metrics.lines ? 0 : node.metrics.first);
       node.metrics.last = node.metrics.last + (node.metrics.lines ? 0 : left.metrics.last);
       node.metrics.chars += left.metrics.chars;
-      node.metrics.lines += left.metrics.lines;
+      if (left.metrics.lines)
+        node.metrics.lines = left.metrics.lines + (node.metrics.lines || 0);
     }
     if (right) {
       node.right = right;
@@ -119,7 +120,8 @@ export let Tree = function(initFrom, selfMetrics, updateData) {
       node.metrics.first = node.metrics.first + (node.metrics.lines ? 0 : right.metrics.first);
       node.metrics.last = right.metrics.last + (right.metrics.lines ? 0 : node.metrics.last);
       node.metrics.chars += right.metrics.chars;
-      node.metrics.lines += right.metrics.lines;
+      if (right.metrics.lines)
+        node.metrics.lines = right.metrics.lines + (node.metrics.lines || 0);
     }
     if (updateData)
       updateData(node, left, right);

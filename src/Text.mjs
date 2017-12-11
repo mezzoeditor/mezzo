@@ -26,26 +26,30 @@ let tree = Tree(
    */
   function selfMetrics(node) {
     let metrics = {
-      lines: 0,
       chars: node.chunk.length,
       first: 0,
       last: 0,
       longest: 0
     };
+    let lines = 0;
     let index = 0;
     while (true) {
       let nextLine = node.chunk.indexOf('\n', index);
-      if (index === 0)
+      if (index === 0) {
         metrics.first = nextLine === -1 ? node.chunk.length : nextLine;
+        metrics.longest = metrics.first;
+      }
       if (nextLine === -1) {
         metrics.last = node.chunk.length - index;
+        metrics.longest = Math.max(metrics.longest, metrics.last);
         break;
       }
-      metrics.lines++;
+      metrics.longest = Math.max(metrics.longest, nextLine - index);
+      lines++;
       index = nextLine + 1;
     }
-    metrics.longest = Math.max(metrics.longest, metrics.first);
-    metrics.longest = Math.max(metrics.longest, metrics.last);
+    if (lines)
+      metrics.lines = lines;
     return metrics;
   });
 
@@ -64,9 +68,9 @@ export class Text {
   constructor(root) {
     this._root = root;
     let metrics = tree.metrics(this._root);
-    this._lineCount = metrics.lines + 1;
+    this._lineCount = (metrics.lines || 0) + 1;
     this._lastOffset = metrics.chars;
-    this._lastPosition = {lineNumber: metrics.lines, columnNumber: metrics.last};
+    this._lastPosition = {lineNumber: metrics.lines || 0, columnNumber: metrics.last};
     this._longestLine = metrics.longest;
 
     this._lineLengths = [];
