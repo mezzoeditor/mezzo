@@ -2,8 +2,8 @@ import { Tree } from "./Tree.mjs";
 
 /**
  * @typedef {{
- *   line: string
- * }} LineNode;
+ *   chunk: string
+ * }} TextNode;
  */
 
 const kChunkMin = 50;
@@ -13,32 +13,32 @@ const kInfinity = 1000000000;
 
 let tree = Tree(
   /**
-   * @param {!LineNode} node
-   * @return {!LineNode}
+   * @param {!TextNode} node
+   * @return {!TextNode}
    */
   function initFrom(node) {
-    return { line: node.line };
+    return { chunk: node.chunk };
   },
 
   /**
-   * @param {!LineNode} node
+   * @param {!TextNode} node
    * @return {!Metrics}
    */
   function selfMetrics(node) {
     let metrics = {
       lines: 0,
-      chars: node.line.length,
+      chars: node.chunk.length,
       first: 0,
       last: 0,
       longest: 0
     };
     let index = 0;
     while (true) {
-      let nextLine = node.line.indexOf('\n', index);
+      let nextLine = node.chunk.indexOf('\n', index);
       if (index === 0)
-        metrics.first = nextLine === -1 ? node.line.length : nextLine;
+        metrics.first = nextLine === -1 ? node.chunk.length : nextLine;
       if (nextLine === -1) {
-        metrics.last = node.line.length - index;
+        metrics.last = node.chunk.length - index;
         break;
       }
       metrics.lines++;
@@ -51,15 +51,15 @@ let tree = Tree(
 
 /**
  * @param {string} s
- * @return {!LineNode}
+ * @return {!TextNode}
  */
 tree.create = function(s) {
-  return tree.wrap({ line: s });
+  return tree.wrap({ chunk: s });
 };
 
 export class Text {
   /**
-   * @param {!LineNode} root
+   * @param {!TextNode} root
    */
   constructor(root) {
     this._root = root;
@@ -82,7 +82,7 @@ export class Text {
 
   /**
    * @param {string} content
-   * @return {!LineNode}
+   * @return {!TextNode}
    */
   static _withContent(content) {
     let index = 0;
@@ -110,7 +110,7 @@ export class Text {
   _content(from, to) {
     let chunks = [];
     tree.visit(this._root, from, to, (node, before, after) => {
-      let s = node.line;
+      let s = node.chunk;
 
       let start = 0;
       if (from.char !== undefined && from.char > before.char) {
@@ -281,9 +281,9 @@ export class Text {
       let first = tree.find(middle, {char: 0}).node;
       let last = tree.find(middle, {char: middleSize - 1}).node;
       middle = Text._withContent(
-        first.line.substring(0, range.from - leftSize) +
+        first.chunk.substring(0, range.from - leftSize) +
         insertion +
-        last.line.substring(last.line.length - (leftSize + middleSize - range.to)));
+        last.chunk.substring(last.chunk.length - (leftSize + middleSize - range.to)));
     }
     return new Text(tree.merge(left, tree.merge(middle, right)));
   }
@@ -302,9 +302,9 @@ export class Text {
     if (!found)
       throw 'Inconsistency';
 
-    if (found.node.line.length < offset - found.position.char)
+    if (found.node.chunk.length < offset - found.position.char)
       throw 'Inconsistent';
-    let chunk = found.node.line.substring(0, offset - found.position.char);
+    let chunk = found.node.chunk.substring(0, offset - found.position.char);
     let lineNumber = found.position.line;
     let columnNumber = found.position.column;
     let index = 0;
@@ -335,7 +335,7 @@ export class Text {
       throw 'Position does not belong to text';
     }
 
-    let chunk = found.node.line;
+    let chunk = found.node.chunk;
     let lineNumber = found.position.line;
     let columnNumber = found.position.column;
     let offset = found.position.char;
