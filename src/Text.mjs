@@ -120,7 +120,10 @@ export class Text {
       if (from.char !== undefined && from.char > before.char) {
         start = from.char - before.char;
       } else if (from.line === before.line && from.column > before.column) {
-        start = from.column - before.column;
+        let lineEnd = s.indexOf('\n');
+        if (lineEnd === -1)
+          lineEnd = s.length;
+        start = Math.min(lineEnd, from.column - before.column);
       } else if (from.line > before.line) {
         for (let line = before.line; line < from.line; line++)
           start = s.indexOf('\n', start) + 1;
