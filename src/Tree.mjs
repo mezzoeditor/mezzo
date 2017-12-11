@@ -5,14 +5,14 @@ import { Random } from "./Types.mjs";
  * Inits any auxilary data for the node from another one,
  * not accounting for any subtrees.
  *
- * @param {function(!Object, !Object|undefined, !Object|undefined)} updateData
- * Updates auxilary data for node from it's left and right
- * subtree (possibly missing).
- *
  * @param {function(!Object):!Metrics} selfMetrics
  * Returns metrics for the node, not accounting for any subtrees.
+ *
+ * @param {function(!Object, !Object|undefined, !Object|undefined)|undefined} updateData
+ * Updates auxilary data for node from it's left and right
+ * subtree (possibly missing).
  */
-export let Tree = function(initFrom, updateData, selfMetrics) {
+export let Tree = function(initFrom, selfMetrics, updateData) {
   let random = Random(42);
 
   /**
@@ -21,13 +21,15 @@ export let Tree = function(initFrom, updateData, selfMetrics) {
    *   lines: number,
    *   chars: number,
    *   first: number,
-   *   last: number
+   *   last: number,
+   *   longest: number|undefined
    * }} Metrics;
    */
 
   /**
    * @typedef {{
    *   metrics: !Metrics,
+   *   selfMetrics: !Metrics|undefined,
    *   left: !TreeNode|undefined,
    *   right: !TreeNode|undefined,
    *   h: number
@@ -86,8 +88,23 @@ export let Tree = function(initFrom, updateData, selfMetrics) {
    * @return {!TreeNode}
    */
   let setChildren = function(node, left, right) {
+    if (left || right) {
+      node.selfMetrics = {
+        lines: node.metrics.lines,
+        chars: node.metrics.chars,
+        last: node.metrics.last
+      };
+      if (node.metrics.first !== undefined)
+        node.selfMetrics.first = node.metrics.first;
+      if (node.metrics.longest !== undefined)
+        node.selfMetrics.longest = node.metrics.longest;
+    }
     if (left) {
       node.left = left;
+      if (node.metrics.longest !== undefined) {
+        let longest = Math.max(left.metrics.longest || 0, left.metrics.last + node.metrics.first);
+        node.metrics.longest = Math.max(node.metrics.longest, longest);
+      }
       node.metrics.first = left.metrics.first + (left.metrics.lines ? 0 : node.metrics.first);
       node.metrics.last = node.metrics.last + (node.metrics.lines ? 0 : left.metrics.last);
       node.metrics.chars += left.metrics.chars;
@@ -95,12 +112,17 @@ export let Tree = function(initFrom, updateData, selfMetrics) {
     }
     if (right) {
       node.right = right;
+      if (node.metrics.longest !== undefined) {
+        let longest = Math.max(right.metrics.longest || 0, node.metrics.last + right.metrics.first);
+        node.metrics.longest = Math.max(node.metrics.longest, longest);
+      }
       node.metrics.first = node.metrics.first + (node.metrics.lines ? 0 : right.metrics.first);
       node.metrics.last = right.metrics.last + (right.metrics.lines ? 0 : node.metrics.last);
       node.metrics.chars += right.metrics.chars;
       node.metrics.lines += right.metrics.lines;
     }
-    updateData(node, left, right);
+    if (updateData)
+      updateData(node, left, right);
     return node;
   };
 
@@ -130,14 +152,10 @@ export let Tree = function(initFrom, updateData, selfMetrics) {
 
   /**
    * @param {!TreeNode} node
-   * @return {!Position}
+   * @return {!Metrics}
    */
-  let end = function(root) {
-    return {
-      char: root.metrics.chars,
-      line: root.metrics.lines,
-      column: root.metrics.last
-    };
+  let metrics = function(node) {
+    return node.metrics;
   };
 
 
@@ -147,9 +165,14 @@ export let Tree = function(initFrom, updateData, selfMetrics) {
 
   /**
    * @param {!Array<!TreeNode>} nodes
-   * @return {!Array<!TreeNode>}
+   * @return {!TreeNode}
    */
   let build = function(nodes) {
+    if (!nodes.length)
+      return;
+    if (nodes.length === 1)
+      return nodes[0];
+
     let stack = [];
     let p = Array(nodes.length);
     for (let i = 0; i < nodes.length; i++) {
@@ -192,9 +215,10 @@ export let Tree = function(initFrom, updateData, selfMetrics) {
    * @param {!TreeNode|undefined} root
    * @param {!Position} current
    * @param {!Position} key
+   * @param {boolean=} intersectionToLeft
    * @return {{left: !TreeNode|undefined, right: !TreeNode|undefined}}
    */
-  let innerSplit = function(root, current, key) {
+  let innerSplit = function(root, current, key, intersectionToLeft) {
     if (!root)
       return {};
     if (greaterEqual(current, key))
@@ -202,13 +226,28 @@ export let Tree = function(initFrom, updateData, selfMetrics) {
     if (!greater(advance(current, root.metrics), key))
       return {left: root};
 
+    // intersection to left:
+    //   key a b  ->  root to right
+    //   a key b  ->  root to left
+    //   a b key  ->  root to left
+    //   rootToLeft = (key > a) == (a < key) == !(a >= key)
+
+    // intersection to right:
+    //   key a b  ->  root to right
+    //   a key b  ->  root to right
+    //   a b key  ->  root to left
+    //   rootToLeft = (key >= b) == (b <= key) == !(b > key)
+
     let next = root.left ? advance(current, root.left.metrics) : current;
-    next = advance(next, selfMetrics(root));
-    if (!greater(next, key)) {
-      let tmp = innerSplit(root.right, next, key);
+    let rootToLeft = !greaterEqual(next, key);
+    next = advance(next, root.selfMetrics || root.metrics);
+    if (!intersectionToLeft)
+      rootToLeft = !greater(next, key);
+    if (rootToLeft) {
+      let tmp = innerSplit(root.right, next, key, intersectionToLeft);
       return {left: setChildren(clone(root), root.left, tmp.left), right: tmp.right};
     } else {
-      let tmp = innerSplit(root.left, current, key);
+      let tmp = innerSplit(root.left, current, key, intersectionToLeft);
       return {left: tmp.left, right: setChildren(clone(root), tmp.right, root.right)};
     }
   };
@@ -216,13 +255,15 @@ export let Tree = function(initFrom, updateData, selfMetrics) {
 
   /**
    * Left part contains all nodes up to key.
-   * If node contains a key position inside, it will be returned in right part.
+   * If node contains a key position inside, it will be returned in right part,
+   * unless |intersectionToLeft| is true.
    * @param {!TreeNode|undefined} root
    * @param {!Position} key
+   * @param {boolean=} intersectionToLeft
    * @return {{left: !TreeNode|undefined, right: !TreeNode|undefined}}
    */
-  let split = function(root, key) {
-    return innerSplit(root, origin, key);
+  let split = function(root, key, intersectionToLeft) {
+    return innerSplit(root, origin, key, intersectionToLeft);
   };
 
 
@@ -249,6 +290,7 @@ export let Tree = function(initFrom, updateData, selfMetrics) {
    * @return {{node: !TreeNode, position: !Position}|undefined}
    */
   let find = function(node, key) {
+    // TODO: maybe implement find with innerVisit for additional testing?
     let current = origin;
     while (true) {
       if (node.left) {
@@ -259,7 +301,7 @@ export let Tree = function(initFrom, updateData, selfMetrics) {
         }
         current = next;
       }
-      let next = advance(current, selfMetrics(node));
+      let next = advance(current, node.selfMetrics || node.metrics);
       if (greater(next, key))
         return {node, position: current};
       current = next;
@@ -272,16 +314,39 @@ export let Tree = function(initFrom, updateData, selfMetrics) {
 
   /**
    * @param {!TreeNode} node
-   * @param {function(!TreeNode)} visitor
+   * @param {!Position} current
+   * @param {!Position} from
+   * @param {!Position} to
+   * @param {function(!TreeNode, !Position, !Position)} visitor
    */
-  let visit = function(node, visitor) {
-    if (node.left)
-      visit(node.left);
-    visitor(node);
-    if (node.right)
-      visit(node.right);
+  let innerVisit = function(node, current, from, to, visitor) {
+    if (node.left) {
+      let next = advance(current, node.left.metrics);
+      if (greaterEqual(next, from))
+        innerVisit(node.left, current, from, to, visitor);
+      current = next;
+    }
+
+    let next = advance(current, node.selfMetrics || node.metrics);
+    if (!greaterEqual(current, to) && greaterEqual(next, from))
+      visitor(node, current, next);
+    current = next;
+
+    if (node.right && !greaterEqual(current, to))
+      innerVisit(node.right, current, from, to, visitor);
   };
 
 
-  return { wrap, build, split, merge, find, visit, end };
+  /**
+   * @param {!TreeNode} node
+   * @param {!Position} from
+   * @param {!Position} to
+   * @param {function(!TreeNode, !Position, !Position)} visitor
+   */
+  let visit = function(node, from, to, visitor) {
+    innerVisit(node, origin, from, to, visitor);
+  };
+
+
+  return { wrap, build, split, merge, find, visit, metrics };
 };

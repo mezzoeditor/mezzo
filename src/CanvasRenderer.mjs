@@ -340,8 +340,8 @@ export class CanvasRenderer {
     const textX = viewportStart.columnNumber * charWidth;
     const lineCount = this._editor.text().lineCount();
     for (let i = viewportStart.lineNumber; i < viewportEnd.lineNumber && i < lineCount; ++i) {
-      const line = this._editor.text().line(i);
-      ctx.fillText(line.substring(viewportStart.columnNumber, viewportEnd.columnNumber + 1), textX, i * lineHeight);
+      const line = this._editor.text().lineChunk(i, viewportStart.columnNumber, viewportEnd.columnNumber + 1);
+      ctx.fillText(line, textX, i * lineHeight);
     }
 
     const backgroundDecorations = viewport._decorations.filter(decoration => decoration.name === 'background');

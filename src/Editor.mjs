@@ -348,14 +348,6 @@ export class Editor {
    * @param {function(!Selection):!OffsetRange} rangeCallback
    */
   _replaceAtSelections(state, s, rangeCallback) {
-    let inserted = s.length;
-    let lines = s.split('\n');
-    let first = lines.shift();
-    let last = null;
-    if (lines.length)
-      last = lines.pop();
-    let middle = lines.length ? Text.withLines(lines) : null;
-
     let delta = 0;
     for (let selection of state.selections) {
       let range = selection.range();
@@ -363,9 +355,9 @@ export class Editor {
       selection.setRange(range);
 
       let replaced = rangeCallback.call(null, selection);
-      state.text = state.text.replaceRange(replaced, first, middle, last);
-      selection.setCaret(replaced.from + inserted);
-      delta += inserted - (replaced.to - replaced.from);
+      state.text = state.text.replaceRange(replaced, s);
+      selection.setCaret(replaced.from + s.length);
+      delta += s.length - (replaced.to - replaced.from);
     }
   }
 

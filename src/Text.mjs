@@ -2,10 +2,14 @@ import { Tree } from "./Tree.mjs";
 
 /**
  * @typedef {{
- *   line: string,
- *   longestLine: number,
+ *   line: string
  * }} LineNode;
  */
+
+const kChunkMin = 50;
+const kChunkDefault = kChunkMin * 2;
+const kChunkMax = kChunkMin * 4;
+const kInfinity = 1000000000;
 
 let tree = Tree(
   /**
@@ -13,22 +17,7 @@ let tree = Tree(
    * @return {!LineNode}
    */
   function initFrom(node) {
-    return {
-      line: node.line,
-      longestLine: node.line.length
-    };
-  },
-
-  /**
-   * @param {!LineNode} node
-   * @param {!LineNode} left
-   * @param {!LineNode} right
-   */
-  function updateData(node, left, right) {
-    if (left)
-      node.longestLine = Math.max(node.longestLine, left.longestLine);
-    if (right)
-      node.longestLine = Math.max(node.longestLine, right.longestLine);
+    return { line: node.line };
   },
 
   /**
@@ -36,12 +25,28 @@ let tree = Tree(
    * @return {!Metrics}
    */
   function selfMetrics(node) {
-    return {
-      lines: 1,
-      chars: node.line.length + 1,
-      first: node.line.length,
-      last: 0
+    let metrics = {
+      lines: 0,
+      chars: node.line.length,
+      first: 0,
+      last: 0,
+      longest: 0
     };
+    let index = 0;
+    while (true) {
+      let nextLine = node.line.indexOf('\n', index);
+      if (index === 0)
+        metrics.first = nextLine === -1 ? node.line.length : nextLine;
+      if (nextLine === -1) {
+        metrics.last = node.line.length - index;
+        break;
+      }
+      metrics.lines++;
+      index = nextLine + 1;
+    }
+    metrics.longest = Math.max(metrics.longest, metrics.first);
+    metrics.longest = Math.max(metrics.longest, metrics.last);
+    return metrics;
   });
 
 /**
@@ -49,10 +54,7 @@ let tree = Tree(
  * @return {!LineNode}
  */
 tree.create = function(s) {
-  return tree.wrap({
-    line: s,
-    longestLine: s.length
-  });
+  return tree.wrap({ line: s });
 };
 
 export class Text {
@@ -61,11 +63,13 @@ export class Text {
    */
   constructor(root) {
     this._root = root;
-    let position = tree.end(this._root);
-    this._lineCount = position.line + 1;
-    this._lastOffset = position.char;
-    this._lastPosition = {lineNumber: position.line, columnNumber: position.column};
-    this._lineCache = [];
+    let metrics = tree.metrics(this._root);
+    this._lineCount = metrics.lines + 1;
+    this._lastOffset = metrics.chars;
+    this._lastPosition = {lineNumber: metrics.lines, columnNumber: metrics.last};
+    this._longestLine = metrics.longest;
+
+    this._lineLengths = [];
   }
 
   /**
@@ -73,48 +77,74 @@ export class Text {
    * @return {!Text}
    */
   static withContent(content) {
-    return Text.withLines(content.split('\n'));
+    return new Text(Text._withContent(content));
   }
 
   /**
-   * @param {!Array<string>} lines
-   * @return {!Text}
+   * @param {string} content
+   * @return {!LineNode}
    */
-  static withLines(lines) {
-    if (!lines.length)
-      throw 'Text does not support zero lines';
-    return new Text(tree.build(lines.map(tree.create)));
+  static _withContent(content) {
+    let index = 0;
+    let nodes = [];
+    while (index < content.length) {
+      let length = Math.min(content.length - index, kChunkDefault);
+      let chunk = content.substring(index, index + length);
+      nodes.push(tree.create(chunk));
+      index += length;
+    }
+    if (!nodes.length)
+      nodes.push(tree.create(''));
+    return tree.build(nodes);
   }
 
   resetCache() {
-    this._lineCache = [];
+    this._lineLengths = [];
   }
 
   /**
-   * @param {number} lineNumber
-   * @return {?string}
+   * @param {!Position} from
+   * @param {!Position} to
+   * @return {string}
    */
-  _line(lineNumber) {
-    if (lineNumber >= this._lineCount)
-      return null;
-    if (this._lineCache[lineNumber] === undefined) {
-      if (lineNumber === this._lineCount - 1 && this._lastPosition.columnNumber === 0) {
-        this._lineCache[lineNumber] = '';
-      } else {
-        let found = tree.find(this._root, {line: lineNumber, column: 0});
-        this._lineCache[lineNumber] = found ? found.node.line : null;
+  _content(from, to) {
+    let chunks = [];
+    tree.visit(this._root, from, to, (node, before, after) => {
+      let s = node.line;
+
+      let start = 0;
+      if (from.char !== undefined && from.char > before.char) {
+        start = from.char - before.char;
+      } else if (from.line === before.line && from.column > before.column) {
+        start = from.column - before.column;
+      } else if (from.line > before.line) {
+        for (let line = before.line; line < from.line; line++)
+          start = s.indexOf('\n', start) + 1;
+        start += from.column;
       }
-    }
-    return this._lineCache[lineNumber];
+
+      let end = s.length;
+      if (to.char !== undefined && to.char < after.char) {
+        end = s.length - (after.char - to.char);
+      } else if (to.line === after.line && to.column < after.column) {
+        end = s.length - (after.column - to.column);
+      } else if (to.line < after.line) {
+        for (let line = after.line; line > to.line; line--)
+          end = s.lastIndexOf('\n', end - 1);
+        let lineStart = s.lastIndexOf('\n', end - 1) + 1;
+        end = Math.min(lineStart + to.column, end);
+      }
+
+      chunks.push(s.substring(start, end));
+    });
+    return chunks.join('');
   }
 
   /**
    * @return {string}
    */
   content() {
-    let result = [];
-    tree.visit(this._root, node => result.push(node.line));
-    return result.join('\n');
+    return this._content({char: 0}, {char: this._lastOffset});
   }
 
   /**
@@ -129,14 +159,14 @@ export class Text {
    * @return {?string}
    */
   line(lineNumber) {
-    return this._line(lineNumber);
+    return this.lineChunk(lineNumber, 0, kInfinity);
   }
 
   /**
    * @return {number}
    */
   longestLineLength() {
-    return this._root.longestLine;
+    return this._longestLine;
   }
 
   /**
@@ -144,8 +174,14 @@ export class Text {
    * @return {number}
    */
   lineLength(lineNumber) {
-    let line = this._line(lineNumber);
-    return line ? line.length : 0;
+    if (lineNumber >= this._lineCount)
+      return 0;
+    if (this._lineLengths[lineNumber] === undefined) {
+      let start = this.positionToOffset({lineNumber, columnNumber: 0}, true /* clamp */);
+      let end = this.positionToOffset({lineNumber: lineNumber + 1, columnNumber: 0}, true /* clamp */);
+      this._lineLengths[lineNumber] = start === end ? 0 : end - start - 1;
+    }
+    return this._lineLengths[lineNumber];
   }
 
   /**
@@ -155,8 +191,9 @@ export class Text {
    * @return {?string}
    */
   lineChunk(lineNumber, from, to) {
-    let line = this._line(lineNumber);
-    return line !== null ? line.substring(from, to) : null;
+    if (lineNumber >= this._lineCount)
+      return null;
+    return this._content({line: lineNumber, column: from}, {line: lineNumber, column: to});
   }
 
   /**
@@ -220,52 +257,35 @@ export class Text {
    */
   lineEndOffset(offset) {
     let position = this.offsetToPosition(offset);
-    if (position.lineNumber == this._lineCount)
+    if (position.lineNumber == this._lineCount - 1)
       return this._lastOffset;
     return this.positionToOffset({lineNumber: position.lineNumber + 1, columnNumber: 0}) - 1;
   }
 
   /**
    * @param {!OffsetRange} range
-   * @param {string} first
-   * @param {?Text} insertionText
-   * @param {?string} last
+   * @param {string} insertion
    * @return {!Text}
    */
-  replaceRange(range, first, insertionText, last) {
-    let from = this.offsetToPosition(range.from);
-    let to = this.offsetToPosition(range.to);
-    let insertion = insertionText ? insertionText._root : undefined;
-
-    let tmp = tree.split(this._root, {line: to.lineNumber + 1, column: 0});
-    let rightText = tmp.right;
-    tmp = tree.split(tmp.left, {line: from.lineNumber, column: 0});
-    let leftText = tmp.left;
-
-    let middleText = tmp.right;
-
-    let fromLine, toLine;
-    if (from.lineNumber === to.lineNumber) {
-      // |middleText| must contain exactly one node.
-      fromLine = toLine = middleText ? middleText.line : '';
+  replaceRange(range, insertion) {
+    let tmp = tree.split(this._root, {char: range.to}, true /* intersectionToLeft */);
+    let right = tmp.right;
+    tmp = tree.split(tmp.left, {char: range.from}, false /* intersectionToLeft */);
+    let left = tmp.left;
+    let middle = tmp.right;
+    if (!middle) {
+      middle = Text._withContent(insertion);
     } else {
-      tmp = tree.split(middleText, {line: to.lineNumber - from.lineNumber, column: 0});
-      toLine = tmp.right ? tmp.right.line : '';
-      tmp = tree.split(tmp.left, {line: 1, column: 0});
-      fromLine = tmp.left.line;
-      // tmp.right is dropped altogether.
+      let leftSize = left ? tree.metrics(left).chars : 0;
+      let middleSize = tree.metrics(middle).chars;
+      let first = tree.find(middle, {char: 0}).node;
+      let last = tree.find(middle, {char: middleSize - 1}).node;
+      middle = Text._withContent(
+        first.line.substring(0, range.from - leftSize) +
+        insertion +
+        last.line.substring(last.line.length - (leftSize + middleSize - range.to)));
     }
-
-    if (last === null) {
-      let line = fromLine.substring(0, from.columnNumber) + first + toLine.substring(to.columnNumber);
-      middleText = tree.create(line);
-    } else {
-      let leftLine = fromLine.substring(0, from.columnNumber) + first;
-      let rightLine = last + toLine.substring(to.columnNumber);
-      middleText = tree.merge(tree.create(leftLine), tree.merge(insertion, tree.create(rightLine)));
-    }
-
-    return new Text(tree.merge(leftText, tree.merge(middleText, rightText)));
+    return new Text(tree.merge(left, tree.merge(middle, right)));
   }
 
   /**
@@ -329,9 +349,13 @@ export class Text {
       lineNumber++;
       columnNumber = 0;
     }
-    if (chunk.length < index + (position.columnNumber - columnNumber)) {
+
+    let lineEnd = chunk.indexOf('\n', index);
+    if (lineEnd === -1)
+      lineEnd = chunk.length;
+    if (lineEnd < index + (position.columnNumber - columnNumber)) {
       if (clamp)
-        return offset + chunk.length - index;
+        return offset + lineEnd - index;
       throw 'Position does not belong to text';
     }
     return offset + position.columnNumber - columnNumber;

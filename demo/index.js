@@ -62,6 +62,7 @@ class TokenHighlighter {
       this._editor.addViewportBuilder(this._viewportBuilder);
     else
       this._editor.removeViewportBuilder(this._viewportBuilder);
+    this._editor.invalidate();
   }
 
   _viewportBuilder(viewport, viewportStart, viewportEnd) {
@@ -91,6 +92,8 @@ async function setupEditor(editor, exampleName) {
   const response = await fetch(exampleName);
   const text = await response.text();
   editor.setText(text);
+  //editor.setText('abc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\n');
+  //editor.setText('abc\n\ndef\n');
   editor.focus();
 
   let selections = [];
