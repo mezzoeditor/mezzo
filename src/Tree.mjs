@@ -18,7 +18,7 @@ export let Tree = function(initFrom, selfMetrics, updateData) {
   /**
    * @typedef {{
    *   lines: number|undefined,
-   *   chars: number,
+   *   length: number,
    *   first: number,
    *   last: number,
    *   longest: number|undefined
@@ -37,7 +37,7 @@ export let Tree = function(initFrom, selfMetrics, updateData) {
 
   /**
    * @typedef {{
-   *   char: number|undefined,
+   *   offset: number|undefined,
    *   line: number|undefined,
    *   column: number|undefined
    * }} Position;
@@ -51,7 +51,7 @@ export let Tree = function(initFrom, selfMetrics, updateData) {
    */
   let advance = function(position, metrics) {
     return {
-      char: position.char + metrics.chars,
+      offset: position.offset + metrics.length,
       line: position.line + (metrics.lines || 0),
       column: metrics.last + (metrics.lines ? 0 : position.column)
     };
@@ -63,8 +63,8 @@ export let Tree = function(initFrom, selfMetrics, updateData) {
    * @param {!Position} key
    */
   let greater = function(position, key) {
-    if (key.char !== undefined)
-      return position.char > key.char;
+    if (key.offset !== undefined)
+      return position.offset > key.offset;
     return position.line > key.line || (position.line === key.line && position.column > key.column);
   };
 
@@ -74,8 +74,8 @@ export let Tree = function(initFrom, selfMetrics, updateData) {
    * @param {!Position} key
    */
   let greaterEqual = function(position, key) {
-    if (key.char !== undefined)
-      return position.char >= key.char;
+    if (key.offset !== undefined)
+      return position.offset >= key.offset;
     return position.line > key.line || (position.line === key.line && position.column >= key.column);
   };
 
@@ -89,7 +89,7 @@ export let Tree = function(initFrom, selfMetrics, updateData) {
   let setChildren = function(node, left, right) {
     if (left || right) {
       node.selfMetrics = {
-        chars: node.metrics.chars,
+        length: node.metrics.length,
         last: node.metrics.last
       };
       if (node.metrics.first !== undefined)
@@ -107,7 +107,7 @@ export let Tree = function(initFrom, selfMetrics, updateData) {
       }
       node.metrics.first = left.metrics.first + (left.metrics.lines ? 0 : node.metrics.first);
       node.metrics.last = node.metrics.last + (node.metrics.lines ? 0 : left.metrics.last);
-      node.metrics.chars += left.metrics.chars;
+      node.metrics.length += left.metrics.length;
       if (left.metrics.lines)
         node.metrics.lines = left.metrics.lines + (node.metrics.lines || 0);
     }
@@ -119,7 +119,7 @@ export let Tree = function(initFrom, selfMetrics, updateData) {
       }
       node.metrics.first = node.metrics.first + (node.metrics.lines ? 0 : right.metrics.first);
       node.metrics.last = right.metrics.last + (right.metrics.lines ? 0 : node.metrics.last);
-      node.metrics.chars += right.metrics.chars;
+      node.metrics.length += right.metrics.length;
       if (right.metrics.lines)
         node.metrics.lines = right.metrics.lines + (node.metrics.lines || 0);
     }
@@ -162,7 +162,7 @@ export let Tree = function(initFrom, selfMetrics, updateData) {
 
 
   /** @type {!Position} */
-  let origin = { char: 0, line: 0, column: 0 };
+  let origin = { offset: 0, line: 0, column: 0 };
 
 
   /**

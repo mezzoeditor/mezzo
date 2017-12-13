@@ -26,7 +26,7 @@ let tree = Tree(
    */
   function selfMetrics(node) {
     let metrics = {
-      chars: node.chunk.length,
+      length: node.chunk.length,
       first: 0,
       last: 0,
       longest: 0
@@ -69,7 +69,7 @@ export class Text {
     this._root = root;
     let metrics = tree.metrics(this._root);
     this._lineCount = (metrics.lines || 0) + 1;
-    this._lastOffset = metrics.chars;
+    this._lastOffset = metrics.length;
     this._lastPosition = {lineNumber: metrics.lines || 0, columnNumber: metrics.last};
     this._longestLine = metrics.longest;
 
@@ -117,8 +117,8 @@ export class Text {
       let s = node.chunk;
 
       let start = 0;
-      if (from.char !== undefined && from.char > before.char) {
-        start = from.char - before.char;
+      if (from.offset !== undefined && from.offset > before.offset) {
+        start = from.offset - before.offset;
       } else if (from.line === before.line && from.column > before.column) {
         let lineEnd = s.indexOf('\n');
         if (lineEnd === -1)
@@ -131,8 +131,8 @@ export class Text {
       }
 
       let end = s.length;
-      if (to.char !== undefined && to.char < after.char) {
-        end = s.length - (after.char - to.char);
+      if (to.offset !== undefined && to.offset < after.offset) {
+        end = s.length - (after.offset - to.offset);
       } else if (to.line === after.line && to.column < after.column) {
         end = s.length - (after.column - to.column);
       } else if (to.line < after.line) {
@@ -151,7 +151,7 @@ export class Text {
    * @return {string}
    */
   content() {
-    return this._content({char: 0}, {char: this._lastOffset});
+    return this._content({offset: 0}, {offset: this._lastOffset});
   }
 
   /**
@@ -275,18 +275,18 @@ export class Text {
    * @return {!Text}
    */
   replaceRange(range, insertion) {
-    let tmp = tree.split(this._root, {char: range.to}, true /* intersectionToLeft */);
+    let tmp = tree.split(this._root, {offset: range.to}, true /* intersectionToLeft */);
     let right = tmp.right;
-    tmp = tree.split(tmp.left, {char: range.from}, false /* intersectionToLeft */);
+    tmp = tree.split(tmp.left, {offset: range.from}, false /* intersectionToLeft */);
     let left = tmp.left;
     let middle = tmp.right;
     if (!middle) {
       middle = Text._withContent(insertion);
     } else {
-      let leftSize = left ? tree.metrics(left).chars : 0;
-      let middleSize = tree.metrics(middle).chars;
-      let first = tree.find(middle, {char: 0}).node;
-      let last = tree.find(middle, {char: middleSize - 1}).node;
+      let leftSize = left ? tree.metrics(left).length : 0;
+      let middleSize = tree.metrics(middle).length;
+      let first = tree.find(middle, {offset: 0}).node;
+      let last = tree.find(middle, {offset: middleSize - 1}).node;
       middle = Text._withContent(
         first.chunk.substring(0, range.from - leftSize) +
         insertion +
@@ -305,13 +305,13 @@ export class Text {
     if (offset === this._lastOffset)
       return this._lastPosition;
 
-    let found = tree.find(this._root, {char: offset});
+    let found = tree.find(this._root, {offset});
     if (!found)
       throw 'Inconsistency';
 
-    if (found.node.chunk.length < offset - found.position.char)
+    if (found.node.chunk.length < offset - found.position.offset)
       throw 'Inconsistent';
-    let chunk = found.node.chunk.substring(0, offset - found.position.char);
+    let chunk = found.node.chunk.substring(0, offset - found.position.offset);
     let lineNumber = found.position.line;
     let columnNumber = found.position.column;
     let index = 0;
@@ -345,7 +345,7 @@ export class Text {
     let chunk = found.node.chunk;
     let lineNumber = found.position.line;
     let columnNumber = found.position.column;
-    let offset = found.position.char;
+    let offset = found.position.offset;
     let index = 0;
     while (lineNumber < position.lineNumber) {
       let nextLine = chunk.indexOf('\n', index);
