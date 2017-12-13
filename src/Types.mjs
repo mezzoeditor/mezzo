@@ -35,8 +35,8 @@ OffsetRange.compare = function(a, b) {
 
 /**
  * @typedef {{
- *   lineNumber: number,
- *   columnNumber: number
+ *   line: number,
+ *   column: number
  * }} TextPosition;
  */
 export let TextPosition = {};
@@ -47,7 +47,7 @@ export let TextPosition = {};
  * @return {number}
  */
 TextPosition.compare = function(a, b) {
-  return (a.lineNumber - b.lineNumber) || (a.columnNumber - b.columnNumber);
+  return (a.line - b.line) || (a.column - b.column);
 };
 
 /**

@@ -21,12 +21,12 @@ export class Selection {
   }
 
   /**
-   * @param {number} columnNumber
+   * @param {number} column
    * @return {number}
    */
-  saveUpDown(columnNumber) {
+  saveUpDown(column) {
     if (this._upDownColumn === -1)
-      this._upDownColumn = columnNumber;
+      this._upDownColumn = column;
     return this._upDownColumn;
   }
 

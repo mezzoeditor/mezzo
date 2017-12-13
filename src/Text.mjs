@@ -70,7 +70,7 @@ export class Text {
     let metrics = tree.metrics(this._root);
     this._lineCount = (metrics.lines || 0) + 1;
     this._lastOffset = metrics.length;
-    this._lastPosition = {lineNumber: metrics.lines || 0, columnNumber: metrics.last};
+    this._lastPosition = {line: metrics.lines || 0, column: metrics.last};
     this._longestLine = metrics.longest;
 
     this._lineLengths = [];
@@ -162,11 +162,11 @@ export class Text {
   }
 
   /**
-   * @param {number} lineNumber
+   * @param {number} line
    * @return {?string}
    */
-  line(lineNumber) {
-    return this.lineChunk(lineNumber, 0, kInfinity);
+  line(line) {
+    return this.lineChunk(line, 0, kInfinity);
   }
 
   /**
@@ -177,30 +177,30 @@ export class Text {
   }
 
   /**
-   * @param {number} lineNumber
+   * @param {number} line
    * @return {number}
    */
-  lineLength(lineNumber) {
-    if (lineNumber >= this._lineCount)
+  lineLength(line) {
+    if (line >= this._lineCount)
       return 0;
-    if (this._lineLengths[lineNumber] === undefined) {
-      let start = this.positionToOffset({lineNumber, columnNumber: 0}, true /* clamp */);
-      let end = this.positionToOffset({lineNumber: lineNumber + 1, columnNumber: 0}, true /* clamp */);
-      this._lineLengths[lineNumber] = start === end ? 0 : end - start - 1;
+    if (this._lineLengths[line] === undefined) {
+      let start = this.positionToOffset({line, column: 0}, true /* clamp */);
+      let end = this.positionToOffset({line: line + 1, column: 0}, true /* clamp */);
+      this._lineLengths[line] = start === end ? 0 : end - start - 1;
     }
-    return this._lineLengths[lineNumber];
+    return this._lineLengths[line];
   }
 
   /**
-   * @param {number} lineNumber
+   * @param {number} line
    * @param {number} from
    * @param {number} to
    * @return {?string}
    */
-  lineChunk(lineNumber, from, to) {
-    if (lineNumber >= this._lineCount)
+  lineChunk(line, from, to) {
+    if (line >= this._lineCount)
       return null;
-    return this._content({line: lineNumber, column: from}, {line: lineNumber, column: to});
+    return this._content({line, column: from}, {line, column: to});
   }
 
   /**
@@ -255,7 +255,7 @@ export class Text {
    */
   lineStartOffset(offset) {
     let position = this.offsetToPosition(offset);
-    return offset - position.columnNumber;
+    return offset - position.column;
   }
 
   /**
@@ -264,9 +264,9 @@ export class Text {
    */
   lineEndOffset(offset) {
     let position = this.offsetToPosition(offset);
-    if (position.lineNumber == this._lineCount - 1)
+    if (position.line == this._lineCount - 1)
       return this._lastOffset;
-    return this.positionToOffset({lineNumber: position.lineNumber + 1, columnNumber: 0}) - 1;
+    return this.positionToOffset({line: position.line + 1, column: 0}) - 1;
   }
 
   /**
@@ -312,21 +312,20 @@ export class Text {
     if (found.node.chunk.length < offset - found.position.offset)
       throw 'Inconsistent';
     let chunk = found.node.chunk.substring(0, offset - found.position.offset);
-    let lineNumber = found.position.line;
-    let columnNumber = found.position.column;
+    let {line, column} = found.position;
     let index = 0;
     while (true) {
       let nextLine = chunk.indexOf('\n', index);
       if (nextLine !== -1) {
-        lineNumber++;
-        columnNumber = 0;
+        line++;
+        column = 0;
         index = nextLine + 1;
       } else {
-        columnNumber += chunk.length - index;
+        column += chunk.length - index;
         break;
       }
     }
-    return {lineNumber, columnNumber};
+    return {line, column};
   }
 
   /**
@@ -335,7 +334,7 @@ export class Text {
    * @return {number}
    */
   positionToOffset(position, clamp) {
-    let found = tree.find(this._root, {line: position.lineNumber, column: position.columnNumber});
+    let found = tree.find(this._root, {line: position.line, column: position.column});
     if (!found) {
       if (clamp)
         return this._lastOffset;
@@ -343,28 +342,26 @@ export class Text {
     }
 
     let chunk = found.node.chunk;
-    let lineNumber = found.position.line;
-    let columnNumber = found.position.column;
-    let offset = found.position.offset;
+    let {line, column, offset} = found.position;
     let index = 0;
-    while (lineNumber < position.lineNumber) {
+    while (line < position.line) {
       let nextLine = chunk.indexOf('\n', index);
       if (nextLine === -1)
         throw 'Inconsistent';
       offset += (nextLine - index + 1);
       index = nextLine + 1;
-      lineNumber++;
-      columnNumber = 0;
+      line++;
+      column = 0;
     }
 
     let lineEnd = chunk.indexOf('\n', index);
     if (lineEnd === -1)
       lineEnd = chunk.length;
-    if (lineEnd < index + (position.columnNumber - columnNumber)) {
+    if (lineEnd < index + (position.column - column)) {
       if (clamp)
         return offset + lineEnd - index;
       throw 'Position does not belong to text';
     }
-    return offset + position.columnNumber - columnNumber;
+    return offset + position.column - column;
   }
 }

@@ -152,8 +152,8 @@ export class CanvasRenderer {
     y += this._scrollTop - this._editorRect.y;
 
     const textPosition = {
-      lineNumber: Math.floor(y / this._metrics.lineHeight),
-      columnNumber: Math.round(x / this._metrics.charWidth),
+      line: Math.floor(y / this._metrics.lineHeight),
+      column: Math.round(x / this._metrics.charWidth),
     };
     return this._editor.text().positionToOffset(textPosition, true /* clamp */);
   }
@@ -281,12 +281,12 @@ export class CanvasRenderer {
     ctx.lineWidth = 1 / this._ratio;
 
     const viewportStart = {
-      lineNumber: Math.floor(this._scrollTop / lineHeight),
-      columnNumber: Math.floor(this._scrollLeft / charWidth)
+      line: Math.floor(this._scrollTop / lineHeight),
+      column: Math.floor(this._scrollLeft / charWidth)
     };
     const viewportEnd = {
-      lineNumber: Math.ceil((this._scrollTop + this._cssHeight) / lineHeight),
-      columnNumber: Math.ceil((this._scrollLeft + this._cssWidth) / charWidth)
+      line: Math.ceil((this._scrollTop + this._cssHeight) / lineHeight),
+      column: Math.ceil((this._scrollLeft + this._cssWidth) / charWidth)
     };
 
     const viewport = new Viewport(this._editor.text(), viewportStart, viewportEnd);
@@ -328,7 +328,7 @@ export class CanvasRenderer {
     ctx.fillStyle = 'rgb(128, 128, 128)';
     const textX = this._gutterRect.width - GUTTER_PADDING_LEFT_RIGHT;
     const lineCount = this._editor.text().lineCount();
-    for (let i = viewportStart.lineNumber; i < viewportEnd.lineNumber && i < lineCount; ++i) {
+    for (let i = viewportStart.line; i < viewportEnd.line && i < lineCount; ++i) {
       const number = (i + 1) + '';
       ctx.fillText(number, textX, i * lineHeight);
     }
@@ -337,10 +337,10 @@ export class CanvasRenderer {
   _drawText(ctx, viewportStart, viewportEnd, viewport) {
     const {lineHeight, charWidth, charHeight} = this._metrics;
     ctx.fillStyle = 'rgb(33, 33, 33)';
-    const textX = viewportStart.columnNumber * charWidth;
+    const textX = viewportStart.column * charWidth;
     const lineCount = this._editor.text().lineCount();
-    for (let i = viewportStart.lineNumber; i < viewportEnd.lineNumber && i < lineCount; ++i) {
-      const line = this._editor.text().lineChunk(i, viewportStart.columnNumber, viewportEnd.columnNumber + 1);
+    for (let i = viewportStart.line; i < viewportEnd.line && i < lineCount; ++i) {
+      const line = this._editor.text().lineChunk(i, viewportStart.column, viewportEnd.column + 1);
       ctx.fillText(line, textX, i * lineHeight);
     }
 
@@ -351,7 +351,7 @@ export class CanvasRenderer {
       ctx.fillStyle = decoration.value;
       ctx.fillRect(
           decoration.from * charWidth,
-          decoration.lineNumber * lineHeight,
+          decoration.line * lineHeight,
           (decoration.to - decoration.from) * charWidth,
           lineHeight);
     }
@@ -361,8 +361,8 @@ export class CanvasRenderer {
       ctx.strokeStyle = underlineDecorations[0].value;
       ctx.beginPath();
       for (const decoration of underlineDecorations) {
-        ctx.moveTo(decoration.from * charWidth, decoration.lineNumber * lineHeight + charHeight);
-        ctx.lineTo(decoration.to * charWidth, decoration.lineNumber * lineHeight + charHeight);
+        ctx.moveTo(decoration.from * charWidth, decoration.line * lineHeight + charHeight);
+        ctx.lineTo(decoration.to * charWidth, decoration.line * lineHeight + charHeight);
       }
       ctx.stroke();
     }
@@ -384,13 +384,13 @@ export class CanvasRenderer {
 
     if (this._drawCursors) {
       const focus = this._editor.text().offsetToPosition(selection.focus());
-      if (focus.lineNumber >= viewportStart.lineNumber &&
-          focus.columnNumber >= viewportStart.columnNumber &&
-          focus.lineNumber < viewportEnd.lineNumber &&
-          focus.columnNumber < viewportEnd.columnNumber) {
+      if (focus.line >= viewportStart.line &&
+          focus.column >= viewportStart.column &&
+          focus.line < viewportEnd.line &&
+          focus.column < viewportEnd.column) {
         ctx.beginPath();
-        ctx.moveTo(focus.columnNumber * charWidth, focus.lineNumber * lineHeight);
-        ctx.lineTo(focus.columnNumber * charWidth, focus.lineNumber * lineHeight + lineHeight);
+        ctx.moveTo(focus.column * charWidth, focus.line * lineHeight);
+        ctx.lineTo(focus.column * charWidth, focus.line * lineHeight + lineHeight);
         ctx.stroke();
       }
     }
@@ -404,21 +404,21 @@ export class CanvasRenderer {
 
     // Selection consists at most of three rectangles.
     // Draw first one.
-    if (from.columnNumber < viewportEnd.columnNumber) {
-      const rEnd = TextPosition.smaller({lineNumber: from.lineNumber, columnNumber: viewportEnd.columnNumber}, to);
-      const rWidth = rEnd.columnNumber - from.columnNumber;
-      ctx.fillRect(from.columnNumber * charWidth, from.lineNumber * lineHeight, charWidth * rWidth, lineHeight);
+    if (from.column < viewportEnd.column) {
+      const rEnd = TextPosition.smaller({line: from.line, column: viewportEnd.column}, to);
+      const rWidth = rEnd.column - from.column;
+      ctx.fillRect(from.column * charWidth, from.line * lineHeight, charWidth * rWidth, lineHeight);
     }
 
-    if (from.lineNumber < to.lineNumber && to.columnNumber > viewportStart.columnNumber) {
-      const rWidth = to.columnNumber - viewportStart.columnNumber;
-      ctx.fillRect(viewportStart.columnNumber * charWidth, to.lineNumber * lineHeight, charWidth * rWidth, lineHeight);
+    if (from.line < to.line && to.column > viewportStart.column) {
+      const rWidth = to.column - viewportStart.column;
+      ctx.fillRect(viewportStart.column * charWidth, to.line * lineHeight, charWidth * rWidth, lineHeight);
     }
 
-    if (to.lineNumber - from.lineNumber > 1) {
-      const rWidth = viewportEnd.columnNumber - viewportStart.columnNumber;
-      const rHeight = to.lineNumber - from.lineNumber -1;
-      ctx.fillRect(viewportStart.columnNumber * charWidth, (from.lineNumber + 1) * lineHeight, charWidth * rWidth, lineHeight * rHeight);
+    if (to.line - from.line > 1) {
+      const rWidth = viewportEnd.column - viewportStart.column;
+      const rHeight = to.line - from.line -1;
+      ctx.fillRect(viewportStart.column * charWidth, (from.line + 1) * lineHeight, charWidth * rWidth, lineHeight * rHeight);
     }
   }
 }

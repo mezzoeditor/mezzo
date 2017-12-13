@@ -27,29 +27,29 @@ export class Viewport {
   }
 
   /**
-   * @param {number} lineNumber
+   * @param {number} line
    * @return {?string}
    */
-  line(lineNumber) {
-    return this._text.line(lineNumber);
+  line(line) {
+    return this._text.line(line);
   }
 
   /**
-   * @param {number} lineNumber
+   * @param {number} line
    * @return {number}
    */
-  lineLength(lineNumber) {
-    return this._text.lineLength(lineNumber);
+  lineLength(line) {
+    return this._text.lineLength(line);
   }
 
   /**
-   * @param {number} lineNumber
+   * @param {number} line
    * @param {number} from
    * @param {number} to
    * @return {?string}
    */
-  lineChunk(lineNumber, from, to) {
-    return this._text.lineChunk(lineNumber, from, to);
+  lineChunk(line, from, to) {
+    return this._text.lineChunk(line, from, to);
   }
 
   /**
@@ -71,7 +71,7 @@ Viewport.Decorations = [
 
 /**
  * @typedef {{
- *   lineNumber: number,
+ *   line: number,
  *   from: number,
  *   to: number,
  *   name: string,

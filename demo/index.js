@@ -68,19 +68,19 @@ class TokenHighlighter {
   _viewportBuilder(viewport, viewportStart, viewportEnd) {
     if (!this._token)
       return;
-    let from = viewportStart.columnNumber - this._token.length;
+    let from = viewportStart.column - this._token.length;
     if (from < 0)
       from = 0;
-    let to = viewportEnd.columnNumber + this._token.length;
-    const toLine = Math.min(viewport.lineCount(), viewportEnd.lineNumber);
-    for (let line = viewportStart.lineNumber; line < toLine; line++) {
+    let to = viewportEnd.column + this._token.length;
+    const toLine = Math.min(viewport.lineCount(), viewportEnd.line);
+    for (let line = viewportStart.line; line < toLine; line++) {
       let text = viewport.lineChunk(line, from, to);
       let index = text.indexOf(this._token);
       while (index !== -1) {
         let value = ['rgba(0, 0, 255, 0.2)', 'rgba(0, 255, 0, 0.2)', 'rgba(255, 0, 0, 0.2)'][line % 3];
         viewport.addDecorations([
-            {lineNumber: line, from: from + index, to: from + index + this._token.length, name: 'background', value: value},
-            {lineNumber: line, from: from + index, to: from + index + this._token.length, name: 'underline', value: 'rgb(50, 50, 50)'},
+            {line, from: from + index, to: from + index + this._token.length, name: 'background', value: value},
+            {line, from: from + index, to: from + index + this._token.length, name: 'underline', value: 'rgb(50, 50, 50)'},
           ]);
         index = text.indexOf(this._token, index + this._token.length);
       }
@@ -100,7 +100,7 @@ async function setupEditor(editor, exampleName) {
   let selections = [];
   for (let i = 0; i < 20; i++) {
     let selection = new Selection();
-    selection.setCaret(editor.positionToOffset({lineNumber: 4 * i, columnNumber: 3}, true /* clamp */));
+    selection.setCaret(editor.positionToOffset({line: 4 * i, column: 3}, true /* clamp */));
     selections.push(selection);
   }
   editor.setSelections(selections);

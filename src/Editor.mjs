@@ -150,8 +150,8 @@ export class Editor {
       if (selection.isCollapsed()) {
         let position = state.text.offsetToPosition(selection.focus());
         position = {
-          lineNumber: position.lineNumber ? position.lineNumber - 1 : position.lineNumber,
-          columnNumber: selection.saveUpDown(position.columnNumber)
+          line: position.line ? position.line - 1 : position.line,
+          column: selection.saveUpDown(position.column)
         };
         selection.setCaret(state.text.positionToOffset(position, true /* clamp */));
       } else {
@@ -167,8 +167,8 @@ export class Editor {
     for (let selection of state.selections) {
       let position = state.text.offsetToPosition(selection.focus());
       position = {
-        lineNumber: position.lineNumber ? position.lineNumber - 1 : position.lineNumber,
-        columnNumber: selection.saveUpDown(position.columnNumber)
+        line: position.line ? position.line - 1 : position.line,
+        column: selection.saveUpDown(position.column)
       };
       selection.moveFocus(state.text.positionToOffset(position, true /* clamp */));
     }
@@ -182,8 +182,8 @@ export class Editor {
       if (selection.isCollapsed()) {
         let position = state.text.offsetToPosition(selection.focus());
         position = {
-          lineNumber: position.lineNumber < state.text.lineCount() - 1 ? position.lineNumber + 1 : position.lineNumber,
-          columnNumber: selection.saveUpDown(position.columnNumber)
+          line: position.line < state.text.lineCount() - 1 ? position.line + 1 : position.line,
+          column: selection.saveUpDown(position.column)
         };
         selection.setCaret(state.text.positionToOffset(position, true /* clamp */));
       } else {
@@ -199,8 +199,8 @@ export class Editor {
     for (let selection of state.selections) {
       let position = state.text.offsetToPosition(selection.focus());
       position = {
-        lineNumber: position.lineNumber < state.text.lineCount() - 1 ? position.lineNumber + 1 : position.lineNumber,
-        columnNumber: selection.saveUpDown(position.columnNumber)
+        line: position.line < state.text.lineCount() - 1 ? position.line + 1 : position.line,
+        column: selection.saveUpDown(position.column)
       };
       selection.moveFocus(state.text.positionToOffset(position, true /* clamp */));
     }
