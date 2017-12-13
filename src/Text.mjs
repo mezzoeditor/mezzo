@@ -27,7 +27,9 @@ let tree = Tree(
    */
   function selfMetrics(node) {
     return Chunk.metrics(node.chunk);
-  });
+  },
+
+  true /* supportLines */);
 
 /**
  * @param {string} s

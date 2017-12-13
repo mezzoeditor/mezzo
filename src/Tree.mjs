@@ -8,19 +8,23 @@ import { Random } from "./Types.mjs";
  * @param {function(!Object):!Metrics} selfMetrics
  * Returns metrics for the node, not accounting for any subtrees.
  *
+ * @param {boolean=} supportLines
+ * Whether to support line+column addressing.
+ *
  * @param {function(!Object, !Object|undefined, !Object|undefined)|undefined} updateData
  * Updates auxilary data for node from it's left and right
  * subtree (possibly missing).
  */
-export let Tree = function(initFrom, selfMetrics, updateData) {
+export let Tree = function(initFrom, selfMetrics, supportLines, updateData) {
   let random = Random(42);
 
   /**
    * @typedef {{
-   *   lines: number|undefined,
    *   length: number,
-   *   first: number,
-   *   last: number,
+   *
+   *   lines: number|undefined,
+   *   first: number|undefined,
+   *   last: number|undefined,
    *   longest: number|undefined
    * }} Metrics;
    */
@@ -50,11 +54,12 @@ export let Tree = function(initFrom, selfMetrics, updateData) {
    * @return {!Position}
    */
   let advance = function(position, metrics) {
-    return {
-      offset: position.offset + metrics.length,
-      line: position.line + (metrics.lines || 0),
-      column: metrics.last + (metrics.lines ? 0 : position.column)
-    };
+    let result = { offset: position.offset + metrics.length };
+    if (supportLines) {
+      result.line = position.line + (metrics.lines || 0);
+      result.column = metrics.last + (metrics.lines ? 0 : position.column);
+    }
+    return result;
   };
 
 
@@ -65,6 +70,8 @@ export let Tree = function(initFrom, selfMetrics, updateData) {
   let greater = function(position, key) {
     if (key.offset !== undefined)
       return position.offset > key.offset;
+    if (!supportLines)
+      throw 'Lines are not supported';
     return position.line > key.line || (position.line === key.line && position.column > key.column);
   };
 
@@ -76,6 +83,8 @@ export let Tree = function(initFrom, selfMetrics, updateData) {
   let greaterEqual = function(position, key) {
     if (key.offset !== undefined)
       return position.offset >= key.offset;
+    if (!supportLines)
+      throw 'Lines are not supported';
     return position.line > key.line || (position.line === key.line && position.column >= key.column);
   };
 
@@ -88,10 +97,9 @@ export let Tree = function(initFrom, selfMetrics, updateData) {
    */
   let setChildren = function(node, left, right) {
     if (left || right) {
-      node.selfMetrics = {
-        length: node.metrics.length,
-        last: node.metrics.last
-      };
+      node.selfMetrics = { length: node.metrics.length };
+      if (node.metrics.last !== undefined)
+        node.selfMetrics.last = node.metrics.last;
       if (node.metrics.first !== undefined)
         node.selfMetrics.first = node.metrics.first;
       if (node.metrics.longest !== undefined)
@@ -101,24 +109,24 @@ export let Tree = function(initFrom, selfMetrics, updateData) {
     }
     if (left) {
       node.left = left;
-      if (node.metrics.longest !== undefined) {
-        let longest = Math.max(left.metrics.longest || 0, left.metrics.last + node.metrics.first);
+      if (supportLines) {
+        let longest = Math.max(left.metrics.longest, left.metrics.last + node.metrics.first);
         node.metrics.longest = Math.max(node.metrics.longest, longest);
+        node.metrics.first = left.metrics.first + (left.metrics.lines ? 0 : node.metrics.first);
+        node.metrics.last = node.metrics.last + (node.metrics.lines ? 0 : left.metrics.last);
       }
-      node.metrics.first = left.metrics.first + (left.metrics.lines ? 0 : node.metrics.first);
-      node.metrics.last = node.metrics.last + (node.metrics.lines ? 0 : left.metrics.last);
       node.metrics.length += left.metrics.length;
       if (left.metrics.lines)
         node.metrics.lines = left.metrics.lines + (node.metrics.lines || 0);
     }
     if (right) {
       node.right = right;
-      if (node.metrics.longest !== undefined) {
-        let longest = Math.max(right.metrics.longest || 0, node.metrics.last + right.metrics.first);
+      if (supportLines) {
+        let longest = Math.max(right.metrics.longest, node.metrics.last + right.metrics.first);
         node.metrics.longest = Math.max(node.metrics.longest, longest);
+        node.metrics.first = node.metrics.first + (node.metrics.lines ? 0 : right.metrics.first);
+        node.metrics.last = right.metrics.last + (right.metrics.lines ? 0 : node.metrics.last);
       }
-      node.metrics.first = node.metrics.first + (node.metrics.lines ? 0 : right.metrics.first);
-      node.metrics.last = right.metrics.last + (right.metrics.lines ? 0 : node.metrics.last);
       node.metrics.length += right.metrics.length;
       if (right.metrics.lines)
         node.metrics.lines = right.metrics.lines + (node.metrics.lines || 0);
