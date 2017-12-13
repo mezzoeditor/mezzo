@@ -91,9 +91,9 @@ export class Text {
    */
   _content(from, to) {
     let chunks = [];
-    tree.visit(this._root, from, to, (node, before, after) => {
-      chunks.push(Chunk.content(node.chunk, before, after, from, to));
-    });
+    let iterator = tree.iterator(this._root, from, to);
+    while (iterator.next())
+      chunks.push(Chunk.content(iterator.node().chunk, iterator.before(), iterator.after(), from, to));
     return chunks.join('');
   }
 

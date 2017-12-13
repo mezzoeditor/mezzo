@@ -300,7 +300,6 @@ export let Tree = function(initFrom, selfMetrics, supportLines, updateData) {
    * @return {{node: !TreeNode, position: !Position}|undefined}
    */
   let find = function(node, key) {
-    // TODO: maybe implement find with innerVisit for additional testing?
     let current = origin;
     while (true) {
       if (node.left) {
@@ -322,41 +321,102 @@ export let Tree = function(initFrom, selfMetrics, supportLines, updateData) {
   };
 
 
-  /**
-   * @param {!TreeNode} node
-   * @param {!Position} current
-   * @param {!Position} from
-   * @param {!Position} to
-   * @param {function(!TreeNode, !Position, !Position)} visitor
-   */
-  let innerVisit = function(node, current, from, to, visitor) {
-    if (node.left) {
-      let next = advance(current, node.left.metrics);
-      if (greaterEqual(next, from))
-        innerVisit(node.left, current, from, to, visitor);
-      current = next;
+  const kLeft = 0;
+  const kSelf = 1;
+  const kRight = 2;
+
+  class TreeIterator {
+    /**
+     * @param {!TreeNode} root
+     * @param {!Position} from
+     * @param {!Position} to
+     */
+    constructor(root, from, to) {
+      this._stack = [{node: root, position: origin, state: kLeft}];
+      this._from = from;
+      this._to = to;
+      this._node = null;
+      this._before = null;
+      this._after = null;
     }
 
-    let next = advance(current, node.selfMetrics || node.metrics);
-    if (!greaterEqual(current, to) && greaterEqual(next, from))
-      visitor(node, current, next);
-    current = next;
+    /**
+     * @return {boolean}
+     */
+    next() {
+      while (true) {
+        if (!this._stack.length)
+          return false;
 
-    if (node.right && !greaterEqual(current, to))
-      innerVisit(node.right, current, from, to, visitor);
+        let {node, position, state} = this._stack.pop();
+
+        if (state === kLeft) {
+          if (node.left) {
+            let next = advance(position, node.left.metrics);
+            this._stack.push({node, position: next, state: kSelf});
+            if (greaterEqual(next, this._from))
+              this._stack.push({node: node.left, position: position, state: kLeft});
+          } else {
+            this._stack.push({node, position, state: kSelf});
+          }
+          continue;
+        }
+
+        if (state === kSelf) {
+          let next = advance(position, node.selfMetrics || node.metrics);
+          this._stack.push({node, position: next, state: kRight});
+          if (!greaterEqual(position, this._to) && greaterEqual(next, this._from)) {
+            this._node = node;
+            this._before = position;
+            this._after = next;
+            return true;
+          }
+          continue;
+        }
+
+        if (state === kRight) {
+          if (node.right && !greaterEqual(position, this._to))
+            this._stack.push({node: node.right, position, state: kLeft});
+          continue;
+        }
+
+        throw 'Unknown state';
+      }
+    }
+
+    /**
+     * @return {!TreeNode}
+     */
+    node() {
+      return this._node;
+    }
+
+    /**
+     * @return {!Position}
+     */
+    before() {
+      return this._before;
+    }
+
+    /**
+     * @return {!Position}
+     */
+    after() {
+      return this._after;
+    }
   };
 
 
   /**
-   * @param {!TreeNode} node
+   * @param {!TreeNode} root
    * @param {!Position} from
    * @param {!Position} to
-   * @param {function(!TreeNode, !Position, !Position)} visitor
+   * @return {!TreeIterator}
    */
-  let visit = function(node, from, to, visitor) {
-    innerVisit(node, origin, from, to, visitor);
+  let iterator = function(root, from, to) {
+    return new TreeIterator(root, from, to);
   };
 
 
-  return { wrap, build, split, merge, find, visit, metrics };
+  return { wrap, build, split, merge, find, metrics, iterator };
 };
