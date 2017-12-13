@@ -123,7 +123,11 @@ export class Text {
    * @return {?string}
    */
   line(line) {
-    return this.lineChunk(line, 0, kInfinity);
+    if (line >= this._lineCount)
+      return null;
+    let from = this.positionToOffset({line, column: 0});
+    let to = this.positionToOffset({line: line + 1, column: 0}, true /* clamp */);
+    return this._content({offset: from}, {offset: to});
   }
 
   /**
@@ -157,7 +161,9 @@ export class Text {
   lineChunk(line, from, to) {
     if (line >= this._lineCount)
       return null;
-    return this._content({line, column: from}, {line, column: to});
+    from = this.positionToOffset({line, column: from}, true /* clamp */);
+    to = this.positionToOffset({line, column: to}, true /* clamp */);
+    return this._content({offset: from}, {offset: to});
   }
 
   /**
