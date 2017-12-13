@@ -11,7 +11,7 @@ import { Random } from "./Types.mjs";
  * @param {boolean=} supportLines
  * Whether to support line+column addressing.
  *
- * @param {function(!Object, !Object|undefined, !Object|undefined)|undefined} updateData
+ * @param {function(!Object, !Object|undefined, !Object|undefined)=} updateData
  * Updates auxilary data for node from it's left and right
  * subtree (possibly missing).
  */
@@ -335,6 +335,8 @@ export let Tree = function(initFrom, selfMetrics, supportLines, updateData) {
       this._stack = [{node: root, position: origin, state: kLeft}];
       this._from = from;
       this._to = to;
+      if (greater(from, to))
+        this._stack = [];
       this._node = null;
       this._before = null;
       this._after = null;
