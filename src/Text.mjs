@@ -1,5 +1,6 @@
 import { Tree } from "./Tree.mjs";
 import { Chunk } from "./Chunk.mjs";
+import { TextPosition } from "./Types.mjs";
 
 /**
  * @typedef {{
@@ -292,6 +293,12 @@ export class Text {
    * @return {number}
    */
   positionToOffset(position, clamp) {
+    let compare = TextPosition.compare(position, this._lastPosition);
+    if (compare >= 0) {
+      if (clamp || compare === 0)
+        return this._lastOffset;
+      throw 'Position does not belong to text';
+    }
     let found = tree.find(this._root, {line: position.line, column: position.column});
     if (!found) {
       if (clamp)
