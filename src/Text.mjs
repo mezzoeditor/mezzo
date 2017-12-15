@@ -112,6 +112,19 @@ export class Text {
   }
 
   /**
+   * @param {number=} from
+   * @param {number=} to
+   * @return {!Text.Iterator}
+   */
+  iterator(from, to) {
+    if (from === undefined)
+      from = 0;
+    if (to === undefined)
+      to = this._lastOffset;
+    return new Text.Iterator(this, Math.max(0, from), Math.min(this._lastOffset, to));
+  }
+
+  /**
    * @return {number}
    */
   lineCount() {
@@ -288,3 +301,86 @@ export class Text {
     return Chunk.positionToOffset(found.node.chunk, found.position, position, clamp);
   }
 }
+
+Text.Iterator = class {
+  /**
+   * @param {!Text} text
+   * @param {number} from
+   * @param {number} to
+   */
+  constructor(text, from, to) {
+    this._iterator = tree.iterator(text._root, {offset: from}, {offset: to});
+    this._to = to;
+
+    this._offset = from;
+    this._chunks = [];
+    this._pos = 0;
+    if (this._iterator.next()) {
+      this._chunks.push(this._iterator.node().chunk);
+      this._pos = from - this._iterator.before().offset;
+    }
+  }
+
+  /**
+   * @param {number} count
+   * @return {number}
+   */
+  advance(count = 1) {
+    count = Math.min(count, this._to - this._offset);
+    let result = count;
+    while (count > 0) {
+      if (!this._chunks.length) {
+        if (!this._iterator.next())
+          throw 'There should be something';
+        this._chunks.push(this._iterator.node().chunk);
+      }
+      let len = this._chunks[0].length - this._pos;
+      if (count >= len) {
+        this._chunks.shift();
+        this._pos = 0;
+        this._offset += len;
+        count -= len;
+      } else {
+        this._offset += count;
+        count = 0;
+      }
+    }
+    return result;
+  }
+
+  /**
+   * @return {number}
+   */
+  offset() {
+    return this._offset;
+  }
+
+  /**
+   * @param {number} count
+   * @return {string}
+   */
+  peek(count = 1) {
+    count = Math.min(count, this._to - this._offset);
+    let result = [];
+    let index = 0;
+    let pos = this._pos;
+    while (count > 0) {
+      if (index === this._chunks.length) {
+        if (!this._iterator.next())
+          throw 'There should be something';
+        this._chunks.push(this._iterator.node().chunk);
+      }
+      let len = this._chunks[index].length - pos;
+      if (count >= len) {
+        result.push(this._chunks[index].substring(pos));
+        index++;
+        pos = 0;
+        count -= len;
+      } else {
+        result.push(this._chunks[index].substring(pos, pos + count));
+        count = 0;
+      }
+    }
+    return result.join('');
+  }
+};

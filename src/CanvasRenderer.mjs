@@ -340,7 +340,9 @@ export class CanvasRenderer {
     const textX = viewportStart.column * charWidth;
     const lineCount = this._editor.text().lineCount();
     for (let i = viewportStart.line; i < viewportEnd.line && i < lineCount; ++i) {
-      const line = this._editor.text().lineChunk(i, viewportStart.column, viewportEnd.column + 1);
+      const lineStart = this._editor.text().positionToOffset({line: i, column: viewportStart.column}, true /* clamp */);
+      const lineEnd = this._editor.text().lineEndOffset(lineStart);
+      const line = this._editor.text().iterator(lineStart, lineEnd).peek(viewportEnd.column - viewportStart.column + 1);
       ctx.fillText(line, textX, i * lineHeight);
     }
 
