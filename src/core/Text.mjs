@@ -50,8 +50,6 @@ export class Text {
     this._lastOffset = metrics.length;
     this._lastPosition = {line: metrics.lines || 0, column: metrics.last, offset: metrics.length};
     this._longestLine = metrics.longest;
-
-    this._lineLengths = [];
   }
 
   /**
@@ -81,7 +79,6 @@ export class Text {
   }
 
   resetCache() {
-    this._lineLengths = [];
   }
 
   /**
@@ -135,18 +132,6 @@ export class Text {
   }
 
   /**
-   * @param {number} line
-   * @return {?string}
-   */
-  line(line) {
-    if (line >= this._lineCount)
-      return null;
-    let from = this.positionToOffset({line, column: 0});
-    let to = this.positionToOffset({line: line + 1, column: 0}, true /* clamp */);
-    return this.content(from, to);
-  }
-
-  /**
    * @return {number}
    */
   longestLineLength() {
@@ -154,75 +139,10 @@ export class Text {
   }
 
   /**
-   * @param {number} line
-   * @return {number}
-   */
-  lineLength(line) {
-    if (line >= this._lineCount)
-      return 0;
-    if (this._lineLengths[line] === undefined) {
-      let start = this.positionToOffset({line, column: 0}, true /* clamp */);
-      let end = this.positionToOffset({line: line + 1, column: 0}, true /* clamp */);
-      this._lineLengths[line] = start === end ? 0 : end - start - 1;
-    }
-    return this._lineLengths[line];
-  }
-
-  /**
-   * @param {number} line
-   * @param {number} from
-   * @param {number} to
-   * @return {?string}
-   */
-  lineChunk(line, from, to) {
-    if (line >= this._lineCount)
-      return null;
-    from = this.positionToOffset({line, column: from}, true /* clamp */);
-    to = this.positionToOffset({line, column: to}, true /* clamp */);
-    return this.content(from, to);
-  }
-
-  /**
    * @return {number}
    */
   lastOffset() {
     return this._lastOffset;
-  }
-
-  /**
-   * @param {number} offset
-   * @return {number}
-   */
-  previousOffset(offset) {
-    return offset ? offset - 1 : 0;
-  }
-
-  /**
-   * @param {number} offset
-   * @return {number}
-   */
-  nextOffset(offset) {
-    return offset < this._lastOffset ? offset + 1 : this._lastOffset;
-  }
-
-  /**
-   * @param {number} offset
-   * @return {number}
-   */
-  lineStartOffset(offset) {
-    let position = this.offsetToPosition(offset);
-    return offset - position.column;
-  }
-
-  /**
-   * @param {number} offset
-   * @return {number}
-   */
-  lineEndOffset(offset) {
-    let position = this.offsetToPosition(offset);
-    if (position.line == this._lineCount - 1)
-      return this._lastOffset;
-    return this.positionToOffset({line: position.line + 1, column: 0}) - 1;
   }
 
   /**

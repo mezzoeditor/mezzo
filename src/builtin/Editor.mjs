@@ -106,7 +106,7 @@ export class Editor {
     this._clearUpDown(state);
     for (let selection of state.selections) {
       if (selection.isCollapsed())
-        selection.setCaret(state.text.previousOffset(selection.focus()));
+        selection.setCaret(TextUtils.previousOffset(state.text, selection.focus()));
       else
         selection.setCaret(selection.range().from);
     }
@@ -118,7 +118,7 @@ export class Editor {
     let state = this._state.clone('selection');
     this._clearUpDown(state);
     for (let selection of state.selections)
-      selection.moveFocus(state.text.previousOffset(selection.focus()));
+      selection.moveFocus(TextUtils.previousOffset(state.text, selection.focus()));
     this._joinSelections(state);
     this._pushState(state);
   }
@@ -128,7 +128,7 @@ export class Editor {
     this._clearUpDown(state);
     for (let selection of state.selections) {
       if (selection.isCollapsed())
-        selection.setCaret(state.text.nextOffset(selection.focus()));
+        selection.setCaret(TextUtils.nextOffset(state.text, selection.focus()));
       else
         selection.setCaret(selection.range().to);
     }
@@ -140,7 +140,7 @@ export class Editor {
     let state = this._state.clone('selection');
     this._clearUpDown(state);
     for (let selection of state.selections)
-      selection.moveFocus(state.text.nextOffset(selection.focus()));
+      selection.moveFocus(TextUtils.nextOffset(state.text, selection.focus()));
     this._joinSelections(state);
     this._pushState(state);
   }
@@ -213,7 +213,7 @@ export class Editor {
     let state = this._state.clone('selection');
     this._clearUpDown(state);
     for (let selection of state.selections)
-      selection.setCaret(state.text.lineStartOffset(selection.focus()));
+      selection.setCaret(TextUtils.lineStartOffset(state.text, selection.focus()));
     this._joinSelections(state);
     this._pushState(state);
   }
@@ -222,7 +222,7 @@ export class Editor {
     let state = this._state.clone('selection');
     this._clearUpDown(state);
     for (let selection of state.selections)
-      selection.moveFocus(state.text.lineStartOffset(selection.focus()));
+      selection.moveFocus(TextUtils.lineStartOffset(state.text, selection.focus()));
     this._joinSelections(state);
     this._pushState(state);
   }
@@ -231,7 +231,7 @@ export class Editor {
     let state = this._state.clone('selection');
     this._clearUpDown(state);
     for (let selection of state.selections)
-      selection.setCaret(state.text.lineEndOffset(seleciton.focus()));
+      selection.setCaret(TextUtils.lineEndOffset(state.text, seleciton.focus()));
     this._joinSelections(state);
     this._pushState(state);
   }
@@ -240,7 +240,7 @@ export class Editor {
     let state = this._state.clone('selection');
     this._clearUpDown(state);
     for (let selection of state.selections)
-      selection.moveFocus(state.text.lineEndOffset(selection.focus()));
+      selection.moveFocus(TextUtils.lineEndOffset(state.text, selection.focus()));
     this._joinSelections(state);
     this._pushState(state);
   }
@@ -283,7 +283,7 @@ export class Editor {
     this._replaceAtSelections(state, "", selection => {
       let range = selection.range();
       if (selection.isCollapsed())
-        range.to = state.text.nextOffset(range.to);
+        range.to = TextUtils.nextOffset(state.text, range.to);
       return range;
     });
     this._joinSelections(state);
@@ -296,7 +296,7 @@ export class Editor {
     this._replaceAtSelections(state, "", selection => {
       let range = selection.range();
       if (selection.isCollapsed())
-        range.from = state.text.previousOffset(range.from);
+        range.from = TextUtils.previousOffset(state.text, range.from);
       return range;
     });
     this._joinSelections(state);

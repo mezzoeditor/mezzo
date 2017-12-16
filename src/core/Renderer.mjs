@@ -2,6 +2,7 @@ import { FontMetrics } from "./FontMetrics.mjs";
 import { Editor } from "../builtin/Editor.mjs";
 import { Selection } from "../builtin/Selection.mjs";
 import { Viewport } from "../api/Viewport.mjs";
+import { TextUtils } from "../utils/TextUtils.mjs";
 
 const GUTTER_PADDING_LEFT_RIGHT = 4;
 const EDITOR_MARGIN_LEFT = 4;
@@ -340,7 +341,7 @@ export class Renderer {
     const lineCount = this._editor.text().lineCount();
     for (let i = viewportStart.line; i < viewportEnd.line && i < lineCount; ++i) {
       const lineStart = this._editor.text().positionToOffset({line: i, column: viewportStart.column}, true /* clamp */);
-      const lineEnd = this._editor.text().lineEndOffset(lineStart);
+      const lineEnd = TextUtils.lineEndOffset(this._editor.text(), lineStart);
       const line = this._editor.text().iterator(lineStart, lineEnd).peek(viewportEnd.column - viewportStart.column + 1);
       ctx.fillText(line, textX, i * lineHeight);
     }

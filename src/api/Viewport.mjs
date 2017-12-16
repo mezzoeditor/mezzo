@@ -1,3 +1,5 @@
+import { TextUtils } from "../utils/TextUtils.mjs";
+
 export class Viewport {
   /**
    * @param {!Text} text
@@ -28,28 +30,12 @@ export class Viewport {
 
   /**
    * @param {number} line
-   * @return {?string}
-   */
-  line(line) {
-    return this._text.line(line);
-  }
-
-  /**
-   * @param {number} line
-   * @return {number}
-   */
-  lineLength(line) {
-    return this._text.lineLength(line);
-  }
-
-  /**
-   * @param {number} line
    * @param {number} from
    * @param {number} to
    * @return {?string}
    */
   lineChunk(line, from, to) {
-    return this._text.lineChunk(line, from, to);
+    return TextUtils.lineChunk(this._text, line, from, to);
   }
 
   /**
