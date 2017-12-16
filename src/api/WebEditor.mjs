@@ -1,5 +1,5 @@
 import { Editor } from "../builtin/Editor.mjs";
-import { Renderer } from "../core/Renderer.mjs";
+import { Renderer } from "./Renderer.mjs";
 import { Selection } from "../builtin/Selection.mjs";
 import { Viewport } from "./Viewport.mjs";
 
