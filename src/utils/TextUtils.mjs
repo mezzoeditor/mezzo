@@ -1,3 +1,5 @@
+export let TextUtils = {};
+
 /**
  * @param {string} chunk
  * @param {!Position} before
@@ -6,7 +8,7 @@
  * @param {!Position} to
  * @return {string}
  */
-export function chunkContent(chunk, before, after, from, to) {
+TextUtils.chunkContent = function(chunk, before, after, from, to) {
   let start = 0;
   if (from.offset !== undefined && from.offset > before.offset) {
     start = from.offset - before.offset;
@@ -38,3 +40,21 @@ export function chunkContent(chunk, before, after, from, to) {
 
   return chunk.substring(start, end);
 };
+
+/**
+ * @param {!Text} text
+ * @param {number} offset
+ * @return {number}
+ */
+TextUtils.clampOffset = function(text, offset) {
+  return Math.max(0, Math.min(offset, text.lastOffset()));
+}
+
+/**
+ * @param {!Text} text
+ * @param {!OffsetRange} range
+ * @return {!OffsetRange}
+ */
+TextUtils.clampRange = function(text, range) {
+  return {from: TextUtils.clampOffset(text, range.from), to: TextUtils.clampOffset(text, range.to)};
+}

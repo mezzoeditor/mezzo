@@ -86,11 +86,27 @@ export class Text {
   }
 
   /**
-   * @param {number} from
-   * @param {number} to
+   * @param {number=} from
+   * @param {number=} to
+   * @return {{from: number, to: number}}
+   */
+  _clamp(from, to) {
+    if (from === undefined)
+      from = 0;
+    from = Math.max(0, from);
+    if (to === undefined)
+      to = this._lastOffset;
+    to = Math.min(this._lastOffset, to);
+    return {from, to};
+  }
+
+  /**
+   * @param {number=} fromOffset
+   * @param {number=} toOffset
    * @return {string}
    */
-  _content(from, to) {
+  content(fromOffset, toOffset) {
+    let {from, to} = this._clamp(fromOffset, toOffset);
     let chunks = [];
     let iterator = tree.iterator(this._root, {offset: from}, {offset: to});
     while (iterator.next()) {
@@ -103,30 +119,13 @@ export class Text {
   }
 
   /**
-   * @param {!OffsetRange=} range
-   * @return {string}
-   */
-  content(range) {
-    if (!range)
-      return this._content(0, this._lastOffset);
-    let from = Math.max(0, range.from);
-    let to = Math.min(this._lastOffset, range.to);
-    if (from >= to)
-      return '';
-    return this._content(from, to);
-  }
-
-  /**
-   * @param {number=} from
-   * @param {number=} to
+   * @param {number=} fromOffset
+   * @param {number=} toOffset
    * @return {!Text.Iterator}
    */
-  iterator(from, to) {
-    if (from === undefined)
-      from = 0;
-    if (to === undefined)
-      to = this._lastOffset;
-    return new Text.Iterator(this, Math.max(0, from), Math.min(this._lastOffset, to));
+  iterator(fromOffset, toOffset) {
+    let {from, to} = this._clamp(fromOffset, toOffset);
+    return new Text.Iterator(this, from, to);
   }
 
   /**
@@ -145,7 +144,7 @@ export class Text {
       return null;
     let from = this.positionToOffset({line, column: 0});
     let to = this.positionToOffset({line: line + 1, column: 0}, true /* clamp */);
-    return this._content(from, to);
+    return this.content(from, to);
   }
 
   /**
@@ -181,7 +180,7 @@ export class Text {
       return null;
     from = this.positionToOffset({line, column: from}, true /* clamp */);
     to = this.positionToOffset({line, column: to}, true /* clamp */);
-    return this._content(from, to);
+    return this.content(from, to);
   }
 
   /**
@@ -189,29 +188,6 @@ export class Text {
    */
   lastOffset() {
     return this._lastOffset;
-  }
-
-  /**
-   * @return {!OffsetRange}
-   */
-  fullRange() {
-    return {from: 0, to: this._lastOffset};
-  }
-
-  /**
-   * @param {number} offset
-   * @return {number}
-   */
-  clampOffset(offset) {
-    return offset < 0 ? 0 : (offset > this._lastOffset ? this._lastOffset : offset);
-  }
-
-  /**
-   * @param {!OffsetRange} range
-   * @return {!OffsetRange}
-   */
-  clampRange(range) {
-    return {from: this.clampOffset(range.from), to: this.clampOffset(range.to)};
   }
 
   /**
@@ -251,14 +227,16 @@ export class Text {
   }
 
   /**
-   * @param {!OffsetRange} range
+   * @param {number=} fromOffset
+   * @param {number=} toOffset
    * @param {string} insertion
    * @return {!Text}
    */
-  replaceRange(range, insertion) {
-    let tmp = tree.split(this._root, {offset: range.to}, true /* intersectionToLeft */);
+  replace(fromOffset, toOffset, insertion) {
+    let {from, to} = this._clamp(fromOffset, toOffset);
+    let tmp = tree.split(this._root, {offset: to}, true /* intersectionToLeft */);
     let right = tmp.right;
-    tmp = tree.split(tmp.left, {offset: range.from}, false /* intersectionToLeft */);
+    tmp = tree.split(tmp.left, {offset: from}, false /* intersectionToLeft */);
     let left = tmp.left;
     let middle = tmp.right;
     if (!middle) {
@@ -269,9 +247,9 @@ export class Text {
       let first = tree.find(middle, {offset: 0}).node;
       let last = tree.find(middle, {offset: middleSize - 1}).node;
       middle = Text._withContent(
-        first.chunk.substring(0, range.from - leftSize) +
+        first.chunk.substring(0, from - leftSize) +
         insertion +
-        last.chunk.substring(last.chunk.length - (leftSize + middleSize - range.to)));
+        last.chunk.substring(last.chunk.length - (leftSize + middleSize - to)));
     }
     return new Text(tree.merge(left, tree.merge(middle, right)));
   }

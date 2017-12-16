@@ -2,6 +2,7 @@ import { State } from "./State.mjs";
 import { Selection } from "./Selection.mjs";
 import { TextPosition, TextRange, OffsetRange } from "../core/Types.mjs";
 import { Text } from "../core/Text.mjs";
+import { TextUtils } from "../utils/TextUtils.mjs";
 
 export class Editor {
   constructor() {
@@ -95,7 +96,7 @@ export class Editor {
   performSelectAll() {
     let state = this._state.clone('selection');
     let selection = new Selection();
-    selection.setRange(this._state.text.fullRange());
+    selection.setRange({from: 0, to: this._state.text.lastOffset()});
     state.selections = [selection];
     this._pushState(state);
   }
@@ -337,7 +338,7 @@ export class Editor {
    */
   _rebuildSelections(state) {
     for (let selection of state.selections)
-      selection.setRange(state.text.clampRange(selection.range()));
+      selection.setRange(TextUtils.clampRange(state.text, selection.range()));
     state.selections.sort((a, b) => OffsetRange.compare(a.range(), b.range()));
     this._joinSelections(state);
   }
@@ -351,11 +352,11 @@ export class Editor {
     let delta = 0;
     for (let selection of state.selections) {
       let range = selection.range();
-      range = state.text.clampRange({from: range.from + delta, to: range.to + delta});
+      range = TextUtils.clampRange(state.text, {from: range.from + delta, to: range.to + delta});
       selection.setRange(range);
 
       let replaced = rangeCallback.call(null, selection);
-      state.text = state.text.replaceRange(replaced, s);
+      state.text = state.text.replace(replaced.from, replaced.to, s);
       selection.setCaret(replaced.from + s.length);
       delta += s.length - (replaced.to - replaced.from);
     }
