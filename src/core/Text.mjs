@@ -86,15 +86,19 @@ export class Text {
   }
 
   /**
-   * @param {!Position} from
-   * @param {!Position} to
+   * @param {number} from
+   * @param {number} to
    * @return {string}
    */
   _content(from, to) {
     let chunks = [];
-    let iterator = tree.iterator(this._root, from, to);
-    while (iterator.next())
-      chunks.push(Chunk.content(iterator.node().chunk, iterator.before(), iterator.after(), from, to));
+    let iterator = tree.iterator(this._root, {offset: from}, {offset: to});
+    while (iterator.next()) {
+      let chunk = iterator.node().chunk;
+      let start = Math.max(0, from - iterator.before().offset);
+      let end = chunk.length - Math.max(0, iterator.after().offset - to);
+      chunks.push(chunk.substring(start, end));
+    }
     return chunks.join('');
   }
 
@@ -104,12 +108,12 @@ export class Text {
    */
   content(range) {
     if (!range)
-      return this._content({offset: 0}, {offset: this._lastOffset});
+      return this._content(0, this._lastOffset);
     let from = Math.max(0, range.from);
     let to = Math.min(this._lastOffset, range.to);
     if (from >= to)
       return '';
-    return this._content({offset: from}, {offset: to});
+    return this._content(from, to);
   }
 
   /**
@@ -141,7 +145,7 @@ export class Text {
       return null;
     let from = this.positionToOffset({line, column: 0});
     let to = this.positionToOffset({line: line + 1, column: 0}, true /* clamp */);
-    return this._content({offset: from}, {offset: to});
+    return this._content(from, to);
   }
 
   /**
@@ -177,7 +181,7 @@ export class Text {
       return null;
     from = this.positionToOffset({line, column: from}, true /* clamp */);
     to = this.positionToOffset({line, column: to}, true /* clamp */);
-    return this._content({offset: from}, {offset: to});
+    return this._content(from, to);
   }
 
   /**
