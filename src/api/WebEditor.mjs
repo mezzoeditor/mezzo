@@ -1,6 +1,6 @@
-import { Editor } from "./Editor.mjs";
-import { CanvasRenderer } from "./CanvasRenderer.mjs";
-import { Selection } from "./Selection.mjs";
+import { Editor } from "../builtin/Editor.mjs";
+import { Renderer } from "../core/Renderer.mjs";
+import { Selection } from "../builtin/Selection.mjs";
 import { Viewport } from "./Viewport.mjs";
 
 export class WebEditor {
@@ -244,7 +244,7 @@ export class WebEditor {
   }
 
   _createRenderer(document) {
-    this._renderer = new CanvasRenderer(document, this._editor);
+    this._renderer = new Renderer(document, this._editor);
     const canvas = this._renderer.canvas();
     canvas.style.setProperty('position', 'absolute');
     canvas.style.setProperty('top', '0');

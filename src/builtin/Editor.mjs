@@ -1,7 +1,7 @@
 import { State } from "./State.mjs";
 import { Selection } from "./Selection.mjs";
-import { TextPosition, TextRange, OffsetRange } from "./Types.mjs";
-import { Text } from "./Text.mjs";
+import { TextPosition, TextRange, OffsetRange } from "../core/Types.mjs";
+import { Text } from "../core/Text.mjs";
 
 export class Editor {
   constructor() {

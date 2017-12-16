@@ -1,8 +1,8 @@
 import { FontMetrics } from "./FontMetrics.mjs";
-import { Editor } from "./Editor.mjs";
-import { Selection } from "./Selection.mjs";
+import { Editor } from "../builtin/Editor.mjs";
+import { Selection } from "../builtin/Selection.mjs";
 import { TextPosition, TextRange } from "./Types.mjs";
-import { Viewport } from "./Viewport.mjs";
+import { Viewport } from "../api/Viewport.mjs";
 
 const GUTTER_PADDING_LEFT_RIGHT = 4;
 const EDITOR_MARGIN_LEFT = 4;
@@ -14,7 +14,7 @@ const MouseDownStates = {
   HSCROLL_DRAG: 'HSCROLL_DRAG',
 };
 
-export class CanvasRenderer {
+export class Renderer {
   /**
    * @param {!Document} document
    * @param {!Editor} editor

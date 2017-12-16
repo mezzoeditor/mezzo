@@ -1,6 +1,6 @@
-import { WebEditor } from "../src/WebEditor.mjs";
-import { Selection } from "../src/Selection.mjs";
-import { Random } from "../src/Types.mjs";
+import { WebEditor } from "../src/api/WebEditor.mjs";
+import { Selection } from "../src/builtin/Selection.mjs";
+import { Random } from "../src/core/Types.mjs";
 let random = Random(17);
 
 const examples = [
