@@ -1,7 +1,6 @@
 import { FontMetrics } from "./FontMetrics.mjs";
 import { Editor } from "../builtin/Editor.mjs";
 import { Selection } from "../builtin/Selection.mjs";
-import { TextPosition, TextRange } from "./Types.mjs";
 import { Viewport } from "../api/Viewport.mjs";
 
 const GUTTER_PADDING_LEFT_RIGHT = 4;
@@ -151,11 +150,11 @@ export class Renderer {
     x += this._scrollLeft - this._editorRect.x;
     y += this._scrollTop - this._editorRect.y;
 
-    const textPosition = {
+    const position = {
       line: Math.floor(y / this._metrics.lineHeight),
       column: Math.round(x / this._metrics.charWidth),
     };
-    return this._editor.text().positionToOffset(textPosition, true /* clamp */);
+    return this._editor.text().positionToOffset(position, true /* clamp */);
   }
 
   _onScroll(event) {
@@ -407,8 +406,10 @@ export class Renderer {
     // Selection consists at most of three rectangles.
     // Draw first one.
     if (from.column < viewportEnd.column) {
-      const rEnd = TextPosition.smaller({line: from.line, column: viewportEnd.column}, to);
-      const rWidth = rEnd.column - from.column;
+      let rEnd = viewportEnd.column;
+      if (to.line === from.line && to.column < viewportEnd.column)
+        rEnd = to.column;
+      const rWidth = rEnd - from.column;
       ctx.fillRect(from.column * charWidth, from.line * lineHeight, charWidth * rWidth, lineHeight);
     }
 

@@ -1,6 +1,5 @@
 import { Tree } from "./Tree.mjs";
 import { Chunk } from "./Chunk.mjs";
-import { TextPosition } from "./Types.mjs";
 
 /**
  * @typedef {{
@@ -49,7 +48,7 @@ export class Text {
     let metrics = tree.metrics(this._root);
     this._lineCount = (metrics.lines || 0) + 1;
     this._lastOffset = metrics.length;
-    this._lastPosition = {line: metrics.lines || 0, column: metrics.last};
+    this._lastPosition = {line: metrics.lines || 0, column: metrics.last, offset: metrics.length};
     this._longestLine = metrics.longest;
 
     this._lineLengths = [];
@@ -256,7 +255,7 @@ export class Text {
 
   /**
    * @param {number} offset
-   * @return {?TextPosition}
+   * @return {?Position}
    */
   offsetToPosition(offset) {
     if (offset > this._lastOffset)
@@ -270,12 +269,18 @@ export class Text {
   }
 
   /**
-   * @param {TextPosition} position
+   * @param {!Position} position
    * @param {boolean=} clamp
    * @return {number}
    */
   positionToOffset(position, clamp) {
-    let compare = TextPosition.compare(position, this._lastPosition);
+    if (position.offset !== undefined) {
+      if ((position.offset < 0 || position.offset > this._lastOffset) && !clamp)
+        throw 'Position does not belong to text';
+      return Math.max(0, Math.min(position.offset, this._lastOffset));
+    }
+
+    let compare = (position.line - this._lastPosition.line) || (position.column - this._lastPosition.column);
     if (compare >= 0) {
       if (clamp || compare === 0)
         return this._lastOffset;

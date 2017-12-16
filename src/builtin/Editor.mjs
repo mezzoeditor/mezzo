@@ -1,6 +1,6 @@
 import { State } from "./State.mjs";
 import { Selection } from "./Selection.mjs";
-import { TextPosition, TextRange, OffsetRange } from "../core/Types.mjs";
+import { TextPosition, TextRange, OffsetRange } from "../utils/Types.mjs";
 import { Text } from "../core/Text.mjs";
 import { TextUtils } from "../utils/TextUtils.mjs";
 

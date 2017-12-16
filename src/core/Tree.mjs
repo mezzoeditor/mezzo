@@ -1,4 +1,4 @@
-import { Random } from "./Types.mjs";
+import { Random } from "./Random.mjs";
 
 /**
  * @param {function(!Object):!Object} initFrom

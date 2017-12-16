@@ -68,7 +68,7 @@ Chunk.positionToOffset = function(chunk, before, position, clamp) {
  * @param {string} chunk
  * @param {!Position} before
  * @param {number} offset
- * @return {!TextPosition}
+ * @return {!Position}
  */
 Chunk.offsetToPosition = function(chunk, before, offset) {
   if (chunk.length < offset - before.offset)
@@ -87,5 +87,5 @@ Chunk.offsetToPosition = function(chunk, before, offset) {
       break;
     }
   }
-  return {line, column};
+  return {line, column, offset};
 };
