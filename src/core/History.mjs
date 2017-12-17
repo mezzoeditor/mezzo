@@ -8,6 +8,14 @@ export class History {
   }
 
   /**
+   * @param {*} state
+   */
+  reset(state) {
+    this._states = [state];
+    this._pos = 0;
+  }
+
+  /**
    * @return {*}
    */
   current() {

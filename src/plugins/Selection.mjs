@@ -313,11 +313,11 @@ Selection.Range = class {
    * @return {!Selection.Range}
    */
   clone() {
-    let selection = new Selection();
-    selection._anchor = this._anchor;
-    selection._focus = this._focus;
-    selection._upDownColumn = this._upDownColumn;
-    return selection;
+    let range = new Selection.Range();
+    range._anchor = this._anchor;
+    range._focus = this._focus;
+    range._upDownColumn = this._upDownColumn;
+    return range;
   }
 
   clearUpDown() {

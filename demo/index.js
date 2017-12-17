@@ -1,5 +1,5 @@
 import { WebEditor } from "../src/api/WebEditor.mjs";
-import { Selection } from "../src/builtin/Selection.mjs";
+import { Selection } from "../src/plugins/Selection.mjs";
 import { Random } from "../src/core/Random.mjs";
 let random = Random(17);
 
@@ -58,10 +58,10 @@ class TokenHighlighter {
     if (this._token === token)
       return;
     this._token = token;
-    if (token)
-      this._editor.addViewportBuilder(this._viewportBuilder);
-    else
-      this._editor.removeViewportBuilder(this._viewportBuilder);
+    // if (token)
+    //   this._editor.addViewportBuilder(this._viewportBuilder);
+    // else
+    //   this._editor.removeViewportBuilder(this._viewportBuilder);
     this._editor.invalidate();
   }
 
@@ -91,17 +91,17 @@ class TokenHighlighter {
 async function setupEditor(editor, exampleName) {
   const response = await fetch(exampleName);
   const text = await response.text();
-  editor.setText(text);
-  //editor.setText('abc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\n');
-  //editor.setText('abc\n\ndef\n');
-  //editor.setText('abc\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nabc');
+  editor.editor().reset(text);
+  //editor.editor().reset('abc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\n');
+  //editor.editor().reset('abc\n\ndef\n');
+  //editor.editor().reset('abc\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nabc');
   editor.focus();
 
-  let selections = [];
+  let ranges = [];
   for (let i = 0; i < 20; i++) {
-    let selection = new Selection();
-    selection.setCaret(editor.positionToOffset({line: 4 * i, column: 3}, true /* clamp */));
-    selections.push(selection);
+    let range = new Selection.Range();
+    range.setCaret(editor.editor().positionToOffset({line: 4 * i, column: 3}, true /* clamp */));
+    ranges.push(range);
   }
-  editor.setSelections(selections);
+  editor.selection().setRanges(ranges);
 }

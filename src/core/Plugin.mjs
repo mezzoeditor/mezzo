@@ -51,15 +51,3 @@ class Plugin {
   onIdle(limit) {
   }
 };
-
-/*
-
-Supposed api to be used by plugins:
-- invalidate
-- replace
-- line markers
-- Text public methods
-- history: begin(name), [do something], end(name), undo(?name), redo(?name)
-- add/remove plugin(name, plugin)
-
-*/
