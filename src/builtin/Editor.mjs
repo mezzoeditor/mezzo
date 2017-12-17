@@ -96,7 +96,7 @@ export class Editor {
   performSelectAll() {
     let state = this._state.clone('selection');
     let selection = new Selection();
-    selection.setRange({from: 0, to: this._state.text.lastOffset()});
+    selection.setRange({from: 0, to: this._state.text.length()});
     state.selections = [selection];
     this._pushState(state);
   }

@@ -47,7 +47,7 @@ TextUtils.chunkContent = function(chunk, before, after, from, to) {
  * @return {number}
  */
 TextUtils.clampOffset = function(text, offset) {
-  return Math.max(0, Math.min(offset, text.lastOffset()));
+  return Math.max(0, Math.min(offset, text.length()));
 };
 
 /**
@@ -115,7 +115,7 @@ TextUtils.previousOffset = function(text, offset) {
  * @return {number}
  */
 TextUtils.nextOffset = function(text, offset) {
-  return Math.min(text.lastOffset(), offset + 1);
+  return Math.min(text.length(), offset + 1);
 };
 
 /**
@@ -136,6 +136,6 @@ TextUtils.lineStartOffset = function(text, offset) {
 TextUtils.lineEndOffset = function(text, offset) {
   let position = text.offsetToPosition(offset);
   if (position.line == text.lineCount() - 1)
-    return text.lastOffset();
+    return text.length();
   return text.positionToOffset({line: position.line + 1, column: 0}) - 1;
 };

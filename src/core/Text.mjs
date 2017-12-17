@@ -47,7 +47,7 @@ export class Text {
     this._root = root;
     let metrics = tree.metrics(this._root);
     this._lineCount = (metrics.lines || 0) + 1;
-    this._lastOffset = metrics.length;
+    this._length = metrics.length;
     this._lastPosition = {line: metrics.lines || 0, column: metrics.last, offset: metrics.length};
     this._longestLine = metrics.longest;
   }
@@ -91,8 +91,8 @@ export class Text {
       from = 0;
     from = Math.max(0, from);
     if (to === undefined)
-      to = this._lastOffset;
-    to = Math.min(this._lastOffset, to);
+      to = this._length;
+    to = Math.min(this._length, to);
     return {from, to};
   }
 
@@ -141,8 +141,8 @@ export class Text {
   /**
    * @return {number}
    */
-  lastOffset() {
-    return this._lastOffset;
+  length() {
+    return this._length;
   }
 
   /**
@@ -178,9 +178,9 @@ export class Text {
    * @return {?Position}
    */
   offsetToPosition(offset) {
-    if (offset > this._lastOffset)
+    if (offset > this._length)
       return null;
-    if (offset === this._lastOffset)
+    if (offset === this._length)
       return this._lastPosition;
     let found = tree.find(this._root, {offset});
     if (!found)
@@ -195,21 +195,21 @@ export class Text {
    */
   positionToOffset(position, clamp) {
     if (position.offset !== undefined) {
-      if ((position.offset < 0 || position.offset > this._lastOffset) && !clamp)
+      if ((position.offset < 0 || position.offset > this._length) && !clamp)
         throw 'Position does not belong to text';
-      return Math.max(0, Math.min(position.offset, this._lastOffset));
+      return Math.max(0, Math.min(position.offset, this._length));
     }
 
     let compare = (position.line - this._lastPosition.line) || (position.column - this._lastPosition.column);
     if (compare >= 0) {
       if (clamp || compare === 0)
-        return this._lastOffset;
+        return this._length;
       throw 'Position does not belong to text';
     }
     let found = tree.find(this._root, {line: position.line, column: position.column});
     if (!found) {
       if (clamp)
-        return this._lastOffset;
+        return this._length;
       throw 'Position does not belong to text';
     }
     return Chunk.positionToOffset(found.node.chunk, found.position, position, clamp);
