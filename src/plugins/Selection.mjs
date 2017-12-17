@@ -37,7 +37,27 @@ export class Selection {
   /**
    * @param {!Viewport} viewport
    */
-  onRender(viewport) {
+  onViewport(viewport) {
+    let start = viewport.start();
+    let end = viewport.end();
+    for (let range of this._ranges) {
+      let focus = this._editor.offsetToPosition(range.focus());
+      if (focus.line >= start.line && focus.column >= start.column &&
+          focus.line < end.line && focus.column < end.column) {
+        viewport.addDecoration(focus, focus, 'selection.focus');
+      }
+
+      if (range.isCollapsed())
+        continue;
+      let {from, to} = range.range();
+      from = this._editor.offsetToPosition(from);
+      to = this._editor.offsetToPosition(to);
+      if (to.line < start.line || (to.line === start.line && to.column < start.column))
+        continue;
+      if (from.line >= end.line || (from.line === end.line - 1 && from.column >= end.column))
+        continue;
+      viewport.addDecoration(from, to, 'selection.range');
+    }
   }
 
   /**
@@ -402,3 +422,5 @@ Selection.Commands = new Set([
   'selection.move.lineend',
   'selection.move.linestart',
 ]);
+
+Selection.Decorations = new Set(['selection.range', 'selection.focus']);

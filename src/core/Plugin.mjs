@@ -6,7 +6,7 @@ class Plugin {
    * Called on every render of viewport. See Viewport for api.
    * @param {!Viewport} viewport
    */
-  onRender(viewport) {
+  onViewport(viewport) {
   }
 
   /**

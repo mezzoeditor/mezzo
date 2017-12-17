@@ -1,5 +1,6 @@
 import { History } from "./History.mjs";
 import { Text } from "./Text.mjs";
+import { Viewport } from "./Viewport.mjs";
 
 export class Editor {
   /**
@@ -12,6 +13,7 @@ export class Editor {
     this._text = this._history.current().text;
     this._operation = null;
     this._replacements = null;
+    this._frozen = false;
   }
 
   /**
@@ -20,6 +22,8 @@ export class Editor {
   reset(text) {
     if (this._operation !== null)
       throw 'Cannot reset during operation';
+    if (this._frozen)
+      throw 'Cannot mutate while building viewport';
     let to = this._text.length();
     this._history.reset({text: Text.withContent(text)});
     this._text = this._history.current().text;
@@ -35,13 +39,31 @@ export class Editor {
   }
 
   /**
+   * @param {{line: number, column: number}} start
+   * @param {{line: number, column: number}} end
+   * @return {!Viewport}
+   */
+  buildViewport(start, end) {
+    this._frozen = true;
+    let viewport = new Viewport(this, start, end);
+    for (let plugin of this._plugins.values()) {
+      if (plugin.onViewport)
+        plugin.onViewport(viewport);
+    }
+    this._frozen = false;
+    return viewport;
+  }
+
+  /**
    * @param {number} from
    * @param {number} to
    * @param {string} insertion
    */
   replace(from, to, insertion) {
     if (this._operation === null)
-      throw 'Editing outside of operation';
+      throw 'Cannot edit outside of operation';
+    if (this._frozen)
+      throw 'Cannot mutate while building viewport';
     this._replacements.push({from, to, inserted: insertion.length});
     let text = this._text.replace(from, to, insertion);
     this._text.resetCache();
@@ -58,6 +80,8 @@ export class Editor {
   begin(name) {
     if (this._operation !== null)
       throw 'Another operation in progress';
+    if (this._frozen)
+      throw 'Cannot mutate while building viewport';
     this._operation = name;
     this._replacements = [];
   }
@@ -95,7 +119,11 @@ export class Editor {
    * @return {boolean}
    */
   undo(name) {
-    // TODO: implement |name|.
+    if (this._operation !== null)
+      throw 'Cannot undo during operation';
+    if (this._frozen)
+      throw 'Cannot mutate while building viewport';
+  // TODO: implement |name|.
     let current = this._history.current();
     let state = this._history.undo();
     if (!state)
@@ -122,6 +150,10 @@ export class Editor {
    * @return {boolean}
    */
   redo(name) {
+    if (this._operation !== null)
+      throw 'Cannot redo during operation';
+    if (this._frozen)
+      throw 'Cannot mutate while building viewport';
     // TODO: implement |name|.
     let state = this._history.redo();
     if (!state)
@@ -162,6 +194,8 @@ export class Editor {
    * @return {*}
    */
   perform(command, data) {
+    if (this._frozen)
+      throw 'Cannot mutate while building viewport';
     if (command === 'history.undo')
       return this.undo();
     if (command === 'history.redo')
