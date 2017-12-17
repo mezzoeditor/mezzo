@@ -1,3 +1,4 @@
+// TODO: replace all Text usages with core/Editor.
 export let TextUtils = {};
 
 /**

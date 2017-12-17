@@ -14,6 +14,22 @@ export class Editor {
     this._replacements = null;
   }
 
+  /**
+   * @param {string} text
+   */
+  reset(text) {
+    if (this._operation !== null)
+      throw 'Cannot reset during operation';
+    let to = this._text.length();
+    this._history.reset({text: Text.withContent(text)});
+    this._text = this._history.current().text;
+    for (let plugin of this._plugins.values()) {
+      if (plugin.onReplace)
+        plugin.onReplace(0, to, text.length);
+    }
+    this.invalidate();
+  }
+
   invalidate() {
     this._onInvalidate.call(null);
   }
@@ -141,6 +157,25 @@ export class Editor {
   }
 
   /**
+   * @param {string} command
+   * @param {*} data
+   * @return {*}
+   */
+  perform(command, data) {
+    if (command === 'history.undo')
+      return this.undo();
+    if (command === 'history.redo')
+      return this.redo();
+    for (let plugin of this._plugins.values()) {
+      if (!plugin.onCommand)
+        continue;
+      let result = plugin.onCommand(command, data);
+      if (result !== undefined)
+        return result;
+    }
+  }
+
+  /**
    * @param {number=} from
    * @param {number=} to
    * @return {string}
@@ -196,3 +231,5 @@ export class Editor {
     return this._text.positionToOffset(position, clamp);
   }
 };
+
+Editor.Commands = new Set(['history.undo', 'history.redo']);

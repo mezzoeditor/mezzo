@@ -19,9 +19,10 @@ class Plugin {
   }
 
   /**
-   * Called when command should be executed.
+   * Called when command should be executed. Return undefined if command is unhandled.
    * @param {string} command
    * @param {*} data
+   * @return {*|undefined}
    */
   onCommand(command, data) {
   }
@@ -37,7 +38,7 @@ class Plugin {
   /**
    * Called when history state is about to be restored,
    * with the data returned from onSaveState (if any).
-   * @param {!Array<{from: number, to: number, inserted: number}>}
+   * @param {!Array<{from: number, to: number, inserted: number}>} replacements
    * @param {*|undefined} data
    */
   onRestore(replacements, data) {
