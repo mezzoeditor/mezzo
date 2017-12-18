@@ -53,7 +53,8 @@ export class WebEditor {
    * @param {!Plugin} plugin
    */
   addPlugin(name, plugin) {
-    this._editor.addPlugin(plugin);
+    this._editor.addPlugin(name, plugin);
+    this.invalidate();
   }
 
   /**
@@ -61,7 +62,8 @@ export class WebEditor {
    * @param {!Plugin} plugin
    */
   removePlugin(name, plugin) {
-    this._editor.removePlugin(plugin);
+    this._editor.removePlugin(name, plugin);
+    this.invalidate();
   }
 
   invalidate() {

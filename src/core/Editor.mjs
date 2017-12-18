@@ -228,7 +228,7 @@ export class Editor {
    * @return {string}
    */
   content(from, to) {
-    return this._text.iterator(from, to);
+    return this._text.content(from, to);
   }
 
   /**

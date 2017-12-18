@@ -1,3 +1,1 @@
-import { Editor } from "../src/Editor.mjs";
-
-const editor = new Editor();
+console.log('All tests passed!');

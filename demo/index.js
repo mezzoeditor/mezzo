@@ -1,6 +1,7 @@
 import { WebEditor } from "../src/api/WebEditor.mjs";
 import { Selection } from "../src/plugins/Selection.mjs";
 import { Random } from "../src/core/Random.mjs";
+import { TextUtils } from "../src/utils/TextUtils.mjs";
 let random = Random(17);
 
 const examples = [
@@ -51,37 +52,35 @@ class TokenHighlighter {
   constructor(editor) {
     this._editor = editor;
     this._token = '';
-    this._viewportBuilder = this._viewportBuilder.bind(this);
+    this._editor.addPlugin('token-highlighter', this);
   }
 
   setToken(token) {
     if (this._token === token)
       return;
     this._token = token;
-    // if (token)
-    //   this._editor.addViewportBuilder(this._viewportBuilder);
-    // else
-    //   this._editor.removeViewportBuilder(this._viewportBuilder);
     this._editor.invalidate();
   }
 
-  _viewportBuilder(viewport, viewportStart, viewportEnd) {
+  onViewport(viewport) {
     if (!this._token)
       return;
-    let from = viewportStart.column - this._token.length;
+    let start = viewport.start();
+    let end = viewport.end();
+    let from = start.column - this._token.length;
     if (from < 0)
       from = 0;
-    let to = viewportEnd.column + this._token.length;
-    const toLine = Math.min(viewport.lineCount(), viewportEnd.line);
-    for (let line = viewportStart.line; line < toLine; line++) {
-      let text = viewport.lineChunk(line, from, to);
+    let to = end.column + this._token.length;
+    const toLine = Math.min(this._editor.editor().lineCount(), end.line);
+    for (let line = start.line; line < toLine; line++) {
+      let text = TextUtils.lineChunk(this._editor.editor(), line, from, to);
       let index = text.indexOf(this._token);
       while (index !== -1) {
-        let value = ['rgba(0, 0, 255, 0.2)', 'rgba(0, 255, 0, 0.2)', 'rgba(255, 0, 0, 0.2)'][line % 3];
-        viewport.addDecorations([
-            {line, from: from + index, to: from + index + this._token.length, name: 'background', value: value},
-            {line, from: from + index, to: from + index + this._token.length, name: 'underline', value: 'rgb(50, 50, 50)'},
-          ]);
+        viewport.addDecoration(
+          {line, column: from + index},
+          {line, column: from + index + this._token.length},
+          ['red', 'green', 'blue'][line % 3]
+        );
         index = text.indexOf(this._token, index + this._token.length);
       }
     }

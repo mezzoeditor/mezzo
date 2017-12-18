@@ -355,8 +355,18 @@ export class Renderer {
           }
           break;
         }
-        case 'selection.range': {
-          ctx.fillStyle = 'rgba(126, 188, 254, 0.6)';
+        case 'selection.range':
+        case 'red':
+        case 'green':
+        case 'blue': {
+          if (decoration.style === 'selection.range')
+            ctx.fillStyle = 'rgba(126, 188, 254, 0.6)';
+          else if (decoration.style === 'red')
+            ctx.fillStyle = 'rgba(255, 0, 0, 0.2)';
+          else if (decoration.style === 'green')
+            ctx.fillStyle = 'rgba(0, 255, 0, 0.2)';
+          else if (decoration.style === 'blue')
+            ctx.fillStyle = 'rgba(0, 0, 255, 0.2)';
           if (from.column < end.column) {
             let rEnd = end.column;
             if (to.line === from.line && to.column < end.column)
