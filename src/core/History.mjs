@@ -33,7 +33,7 @@ export class History {
       this._states[++this._pos] = state;
     }
     if (this._states.length > this._pos + 1)
-      this.states.splice(this._pos + 1, this._states.length - this._pos + 1);
+      this._states.splice(this._pos + 1, this._states.length - this._pos + 1);
   }
 
   /**

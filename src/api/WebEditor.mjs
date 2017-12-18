@@ -1,6 +1,7 @@
 import { Editor } from "../core/Editor.mjs";
 import { Renderer } from "../render/Renderer.mjs";
 import { Selection } from "../plugins/Selection.mjs";
+import { Editing } from "../plugins/Editing.mjs";
 
 export class WebEditor {
   /**
@@ -10,7 +11,9 @@ export class WebEditor {
     this._createDOM(document);
     this._editor = new Editor(() => this._renderer.invalidate());
     this._selection = new Selection(this._editor);
+    this._editing = new Editing(this._editor, this._selection);
     this._editor.addPlugin('selection', this._selection);
+    this._editor.addPlugin('editing', this._editing);
     this._createRenderer(document);
     this._setupCursors();
   }
@@ -122,7 +125,7 @@ export class WebEditor {
     `;
     this._element.appendChild(this._input);
     this._input.addEventListener('input', event => {
-      //this._editor.performType(this._input.value);
+      this._editor.perform('editing.type', this._input.value);
       this._input.value = '';
       this._revealCursors();
     });
@@ -158,7 +161,7 @@ export class WebEditor {
           handled = true;
           break;
         case 'Enter':
-          //this._editor.performNewLine();
+          this._editor.perform('editing.newline');
           handled = true;
           break;
         case 'Home':
@@ -196,11 +199,11 @@ export class WebEditor {
       }
       switch (event.keyCode) {
         case 8: /* backspace */
-          //this._editor.performDeleteBefore();
+          this._editor.perform('editing.delete.before');
           handled = true;
           break;
         case 46: /* delete */
-          //this._editor.performDeleteAfter();
+          this._editor.perform('editing.delete.after');
           handled = true;
           break;
         case 27: /* escape */
@@ -217,7 +220,7 @@ export class WebEditor {
       let data = event.clipboardData;
       if (data.types.indexOf('text/plain') === -1)
         return;
-      //this._editor.performPaste(data.getData('text/plain'));
+      this._editor.perform('editing.paste', data.getData('text/plain'));
       event.preventDefault();
       event.stopPropagation();
     });

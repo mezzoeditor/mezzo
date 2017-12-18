@@ -71,21 +71,22 @@ export class Selection {
 
     for (let i = 0; i < this._ranges.length; i++) {
       let range = this._ranges[i].clone();
-      let {f, t} = range.range();
-      if (from <= f && to >= t)
+      let start = range.range().from;
+      let end = range.range().to;
+      if (from < start && to > start)
         continue;
 
-      if (f <= from && t >= to) {
-        range.setRange(f, t + delta);
-      } else if (t < from) {
-        range.setRange(f, t);
-      } else if (f >= to) {
-        range.setRange(f + delta, t + delta);
-      } else if (f <= from) {
-        range.setRange(f, from);
-      } else {
-        range.setRange(to + delta, t + delta);
-      }
+      if (from <= start)
+        start = to >= start ? from : start - (to - from);
+      if (from <= end)
+        end = to >= end ? from : end - (to - from);
+
+      if (from <= start)
+        start += inserted;
+      if (from <= end)
+        end += inserted;
+
+      range.setRange({from: start, to: end});
       ranges.push(range);
     }
 

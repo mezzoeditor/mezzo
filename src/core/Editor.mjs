@@ -2,6 +2,7 @@ import { History } from "./History.mjs";
 import { Text } from "./Text.mjs";
 import { Viewport } from "./Viewport.mjs";
 
+// TODO: rename this to Document or something alike?
 export class Editor {
   /**
    * @param {function()} onInvalidate
@@ -9,7 +10,12 @@ export class Editor {
   constructor(onInvalidate) {
     this._onInvalidate = onInvalidate;
     this._plugins = new Map();
-    this._history = new History({text: Text.withContent('')});
+    this._history = new History({
+      text: Text.withContent(''),
+      replacements: [],
+      data: new Map(),
+      operation: '__initial__'
+    });
     this._text = this._history.current().text;
     this._operation = null;
     this._replacements = null;
@@ -25,7 +31,12 @@ export class Editor {
     if (this._frozen)
       throw 'Cannot mutate while building viewport';
     let to = this._text.length();
-    this._history.reset({text: Text.withContent(text)});
+    this._history.reset({
+      text: Text.withContent(text),
+      replacements: [],
+      data: new Map(),
+      operation: '__initial__'
+    });
     this._text = this._history.current().text;
     for (let plugin of this._plugins.values()) {
       if (plugin.onReplace)
@@ -142,6 +153,7 @@ export class Editor {
       if (plugin.onRestore)
         plugin.onRestore(replacements, data);
     }
+    this.invalidate();
     return true;
   }
 
@@ -165,6 +177,7 @@ export class Editor {
       if (plugin.onRestore)
         plugin.onRestore(state.replacements, data);
     }
+    this.invalidate();
     return true;
   }
 
