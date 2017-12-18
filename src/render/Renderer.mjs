@@ -335,7 +335,7 @@ export class Renderer {
     for (let i = start.line; i < end.line && i < lineCount; ++i) {
       const lineStart = this._editor.positionToOffset({line: i, column: start.column}, true /* clamp */);
       const lineEnd = TextUtils.lineEndOffset(this._editor, lineStart);
-      const line = this._editor.iterator(lineStart, lineEnd).peek(end.column - start.column + 1);
+      const line = this._editor.iterator(lineStart, lineStart, lineEnd).peek(end.column - start.column + 1);
       ctx.fillText(line, textX, i * lineHeight);
     }
 

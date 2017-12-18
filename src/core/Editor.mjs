@@ -232,12 +232,13 @@ export class Editor {
   }
 
   /**
+   * @param {number} offset
    * @param {number=} from
    * @param {number=} to
    * @return {!Text.Iterator}
    */
-  iterator(from, to) {
-    return this._text.iterator(from, to);
+  iterator(offset, from, to) {
+    return this._text.iterator(offset, from, to);
   }
 
   /**

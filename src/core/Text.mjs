@@ -104,24 +104,25 @@ export class Text {
   content(fromOffset, toOffset) {
     let {from, to} = this._clamp(fromOffset, toOffset);
     let chunks = [];
-    let iterator = tree.iterator(this._root, {offset: from}, {offset: to});
-    while (iterator.next()) {
+    let iterator = tree.iterator(this._root, from, from, to);
+    do {
       let chunk = iterator.node().chunk;
-      let start = Math.max(0, from - iterator.before().offset);
-      let end = chunk.length - Math.max(0, iterator.after().offset - to);
+      let start = Math.max(0, from - iterator.before());
+      let end = chunk.length - Math.max(0, iterator.after() - to);
       chunks.push(chunk.substring(start, end));
-    }
+    } while (iterator.next());
     return chunks.join('');
   }
 
   /**
+   * @param {number} offset
    * @param {number=} fromOffset
    * @param {number=} toOffset
    * @return {!Text.Iterator}
    */
-  iterator(fromOffset, toOffset) {
+  iterator(offset, fromOffset, toOffset) {
     let {from, to} = this._clamp(fromOffset, toOffset);
-    return new Text.Iterator(this, from, to);
+    return new Text.Iterator(this, offset, from, to);
   }
 
   /**
@@ -219,20 +220,19 @@ export class Text {
 Text.Iterator = class {
   /**
    * @param {!Text} text
+   * @param {number} offset
    * @param {number} from
    * @param {number} to
    */
-  constructor(text, from, to) {
-    this._iterator = tree.iterator(text._root, {offset: from}, {offset: to});
+  constructor(text, offset, from, to) {
+    this._iterator = tree.iterator(text._root, offset, from, to);
+    this._from = from;
     this._to = to;
 
-    this._offset = from;
+    this._offset = offset;
     this._chunks = [];
-    this._pos = 0;
-    if (this._iterator.next()) {
-      this._chunks.push(this._iterator.node().chunk);
-      this._pos = from - this._iterator.before().offset;
-    }
+    this._chunks.push(this._iterator.node().chunk);
+    this._pos = offset - this._iterator.before();
   }
 
   /**

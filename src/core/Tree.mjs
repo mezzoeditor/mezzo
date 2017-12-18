@@ -328,62 +328,107 @@ export let Tree = function(initFrom, selfMetrics, supportLines, updateData) {
   class TreeIterator {
     /**
      * @param {!TreeNode} root
-     * @param {!Position} from
-     * @param {!Position} to
+     * @param {number} position
+     * @param {number} from
+     * @param {number} to
      */
-    constructor(root, from, to) {
-      this._stack = [{node: root, position: origin, state: kLeft}];
+    constructor(root, position, from, to) {
       this._from = from;
       this._to = to;
-      if (greater(from, to))
-        this._stack = [];
-      this._node = null;
-      this._before = null;
-      this._after = null;
+      this._init(root, position);
+    }
+
+    /**
+     * @param {!TreeNode} node
+     * @param {number} position
+     */
+    _init(node, position) {
+      this._stack = [];
+      let current = 0;
+      while (true) {
+        this._stack.push(node);
+        if (node.left) {
+          let next = current + node.left.metrics.length;
+          if (next > position) {
+            node = node.left;
+            continue;
+          }
+          current = next;
+        }
+        let next = current + (node.selfMetrics || node.metrics).length;
+        if (next > position || !node.right) {
+          this._node = node;
+          this._before = current;
+          this._after = next;
+          return;
+        }
+        current = next;
+        node = node.right;
+      }
     }
 
     /**
      * @return {boolean}
      */
     next() {
-      while (true) {
-        if (!this._stack.length)
-          return false;
+      if (this._after > this._to)
+        return false;
 
-        let {node, position, state} = this._stack.pop();
-
-        if (state === kLeft) {
-          if (node.left) {
-            let next = advance(position, node.left.metrics);
-            this._stack.push({node, position: next, state: kSelf});
-            if (greaterEqual(next, this._from))
-              this._stack.push({node: node.left, position: position, state: kLeft});
-          } else {
-            this._stack.push({node, position, state: kSelf});
-          }
-          continue;
-        }
-
-        if (state === kSelf) {
-          let next = advance(position, node.selfMetrics || node.metrics);
-          this._stack.push({node, position: next, state: kRight});
-          if (!greaterEqual(position, this._to) && greaterEqual(next, this._from)) {
-            this._node = node;
-            this._before = position;
-            this._after = next;
-            return true;
-          }
-          continue;
-        }
-
-        if (state === kRight) {
-          if (node.right && !greaterEqual(position, this._to))
-            this._stack.push({node: node.right, position, state: kLeft});
-          continue;
-        }
-
-        throw 'Unknown state';
+      if (this._node.right) {
+        let right = this._node.right;
+        this._stack.push(right);
+        this._before = this._after;
+        this._after += (right.selfMetrics || right.metrics).length;
+        this._node = right;
+        return true;
       }
+
+      let len = this._stack.length;
+      while (len > 1 && this._stack[len - 2].right === this._stack[len - 1]) {
+        this._stack.pop();
+        len--;
+      }
+      if (len === 1)
+        return false;
+
+      let next = this._stack[len - 2];
+      this._stack.pop();
+      this._before = this._after;
+      this._after += (next.selfMetrics || next.metrics).length;
+      this._node = next;
+      return true;
+    }
+
+    /**
+     * @return {boolean}
+     */
+    previous() {
+      if (this._before < this._from)
+        return false;
+
+      if (this._node.left) {
+        let left = this._node.left;
+        this._stack.push(left);
+        this._after = this._before;
+        this._before -= (left.selfMetrics || left.metrics).length;
+        this._node = left;
+        return true;
+      }
+
+      let len = this._stack.length;
+      while (len > 1 && this._stack[len - 2].left === this._stack[len - 1]) {
+        this._stack.pop();
+        len--;
+      }
+      if (len === 1)
+        return false;
+
+      let next = this._stack[len - 2];
+      this._stack.pop();
+      this._after = this._before;
+      this._before -= (next.selfMetrics || next.metrics).length;
+      this._node = next;
+      return true;
     }
 
     /**
@@ -394,14 +439,14 @@ export let Tree = function(initFrom, selfMetrics, supportLines, updateData) {
     }
 
     /**
-     * @return {!Position}
+     * @return {number}
      */
     before() {
       return this._before;
     }
 
     /**
-     * @return {!Position}
+     * @return {number}
      */
     after() {
       return this._after;
@@ -411,12 +456,19 @@ export let Tree = function(initFrom, selfMetrics, supportLines, updateData) {
 
   /**
    * @param {!TreeNode} root
-   * @param {!Position} from
-   * @param {!Position} to
+   * @param {number} position
+   * @param {number=} from
+   * @param {number=} to
    * @return {!TreeIterator}
    */
-  let iterator = function(root, from, to) {
-    return new TreeIterator(root, from, to);
+  let iterator = function(root, position, from, to) {
+    if (from === undefined)
+      from = 0;
+    if (to === undefined)
+      to = root.metrics.length;
+    if (from > position || position > to)
+      throw 'Position must belong to interval';
+    return new TreeIterator(root, position, from, to);
   };
 
 
