@@ -14,6 +14,14 @@ export class Selection {
     editor.element().addEventListener('mousedown', this._onMouseDown.bind(this));
     editor.element().addEventListener('mousemove', this._onMouseMove.bind(this));
     editor.element().addEventListener('mouseup', this._onMouseUp.bind(this));
+    editor.element().addEventListener('copy', event => {
+      let text = this._document.perform('selection.copy');
+      if (text) {
+        event.clipboardData.setData('text/plain', text);
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    });
   }
 
   _onMouseDown(event) {
@@ -145,6 +153,12 @@ export class Selection {
     if (command === 'selection.collapse')
       return this._collapse();
 
+    if (command ===  'selection.copy') {
+      let lines = [];
+      for (const range of this._ranges)
+        lines.push(this._document.content(range.range().from, range.range().to));
+      return lines.join('\n');
+    }
     this._document.begin('selection');
     this._ranges = this._ranges.map(range => range.clone());
     switch (command) {
@@ -432,6 +446,7 @@ Selection.Range = class {
 };
 
 Selection.Commands = new Set([
+  'selection.copy',
   'selection.collapse',
   'selection.select.all',
   'selection.select.left',
