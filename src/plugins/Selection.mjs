@@ -22,7 +22,39 @@ export class Selection {
         event.stopPropagation();
       }
     });
+    this._setupCursors();
   }
+
+  _setupCursors() {
+    let cursorsVisible = false;
+    let cursorsTimeout;
+    let toggleCursors = () => {
+      cursorsVisible = !cursorsVisible;
+      this._setCursorsVisible(cursorsVisible);
+    };
+    this._editor.element().addEventListener('focusin', event => {
+      toggleCursors();
+      cursorsTimeout = document.defaultView.setInterval(toggleCursors, 500);
+    });
+    this._editor.element().addEventListener('focusout', event => {
+      if (cursorsVisible)
+        toggleCursors();
+      if (cursorsTimeout) {
+        document.defaultView.clearInterval(cursorsTimeout);
+        cursorsTimeout = null;
+      }
+    });
+    this._revealCursors = () => {
+      if (!cursorsTimeout)
+        return;
+      document.defaultView.clearInterval(cursorsTimeout);
+      if (!cursorsVisible)
+        toggleCursors();
+      cursorsTimeout = document.defaultView.setInterval(toggleCursors, 500);
+    };
+    this._revealCursors();
+  }
+
 
   _onMouseDown(event) {
     const offset = this._editor.mouseEventToTextOffset(event);
@@ -40,6 +72,7 @@ export class Selection {
     const offset = this._editor.mouseEventToTextOffset(event);
     const range = new Selection.Range();
     range.setRange({from: this._mouseRangeStartOffset, to: offset});
+    this._revealCursors();
     this.setRanges([range]);
   }
 
@@ -47,7 +80,7 @@ export class Selection {
     this._mouseRangeStartOffset = null;
   }
 
-  setCursorsVisible(visible) {
+  _setCursorsVisible(visible) {
     if (this._drawCursors === visible)
       return;
     this._drawCursors = visible;
@@ -98,6 +131,7 @@ export class Selection {
    * @param {number} inserted
    */
   onReplace(from, to, inserted) {
+    this._revealCursors();
     let delta = inserted - (to - from);
     let ranges = [];
 
