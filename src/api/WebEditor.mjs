@@ -234,6 +234,18 @@ export class WebEditor {
       event.preventDefault();
       event.stopPropagation();
     });
+    this._input.addEventListener('copy', event => {
+      const ranges = this._selection.ranges();
+      const lines = [];
+      for (const range of this._selection.ranges())
+        lines.push(this._document.content(range.range().from, range.range().to));
+      const text = lines.join('\n');
+      if (!text.length)
+        return;
+      event.clipboardData.setData('text/plain', text);
+      event.preventDefault();
+      event.stopPropagation();
+    });
   }
 
   _createRenderer(document) {
