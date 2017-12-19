@@ -10,11 +10,11 @@ export class WebEditor {
   constructor(document) {
     this._createDOM(document);
     this._document = new Document(() => this._renderer.invalidate());
-    this._selection = new Selection(this._document);
+    this._createRenderer(document);
+    this._selection = new Selection(this);
     this._editing = new Editing(this._document, this._selection);
     this._document.addPlugin('selection', this._selection);
     this._document.addPlugin('editing', this._editing);
-    this._createRenderer(document);
     this._setupCursors();
   }
 
@@ -86,6 +86,14 @@ export class WebEditor {
 
   resize() {
     this._renderer.setSize(this._element.clientWidth, this._element.clientHeight);
+  }
+
+  /**
+   * @param {!MouseEvent} event
+   * @return {number}
+   */
+  mouseEventToTextOffset(event) {
+    return this._renderer.mouseEventToTextOffset(event);
   }
 
   /**
@@ -229,7 +237,7 @@ export class WebEditor {
   }
 
   _createRenderer(document) {
-    this._renderer = new Renderer(document, this._document, this._selection);
+    this._renderer = new Renderer(document, this._document);
     const canvas = this._renderer.canvas();
     canvas.style.setProperty('position', 'absolute');
     canvas.style.setProperty('top', '0');

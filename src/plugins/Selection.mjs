@@ -5,9 +5,20 @@ import { TextUtils } from "../utils/TextUtils.mjs";
  * @implements {Plugin}
  */
 export class Selection {
-  constructor(document) {
-    this._document = document;
+  constructor(editor) {
+    this._editor = editor;
+    this._document = editor.document();
     this._ranges = [];
+    editor.element().addEventListener('mousedown', this._onMouseDown.bind(this));
+  }
+
+  _onMouseDown(event) {
+    const offset = this._editor.mouseEventToTextOffset(event);
+    const range = new Selection.Range();
+    range.setCaret(offset);
+    this.setRanges([range]);
+    event.stopPropagation();
+    event.preventDefault();
   }
 
   // -------- Public API --------

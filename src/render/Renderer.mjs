@@ -1,8 +1,5 @@
 import { TextUtils } from "../utils/TextUtils.mjs";
 
-// TODO: remove after SelectionRender is a thing.
-import { Selection } from "../plugins/Selection.mjs";
-
 class FontMetrics {
   constructor(charWidth, charHeight, lineHeight) {
     this.charWidth = charWidth;
@@ -29,13 +26,10 @@ export class Renderer {
   /**
    * @param {!Document} domDocument
    * @param {!Document} document
-   * @param {!Selection} selection
    */
-  constructor(domDocument, document, selection) {
+  constructor(domDocument, document) {
     this._canvas = domDocument.createElement('canvas');
     this._document = document;
-    // TODO: remove after SelectionRender is a thing.
-    this._selection = selection;
     this._drawCursors = true;
 
     this._animationFrameId = 0;
@@ -141,7 +135,7 @@ export class Renderer {
     return {x, y};
   }
 
-  _canvasToTextOffset(x, y) {
+  _canvasToTextOffset({x, y}) {
     x += this._scrollLeft - this._editorRect.x;
     y += this._scrollTop - this._editorRect.y;
 
@@ -150,6 +144,14 @@ export class Renderer {
       column: Math.round(x / this._metrics.charWidth),
     };
     return this._document.positionToOffset(position, true /* clamp */);
+  }
+
+  /**
+   * @param {!MouseEvent} event
+   * @return {number}
+   */
+  mouseEventToTextOffset(event) {
+    return this._canvasToTextOffset(this._mouseEventToCanvas(event));
   }
 
   _onScroll(event) {
@@ -172,6 +174,8 @@ export class Renderer {
       this._mouseDownState.scrollTop = this._scrollTop;
       this._mouseDownState.scrollLeft = this._scrollLeft;
       this._scheduleRender();
+      event.stopPropagation();
+      event.preventDefault();
       return;
     }
     this._hScrollbar.hovered = rectHasPoint(this._hScrollbar.thumbRect, canvasPosition.x, canvasPosition.y);
@@ -181,16 +185,10 @@ export class Renderer {
       this._mouseDownState.scrollTop = this._scrollTop;
       this._mouseDownState.scrollLeft = this._scrollLeft;
       this._scheduleRender();
+      event.stopPropagation();
+      event.preventDefault();
       return;
     }
-
-    // TODO: move this to SelectionRender.
-    const range = new Selection.Range();
-    range.setCaret(this._canvasToTextOffset(canvasPosition.x, canvasPosition.y));
-    this._selection.setRanges([range]);
-
-    event.stopPropagation();
-    event.preventDefault();
   }
 
   _onMouseMove(event) {
