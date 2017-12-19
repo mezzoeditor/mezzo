@@ -1,4 +1,3 @@
-// TODO: replace all Text usages with core/Editor.
 export let TextUtils = {};
 
 /**
@@ -43,100 +42,100 @@ TextUtils.chunkContent = function(chunk, before, after, from, to) {
 };
 
 /**
- * @param {!Text} text
+ * @param {!Document} document
  * @param {number} offset
  * @return {number}
  */
-TextUtils.clampOffset = function(text, offset) {
-  return Math.max(0, Math.min(offset, text.length()));
+TextUtils.clampOffset = function(document, offset) {
+  return Math.max(0, Math.min(offset, document.length()));
 };
 
 /**
- * @param {!Text} text
+ * @param {!Document} document
  * @param {!OffsetRange} range
  * @return {!OffsetRange}
  */
-TextUtils.clampRange = function(text, range) {
-  return {from: TextUtils.clampOffset(text, range.from), to: TextUtils.clampOffset(text, range.to)};
+TextUtils.clampRange = function(document, range) {
+  return {from: TextUtils.clampOffset(document, range.from), to: TextUtils.clampOffset(document, range.to)};
 };
 
 /**
- * @param {!Text} text
+ * @param {!Document} document
  * @param {number} line
  * @return {number}
  */
-TextUtils.lineLength = function(text, line) {
-  if (line >= text.lineCount())
+TextUtils.lineLength = function(document, line) {
+  if (line >= document.lineCount())
     return 0;
-  let start = text.positionToOffset({line, column: 0}, true /* clamp */);
-  let end = text.positionToOffset({line: line + 1, column: 0}, true /* clamp */);
+  let start = document.positionToOffset({line, column: 0}, true /* clamp */);
+  let end = document.positionToOffset({line: line + 1, column: 0}, true /* clamp */);
   return start === end ? 0 : end - start - 1;
 };
 
 /**
- * @param {!Text} text
+ * @param {!Document} document
  * @param {number} line
  * @return {?string}
  */
-TextUtils.line = function(text, line) {
-  if (line >= text.lineCount())
+TextUtils.line = function(document, line) {
+  if (line >= document.lineCount())
     return null;
-  let from = text.positionToOffset({line, column: 0});
-  let to = text.positionToOffset({line: line + 1, column: 0}, true /* clamp */);
-  return text.content(from, to);
+  let from = document.positionToOffset({line, column: 0});
+  let to = document.positionToOffset({line: line + 1, column: 0}, true /* clamp */);
+  return document.content(from, to);
 };
 
 /**
- * @param {!Text} text
+ * @param {!Document} document
  * @param {number} line
  * @param {number} from
  * @param {number} to
  * @return {?string}
  */
-TextUtils.lineChunk = function(text, line, from, to) {
-  if (line >= text.lineCount())
+TextUtils.lineChunk = function(document, line, from, to) {
+  if (line >= document.lineCount())
     return null;
-  from = text.positionToOffset({line, column: from}, true /* clamp */);
-  to = text.positionToOffset({line, column: to}, true /* clamp */);
-  return text.content(from, to);
+  from = document.positionToOffset({line, column: from}, true /* clamp */);
+  to = document.positionToOffset({line, column: to}, true /* clamp */);
+  return document.content(from, to);
 };
 
 /**
- * @param {!Text} text
+ * @param {!Document} document
  * @param {number} offset
  * @return {number}
  */
-TextUtils.previousOffset = function(text, offset) {
+TextUtils.previousOffset = function(document, offset) {
   return Math.max(0, offset - 1);
 };
 
 /**
- * @param {!Text} text
+ * @param {!Document} document
  * @param {number} offset
  * @return {number}
  */
-TextUtils.nextOffset = function(text, offset) {
-  return Math.min(text.length(), offset + 1);
+TextUtils.nextOffset = function(document, offset) {
+  return Math.min(document.length(), offset + 1);
 };
 
 /**
- * @param {!Text} text
+ * @param {!Document} document
  * @param {number} offset
  * @return {number}
  */
-TextUtils.lineStartOffset = function(text, offset) {
-  let position = text.offsetToPosition(offset);
+TextUtils.lineStartOffset = function(document, offset) {
+  let position = document.offsetToPosition(offset);
   return offset - position.column;
 };
 
 /**
- * @param {!Text} text
+ * @param {!Document} document
  * @param {number} offset
  * @return {number}
  */
-TextUtils.lineEndOffset = function(text, offset) {
-  let position = text.offsetToPosition(offset);
-  if (position.line == text.lineCount() - 1)
-    return text.length();
-  return text.positionToOffset({line: position.line + 1, column: 0}) - 1;
+TextUtils.lineEndOffset = function(document, offset) {
+  let position = document.offsetToPosition(offset);
+  if (position.line == document.lineCount() - 1)
+    return document.length();
+  return document.positionToOffset({line: position.line + 1, column: 0}) - 1;
 };

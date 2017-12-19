@@ -1,4 +1,4 @@
-import { Editor } from "../core/Editor.mjs";
+import { Document } from "../core/Document.mjs";
 import { Renderer } from "../render/Renderer.mjs";
 import { Selection } from "../plugins/Selection.mjs";
 import { Editing } from "../plugins/Editing.mjs";
@@ -9,11 +9,11 @@ export class WebEditor {
    */
   constructor(document) {
     this._createDOM(document);
-    this._editor = new Editor(() => this._renderer.invalidate());
-    this._selection = new Selection(this._editor);
-    this._editing = new Editing(this._editor, this._selection);
-    this._editor.addPlugin('selection', this._selection);
-    this._editor.addPlugin('editing', this._editing);
+    this._document = new Document(() => this._renderer.invalidate());
+    this._selection = new Selection(this._document);
+    this._editing = new Editing(this._document, this._selection);
+    this._document.addPlugin('selection', this._selection);
+    this._document.addPlugin('editing', this._editing);
     this._createRenderer(document);
     this._setupCursors();
   }
@@ -53,7 +53,7 @@ export class WebEditor {
    * @param {!Plugin} plugin
    */
   addPlugin(name, plugin) {
-    this._editor.addPlugin(name, plugin);
+    this._document.addPlugin(name, plugin);
     this.invalidate();
   }
 
@@ -62,7 +62,7 @@ export class WebEditor {
    * @param {!Plugin} plugin
    */
   removePlugin(name, plugin) {
-    this._editor.removePlugin(name, plugin);
+    this._document.removePlugin(name, plugin);
     this.invalidate();
   }
 
@@ -71,10 +71,10 @@ export class WebEditor {
   }
 
   /**
-   * @return {!Editor}
+   * @return {!Document}
    */
-  editor() {
-    return this._editor;
+  document() {
+    return this._document;
   }
 
   /**
@@ -127,7 +127,7 @@ export class WebEditor {
     `;
     this._element.appendChild(this._input);
     this._input.addEventListener('input', event => {
-      this._editor.perform('editing.type', this._input.value);
+      this._document.perform('editing.type', this._input.value);
       this._input.value = '';
       this._revealCursors();
     });
@@ -136,55 +136,55 @@ export class WebEditor {
       switch (event.key) {
         case 'ArrowLeft':
           if (event.shiftKey)
-            this._editor.perform('selection.select.left');
+            this._document.perform('selection.select.left');
           else
-            this._editor.perform('selection.move.left');
+            this._document.perform('selection.move.left');
           handled = true;
           break;
         case 'ArrowRight':
           if (event.shiftKey)
-            this._editor.perform('selection.select.right');
+            this._document.perform('selection.select.right');
           else
-            this._editor.perform('selection.move.right');
+            this._document.perform('selection.move.right');
           handled = true;
           break;
         case 'ArrowUp':
           if (event.shiftKey)
-            this._editor.perform('selection.select.up');
+            this._document.perform('selection.select.up');
           else
-            this._editor.perform('selection.move.up');
+            this._document.perform('selection.move.up');
           handled = true;
           break;
         case 'ArrowDown':
           if (event.shiftKey)
-            this._editor.perform('selection.select.down');
+            this._document.perform('selection.select.down');
           else
-            this._editor.perform('selection.move.down');
+            this._document.perform('selection.move.down');
           handled = true;
           break;
         case 'Enter':
-          this._editor.perform('editing.newline');
+          this._document.perform('editing.newline');
           handled = true;
           break;
         case 'Home':
           if (event.shiftKey)
-            this._editor.perform('selection.select.linestart');
+            this._document.perform('selection.select.linestart');
           else
-            this._editor.perform('selection.move.linestart');
+            this._document.perform('selection.move.linestart');
           handled = true;
           break;
         case 'End':
           if (event.shiftKey)
-            this._editor.perform('selection.select.lineend');
+            this._document.perform('selection.select.lineend');
           else
-            this._editor.perform('selection.move.lineend');
+            this._document.perform('selection.move.lineend');
           handled = true;
           break;
         case 'a':
         case 'A':
           // TODO: handle shortcuts properly.
           if (!event.shiftKey && (event.metaKey || event.ctrlKey)) {
-            this._editor.perform('selection.select.all');
+            this._document.perform('selection.select.all');
             handled = true;
           }
           break;
@@ -193,23 +193,23 @@ export class WebEditor {
           // TODO: handle shortcuts properly.
           if (event.metaKey || event.ctrlKey) {
             if (event.shiftKey)
-              handled = this._editor.redo();
+              handled = this._document.redo();
             else
-              handled = this._editor.undo();
+              handled = this._document.undo();
           }
           break;
       }
       switch (event.keyCode) {
         case 8: /* backspace */
-          this._editor.perform('editing.delete.before');
+          this._document.perform('editing.delete.before');
           handled = true;
           break;
         case 46: /* delete */
-          this._editor.perform('editing.delete.after');
+          this._document.perform('editing.delete.after');
           handled = true;
           break;
         case 27: /* escape */
-          handled = this._editor.perform('selection.collapse');
+          handled = this._document.perform('selection.collapse');
           break;
       }
       if (handled) {
@@ -222,14 +222,14 @@ export class WebEditor {
       let data = event.clipboardData;
       if (data.types.indexOf('text/plain') === -1)
         return;
-      this._editor.perform('editing.paste', data.getData('text/plain'));
+      this._document.perform('editing.paste', data.getData('text/plain'));
       event.preventDefault();
       event.stopPropagation();
     });
   }
 
   _createRenderer(document) {
-    this._renderer = new Renderer(document, this._editor, this._selection);
+    this._renderer = new Renderer(document, this._document, this._selection);
     const canvas = this._renderer.canvas();
     canvas.style.setProperty('position', 'absolute');
     canvas.style.setProperty('top', '0');

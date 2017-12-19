@@ -71,9 +71,9 @@ class TokenHighlighter {
     if (from < 0)
       from = 0;
     let to = end.column + this._token.length;
-    const toLine = Math.min(this._editor.editor().lineCount(), end.line);
+    const toLine = Math.min(this._editor.document().lineCount(), end.line);
     for (let line = start.line; line < toLine; line++) {
-      let text = TextUtils.lineChunk(this._editor.editor(), line, from, to);
+      let text = TextUtils.lineChunk(this._editor.document(), line, from, to);
       let index = text.indexOf(this._token);
       while (index !== -1) {
         viewport.addDecoration(
@@ -90,7 +90,7 @@ class TokenHighlighter {
 async function setupEditor(editor, exampleName) {
   const response = await fetch(exampleName);
   const text = await response.text();
-  editor.editor().reset(text);
+  editor.document().reset(text);
   //editor.editor().reset('abc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\n');
   //editor.editor().reset('abc\n\ndef\n');
   //editor.editor().reset('abc\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nabc');
@@ -99,7 +99,7 @@ async function setupEditor(editor, exampleName) {
   let ranges = [];
   for (let i = 0; i < 20; i++) {
     let range = new Selection.Range();
-    range.setCaret(editor.editor().positionToOffset({line: 4 * i, column: 3}, true /* clamp */));
+    range.setCaret(editor.document().positionToOffset({line: 4 * i, column: 3}, true /* clamp */));
     ranges.push(range);
   }
   editor.selection().setRanges(ranges);

@@ -2,11 +2,11 @@ import { TextUtils } from "../utils/TextUtils.mjs";
 
 export class Editing {
   /**
-   * @param {!Editor} editor
+   * @param {!Document} document
    * @param {!Selection} selection
    */
-  constructor(editor, selection) {
-    this._editor = editor;
+  constructor(document, selection) {
+    this._document = document;
     this._selection = selection;
   }
 
@@ -19,7 +19,7 @@ export class Editing {
     if (!Editing.Commands.has(command))
       return;
 
-    this._editor.begin('editing');
+    this._document.begin('editing');
     switch (command) {
       case 'editing.type': {
         let s = /** @type {string} */ (data);
@@ -38,7 +38,7 @@ export class Editing {
       case 'editing.delete.after': {
         this._replace('', range => {
           if (range.from === range.to)
-            return {from: range.from, to: TextUtils.nextOffset(this._editor, range.to)};
+            return {from: range.from, to: TextUtils.nextOffset(this._document, range.to)};
           return range;
         });
         break;
@@ -46,13 +46,13 @@ export class Editing {
       case 'editing.delete.before': {
         this._replace('', range => {
           if (range.from === range.to)
-            return {from: TextUtils.previousOffset(this._editor, range.from), to: range.to};
+            return {from: TextUtils.previousOffset(this._document, range.from), to: range.to};
           return range;
         });
         break;
       }
     }
-    this._editor.end('editing');
+    this._document.end('editing');
     return true;
   }
 
@@ -64,9 +64,9 @@ export class Editing {
     let ranges = this._selection.ranges().map(range => range.range());
     let delta = 0;
     for (let range of ranges) {
-      let moved = TextUtils.clampRange(this._editor, {from: range.from + delta, to: range.to + delta});
+      let moved = TextUtils.clampRange(this._document, {from: range.from + delta, to: range.to + delta});
       let replaced = rangeCallback(moved);
-      this._editor.replace(replaced.from, replaced.to, s);
+      this._document.replace(replaced.from, replaced.to, s);
       delta += s.length - (replaced.to - replaced.from);
     }
   }

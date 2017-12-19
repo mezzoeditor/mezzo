@@ -5,8 +5,8 @@ import { TextUtils } from "../utils/TextUtils.mjs";
  * @implements {Plugin}
  */
 export class Selection {
-  constructor(editor) {
-    this._editor = editor;
+  constructor(document) {
+    this._document = document;
     this._ranges = [];
   }
 
@@ -25,11 +25,11 @@ export class Selection {
    * @param {!Array<!Selection.Range>} ranges
    */
   setRanges(ranges) {
-    this._editor.begin('selection');
+    this._document.begin('selection');
     this._ranges = ranges;
     this._clearUpDown();
     this._rebuild();
-    this._editor.end('selection');
+    this._document.end('selection');
   }
 
   // -------- Plugin --------
@@ -41,7 +41,7 @@ export class Selection {
     let start = viewport.start();
     let end = viewport.end();
     for (let range of this._ranges) {
-      let focus = this._editor.offsetToPosition(range.focus());
+      let focus = this._document.offsetToPosition(range.focus());
       if (focus.line >= start.line && focus.column >= start.column &&
           focus.line < end.line && focus.column < end.column) {
         viewport.addDecoration(focus, focus, 'selection.focus');
@@ -50,8 +50,8 @@ export class Selection {
       if (range.isCollapsed())
         continue;
       let {from, to} = range.range();
-      from = this._editor.offsetToPosition(from);
-      to = this._editor.offsetToPosition(to);
+      from = this._document.offsetToPosition(from);
+      to = this._document.offsetToPosition(to);
       if (to.line < start.line || (to.line === start.line && to.column < start.column))
         continue;
       if (from.line >= end.line || (from.line === end.line - 1 && from.column >= end.column))
@@ -121,12 +121,12 @@ export class Selection {
     if (command === 'selection.collapse')
       return this._collapse();
 
-    this._editor.begin('selection');
+    this._document.begin('selection');
     this._ranges = this._ranges.map(range => range.clone());
     switch (command) {
       case 'selection.select.all': {
         let range = new Selection.Range();
-        range.setRange({from: 0, to: this._editor.length()});
+        range.setRange({from: 0, to: this._document.length()});
         this._ranges = [range];
         break;
       }
@@ -134,7 +134,7 @@ export class Selection {
         this._clearUpDown();
         for (let range of this._ranges) {
           if (range.isCollapsed())
-            range.setCaret(TextUtils.previousOffset(this._editor, range.focus()));
+            range.setCaret(TextUtils.previousOffset(this._document, range.focus()));
           else
             range.setCaret(range.range().from);
         }
@@ -144,7 +144,7 @@ export class Selection {
       case 'selection.select.left': {
         this._clearUpDown();
         for (let range of this._ranges)
-          range.moveFocus(TextUtils.previousOffset(this._editor, range.focus()));
+          range.moveFocus(TextUtils.previousOffset(this._document, range.focus()));
         this._join();
         break;
       }
@@ -152,7 +152,7 @@ export class Selection {
         this._clearUpDown();
         for (let range of this._ranges) {
           if (range.isCollapsed())
-            range.setCaret(TextUtils.nextOffset(this._editor, range.focus()));
+            range.setCaret(TextUtils.nextOffset(this._document, range.focus()));
           else
             range.setCaret(range.range().to);
         }
@@ -162,19 +162,19 @@ export class Selection {
       case 'selection.select.right': {
         this._clearUpDown();
         for (let range of this._ranges)
-          range.moveFocus(TextUtils.nextOffset(this._editor, range.focus()));
+          range.moveFocus(TextUtils.nextOffset(this._document, range.focus()));
         this._join();
         break;
       }
       case 'selection.move.up': {
         for (let range of this._ranges) {
           if (range.isCollapsed()) {
-            let position = this._editor.offsetToPosition(range.focus());
+            let position = this._document.offsetToPosition(range.focus());
             position = {
               line: position.line ? position.line - 1 : position.line,
               column: range.saveUpDown(position.column)
             };
-            range.setCaret(this._editor.positionToOffset(position, true /* clamp */));
+            range.setCaret(this._document.positionToOffset(position, true /* clamp */));
           } else {
             range.setCaret(range.range().from);
           }
@@ -184,12 +184,12 @@ export class Selection {
       }
       case 'selection.select.up': {
         for (let range of this._ranges) {
-          let position = this._editor.offsetToPosition(range.focus());
+          let position = this._document.offsetToPosition(range.focus());
           position = {
             line: position.line ? position.line - 1 : position.line,
             column: range.saveUpDown(position.column)
           };
-          range.moveFocus(this._editor.positionToOffset(position, true /* clamp */));
+          range.moveFocus(this._document.positionToOffset(position, true /* clamp */));
         }
         this._join();
         break;
@@ -197,12 +197,12 @@ export class Selection {
       case 'selection.move.down': {
         for (let range of this._ranges) {
           if (range.isCollapsed()) {
-            let position = this._editor.offsetToPosition(range.focus());
+            let position = this._document.offsetToPosition(range.focus());
             position = {
-              line: position.line < this._editor.lineCount() - 1 ? position.line + 1 : position.line,
+              line: position.line < this._document.lineCount() - 1 ? position.line + 1 : position.line,
               column: range.saveUpDown(position.column)
             };
-            range.setCaret(this._editor.positionToOffset(position, true /* clamp */));
+            range.setCaret(this._document.positionToOffset(position, true /* clamp */));
           } else {
             range.setCaret(range.range().to);
           }
@@ -212,12 +212,12 @@ export class Selection {
       }
       case 'selection.select.down': {
         for (let range of this._ranges) {
-          let position = this._editor.offsetToPosition(range.focus());
+          let position = this._document.offsetToPosition(range.focus());
           position = {
-            line: position.line < this._editor.lineCount() - 1 ? position.line + 1 : position.line,
+            line: position.line < this._document.lineCount() - 1 ? position.line + 1 : position.line,
             column: range.saveUpDown(position.column)
           };
-          range.moveFocus(this._editor.positionToOffset(position, true /* clamp */));
+          range.moveFocus(this._document.positionToOffset(position, true /* clamp */));
         }
         this._join();
         break;
@@ -225,33 +225,33 @@ export class Selection {
       case 'selection.move.linestart': {
         this._clearUpDown();
         for (let range of this._ranges)
-          range.setCaret(TextUtils.lineStartOffset(this._editor, range.focus()));
+          range.setCaret(TextUtils.lineStartOffset(this._document, range.focus()));
         this._join();
         break;
       }
       case 'selection.select.linestart': {
         this._clearUpDown();
         for (let range of this._ranges)
-          range.moveFocus(TextUtils.lineStartOffset(this._editor, range.focus()));
+          range.moveFocus(TextUtils.lineStartOffset(this._document, range.focus()));
         this._join();
         break;
       }
       case 'selection.move.lineend': {
         this._clearUpDown();
         for (let range of this._ranges)
-          range.setCaret(TextUtils.lineEndOffset(this._editor, seleciton.focus()));
+          range.setCaret(TextUtils.lineEndOffset(this._document, seleciton.focus()));
         this._join();
         break;
       }
       case 'selection.select.lineend': {
         this._clearUpDown();
         for (let range of this._ranges)
-          range.moveFocus(TextUtils.lineEndOffset(this._editor, range.focus()));
+          range.moveFocus(TextUtils.lineEndOffset(this._document, range.focus()));
         this._join();
         break;
       }
     }
-    this._editor.end('selection');
+    this._document.end('selection');
     return true;
   }
 
@@ -267,10 +267,10 @@ export class Selection {
       collapsed |= range.collapse();
     if (!collapsed)
       return false;
-    this._editor.begin('selection');
+    this._document.begin('selection');
     this._ranges = ranges;
     this._clearUpDown();
-    this._editor.end('selection');
+    this._document.end('selection');
     return true;
   }
 
@@ -297,7 +297,7 @@ export class Selection {
 
   _rebuild() {
     for (let range of this._ranges)
-      range.setRange(TextUtils.clampRange(this._editor, range.range()));
+      range.setRange(TextUtils.clampRange(this._document, range.range()));
     this._ranges.sort((a, b) => OffsetRange.compare(a.range(), b.range()));
     this._join();
   }

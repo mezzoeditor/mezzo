@@ -27,13 +27,13 @@ function rectHasPoint(rect, x, y) {
 
 export class Renderer {
   /**
+   * @param {!Document} domDocument
    * @param {!Document} document
-   * @param {!Editor} editor
    * @param {!Selection} selection
    */
-  constructor(document, editor, selection) {
-    this._canvas = document.createElement('canvas');
-    this._editor = editor;
+  constructor(domDocument, document, selection) {
+    this._canvas = domDocument.createElement('canvas');
+    this._document = document;
     // TODO: remove after SelectionRender is a thing.
     this._selection = selection;
     this._drawCursors = true;
@@ -149,7 +149,7 @@ export class Renderer {
       line: Math.floor(y / this._metrics.lineHeight),
       column: Math.round(x / this._metrics.charWidth),
     };
-    return this._editor.positionToOffset(position, true /* clamp */);
+    return this._document.positionToOffset(position, true /* clamp */);
   }
 
   _onScroll(event) {
@@ -225,17 +225,17 @@ export class Renderer {
 
   invalidate() {
     // To properly handle input events, we have to update rects synchronously.
-    const lineCount = this._editor.lineCount();
+    const lineCount = this._document.lineCount();
 
     this._maxScrollTop = Math.max(0, (lineCount - 1) * this._metrics.lineHeight);
-    this._maxScrollLeft = Math.max(0, (this._editor.longestLineLength() + 3) * this._metrics.charWidth - this._editorRect.width);
+    this._maxScrollLeft = Math.max(0, (this._document.longestLineLength() + 3) * this._metrics.charWidth - this._editorRect.width);
 
     this._scrollLeft = Math.max(this._scrollLeft, 0);
     this._scrollLeft = Math.min(this._scrollLeft, this._maxScrollLeft);
     this._scrollTop = Math.max(this._scrollTop, 0);
     this._scrollTop = Math.min(this._scrollTop, this._maxScrollTop);
 
-    const gutterLength = lineCount < 100 ? 3 : (this._editor.lineCount() + '').length;
+    const gutterLength = lineCount < 100 ? 3 : (this._document.lineCount() + '').length;
     this._gutterRect.width = gutterLength * this._metrics.charWidth + 2 * GUTTER_PADDING_LEFT_RIGHT;
     this._gutterRect.height = this._cssHeight;
 
@@ -253,7 +253,7 @@ export class Renderer {
     this._hScrollbar.rect.y = this._cssHeight - SCROLLBAR_WIDTH;
     this._hScrollbar.rect.width = this._cssWidth - this._gutterRect.width - this._vScrollbar.rect.width;
     this._hScrollbar.rect.height = this._maxScrollLeft ? SCROLLBAR_WIDTH : 0;
-    this._hScrollbar.updateThumbRect(this._editorRect.width, this._editor.longestLineLength() * this._metrics.charWidth, this._scrollLeft, this._maxScrollLeft);
+    this._hScrollbar.updateThumbRect(this._editorRect.width, this._document.longestLineLength() * this._metrics.charWidth, this._scrollLeft, this._maxScrollLeft);
 
     this._scheduleRender();
   }
@@ -282,7 +282,7 @@ export class Renderer {
       column: Math.ceil((this._scrollLeft + this._cssWidth) / charWidth)
     };
 
-    const viewport = this._editor.buildViewport(start, end);
+    const viewport = this._document.buildViewport(start, end);
 
     ctx.save();
     ctx.rect(this._gutterRect.x, this._gutterRect.y, this._gutterRect.width, this._gutterRect.height);
@@ -317,7 +317,7 @@ export class Renderer {
     ctx.textAlign = 'right';
     ctx.fillStyle = 'rgb(128, 128, 128)';
     const textX = this._gutterRect.width - GUTTER_PADDING_LEFT_RIGHT;
-    const lineCount = this._editor.lineCount();
+    const lineCount = this._document.lineCount();
     for (let i = viewport.start().line; i < viewport.end().line && i < lineCount; ++i) {
       const number = (i + 1) + '';
       ctx.fillText(number, textX, i * lineHeight);
@@ -331,11 +331,11 @@ export class Renderer {
 
     ctx.fillStyle = 'rgb(33, 33, 33)';
     const textX = start.column * charWidth;
-    const lineCount = this._editor.lineCount();
+    const lineCount = this._document.lineCount();
     for (let i = start.line; i < end.line && i < lineCount; ++i) {
-      const lineStart = this._editor.positionToOffset({line: i, column: start.column}, true /* clamp */);
-      const lineEnd = TextUtils.lineEndOffset(this._editor, lineStart);
-      const line = this._editor.iterator(lineStart, lineStart, lineEnd).peek(end.column - start.column + 1);
+      const lineStart = this._document.positionToOffset({line: i, column: start.column}, true /* clamp */);
+      const lineEnd = TextUtils.lineEndOffset(this._document, lineStart);
+      const line = this._document.iterator(lineStart, lineStart, lineEnd).peek(end.column - start.column + 1);
       ctx.fillText(line, textX, i * lineHeight);
     }
 

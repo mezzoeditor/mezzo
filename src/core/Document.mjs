@@ -3,7 +3,7 @@ import { Text } from "./Text.mjs";
 import { Viewport } from "./Viewport.mjs";
 
 // TODO: rename this to Document or something alike?
-export class Editor {
+export class Document {
   /**
    * @param {function()} onInvalidate
    */
@@ -280,4 +280,4 @@ export class Editor {
   }
 };
 
-Editor.Commands = new Set(['history.undo', 'history.redo']);
+Document.Commands = new Set(['history.undo', 'history.redo']);

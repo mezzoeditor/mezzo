@@ -1,11 +1,11 @@
 export class Viewport {
   /**
-   * @param {!Editor} editor
+   * @param {!Document} document
    * @param {{line: number, column: number}} start
    * @param {{line: number, column: number}} end
    */
-  constructor(editor, start, end) {
-    this._editor = editor;
+  constructor(document, start, end) {
+    this._document = document;
     this._start = start;
     this._end = end;
     this._decorations = [];
@@ -26,10 +26,10 @@ export class Viewport {
   }
 
   /**
-   * @return {!Editor}
+   * @return {!Document}
    */
-  editor() {
-    return this._editor;
+  document() {
+    return this._document;
   }
 
   decorations() {
