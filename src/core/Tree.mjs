@@ -376,6 +376,10 @@ export let Tree = function(initFrom, selfMetrics, supportLines, updateData) {
 
       if (this._node.right) {
         let right = this._node.right;
+        while (right.left) {
+          this._stack.push(right);
+          right = right.left;
+        }
         this._stack.push(right);
         this._before = this._after;
         this._after += (right.selfMetrics || right.metrics).length;
@@ -408,6 +412,10 @@ export let Tree = function(initFrom, selfMetrics, supportLines, updateData) {
 
       if (this._node.left) {
         let left = this._node.left;
+        while (left.right) {
+          this._stack.push(right);
+          left = left.right;
+        }
         this._stack.push(left);
         this._after = this._before;
         this._before -= (left.selfMetrics || left.metrics).length;
