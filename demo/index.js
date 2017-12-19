@@ -24,7 +24,7 @@ function addHighlights(editor) {
   const tokenHighlighter = new TokenHighlighter(editor);
 
   const select = document.querySelector('.highlights');
-  const highlights = ['the', 'e', '('];
+  const highlights = ['the', 'e', '(', ''];
   for (const highlight of highlights) {
     const option = document.createElement('option');
     option.textContent = highlight;
