@@ -9,6 +9,7 @@ export class Selection {
     this._editor = editor;
     this._document = editor.document();
     this._ranges = [];
+    this._drawCursors = true;
     editor.element().addEventListener('mousedown', this._onMouseDown.bind(this));
   }
 
@@ -19,6 +20,13 @@ export class Selection {
     this.setRanges([range]);
     event.stopPropagation();
     event.preventDefault();
+  }
+
+  setCursorsVisible(visible) {
+    if (this._drawCursors === visible)
+      return;
+    this._drawCursors = visible;
+    this._editor.invalidate();
   }
 
   // -------- Public API --------
@@ -49,6 +57,8 @@ export class Selection {
    * @param {!Viewport} viewport
    */
   onViewport(viewport) {
+    if (!this._drawCursors)
+      return;
     for (let range of this._ranges) {
       viewport.addDecoration(range.focus(), range.focus(), 'selection.focus');
       if (range.isCollapsed())

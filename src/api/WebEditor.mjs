@@ -23,7 +23,7 @@ export class WebEditor {
     let cursorsTimeout;
     let toggleCursors = () => {
       cursorsVisible = !cursorsVisible;
-      this._renderer.setCursorsVisible(cursorsVisible);
+      this._selection.setCursorsVisible(cursorsVisible);
     };
     this._input.addEventListener('focus', event => {
       toggleCursors();

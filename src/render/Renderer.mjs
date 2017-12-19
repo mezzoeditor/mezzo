@@ -30,7 +30,6 @@ export class Renderer {
   constructor(domDocument, document) {
     this._canvas = domDocument.createElement('canvas');
     this._document = document;
-    this._drawCursors = true;
 
     this._animationFrameId = 0;
 
@@ -96,15 +95,6 @@ export class Renderer {
     this._canvas.style.width = cssWidth + 'px';
     this._canvas.style.height = cssHeight + 'px';
     this._initializeMetrics();
-    this.invalidate();
-  }
-
-  /**
-   * @param {boolean} visible
-   */
-  setCursorsVisible(visible) {
-    // TODO: move this to SelectionRender and theming.
-    this._drawCursors = visible;
     this.invalidate();
   }
 
@@ -349,14 +339,12 @@ export class Renderer {
       const to = viewport.document().offsetToPosition(decoration.to);
       switch (decoration.style) {
         case 'selection.focus': {
-          if (this._drawCursors) {
-            ctx.stokeStyle = 'rgb(33, 33, 33)';
-            ctx.lineWidth = 2 / this._ratio;
-            ctx.beginPath();
-            ctx.moveTo(from.column * charWidth, from.line * lineHeight);
-            ctx.lineTo(from.column * charWidth, from.line * lineHeight + lineHeight);
-            ctx.stroke();
-          }
+          ctx.stokeStyle = 'rgb(33, 33, 33)';
+          ctx.lineWidth = 2 / this._ratio;
+          ctx.beginPath();
+          ctx.moveTo(from.column * charWidth, from.line * lineHeight);
+          ctx.lineTo(from.column * charWidth, from.line * lineHeight + lineHeight);
+          ctx.stroke();
           break;
         }
         case 'selection.range':
