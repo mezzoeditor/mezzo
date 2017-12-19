@@ -337,8 +337,10 @@ export class Renderer {
     const textX = start.column * charWidth;
     const lineCount = this._document.lineCount();
     const content = viewport.content();
-    for (let i = 0; i < content.length; ++i)
-      ctx.fillText(content[i], textX, (i + viewport.startLine()) * lineHeight);
+    for (let i = viewport.startLine(); i < viewport.startLine() + viewport.height() && i < this._document.lineCount(); ++i) {
+      const text = TextUtils.lineChunk(this._document, i, viewport.startColumn(), viewport.startColumn() + viewport.width());
+      ctx.fillText(text, textX, i * lineHeight);
+    }
 
     for (const decoration of viewport.decorations()) {
       // TODO: move this to theme, customize default one from SelectionRender?

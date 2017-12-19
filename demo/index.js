@@ -65,24 +65,24 @@ class TokenHighlighter {
   onViewport(viewport) {
     if (!this._token)
       return;
-    const contentPadding = Math.min(viewport.startColumn(), this._token.length);
-    const content = viewport.content(contentPadding);
-    for (let i = 0; i < content.length; ++i) {
-      const text = content[i];
+    const fromColumn = viewport.startColumn() - Math.min(viewport.startColumn(), this._token.length);
+    const toColumn = viewport.startColumn() + viewport.width() + this._token.length;
+    for (let i = viewport.startLine(); i < viewport.endLine(); ++i) {
+      const text = TextUtils.lineChunk(viewport.document(), i, fromColumn, toColumn);
       let index = text.indexOf(this._token);
       while (index !== -1) {
         const from = viewport.document().positionToOffset({
-          line: viewport.startLine() + i,
-          column: viewport.startColumn() + index - contentPadding
+          line: i,
+          column: fromColumn + index
         });
         const to = viewport.document().positionToOffset({
-          line: viewport.startLine() + i,
-          column: viewport.startColumn() + index + this._token.length - contentPadding
+          line: i,
+          column: fromColumn + index + this._token.length
         });
         viewport.addDecoration(
           from,
           to,
-          ['red', 'green', 'blue'][(viewport.startLine() + i) % 3]
+          ['red', 'green', 'blue'][i % 3]
         );
         index = text.indexOf(this._token, index + this._token.length);
       }

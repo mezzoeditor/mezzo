@@ -18,8 +18,7 @@ export class Viewport {
     const start = this._document.offsetToPosition(this._from);
     this._startLine = start.line;
     this._startColumn = start.column;
-    this._content = null;
-    this._contentPadding = 0;
+    this._endLine = Math.min(start.line + height, document.lineCount());
   }
 
   /**
@@ -27,6 +26,13 @@ export class Viewport {
    */
   startLine() {
     return this._startLine;
+  }
+
+  /**
+   * @return {number}
+   */
+  endLine() {
+    return this._endLine;
   }
 
   /**
@@ -62,22 +68,6 @@ export class Viewport {
    */
   height() {
     return this._width;
-  }
-
-  /**
-   * @param {number=} contentPadding
-   * @return {!Array<string>}
-   */
-  content(contentPadding = 0) {
-    if (!this._content || this._contentPadding < contentPadding) {
-      this._content = [];
-      this._contentPadding = contentPadding;
-      for (let i = 0; i < this._height && i + this._startLine < this._document.lineCount(); ++i)
-        this._content.push(TextUtils.lineChunk(this._document, this._startLine + i, this._startColumn - contentPadding, this._startColumn + this._width + contentPadding));
-    }
-    if (this._contentPadding === contentPadding)
-      return this._content;
-    return this._content.map(line => line.substring(this._contentPadding - contentPadding));
   }
 
   /**
