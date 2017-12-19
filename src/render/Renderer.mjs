@@ -281,8 +281,9 @@ export class Renderer {
       line: Math.ceil((this._scrollTop + this._cssHeight) / lineHeight),
       column: Math.ceil((this._scrollLeft + this._cssWidth) / charWidth)
     };
-
-    const viewport = this._document.buildViewport(start, end);
+    const from = this._document.positionToOffset(start, true /* clamp */);
+    const to = this._document.positionToOffset(end, true /* clamp */);
+    const viewport = this._document.buildViewport(from, to, end.column - start.column, end.line - start.line);
 
     ctx.save();
     ctx.rect(this._gutterRect.x, this._gutterRect.y, this._gutterRect.width, this._gutterRect.height);
@@ -318,7 +319,7 @@ export class Renderer {
     ctx.fillStyle = 'rgb(128, 128, 128)';
     const textX = this._gutterRect.width - GUTTER_PADDING_LEFT_RIGHT;
     const lineCount = this._document.lineCount();
-    for (let i = viewport.start().line; i < viewport.end().line && i < lineCount; ++i) {
+    for (let i = viewport.startLine(); i < viewport.startLine() + viewport.height() && i < lineCount; ++i) {
       const number = (i + 1) + '';
       ctx.fillText(number, textX, i * lineHeight);
     }
@@ -326,23 +327,23 @@ export class Renderer {
 
   _drawText(ctx, viewport) {
     const {lineHeight, charWidth, charHeight} = this._metrics;
-    const start = viewport.start();
-    const end = viewport.end();
+    const start = this._document.offsetToPosition(viewport.from());
+    const end = {
+      line: start.line + viewport.height(),
+      column: start.column + viewport.width()
+    };
 
     ctx.fillStyle = 'rgb(33, 33, 33)';
     const textX = start.column * charWidth;
     const lineCount = this._document.lineCount();
-    for (let i = start.line; i < end.line && i < lineCount; ++i) {
-      const lineStart = this._document.positionToOffset({line: i, column: start.column}, true /* clamp */);
-      const lineEnd = TextUtils.lineEndOffset(this._document, lineStart);
-      const line = this._document.iterator(lineStart, lineStart, lineEnd).peek(end.column - start.column + 1);
-      ctx.fillText(line, textX, i * lineHeight);
-    }
+    const content = viewport.content();
+    for (let i = 0; i < content.length; ++i)
+      ctx.fillText(content[i], textX, (i + viewport.startLine()) * lineHeight);
 
     for (const decoration of viewport.decorations()) {
       // TODO: move this to theme, customize default one from SelectionRender?
-      const from = decoration.start;
-      const to = decoration.end;
+      const from = viewport.document().offsetToPosition(decoration.from);
+      const to = viewport.document().offsetToPosition(decoration.to);
       switch (decoration.style) {
         case 'selection.focus': {
           if (this._drawCursors) {

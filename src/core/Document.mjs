@@ -50,13 +50,15 @@ export class Document {
   }
 
   /**
-   * @param {{line: number, column: number}} start
-   * @param {{line: number, column: number}} end
+   * @param {number} from
+   * @param {number} to
+   * @param {number} width
+   * @param {number} height
    * @return {!Viewport}
    */
-  buildViewport(start, end) {
+  buildViewport(from, to, width, height) {
     this._frozen = true;
-    let viewport = new Viewport(this, start, end);
+    let viewport = new Viewport(this, from, to, width, height);
     for (let plugin of this._plugins.values()) {
       if (plugin.onViewport)
         plugin.onViewport(viewport);
