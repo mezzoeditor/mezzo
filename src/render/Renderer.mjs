@@ -273,9 +273,7 @@ export class Renderer {
       line: Math.ceil((this._scrollTop + this._cssHeight) / lineHeight),
       column: Math.ceil((this._scrollLeft + this._cssWidth) / charWidth)
     };
-    const from = this._document.positionToOffset(start, true /* clamp */);
-    const to = this._document.positionToOffset(end, true /* clamp */);
-    const viewport = this._document.buildViewport(from, to, end.column - start.column, end.line - start.line);
+    const viewport = this._document.buildViewport(start, end.column - start.column, end.line - start.line);
 
     ctx.save();
     ctx.rect(this._gutterRect.x, this._gutterRect.y, this._gutterRect.width, this._gutterRect.height);
@@ -319,14 +317,17 @@ export class Renderer {
 
   _drawText(ctx, viewport) {
     const {lineHeight, charWidth, charHeight} = this._metrics;
-    const start = this._document.offsetToPosition(viewport.from());
+    const start = {
+      line: viewport.startLine(),
+      column: viewport.startColumn(),
+    };
     const end = {
       line: start.line + viewport.height(),
       column: start.column + viewport.width()
     };
 
     ctx.fillStyle = 'rgb(33, 33, 33)';
-    const textX = start.column * charWidth;
+    const textX = viewport.startColumn() * charWidth;
     const lineCount = this._document.lineCount();
     for (let i = viewport.startLine(); i < viewport.startLine() + viewport.height() && i < this._document.lineCount(); ++i) {
       const text = TextUtils.lineChunk(this._document, i, viewport.startColumn(), viewport.startColumn() + viewport.width());

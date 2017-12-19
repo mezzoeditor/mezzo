@@ -3,19 +3,20 @@ import { TextUtils } from '../utils/TextUtils.mjs';
 export class Viewport {
   /**
    * @param {!Document} document
-   * @param {number} from
-   * @param {number} to
+   * @param {!TextPosition} start
    * @param {number} width
    * @param {number} height
    */
-  constructor(document, from, to, width, height) {
+  constructor(document, start, width, height) {
     this._document = document;
-    this._from = from;
-    this._to = to;
+    this._from = this._document.positionToOffset(start, true /* clamp */);
+    this._to = this._document.positionToOffset({
+      line: start.line + height,
+      column: start.column + width
+    }, true /* clamp */);
     this._width = width;
     this._height = height;
     this._decorations = [];
-    const start = this._document.offsetToPosition(this._from);
     this._startLine = start.line;
     this._startColumn = start.column;
     this._endLine = Math.min(start.line + height, document.lineCount());

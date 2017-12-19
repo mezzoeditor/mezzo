@@ -50,15 +50,14 @@ export class Document {
   }
 
   /**
-   * @param {number} from
-   * @param {number} to
+   * @param {TextPosition} start
    * @param {number} width
    * @param {number} height
    * @return {!Viewport}
    */
-  buildViewport(from, to, width, height) {
+  buildViewport(start, width, height) {
     this._frozen = true;
-    let viewport = new Viewport(this, from, to, width, height);
+    let viewport = new Viewport(this, start, width, height);
     for (let plugin of this._plugins.values()) {
       if (plugin.onViewport)
         plugin.onViewport(viewport);
