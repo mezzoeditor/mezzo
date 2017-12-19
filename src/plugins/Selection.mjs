@@ -10,7 +10,10 @@ export class Selection {
     this._document = editor.document();
     this._ranges = [];
     this._drawCursors = true;
+    this._mouseRangeStartOffset = null;
     editor.element().addEventListener('mousedown', this._onMouseDown.bind(this));
+    editor.element().addEventListener('mousemove', this._onMouseMove.bind(this));
+    editor.element().addEventListener('mouseup', this._onMouseUp.bind(this));
   }
 
   _onMouseDown(event) {
@@ -18,8 +21,22 @@ export class Selection {
     const range = new Selection.Range();
     range.setCaret(offset);
     this.setRanges([range]);
+    this._mouseRangeStartOffset = offset;
     event.stopPropagation();
     event.preventDefault();
+  }
+
+  _onMouseMove(event) {
+    if (!this._mouseRangeStartOffset)
+      return;
+    const offset = this._editor.mouseEventToTextOffset(event);
+    const range = new Selection.Range();
+    range.setRange({from: this._mouseRangeStartOffset, to: offset});
+    this.setRanges([range]);
+  }
+
+  _onMouseUp(event) {
+    this._mouseRangeStartOffset = null;
   }
 
   setCursorsVisible(visible) {
@@ -57,10 +74,9 @@ export class Selection {
    * @param {!Viewport} viewport
    */
   onViewport(viewport) {
-    if (!this._drawCursors)
-      return;
     for (let range of this._ranges) {
-      viewport.addDecoration(range.focus(), range.focus(), 'selection.focus');
+      if (this._drawCursors)
+        viewport.addDecoration(range.focus(), range.focus(), 'selection.focus');
       if (range.isCollapsed())
         continue;
       let {from, to} = range.range();
