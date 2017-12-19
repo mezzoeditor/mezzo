@@ -200,6 +200,10 @@ export class Renderer {
     if (!this._mouseDownState.name) {
       this._vScrollbar.hovered = rectHasPoint(this._vScrollbar.thumbRect, canvasPosition.x, canvasPosition.y);
       this._hScrollbar.hovered = rectHasPoint(this._hScrollbar.thumbRect, canvasPosition.x, canvasPosition.y);
+      if (this._vScrollbar.hovered || this._hScrollbar.hovered)
+        this._canvas.style.setProperty('cursor', 'default');
+      else
+        this._canvas.style.setProperty('cursor', 'text');
       this._scheduleRender();
     } else if (this._mouseDownState.name === MouseDownStates.VSCROLL_DRAG) {
       const ratio = (canvasPosition.y - this._lastCoordinates.mouseDown.y) / (this._vScrollbar.rect.height - this._vScrollbar.thumbRect.height);
@@ -336,7 +340,6 @@ export class Renderer {
     ctx.fillStyle = 'rgb(33, 33, 33)';
     const textX = start.column * charWidth;
     const lineCount = this._document.lineCount();
-    const content = viewport.content();
     for (let i = viewport.startLine(); i < viewport.startLine() + viewport.height() && i < this._document.lineCount(); ++i) {
       const text = TextUtils.lineChunk(this._document, i, viewport.startColumn(), viewport.startColumn() + viewport.width());
       ctx.fillText(text, textX, i * lineHeight);
