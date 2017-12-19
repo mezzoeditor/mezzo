@@ -229,72 +229,37 @@ Text.Iterator = class {
     this._from = from;
     this._to = to;
 
-    this._offset = offset;
-    this._chunks = [];
-    this._chunks.push(this._iterator.node().chunk);
+    this.offset = offset;
+    this._chunk = this._iterator.node().chunk;
     this._pos = offset - this._iterator.before();
+    this.current = this._chunk[this._pos];
   }
 
-  /**
-   * @param {number} count
-   * @return {number}
-   */
-  advance(count = 1) {
-    count = Math.min(count, this._to - this._offset);
-    let result = count;
-    while (count > 0) {
-      if (!this._chunks.length) {
-        if (!this._iterator.next())
-          throw 'There should be something';
-        this._chunks.push(this._iterator.node().chunk);
-      }
-      let len = this._chunks[0].length - this._pos;
-      if (count >= len) {
-        this._chunks.shift();
-        this._pos = 0;
-        this._offset += len;
-        count -= len;
-      } else {
-        this._offset += count;
-        count = 0;
-      }
+  next() {
+    if (this.offset === this._to)
+      return false;
+    while (this._pos === this._chunk.length - 1) {
+      this._iterator.next();
+      this._chunk = this._iterator.node().chunk;
+      this._pos = -1;
     }
-    return result;
+    ++this.offset;
+    ++this._pos;
+    this.current = this._chunk[this._pos];
+    return true;
   }
 
-  /**
-   * @return {number}
-   */
-  offset() {
-    return this._offset;
-  }
-
-  /**
-   * @param {number} count
-   * @return {string}
-   */
-  peek(count = 1) {
-    count = Math.min(count, this._to - this._offset);
-    let result = [];
-    let index = 0;
-    let pos = this._pos;
-    while (count > 0) {
-      if (index === this._chunks.length) {
-        if (!this._iterator.next())
-          throw 'There should be something';
-        this._chunks.push(this._iterator.node().chunk);
-      }
-      let len = this._chunks[index].length - pos;
-      if (count >= len) {
-        result.push(this._chunks[index].substring(pos));
-        index++;
-        pos = 0;
-        count -= len;
-      } else {
-        result.push(this._chunks[index].substring(pos, pos + count));
-        count = 0;
-      }
+  prev() {
+    if (this.offset === this._from)
+      return false;
+    while (!this._pos) {
+      this._iterator.prev();
+      this._chunk = this._iterator.node().chunk;
+      this._pos = this._chunk.length;
     }
-    return result.join('');
+    --this.offset;
+    --this._pos;
+    this.current = this._chunk[this._pos];
+    return true;
   }
 };

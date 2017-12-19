@@ -406,7 +406,7 @@ export let Tree = function(initFrom, selfMetrics, supportLines, updateData) {
     /**
      * @return {boolean}
      */
-    previous() {
+    prev() {
       if (this._before < this._from)
         return false;
 
