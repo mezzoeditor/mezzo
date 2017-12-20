@@ -2,7 +2,6 @@ import { History } from "./History.mjs";
 import { Text } from "./Text.mjs";
 import { Viewport } from "./Viewport.mjs";
 
-// TODO: rename this to Document or something alike?
 export class Document {
   /**
    * @param {function()} onInvalidate
