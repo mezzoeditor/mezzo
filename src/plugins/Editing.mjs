@@ -79,7 +79,7 @@ export class Editing {
    * @param {function(!OffsetRange):!OffsetRange} rangeCallback
    */
   _replace(s, rangeCallback) {
-    let ranges = this._selection.ranges().map(range => range.range());
+    let ranges = this._selection.ranges();
     let delta = 0;
     for (let range of ranges) {
       let moved = TextUtils.clampRange(this._document, {from: range.from + delta, to: range.to + delta});

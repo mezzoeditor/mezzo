@@ -364,17 +364,17 @@ export class Renderer {
             let rEnd = end.column;
             if (to.line === from.line && to.column < end.column)
               rEnd = to.column;
-            const rWidth = rEnd - from.column;
-            ctx.fillRect(from.column * charWidth, from.line * lineHeight, charWidth * rWidth, lineHeight);
+            let rBegin = from.column || -1;
+            ctx.fillRect(rBegin * charWidth, from.line * lineHeight, charWidth * (rEnd - rBegin), lineHeight);
           }
           if (from.line < to.line && to.column > start.column) {
-            const rWidth = to.column - start.column;
-            ctx.fillRect(start.column * charWidth, to.line * lineHeight, charWidth * rWidth, lineHeight);
+            let rBegin = start.column || -1;
+            ctx.fillRect(rBegin * charWidth, to.line * lineHeight, charWidth * (to.column - rBegin), lineHeight);
           }
           if (to.line - from.line > 1) {
-            const rWidth = end.column - start.column;
-            const rHeight = to.line - from.line -1;
-            ctx.fillRect(start.column * charWidth, (from.line + 1) * lineHeight, charWidth * rWidth, lineHeight * rHeight);
+            let rBegin = start.column || -1;
+            let rHeight = to.line - from.line - 1;
+            ctx.fillRect(rBegin * charWidth, (from.line + 1) * lineHeight, charWidth * (end.column - rBegin), lineHeight * rHeight);
           }
           break;
         }

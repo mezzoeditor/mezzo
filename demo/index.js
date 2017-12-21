@@ -1,5 +1,4 @@
 import { WebEditor } from "../src/api/WebEditor.mjs";
-import { Selection } from "../src/plugins/Selection.mjs";
 import { Random } from "../src/core/Random.mjs";
 import { TextUtils } from "../src/utils/TextUtils.mjs";
 let random = Random(17);
@@ -94,16 +93,16 @@ async function setupEditor(editor, exampleName) {
   const response = await fetch(exampleName);
   const text = await response.text();
   editor.document().reset(text);
-  //editor.editor().reset('abc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\n');
-  //editor.editor().reset('abc\n\ndef\n');
-  //editor.editor().reset('abc\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nabc');
+  //editor.document().reset('abc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\n');
+  //editor.document().reset('abc\nabc\nabc\nabc\n');
+  //editor.document().reset('abc\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nabc');
   editor.focus();
 
   let ranges = [];
   for (let i = 0; i < 20; i++) {
-    let range = new Selection.Range();
-    range.setCaret(editor.document().positionToOffset({line: 4 * i, column: 3}, true /* clamp */));
-    ranges.push(range);
+    let offset = editor.document().positionToOffset({line: 4 * i, column: 3}, true /* clamp */);
+    ranges.push({from: offset, to: offset});
   }
+  //let ranges = [{from: 0, to: 0}, {from: 9, to: 9}];
   editor.selection().setRanges(ranges);
 }
