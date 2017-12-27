@@ -269,7 +269,7 @@ export class Renderer {
 
     const start = {
       line: Math.floor(this._scrollTop / lineHeight),
-      column: Math.floor(this._scrollLeft / charWidth)
+      column: Math.floor((this._scrollLeft - EDITOR_MARGIN_LEFT) / charWidth)
     };
     const end = {
       line: Math.ceil((this._scrollTop + this._cssHeight) / lineHeight),
@@ -343,7 +343,7 @@ export class Renderer {
           let rEnd = end.column;
           if (to.line === from.line && to.column < end.column)
             rEnd = to.column;
-          let rBegin = Math.max(from.column - 1, 0);
+          let rBegin = from.column;
           const text = TextUtils.lineChunk(this._document, from.line, rBegin, rEnd);
           ctx.fillText(text, rBegin * charWidth, from.line * lineHeight);
         }
