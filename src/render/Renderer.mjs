@@ -269,7 +269,7 @@ export class Renderer {
 
     const start = {
       line: Math.floor(this._scrollTop / lineHeight),
-      column: Math.floor((this._scrollLeft - EDITOR_MARGIN_LEFT) / charWidth)
+      column: Math.max(Math.floor((this._scrollLeft - EDITOR_MARGIN_LEFT) / charWidth), 0)
     };
     const end = {
       line: Math.ceil((this._scrollTop + this._cssHeight) / lineHeight),
