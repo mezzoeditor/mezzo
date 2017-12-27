@@ -331,20 +331,34 @@ export class Renderer {
       column: start.column + viewport.width()
     };
 
-    ctx.fillStyle = 'rgb(33, 33, 33)';
-    const textX = viewport.startColumn() * charWidth;
-    const lineCount = this._document.lineCount();
-    for (let i = viewport.startLine(); i < viewport.startLine() + viewport.height() && i < this._document.lineCount(); ++i) {
-      const text = TextUtils.lineChunk(this._document, i, viewport.startColumn(), viewport.startColumn() + viewport.width());
-      ctx.fillText(text, textX, i * lineHeight);
-    }
-
     for (const decoration of viewport.decorations()) {
       const style = this._theme[decoration.style];
       if (!style)
         continue;
       const from = viewport.document().offsetToPosition(decoration.from);
       const to = viewport.document().offsetToPosition(decoration.to);
+      if (style.color) {
+        ctx.fillStyle = style.color;
+        if (from.column < end.column) {
+          let rEnd = end.column;
+          if (to.line === from.line && to.column < end.column)
+            rEnd = to.column;
+          let rBegin = from.column;
+          const text = TextUtils.lineChunk(this._document, from.line, rBegin, rEnd);
+          ctx.fillText(text, rBegin * charWidth, from.line * lineHeight);
+        }
+        for (let i = from.line + 1; i < to.line; ++i) {
+          let rBegin = start.column;
+          let rHeight = to.line - from.line - 1;
+          const text = TextUtils.lineChunk(this._document, i, start.column, end.column);
+          ctx.fillText(text, rBegin * charWidth, i * lineHeight);
+        }
+        if (from.line < to.line && to.column > start.column) {
+          let rBegin = start.column;
+          const text = TextUtils.lineChunk(this._document, to.line, start.column, to.column);
+          ctx.fillText(text, rBegin * charWidth, to.line * lineHeight);
+        }
+      }
       if (style.backgroundColor) {
         ctx.fillStyle = style.backgroundColor;
         if (from.column < end.column) {
@@ -354,14 +368,14 @@ export class Renderer {
           let rBegin = from.column;
           ctx.fillRect(rBegin * charWidth, from.line * lineHeight, charWidth * (rEnd - rBegin), lineHeight);
         }
-        if (from.line < to.line && to.column > start.column) {
-          let rBegin = Math.max(start.column - 1, 0);
-          ctx.fillRect(rBegin * charWidth, to.line * lineHeight, charWidth * (to.column - rBegin), lineHeight);
-        }
         if (to.line - from.line > 1) {
           let rBegin = Math.max(start.column - 1, 0);
           let rHeight = to.line - from.line - 1;
           ctx.fillRect(rBegin * charWidth, (from.line + 1) * lineHeight, charWidth * (end.column - rBegin), lineHeight * rHeight);
+        }
+        if (from.line < to.line && to.column > start.column) {
+          let rBegin = Math.max(start.column - 1, 0);
+          ctx.fillRect(rBegin * charWidth, to.line * lineHeight, charWidth * (to.column - rBegin), lineHeight);
         }
       }
       if (style.borderColor) {
