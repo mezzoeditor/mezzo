@@ -3,7 +3,7 @@ import { Renderer } from "../render/Renderer.mjs";
 import { Selection } from "../plugins/Selection.mjs";
 import { Editing } from "../plugins/Editing.mjs";
 import { DefaultTheme } from "../themes/DefaultTheme.mjs";
-import PlainHighlighter from "../syntax/Plain.mjs";
+import PlainHighlighter from "../syntax/plain.mjs";
 
 export class WebEditor {
   /**
