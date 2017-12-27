@@ -26,10 +26,12 @@ export class Renderer {
   /**
    * @param {!Document} domDocument
    * @param {!Document} document
+   * @param {!Theme} theme
    */
-  constructor(domDocument, document) {
+  constructor(domDocument, document, theme) {
     this._canvas = domDocument.createElement('canvas');
     this._document = document;
+    this._theme = theme;
 
     this._animationFrameId = 0;
 
@@ -276,12 +278,14 @@ export class Renderer {
     const viewport = this._document.buildViewport(start, end.column - start.column, end.line - start.line);
 
     ctx.save();
+    ctx.beginPath();
     ctx.rect(this._gutterRect.x, this._gutterRect.y, this._gutterRect.width, this._gutterRect.height);
     ctx.clip();
     this._drawGutter(ctx, viewport);
     ctx.restore();
 
     ctx.save();
+    ctx.beginPath();
     ctx.rect(this._editorRect.x - EDITOR_MARGIN_LEFT, this._editorRect.y, this._editorRect.width + EDITOR_MARGIN_LEFT, this._editorRect.height);
     ctx.clip();
     ctx.translate(-this._scrollLeft + this._editorRect.x, -this._scrollTop + this._editorRect.y);
@@ -299,6 +303,7 @@ export class Renderer {
     ctx.fillStyle = '#eee';
     ctx.fillRect(0, 0, this._gutterRect.width, this._gutterRect.height);
     ctx.strokeStyle = 'rgb(187, 187, 187)';
+    ctx.lineWidth = 1 / this._ratio;
     ctx.beginPath();
     ctx.moveTo(this._gutterRect.width, 0);
     ctx.lineTo(this._gutterRect.width, this._gutterRect.height);
@@ -335,49 +340,43 @@ export class Renderer {
     }
 
     for (const decoration of viewport.decorations()) {
-      // TODO: move this to theme, customize default one from SelectionRender?
+      const style = this._theme[decoration.style];
+      if (!style)
+        continue;
       const from = viewport.document().offsetToPosition(decoration.from);
       const to = viewport.document().offsetToPosition(decoration.to);
-      switch (decoration.style) {
-        case 'selection.focus': {
-          ctx.stokeStyle = 'rgb(33, 33, 33)';
-          ctx.lineWidth = 2 / this._ratio;
-          ctx.beginPath();
+      if (style.backgroundColor) {
+        ctx.fillStyle = style.backgroundColor;
+        if (from.column < end.column) {
+          let rEnd = end.column;
+          if (to.line === from.line && to.column < end.column)
+            rEnd = to.column;
+          let rBegin = from.column;
+          ctx.fillRect(rBegin * charWidth, from.line * lineHeight, charWidth * (rEnd - rBegin), lineHeight);
+        }
+        if (from.line < to.line && to.column > start.column) {
+          let rBegin = Math.max(start.column - 1, 0);
+          ctx.fillRect(rBegin * charWidth, to.line * lineHeight, charWidth * (to.column - rBegin), lineHeight);
+        }
+        if (to.line - from.line > 1) {
+          let rBegin = Math.max(start.column - 1, 0);
+          let rHeight = to.line - from.line - 1;
+          ctx.fillRect(rBegin * charWidth, (from.line + 1) * lineHeight, charWidth * (end.column - rBegin), lineHeight * rHeight);
+        }
+      }
+      if (style.borderColor) {
+        ctx.strokeStyle = style.borderColor;
+        ctx.lineWidth = (style.borderWidth || 1) / this._ratio;
+        ctx.beginPath();
+        if (decoration.from === decoration.to) {
           ctx.moveTo(from.column * charWidth, from.line * lineHeight);
           ctx.lineTo(from.column * charWidth, from.line * lineHeight + lineHeight);
-          ctx.stroke();
-          break;
+        } else {
+          const width = to.column - from.column;
+          const height = to.line - from.line + 1;
+          ctx.rect(from.column * charWidth, from.line * lineHeight, width * charWidth, height * lineHeight);
         }
-        case 'selection.range':
-        case 'red':
-        case 'green':
-        case 'blue': {
-          if (decoration.style === 'selection.range')
-            ctx.fillStyle = 'rgba(126, 188, 254, 0.6)';
-          else if (decoration.style === 'red')
-            ctx.fillStyle = 'rgba(255, 0, 0, 0.2)';
-          else if (decoration.style === 'green')
-            ctx.fillStyle = 'rgba(0, 255, 0, 0.2)';
-          else if (decoration.style === 'blue')
-            ctx.fillStyle = 'rgba(0, 0, 255, 0.2)';
-          if (from.column < end.column) {
-            let rEnd = end.column;
-            if (to.line === from.line && to.column < end.column)
-              rEnd = to.column;
-            let rBegin = from.column || -1;
-            ctx.fillRect(rBegin * charWidth, from.line * lineHeight, charWidth * (rEnd - rBegin), lineHeight);
-          }
-          if (from.line < to.line && to.column > start.column) {
-            let rBegin = start.column || -1;
-            ctx.fillRect(rBegin * charWidth, to.line * lineHeight, charWidth * (to.column - rBegin), lineHeight);
-          }
-          if (to.line - from.line > 1) {
-            let rBegin = start.column || -1;
-            let rHeight = to.line - from.line - 1;
-            ctx.fillRect(rBegin * charWidth, (from.line + 1) * lineHeight, charWidth * (end.column - rBegin), lineHeight * rHeight);
-          }
-          break;
-        }
+        ctx.stroke();
       }
     }
   }

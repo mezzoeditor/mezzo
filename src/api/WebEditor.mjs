@@ -2,6 +2,7 @@ import { Document } from "../core/Document.mjs";
 import { Renderer } from "../render/Renderer.mjs";
 import { Selection } from "../plugins/Selection.mjs";
 import { Editing } from "../plugins/Editing.mjs";
+import { DefaultTheme } from "../themes/DefaultTheme.mjs";
 
 export class WebEditor {
   /**
@@ -196,7 +197,7 @@ export class WebEditor {
   }
 
   _createRenderer(document) {
-    this._renderer = new Renderer(document, this._document);
+    this._renderer = new Renderer(document, this._document, DefaultTheme);
     const canvas = this._renderer.canvas();
     canvas.style.setProperty('position', 'absolute');
     canvas.style.setProperty('top', '0');
