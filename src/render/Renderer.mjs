@@ -331,66 +331,70 @@ export class Renderer {
       column: start.column + viewport.width()
     };
 
-    for (const decoration of viewport.decorations()) {
-      const style = this._theme[decoration.style];
-      if (!style)
+    const styleToDecorations = viewport.styleToDecorations();
+    for (let styleName of Object.keys(this._theme)) {
+      const decorations = styleToDecorations.get(styleName);
+      if (!decorations)
         continue;
-      const from = viewport.document().offsetToPosition(decoration.from);
-      const to = viewport.document().offsetToPosition(decoration.to);
-      if (style.color) {
-        ctx.fillStyle = style.color;
-        if (from.column < end.column) {
-          let rEnd = end.column;
-          if (to.line === from.line && to.column < end.column)
-            rEnd = to.column;
-          let rBegin = from.column;
-          const text = TextUtils.lineChunk(this._document, from.line, rBegin, rEnd);
-          ctx.fillText(text, rBegin * charWidth, from.line * lineHeight);
+      const style = this._theme[styleName];
+      for (let decoration of decorations) {
+        const from = viewport.document().offsetToPosition(decoration.from);
+        const to = viewport.document().offsetToPosition(decoration.to);
+        if (style.color) {
+          ctx.fillStyle = style.color;
+          if (from.column < end.column) {
+            let rEnd = end.column;
+            if (to.line === from.line && to.column < end.column)
+              rEnd = to.column;
+            let rBegin = from.column;
+            const text = TextUtils.lineChunk(this._document, from.line, rBegin, rEnd);
+            ctx.fillText(text, rBegin * charWidth, from.line * lineHeight);
+          }
+          for (let i = from.line + 1; i < to.line; ++i) {
+            let rBegin = Math.max(start.column - 1, 0);
+            let rHeight = to.line - from.line - 1;
+            const text = TextUtils.lineChunk(this._document, i, rBegin, end.column);
+            ctx.fillText(text, rBegin * charWidth, i * lineHeight);
+          }
+          if (from.line < to.line && to.column > start.column) {
+            let rBegin = Math.max(start.column - 1, 0);
+            const text = TextUtils.lineChunk(this._document, to.line, rBegin, to.column);
+            ctx.fillText(text, rBegin * charWidth, to.line * lineHeight);
+          }
         }
-        for (let i = from.line + 1; i < to.line; ++i) {
-          let rBegin = Math.max(start.column - 1, 0);
-          let rHeight = to.line - from.line - 1;
-          const text = TextUtils.lineChunk(this._document, i, rBegin, end.column);
-          ctx.fillText(text, rBegin * charWidth, i * lineHeight);
+        if (style.backgroundColor) {
+          ctx.fillStyle = style.backgroundColor;
+          if (from.column < end.column) {
+            let rEnd = end.column;
+            if (to.line === from.line && to.column < end.column)
+              rEnd = to.column;
+            let rBegin = from.column;
+            ctx.fillRect(rBegin * charWidth, from.line * lineHeight, charWidth * (rEnd - rBegin), lineHeight);
+          }
+          if (to.line - from.line > 1) {
+            let rBegin = Math.max(start.column - 1, 0);
+            let rHeight = to.line - from.line - 1;
+            ctx.fillRect(rBegin * charWidth, (from.line + 1) * lineHeight, charWidth * (end.column - rBegin), lineHeight * rHeight);
+          }
+          if (from.line < to.line && to.column > start.column) {
+            let rBegin = Math.max(start.column - 1, 0);
+            ctx.fillRect(rBegin * charWidth, to.line * lineHeight, charWidth * (to.column - rBegin), lineHeight);
+          }
         }
-        if (from.line < to.line && to.column > start.column) {
-          let rBegin = Math.max(start.column - 1, 0);
-          const text = TextUtils.lineChunk(this._document, to.line, rBegin, to.column);
-          ctx.fillText(text, rBegin * charWidth, to.line * lineHeight);
+        if (style.borderColor) {
+          ctx.strokeStyle = style.borderColor;
+          ctx.lineWidth = (style.borderWidth || 1) / this._ratio;
+          ctx.beginPath();
+          if (decoration.from === decoration.to) {
+            ctx.moveTo(from.column * charWidth, from.line * lineHeight);
+            ctx.lineTo(from.column * charWidth, from.line * lineHeight + lineHeight);
+          } else {
+            const width = to.column - from.column;
+            const height = to.line - from.line + 1;
+            ctx.rect(from.column * charWidth, from.line * lineHeight, width * charWidth, height * lineHeight);
+          }
+          ctx.stroke();
         }
-      }
-      if (style.backgroundColor) {
-        ctx.fillStyle = style.backgroundColor;
-        if (from.column < end.column) {
-          let rEnd = end.column;
-          if (to.line === from.line && to.column < end.column)
-            rEnd = to.column;
-          let rBegin = from.column;
-          ctx.fillRect(rBegin * charWidth, from.line * lineHeight, charWidth * (rEnd - rBegin), lineHeight);
-        }
-        if (to.line - from.line > 1) {
-          let rBegin = Math.max(start.column - 1, 0);
-          let rHeight = to.line - from.line - 1;
-          ctx.fillRect(rBegin * charWidth, (from.line + 1) * lineHeight, charWidth * (end.column - rBegin), lineHeight * rHeight);
-        }
-        if (from.line < to.line && to.column > start.column) {
-          let rBegin = Math.max(start.column - 1, 0);
-          ctx.fillRect(rBegin * charWidth, to.line * lineHeight, charWidth * (to.column - rBegin), lineHeight);
-        }
-      }
-      if (style.borderColor) {
-        ctx.strokeStyle = style.borderColor;
-        ctx.lineWidth = (style.borderWidth || 1) / this._ratio;
-        ctx.beginPath();
-        if (decoration.from === decoration.to) {
-          ctx.moveTo(from.column * charWidth, from.line * lineHeight);
-          ctx.lineTo(from.column * charWidth, from.line * lineHeight + lineHeight);
-        } else {
-          const width = to.column - from.column;
-          const height = to.line - from.line + 1;
-          ctx.rect(from.column * charWidth, from.line * lineHeight, width * charWidth, height * lineHeight);
-        }
-        ctx.stroke();
       }
     }
   }

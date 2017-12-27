@@ -16,7 +16,7 @@ export class Viewport {
     }, true /* clamp */);
     this._width = width;
     this._height = height;
-    this._decorations = [];
+    this._styleToDecorations = new Map();
     this._startLine = start.line;
     this._startColumn = start.column;
     this._endLine = Math.min(start.line + height, document.lineCount());
@@ -78,9 +78,8 @@ export class Viewport {
     return this._document;
   }
 
-  decorations() {
-    // TODO: we should actually intersect all of them and produce nice output for renderer.
-    return this._decorations;
+  styleToDecorations() {
+    return this._styleToDecorations;
   }
 
   /**
@@ -91,6 +90,11 @@ export class Viewport {
   addDecoration(from, to, style) {
     if (this._from > to || this._to < from)
       return;
-    this._decorations.push({from, to, style});
+    let styleToDecorations = this._styleToDecorations.get(style);
+    if (!styleToDecorations) {
+      styleToDecorations = [];
+      this._styleToDecorations.set(style, styleToDecorations);
+    }
+    styleToDecorations.push({from, to, style});
   }
 }
