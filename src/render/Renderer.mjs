@@ -343,19 +343,19 @@ export class Renderer {
           let rEnd = end.column;
           if (to.line === from.line && to.column < end.column)
             rEnd = to.column;
-          let rBegin = from.column;
+          let rBegin = Math.max(from.column - 1, 0);
           const text = TextUtils.lineChunk(this._document, from.line, rBegin, rEnd);
           ctx.fillText(text, rBegin * charWidth, from.line * lineHeight);
         }
         for (let i = from.line + 1; i < to.line; ++i) {
-          let rBegin = start.column;
+          let rBegin = Math.max(start.column - 1, 0);
           let rHeight = to.line - from.line - 1;
-          const text = TextUtils.lineChunk(this._document, i, start.column, end.column);
+          const text = TextUtils.lineChunk(this._document, i, rBegin, end.column);
           ctx.fillText(text, rBegin * charWidth, i * lineHeight);
         }
         if (from.line < to.line && to.column > start.column) {
-          let rBegin = start.column;
-          const text = TextUtils.lineChunk(this._document, to.line, start.column, to.column);
+          let rBegin = Math.max(start.column - 1, 0);
+          const text = TextUtils.lineChunk(this._document, to.line, rBegin, to.column);
           ctx.fillText(text, rBegin * charWidth, to.line * lineHeight);
         }
       }
