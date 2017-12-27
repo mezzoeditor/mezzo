@@ -3,6 +3,7 @@ import { Renderer } from "../render/Renderer.mjs";
 import { Selection } from "../plugins/Selection.mjs";
 import { Editing } from "../plugins/Editing.mjs";
 import { DefaultTheme } from "../themes/DefaultTheme.mjs";
+import PlainHighlighter from "../syntax/Plain.mjs";
 
 export class WebEditor {
   /**
@@ -16,6 +17,14 @@ export class WebEditor {
     this._editing = new Editing(this, this._selection);
     this._document.addPlugin('selection', this._selection);
     this._document.addPlugin('editing', this._editing);
+    this._syntaxHighlighter = new PlainHighlighter();
+    this._document.addPlugin('syntax-highlight', this._syntaxHighlighter);
+  }
+
+  setHighlighter(highlighter) {
+    this._document.removePlugin('syntax-highlight', this._syntaxHighlighter);
+    this._syntaxHighlighter = highlighter;
+    this._document.addPlugin('syntax-highlight', this._syntaxHighlighter);
   }
 
   /**

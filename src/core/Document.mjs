@@ -57,7 +57,6 @@ export class Document {
   buildViewport(start, width, height) {
     this._frozen = true;
     let viewport = new Viewport(this, start, width, height);
-    viewport.addDecoration(viewport.from(), viewport.to(), 'text');
     for (let plugin of this._plugins.values()) {
       if (plugin.onViewport)
         plugin.onViewport(viewport);

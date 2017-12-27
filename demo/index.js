@@ -1,6 +1,9 @@
 import { WebEditor } from "../src/api/WebEditor.mjs";
 import { Random } from "../src/core/Random.mjs";
 import { TextUtils } from "../src/utils/TextUtils.mjs";
+import JSHighlighter from "../src/syntax/javascript.mjs";
+import PlainHighlighter from "../src/syntax/plain.mjs";
+
 let random = Random(17);
 
 const examples = [
@@ -8,6 +11,9 @@ const examples = [
   'jquery.min.js',
   'megaline.txt',
 ];
+
+const jsHighlighter = new JSHighlighter();
+const plainHighlighter = new PlainHighlighter();
 
 function addExamples(editor) {
   const select = document.querySelector('.examples');
@@ -92,6 +98,10 @@ class TokenHighlighter {
 async function setupEditor(editor, exampleName) {
   const response = await fetch(exampleName);
   const text = await response.text();
+  if (exampleName.endsWith('.js'))
+    editor.setHighlighter(jsHighlighter);
+  else
+    editor.setHighlighter(plainHighlighter);
   editor.document().reset(text);
   //editor.document().reset('abc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\n');
   //editor.document().reset('abc\nabc\nabc\nabc\n');
