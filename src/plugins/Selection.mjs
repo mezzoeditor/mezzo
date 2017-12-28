@@ -373,6 +373,7 @@ export class Selection {
       }
     }
     this._document.end('selection');
+    this._revealCursors();
     return true;
   }
 
@@ -396,6 +397,7 @@ export class Selection {
     this._upDownCleared = true;
     this._setSegments(segments);
     this._document.end('selection');
+    this._revealCursors();
     return true;
   }
 
