@@ -1,10 +1,15 @@
 import { TextUtils } from "../utils/TextUtils.mjs";
 
 class FontMetrics {
-  constructor(charWidth, charHeight, lineHeight) {
+  constructor(charWidth, lineHeight, charHeight, baseline) {
     this.charWidth = charWidth;
-    this.charHeight = charHeight;
     this.lineHeight = lineHeight;
+    this.charHeight = charHeight;
+    this.baseline = baseline;
+  }
+
+  textOffset() {
+    return this.lineHeight - (this.baseline + this.charHeight);
   }
 }
 
@@ -117,7 +122,7 @@ export class Renderer {
     // The following will be shipped soon.
     // const fontHeight = metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent;
 
-    this._metrics = new FontMetrics(metrics.width, fontHeight - 5, fontHeight);
+    this._metrics = new FontMetrics(metrics.width, fontHeight, fontHeight - 5, 3);
   }
 
   _mouseEventToCanvas(event) {
@@ -300,6 +305,7 @@ export class Renderer {
 
   _drawGutter(ctx, viewport) {
     const {lineHeight, charWidth} = this._metrics;
+    const textOffset = this._metrics.textOffset();
     ctx.fillStyle = '#eee';
     ctx.fillRect(0, 0, this._gutterRect.width, this._gutterRect.height);
     ctx.strokeStyle = 'rgb(187, 187, 187)';
@@ -316,12 +322,13 @@ export class Renderer {
     const lineCount = this._document.lineCount();
     for (let i = viewport.startLine(); i < viewport.startLine() + viewport.height() && i < lineCount; ++i) {
       const number = (i + 1) + '';
-      ctx.fillText(number, textX, i * lineHeight);
+      ctx.fillText(number, textX, i * lineHeight + textOffset);
     }
   }
 
   _drawText(ctx, viewport) {
-    const {lineHeight, charWidth, charHeight} = this._metrics;
+    const {lineHeight, charWidth} = this._metrics;
+    const textOffset = this._metrics.textOffset();
     const start = {
       line: viewport.startLine(),
       column: viewport.startColumn(),
@@ -348,18 +355,18 @@ export class Renderer {
               rEnd = to.column;
             let rBegin = from.column;
             const text = TextUtils.lineChunk(this._document, from.line, rBegin, rEnd);
-            ctx.fillText(text, rBegin * charWidth, from.line * lineHeight);
+            ctx.fillText(text, rBegin * charWidth, from.line * lineHeight + textOffset);
           }
           for (let i = from.line + 1; i < to.line; ++i) {
             let rBegin = Math.max(start.column - 1, 0);
             let rHeight = to.line - from.line - 1;
             const text = TextUtils.lineChunk(this._document, i, rBegin, end.column);
-            ctx.fillText(text, rBegin * charWidth, i * lineHeight);
+            ctx.fillText(text, rBegin * charWidth, i * lineHeight + textOffset);
           }
           if (from.line < to.line && to.column > start.column) {
             let rBegin = Math.max(start.column - 1, 0);
             const text = TextUtils.lineChunk(this._document, to.line, rBegin, to.column);
-            ctx.fillText(text, rBegin * charWidth, to.line * lineHeight);
+            ctx.fillText(text, rBegin * charWidth, to.line * lineHeight + textOffset);
           }
         }
         if (style.backgroundColor) {
