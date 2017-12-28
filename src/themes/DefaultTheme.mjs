@@ -25,6 +25,7 @@ export let DefaultTheme = {
     color: 'red',
     backgroundColor: 'rgba(255, 0, 0, 0.2)',
     borderColor: 'black',
+    borderRadius: 4,
   },
   'green': {
     color: 'green',
@@ -33,6 +34,8 @@ export let DefaultTheme = {
   'blue': {
     color: 'blue',
     backgroundColor: 'rgba(0, 0, 255, 0.2)',
+    borderColor: 'rgb(0, 0, 50)',
+    borderWidth: 2,
   },
 }
 

@@ -27,6 +27,18 @@ function rectHasPoint(rect, x, y) {
   return rect.x <= x && x <= rect.x + rect.width && rect.y <= y && y <= rect.y + rect.height;
 }
 
+function roundRect(ctx, x, y, width, height, radius) {
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+}
+
 export class Renderer {
   /**
    * @param {!Document} domDocument
@@ -369,6 +381,7 @@ export class Renderer {
             ctx.fillText(text, rBegin * charWidth, to.line * lineHeight + textOffset);
           }
         }
+        // TODO: note that some editors only show selection up to line length. Setting?
         if (style.backgroundColor) {
           ctx.fillStyle = style.backgroundColor;
           if (from.column < end.column) {
@@ -388,6 +401,7 @@ export class Renderer {
             ctx.fillRect(rBegin * charWidth, to.line * lineHeight, charWidth * (to.column - rBegin), lineHeight);
           }
         }
+        // TODO: lines of width not divisble by ratio should be snapped by 1 / ratio.
         if (style.borderColor) {
           ctx.strokeStyle = style.borderColor;
           ctx.lineWidth = (style.borderWidth || 1) / this._ratio;
@@ -398,7 +412,11 @@ export class Renderer {
           } else {
             const width = to.column - from.column;
             const height = to.line - from.line + 1;
-            ctx.rect(from.column * charWidth, from.line * lineHeight, width * charWidth, height * lineHeight);
+            const radius = Math.min(style.borderRadius || 0, Math.min(lineHeight, width * charWidth) / 2) / this._ratio;
+            if (radius)
+              roundRect(ctx, from.column * charWidth, from.line * lineHeight, width * charWidth, height * lineHeight, radius);
+            else
+              ctx.rect(from.column * charWidth, from.line * lineHeight, width * charWidth, height * lineHeight);
           }
           ctx.stroke();
         }
