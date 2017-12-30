@@ -310,6 +310,7 @@ export class Renderer {
     ctx.restore();
 
     ctx.save();
+    this._drawScrollbarMarkers(ctx, viewport, this._vScrollbar.rect);
     this._vScrollbar.draw(ctx);
     this._hScrollbar.draw(ctx);
     ctx.restore();
@@ -359,8 +360,8 @@ export class Renderer {
       for (let decoration of decorations) {
         const from = viewport.document().offsetToPosition(decoration.from);
         const to = viewport.document().offsetToPosition(decoration.to);
-        if (style.color) {
-          ctx.fillStyle = style.color;
+        if (style.text) {
+          ctx.fillStyle = style.text.color || 'rgb(33, 33, 33)';
           if (from.column < end.column) {
             let rEnd = end.column;
             if (to.line === from.line && to.column < end.column)
@@ -382,8 +383,8 @@ export class Renderer {
           }
         }
         // TODO: note that some editors only show selection up to line length. Setting?
-        if (style.backgroundColor) {
-          ctx.fillStyle = style.backgroundColor;
+        if (style.background && style.background.color) {
+          ctx.fillStyle = style.background.color;
           if (from.column < end.column) {
             let rEnd = end.column;
             if (to.line === from.line && to.column < end.column)
@@ -402,9 +403,9 @@ export class Renderer {
           }
         }
         // TODO: lines of width not divisble by ratio should be snapped by 1 / ratio.
-        if (style.borderColor) {
-          ctx.strokeStyle = style.borderColor;
-          ctx.lineWidth = (style.borderWidth || 1) / this._ratio;
+        if (style.border) {
+          ctx.strokeStyle = style.border.color || 'transparent';
+          ctx.lineWidth = (style.border.width || 1) / this._ratio;
           ctx.beginPath();
           if (decoration.from === decoration.to) {
             ctx.moveTo(from.column * charWidth, from.line * lineHeight);
@@ -412,13 +413,38 @@ export class Renderer {
           } else {
             const width = to.column - from.column;
             const height = to.line - from.line + 1;
-            const radius = Math.min(style.borderRadius || 0, Math.min(lineHeight, width * charWidth) / 2) / this._ratio;
+            // TODO: border.radius should actually clip background.
+            const radius = Math.min(style.border.radius || 0, Math.min(lineHeight, width * charWidth) / 2) / this._ratio;
             if (radius)
               roundRect(ctx, from.column * charWidth, from.line * lineHeight, width * charWidth, height * lineHeight, radius);
             else
               ctx.rect(from.column * charWidth, from.line * lineHeight, width * charWidth, height * lineHeight);
           }
           ctx.stroke();
+        }
+      }
+    }
+  }
+
+  _drawScrollbarMarkers(ctx, viewport, rect) {
+    const styleToDecorations = viewport.styleToDecorations();
+    for (let styleName of Object.keys(this._theme)) {
+      const decorations = styleToDecorations.get(styleName);
+      if (!decorations)
+        continue;
+      const style = this._theme[styleName];
+      for (let decoration of decorations) {
+        if (style.scrollbar && style.scrollbar.color) {
+          const from = viewport.document().offsetToPosition(decoration.from);
+          const to = viewport.document().offsetToPosition(decoration.to);
+          let top = Math.round(rect.height / viewport.document().lineCount() * from.line);
+          let bottom = Math.round(rect.height / viewport.document().lineCount() * (to.line + 1));
+          let left = Math.round(rect.width * (style.scrollbar.left || 0) / 100);
+          let right = Math.round(rect.width * (style.scrollbar.right || 100) / 100);
+          if (top === bottom)
+            bottom++;
+          ctx.fillStyle = style.scrollbar.color;
+          ctx.fillRect(rect.x + left, rect.y + top, right - left, bottom - top);
         }
       }
     }
