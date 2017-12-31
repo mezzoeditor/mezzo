@@ -21,6 +21,7 @@ export class Selection {
     this._document = document;
     this._segments = Segments.empty();
     this._upDownCleared = true;
+    this._muted = 0;
   }
 
   /**
@@ -89,6 +90,14 @@ export class Selection {
     this._document.end('selection');
   }
 
+  mute() {
+    this._muted++;
+  }
+
+  unmute() {
+    this._muted--;
+  }
+
   // -------- Plugin --------
 
   /**
@@ -109,6 +118,8 @@ export class Selection {
    * @param {number} inserted
    */
   onReplace(from, to, inserted) {
+    if (this._muted)
+      return;
     this._upDownCleared = true;
     this._segments = this._segments.replace(from, to, inserted);
   }
@@ -142,6 +153,9 @@ export class Selection {
   onCommand(command, data) {
     if (!Selection.Commands.has(command))
       return;
+
+    if (this._muted)
+      throw 'Cannot perform selection command while muted';
 
     if (command === 'selection.collapse')
       return this._collapse();

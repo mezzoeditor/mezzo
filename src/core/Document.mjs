@@ -16,8 +16,8 @@ export class Document {
       operation: '__initial__'
     });
     this._text = this._history.current().text;
-    this._operation = null;
-    this._replacements = null;
+    this._operations = [];
+    this._replacements = [];
     this._frozen = false;
   }
 
@@ -25,7 +25,7 @@ export class Document {
    * @param {string} text
    */
   reset(text) {
-    if (this._operation !== null)
+    if (this._operations.length)
       throw 'Cannot reset during operation';
     if (this._frozen)
       throw 'Cannot mutate while building viewport';
@@ -71,7 +71,7 @@ export class Document {
    * @param {string} insertion
    */
   replace(from, to, insertion) {
-    if (this._operation === null)
+    if (!this._operations.length)
       throw 'Cannot edit outside of operation';
     if (this._frozen)
       throw 'Cannot mutate while building viewport';
@@ -89,11 +89,9 @@ export class Document {
    * @param {string} name
    */
   begin(name) {
-    if (this._operation !== null)
-      throw 'Another operation in progress';
     if (this._frozen)
       throw 'Cannot mutate while building viewport';
-    this._operation = name;
+    this._operations.push(name);
     this._replacements = [];
   }
 
@@ -101,14 +99,19 @@ export class Document {
    * @param {string} name
    */
   end(name) {
-    if (this._operation !== name)
+    if (this._operations[this._operations.length - 1] !== name)
       throw 'Trying to end wrong operation';
+    this._operations.pop();
+    if (this._operations.length)
+      return;
+
     let state = {
       text: this._text,
       data: new Map(),
       replacements: this._replacements,
-      operation: this._operation
+      operation: name
     };
+    this._replacements = [];
     for (let name of this._plugins.keys()) {
       let plugin = this._plugins.get(name);
       let data;
@@ -120,8 +123,6 @@ export class Document {
         state.data.set(name, data);
     }
     this._history.push(state);
-    this._operation = null;
-    this._replacements = null;
     this.invalidate();
   }
 
@@ -130,7 +131,7 @@ export class Document {
    * @return {boolean}
    */
   undo(name) {
-    if (this._operation !== null)
+    if (this._operations.length)
       throw 'Cannot undo during operation';
     if (this._frozen)
       throw 'Cannot mutate while building viewport';
@@ -162,7 +163,7 @@ export class Document {
    * @return {boolean}
    */
   redo(name) {
-    if (this._operation !== null)
+    if (this._operations.length)
       throw 'Cannot redo during operation';
     if (this._frozen)
       throw 'Cannot mutate while building viewport';

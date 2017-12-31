@@ -61,14 +61,19 @@ export class Editing {
    * @param {function(!OffsetRange):!OffsetRange} rangeCallback
    */
   _replace(s, rangeCallback) {
+    this._selection.mute();
     let ranges = this._selection.ranges();
+    let newRanges = [];
     let delta = 0;
     for (let range of ranges) {
       let moved = TextUtils.clampRange(this._document, {from: range.from + delta, to: range.to + delta});
       let replaced = rangeCallback(moved);
       this._document.replace(replaced.from, replaced.to, s);
+      newRanges.push({from: replaced.from + s.length, to: replaced.from + s.length});
       delta += s.length - (replaced.to - replaced.from);
     }
+    this._selection.unmute(newRanges);
+    this._selection.setRanges(newRanges);
   }
 };
 
