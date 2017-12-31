@@ -14,82 +14,13 @@ import { Segments } from "../core/Segments.mjs";
  * @implements {Plugin}
  */
 export class Selection {
-  constructor(editor) {
-    this._editor = editor;
-    this._document = editor.document();
+  /**
+   * @param {!Document} document
+   */
+  constructor(document) {
+    this._document = document;
     this._segments = Segments.empty();
     this._upDownCleared = true;
-    this._drawCursors = true;
-    this._mouseRangeStartOffset = null;
-    editor.element().addEventListener('mousedown', this._onMouseDown.bind(this));
-    editor.element().addEventListener('mousemove', this._onMouseMove.bind(this));
-    editor.element().addEventListener('mouseup', this._onMouseUp.bind(this));
-    editor.element().addEventListener('copy', event => {
-      let text = this._document.perform('selection.copy');
-      if (text) {
-        event.clipboardData.setData('text/plain', text);
-        event.preventDefault();
-        event.stopPropagation();
-      }
-    });
-    this._setupCursors();
-  }
-
-  _setupCursors() {
-    let cursorsVisible = false;
-    let cursorsTimeout;
-    let toggleCursors = () => {
-      cursorsVisible = !cursorsVisible;
-      this._setCursorsVisible(cursorsVisible);
-    };
-    this._editor.element().addEventListener('focusin', event => {
-      toggleCursors();
-      cursorsTimeout = document.defaultView.setInterval(toggleCursors, 500);
-    });
-    this._editor.element().addEventListener('focusout', event => {
-      if (cursorsVisible)
-        toggleCursors();
-      if (cursorsTimeout) {
-        document.defaultView.clearInterval(cursorsTimeout);
-        cursorsTimeout = null;
-      }
-    });
-    this._revealCursors = () => {
-      if (!cursorsTimeout)
-        return;
-      document.defaultView.clearInterval(cursorsTimeout);
-      if (!cursorsVisible)
-        toggleCursors();
-      cursorsTimeout = document.defaultView.setInterval(toggleCursors, 500);
-    };
-    this._revealCursors();
-  }
-
-  _onMouseDown(event) {
-    let offset = this._editor.mouseEventToTextOffset(event);
-    this.setRanges([{from: offset, to: offset}]);
-    this._mouseRangeStartOffset = offset;
-    event.stopPropagation();
-    event.preventDefault();
-  }
-
-  _onMouseMove(event) {
-    if (!this._mouseRangeStartOffset)
-      return;
-    let offset = this._editor.mouseEventToTextOffset(event);
-    this.setRanges([{from: this._mouseRangeStartOffset, to: offset}]);
-    this._revealCursors();
-  }
-
-  _onMouseUp(event) {
-    this._mouseRangeStartOffset = null;
-  }
-
-  _setCursorsVisible(visible) {
-    if (this._drawCursors === visible)
-      return;
-    this._drawCursors = visible;
-    this._editor.invalidate();
   }
 
   /**
@@ -165,10 +96,8 @@ export class Selection {
    */
   onViewport(viewport) {
     for (let segment of this._segments.all()) {
-      if (this._drawCursors) {
-        let focus = this._focus(segment);
-        viewport.addDecoration(focus, focus, 'selection.focus');
-      }
+      let focus = this._focus(segment);
+      viewport.addDecoration(focus, focus, 'selection.focus');
       if (segment.from !== segment.to)
         viewport.addDecoration(segment.from, segment.to, 'selection.range');
     }
@@ -180,7 +109,6 @@ export class Selection {
    * @param {number} inserted
    */
   onReplace(from, to, inserted) {
-    this._revealCursors();
     this._upDownCleared = true;
     this._segments = this._segments.replace(from, to, inserted);
   }
@@ -373,7 +301,6 @@ export class Selection {
       }
     }
     this._document.end('selection');
-    this._revealCursors();
     return true;
   }
 
@@ -397,7 +324,6 @@ export class Selection {
     this._upDownCleared = true;
     this._setSegments(segments);
     this._document.end('selection');
-    this._revealCursors();
     return true;
   }
 

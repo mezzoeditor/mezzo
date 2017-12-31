@@ -125,7 +125,7 @@ export class WebEditor {
   }
 
   _setupSelection() {
-    this._selection = new Selection(this);
+    this._selection = new Selection(this._document);
     this._input.addEventListener('keydown', event => {
       let handled = false;
       switch (event.key) {
@@ -160,10 +160,73 @@ export class WebEditor {
           break;
       }
       if (handled) {
+        this._revealCursors();
         event.preventDefault();
         event.stopPropagation();
       }
     });
+
+    let mouseRangeStartOffset = null;
+    this._element.addEventListener('mousedown', event => {
+      let offset = this._renderer.mouseEventToTextOffset(event);
+      this._selection.setRanges([{from: offset, to: offset}]);
+      mouseRangeStartOffset = offset;
+      event.stopPropagation();
+      event.preventDefault();
+    });
+    this._element.addEventListener('mousemove', event => {
+      if (!mouseRangeStartOffset)
+        return;
+      let offset = this._renderer.mouseEventToTextOffset(event);
+      this._selection.setRanges([{from: mouseRangeStartOffset, to: offset}]);
+      this._revealCursors();
+    });
+    this._element.addEventListener('mouseup', event => {
+      mouseRangeStartOffset = null;
+    });
+    this._element.addEventListener('copy', event => {
+      let text = this._document.perform('selection.copy');
+      if (text) {
+        event.clipboardData.setData('text/plain', text);
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    });
+
+    let theme = this._renderer.theme();
+    let selectionFocusTheme = theme['selection.focus'];
+    let cursorsVisible = false;
+    let cursorsTimeout;
+    let toggleCursors = () => {
+      cursorsVisible = !cursorsVisible;
+      if (cursorsVisible)
+        theme['selection.focus'] = selectionFocusTheme;
+      else
+        delete theme['selection.focus'];
+      this._renderer.invalidate();
+    };
+    this._element.addEventListener('focusin', event => {
+      toggleCursors();
+      cursorsTimeout = window.setInterval(toggleCursors, 500);
+    });
+    this._element.addEventListener('focusout', event => {
+      if (cursorsVisible)
+        toggleCursors();
+      if (cursorsTimeout) {
+        window.clearInterval(cursorsTimeout);
+        cursorsTimeout = null;
+      }
+    });
+    this._revealCursors = () => {
+      if (!cursorsTimeout)
+        return;
+      window.clearInterval(cursorsTimeout);
+      if (!cursorsVisible)
+        toggleCursors();
+      cursorsTimeout = window.setInterval(toggleCursors, 500);
+    };
+    this._revealCursors();
+
     this._document.addPlugin('selection', this._selection);
   }
 
@@ -174,6 +237,7 @@ export class WebEditor {
       if (data.types.indexOf('text/plain') === -1)
         return;
       this._document.perform('editing.paste', data.getData('text/plain'));
+      this._revealCursors();
       event.preventDefault();
       event.stopPropagation();
     });
@@ -183,11 +247,13 @@ export class WebEditor {
         return;
       event.clipboardData.setData('text/plain', text);
       this._document.perform('editing.delete.before');
+      this._revealCursors();
       event.preventDefault();
       event.stopPropagation();
     });
     this._input.addEventListener('input', event => {
       this._document.perform('editing.type', this._input.value);
+      this._revealCursors();
       this._input.value = '';
     });
     this._input.addEventListener('keydown', event => {
@@ -212,6 +278,7 @@ export class WebEditor {
           break;
       }
       if (handled) {
+        this._revealCursors();
         event.preventDefault();
         event.stopPropagation();
       }

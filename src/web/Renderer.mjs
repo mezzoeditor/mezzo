@@ -88,6 +88,10 @@ export class Renderer {
     };
   }
 
+  theme() {
+    return this._theme;
+  }
+
   _getRatio() {
     const ctx = this._canvas.getContext('2d');
     const dpr = window.devicePixelRatio || 1;
