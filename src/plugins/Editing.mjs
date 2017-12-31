@@ -2,30 +2,12 @@ import { TextUtils } from "../utils/TextUtils.mjs";
 
 export class Editing {
   /**
-   * @param {!WebEditor} editor
+   * @param {!Document} document
    * @param {!Selection} selection
    */
-  constructor(editor, selection) {
-    this._editor = editor;
-    this._document = editor.document();
+  constructor(document, selection) {
+    this._document = document;
     this._selection = selection;
-    editor.element().addEventListener('paste', event => {
-      let data = event.clipboardData;
-      if (data.types.indexOf('text/plain') === -1)
-        return;
-      this._document.perform('editing.paste', data.getData('text/plain'));
-      event.preventDefault();
-      event.stopPropagation();
-    });
-    editor.element().addEventListener('cut', event => {
-      const text = this._document.perform('selection.copy');
-      if (!text)
-        return;
-      event.clipboardData.setData('text/plain', text);
-      this._document.perform('editing.delete.before');
-      event.preventDefault();
-      event.stopPropagation();
-    });
   }
 
   /**

@@ -134,7 +134,7 @@ export class Document {
       throw 'Cannot undo during operation';
     if (this._frozen)
       throw 'Cannot mutate while building viewport';
-  // TODO: implement |name|.
+    // TODO: implement |name|.
     let current = this._history.current();
     let state = this._history.undo();
     if (!state)

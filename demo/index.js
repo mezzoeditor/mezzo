@@ -1,4 +1,4 @@
-import { WebEditor } from "../src/api/WebEditor.mjs";
+import { WebEditor } from "../src/web/WebEditor.mjs";
 import { Random } from "../src/core/Random.mjs";
 import { TextUtils } from "../src/utils/TextUtils.mjs";
 import JSHighlighter from "../src/syntax/javascript.mjs";
