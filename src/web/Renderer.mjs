@@ -86,6 +86,9 @@ export class Renderer {
       scrollLeft: 0,
       scrollTop: 0
     };
+
+    this._renderTime = 0;
+    this._renderCount = 0;
   }
 
   theme() {
@@ -279,6 +282,8 @@ export class Renderer {
   }
 
   _render() {
+    let time = window.performance.now();
+
     this._animationFrameId = 0;
 
     const ctx = this._canvas.getContext('2d');
@@ -320,6 +325,14 @@ export class Renderer {
     ctx.restore();
 
     viewport.cleanup();
+
+    time = window.performance.now() - time;
+    this._renderTime += time;
+    if (++this._renderCount === 100) {
+      console.log('Avg render time: ' + this._renderTime / 100);
+      this._renderCount = 0;
+      this._renderTime = 0;
+    }
   }
 
   _drawGutter(ctx, viewport) {
