@@ -7,8 +7,8 @@ import PlainHighlighter from "../src/syntax/plain.mjs";
 let random = Random(17);
 
 const examples = [
-  'shakespeare.txt',
   'jquery.min.js',
+  'shakespeare.txt',
   'megaline.txt',
 ];
 
@@ -29,7 +29,7 @@ function addHighlights(editor) {
   const tokenHighlighter = new TokenHighlighter(editor);
 
   const select = document.querySelector('.highlights');
-  const highlights = ['the', 'e', 'The', '(', ''];
+  const highlights = ['e', 'the', 'The', '(', ''];
   for (const highlight of highlights) {
     const option = document.createElement('option');
     option.textContent = highlight;
@@ -70,24 +70,15 @@ class TokenHighlighter {
   onViewport(viewport) {
     if (!this._token)
       return;
-    const fromColumn = viewport.startColumn() - Math.min(viewport.startColumn(), this._token.length);
-    const toColumn = viewport.startColumn() + viewport.width() + this._token.length;
-    for (let i = viewport.startLine(); i < viewport.endLine(); ++i) {
-      const text = TextUtils.lineChunk(viewport.document(), i, fromColumn, toColumn);
+    for (let line of viewport.lines()) {
+      let text = viewport.lineContent(line, this._token.length, this._token.length);
+      let offset = Math.max(0, line.from - this._token.length);
       let index = text.indexOf(this._token);
       while (index !== -1) {
-        const from = viewport.document().positionToOffset({
-          line: i,
-          column: fromColumn + index
-        });
-        const to = viewport.document().positionToOffset({
-          line: i,
-          column: fromColumn + index + this._token.length
-        });
         viewport.addDecoration(
-          from,
-          to,
-          ['red', 'green', 'blue'][i % 3]
+          offset + index,
+          offset + index + this._token.length,
+          ['red', 'green', 'blue'][line.line % 3]
         );
         index = text.indexOf(this._token, index + this._token.length);
       }
@@ -102,7 +93,7 @@ async function setupEditor(editor, exampleName) {
     editor.setHighlighter(jsHighlighter);
   else
     editor.setHighlighter(plainHighlighter);
-  editor.document().reset(text);
+  editor.document().reset(new Array(1000).fill(text).join(''));
   //editor.document().reset('abc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\n');
   //editor.document().reset('abc\nabc\nabc\nabc\n');
   //editor.document().reset('abc\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nabc');

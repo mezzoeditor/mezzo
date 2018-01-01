@@ -318,6 +318,8 @@ export class Renderer {
     this._vScrollbar.draw(ctx);
     this._hScrollbar.draw(ctx);
     ctx.restore();
+
+    viewport.cleanup();
   }
 
   _drawGutter(ctx, viewport) {
@@ -336,24 +338,20 @@ export class Renderer {
     ctx.textAlign = 'right';
     ctx.fillStyle = 'rgb(128, 128, 128)';
     const textX = this._gutterRect.width - GUTTER_PADDING_LEFT_RIGHT;
-    const lineCount = this._document.lineCount();
-    for (let i = viewport.startLine(); i < viewport.startLine() + viewport.height() && i < lineCount; ++i) {
-      const number = (i + 1) + '';
-      ctx.fillText(number, textX, i * lineHeight + textOffset);
+    for (let line of viewport.lines()) {
+      const number = (line.line + 1) + '';
+      ctx.fillText(number, textX, line.line * lineHeight + textOffset);
     }
   }
 
   _drawText(ctx, viewport) {
     const {lineHeight, charWidth} = this._metrics;
     const textOffset = this._metrics.textOffset();
-    const start = {
-      line: viewport.startLine(),
-      column: viewport.startColumn(),
-    };
-    const end = {
-      line: start.line + viewport.height(),
-      column: start.column + viewport.width()
-    };
+    const lines = viewport.lines();
+    const startLine = lines[0].line;
+    const startColumn = viewport.startPosition().column;
+    const endColumn = viewport.endPosition().column;
+    const range = viewport.range();
 
     const styleToDecorations = viewport.styleToDecorations();
     for (let styleName of Object.keys(this._theme)) {
@@ -362,52 +360,47 @@ export class Renderer {
         continue;
       const style = this._theme[styleName];
       for (let decoration of decorations) {
-        const from = viewport.document().offsetToPosition(decoration.from);
-        const to = viewport.document().offsetToPosition(decoration.to);
         if (style.text) {
+          const from = viewport.offsetToPosition(Math.max(decoration.from, range.from));
+          const to = viewport.offsetToPosition(Math.min(decoration.to, range.to));
           ctx.fillStyle = style.text.color || 'rgb(33, 33, 33)';
-          if (from.column < end.column) {
-            let rEnd = end.column;
-            if (to.line === from.line && to.column < end.column)
-              rEnd = to.column;
-            let rBegin = from.column;
-            const text = TextUtils.lineChunk(this._document, from.line, rBegin, rEnd);
-            ctx.fillText(text, rBegin * charWidth, from.line * lineHeight + textOffset);
-          }
-          for (let i = from.line + 1; i < to.line; ++i) {
-            let rBegin = Math.max(start.column - 1, 0);
-            let rHeight = to.line - from.line - 1;
-            const text = TextUtils.lineChunk(this._document, i, rBegin, end.column);
-            ctx.fillText(text, rBegin * charWidth, i * lineHeight + textOffset);
-          }
-          if (from.line < to.line && to.column > start.column) {
-            let rBegin = Math.max(start.column - 1, 0);
-            const text = TextUtils.lineChunk(this._document, to.line, rBegin, to.column);
-            ctx.fillText(text, rBegin * charWidth, to.line * lineHeight + textOffset);
+          for (let lineNumber = from.line; lineNumber <= to.line; lineNumber++) {
+            let line = lines[lineNumber - startLine];
+            let lineFrom = Math.max(line.from, decoration.from);
+            let lineTo = Math.min(line.to, decoration.to);
+            if (lineFrom < lineTo) {
+              let text = viewport.lineContent(line).substring(lineFrom - line.from, lineTo - line.from);
+              let column = lineFrom - line.from + startColumn;
+              ctx.fillText(text, column * charWidth, lineNumber * lineHeight + textOffset);
+            }
           }
         }
         // TODO: note that some editors only show selection up to line length. Setting?
         if (style.background && style.background.color) {
+          const from = viewport.offsetToPosition(Math.max(decoration.from, range.from));
+          const to = viewport.offsetToPosition(Math.min(decoration.to, range.to));
           ctx.fillStyle = style.background.color;
-          if (from.column < end.column) {
-            let rEnd = end.column;
-            if (to.line === from.line && to.column < end.column)
+          if (from.column < endColumn) {
+            let rEnd = endColumn;
+            if (to.line === from.line && to.column < endColumn)
               rEnd = to.column;
             let rBegin = from.column;
             ctx.fillRect(rBegin * charWidth, from.line * lineHeight, charWidth * (rEnd - rBegin), lineHeight);
           }
           if (to.line - from.line > 1) {
-            let rBegin = Math.max(start.column - 1, 0);
+            let rBegin = Math.max(startColumn - 1, 0);
             let rHeight = to.line - from.line - 1;
-            ctx.fillRect(rBegin * charWidth, (from.line + 1) * lineHeight, charWidth * (end.column - rBegin), lineHeight * rHeight);
+            ctx.fillRect(rBegin * charWidth, (from.line + 1) * lineHeight, charWidth * (endColumn - rBegin), lineHeight * rHeight);
           }
-          if (from.line < to.line && to.column > start.column) {
-            let rBegin = Math.max(start.column - 1, 0);
+          if (from.line < to.line && to.column > startColumn) {
+            let rBegin = Math.max(startColumn - 1, 0);
             ctx.fillRect(rBegin * charWidth, to.line * lineHeight, charWidth * (to.column - rBegin), lineHeight);
           }
         }
         // TODO: lines of width not divisble by ratio should be snapped by 1 / ratio.
         if (style.border) {
+          const from = viewport.offsetToPosition(decoration.from);
+          const to = viewport.offsetToPosition(decoration.to);
           ctx.strokeStyle = style.border.color || 'transparent';
           ctx.lineWidth = (style.border.width || 1) / this._ratio;
           ctx.beginPath();
@@ -432,6 +425,8 @@ export class Renderer {
 
   _drawScrollbarMarkers(ctx, viewport, rect) {
     const styleToDecorations = viewport.styleToDecorations();
+    const ratio = rect.height / viewport.document().lineCount();
+    const range = viewport.range();
     for (let styleName of Object.keys(this._theme)) {
       const decorations = styleToDecorations.get(styleName);
       if (!decorations)
@@ -439,10 +434,10 @@ export class Renderer {
       const style = this._theme[styleName];
       for (let decoration of decorations) {
         if (style.scrollbar && style.scrollbar.color) {
-          const from = viewport.document().offsetToPosition(decoration.from);
-          const to = viewport.document().offsetToPosition(decoration.to);
-          let top = Math.round(rect.height / viewport.document().lineCount() * from.line);
-          let bottom = Math.round(rect.height / viewport.document().lineCount() * (to.line + 1));
+          const from = viewport.offsetToPosition(Math.max(decoration.from, range.from));
+          const to = viewport.offsetToPosition(Math.min(decoration.to, range.to));
+          let top = Math.round(ratio * from.line);
+          let bottom = Math.round(ratio * (to.line + 1));
           let left = Math.round(rect.width * (style.scrollbar.left || 0) / 100);
           let right = Math.round(rect.width * (style.scrollbar.right || 100) / 100);
           if (top === bottom)

@@ -11,16 +11,8 @@ export default class {
    */
   onViewport(viewport) {
     let document = viewport.document();
-    if (viewport.to() - viewport.from() < 10000) {
-      let text = document.content(viewport.from(), viewport.to());
-      tokenizeText(text, viewport.from(), viewport);
-    } else {
-      for (let i = viewport.startLine(); i < viewport.startLine() + viewport.height() && i < document.lineCount(); ++i) {
-        let text = TextUtils.lineChunk(document, i, viewport.startColumn(), viewport.startColumn() + viewport.width());
-        let offset = document.positionToOffset({line: i, column: viewport.startColumn()}, true);
-        tokenizeText(text, offset, viewport);
-      }
-    }
+    for (let range of viewport.ranges())
+      tokenizeText(viewport.rangeContent(range), range.from, viewport);
   }
 };
 

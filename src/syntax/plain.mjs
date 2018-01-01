@@ -4,6 +4,7 @@ export default class {
    * @param {!Viewport} viewport
    */
   onViewport(viewport) {
-    viewport.addDecoration(viewport.from(), viewport.to(), 'syntax.default');
+    let {from, to} = viewport.range();
+    viewport.addDecoration(from, to, 'syntax.default');
   }
 };
