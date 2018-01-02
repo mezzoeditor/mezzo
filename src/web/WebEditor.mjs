@@ -252,6 +252,8 @@ export class WebEditor {
       event.stopPropagation();
     });
     this._input.addEventListener('input', event => {
+      if (!this._input.value)
+        return;
       this._document.perform('editing.type', this._input.value);
       this._revealCursors();
       this._input.value = '';
@@ -266,7 +268,7 @@ export class WebEditor {
         case 'Z':
           // TODO: handle shortcuts properly.
           if (event.metaKey || event.ctrlKey)
-            handled = this._document.perform(event.shiftKey ? 'history.redo' : 'history.undo');
+            handled = this._document.perform(event.shiftKey ? 'history.redo' : 'history.undo', '!selection');
           break;
       }
       switch (event.keyCode) {

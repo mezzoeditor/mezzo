@@ -92,7 +92,6 @@ export class Document {
     if (this._frozen)
       throw 'Cannot mutate while building viewport';
     this._operations.push(name);
-    this._replacements = [];
   }
 
   /**
@@ -123,11 +122,12 @@ export class Document {
         state.data.set(name, data);
     }
     this._history.push(state);
+    console.log('pushed', state, name);
     this.invalidate();
   }
 
   /**
-   * @param {string} name
+   * @param {string=} name
    * @return {boolean}
    */
   undo(name) {
@@ -135,22 +135,55 @@ export class Document {
       throw 'Cannot undo during operation';
     if (this._frozen)
       throw 'Cannot mutate while building viewport';
-    // TODO: implement |name|.
-    let current = this._history.current();
-    let state = this._history.undo();
-    if (!state)
+
+    let undone = this._history.undo(state => this._filterHistory(state, name));
+    if (!undone)
       return false;
-    this._text = state.text;
 
     let replacements = [];
-    for (let i = current.replacements.length - 1; i >= 0; i--) {
-      let {from, to, inserted} = current.replacements[i];
-      replacements.push({from, to: from + inserted, inserted: to - from});
+    for (let state of undone) {
+      for (let i = state.replacements.length - 1; i >= 0; i--) {
+        let {from, to, inserted} = state.replacements[i];
+        replacements.push({from, to: from + inserted, inserted: to - from});
+      }
     }
 
+    let current = this._history.current();
+    this._text = current.text;
     for (let name of this._plugins.keys()) {
       let plugin = this._plugins.get(name);
-      let data = state.data.get(name);
+      let data = current.data.get(name);
+      if (plugin.onRestore)
+        plugin.onRestore(replacements, data);
+    }
+    this.invalidate();
+    console.log('undone', undone);
+    return true;
+  }
+
+  /**
+   * @param {string=} name
+   * @return {boolean}
+   */
+  redo(name) {
+    if (this._operations.length)
+      throw 'Cannot redo during operation';
+    if (this._frozen)
+      throw 'Cannot mutate while building viewport';
+
+    let redone = this._history.redo(state => this._filterHistory(state, name));
+    if (!redone)
+      return false;
+
+    let replacements = [];
+    for (let state of redone)
+      replacements.push(...state.replacements);
+
+    let current = this._history.current();
+    this._text = current.text;
+    for (let name of this._plugins.keys()) {
+      let plugin = this._plugins.get(name);
+      let data = current.data.get(name);
       if (plugin.onRestore)
         plugin.onRestore(replacements, data);
     }
@@ -159,27 +192,15 @@ export class Document {
   }
 
   /**
-   * @param {string} name
-   * @return {boolean}
+   * @param {*} state
+   * @param {string|undefined} name
    */
-  redo(name) {
-    if (this._operations.length)
-      throw 'Cannot redo during operation';
-    if (this._frozen)
-      throw 'Cannot mutate while building viewport';
-    // TODO: implement |name|.
-    let state = this._history.redo();
-    if (!state)
-      return false;
-    this._text = state.text;
-    for (let name of this._plugins.keys()) {
-      let plugin = this._plugins.get(name);
-      let data = state.data.get(name);
-      if (plugin.onRestore)
-        plugin.onRestore(state.replacements, data);
-    }
-    this.invalidate();
-    return true;
+  _filterHistory(state, name) {
+    if (!name)
+      return true;
+    if (name[0] === '!')
+      return state.operation !== name.substring(1);
+    return state.operation === name;
   }
 
   /**
@@ -211,9 +232,9 @@ export class Document {
     if (this._frozen)
       throw 'Cannot mutate while building viewport';
     if (command === 'history.undo')
-      return this.undo();
+      return this.undo(data);
     if (command === 'history.redo')
-      return this.redo();
+      return this.redo(data);
     for (let plugin of this._plugins.values()) {
       if (!plugin.onCommand)
         continue;

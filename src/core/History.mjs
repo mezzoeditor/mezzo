@@ -38,43 +38,33 @@ export class History {
 
   /**
    * @param {function(*):boolean} filter
+   * @return {!Array<*>|undefined}
    */
-  canUndo(filter) {
-    for (let pos = this._pos - 1; pos >= 0; pos--) {
-      if (filter(this._states[pos]))
-        return true;
+  undo(filter) {
+    let undone = [];
+    for (let pos = this._pos; pos > 0; pos--) {
+      let state = this._states[pos];
+      undone.push(state);
+      if (filter(state)) {
+        this._pos = pos - 1;
+        return undone;
+      }
     }
-    return false;
   }
 
   /**
    * @param {function(*):boolean} filter
+   * @return {!Array<*>|undefined}
    */
-  canRedo(filter) {
+  redo(filter) {
+    let redone = [];
     for (let pos = this._pos + 1; pos < this._states.length; pos++) {
-      if (filter(this._states[pos]))
-        return true;
+      let state = this._states[pos];
+      redone.push(state);
+      if (filter(state)) {
+        this._pos = pos;
+        return redone;
+      }
     }
-    return false;
-  }
-
-  /**
-   * @return {*|undefined}
-   */
-  undo() {
-    if (this._pos === 0)
-      return;
-    --this._pos;
-    return this._states[this._pos];
-  }
-
-  /**
-   * @return {*|undefined}
-   */
-  redo() {
-    if (this._pos === this._states.length - 1)
-      return;
-    ++this._pos;
-    return this._states[this._pos];
   }
 };
