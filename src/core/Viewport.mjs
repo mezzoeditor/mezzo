@@ -182,12 +182,28 @@ export class Viewport {
    * @return {!TextPosition}
    */
   offsetToPosition(offset) {
-    // TODO: use binary search here.
-    for (let line of this._lines) {
-      if (offset >= line.start && offset <= line.end)
+    if (this._lines.length <= 20) {
+      for (let line of this._lines) {
+        if (offset >= line.start && offset <= line.end)
+          return {line: line.line, column: offset - line.start};
+      }
+      return this._document.offsetToPosition(offset);
+    }
+
+    let left = 0;
+    let right = this._lines.length - 1;
+    if (offset < this._lines[left].start || offset > this._lines[right].end)
+      return this._document.offsetToPosition(offset);
+    while (true) {
+      let middle = (left + right) >> 1;
+      let line = this._lines[middle];
+      if (offset < line.start)
+        right = middle - 1;
+      else if (offset > line.end)
+        left = middle + 1;
+      else
         return {line: line.line, column: offset - line.start};
     }
-    return this._document.offsetToPosition(offset);
   }
 
   /**
