@@ -196,7 +196,7 @@ export class Viewport {
    * @param {string} style
    */
   addDecoration(from, to, style) {
-    if (this._from > to || this._to < from)
+    if (this._range.from > to || this._range.to < from)
       return;
     let styleToDecorations = this._styleToDecorations.get(style);
     if (!styleToDecorations) {
