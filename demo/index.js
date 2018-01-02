@@ -10,6 +10,7 @@ const examples = [
   'jquery.min.js',
   'shakespeare.txt',
   'megaline.txt',
+  'index.js',
 ];
 
 const jsHighlighter = new JSHighlighter();
@@ -93,7 +94,10 @@ async function setupEditor(editor, exampleName) {
     editor.setHighlighter(jsHighlighter);
   else
     editor.setHighlighter(plainHighlighter);
-  editor.document().reset(new Array(1000).fill(text).join(''));
+  if (exampleName.indexOf('jquery') !== -1)
+    editor.document().reset(new Array(1000).fill(text).join(''));
+  else
+    editor.document().reset(text);
   //editor.document().reset('abc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\n');
   //editor.document().reset('abc\nabc\nabc\nabc\n');
   //editor.document().reset('abc\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nabc');

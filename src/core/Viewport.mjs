@@ -27,16 +27,16 @@ export class Viewport {
    * @param {number} height
    */
   constructor(document, start, width, height) {
-    this._document = document;
-
     let startLine = start.line;
     let startColumn = start.column;
-    let endLine = Math.min(start.line + height, this._document.lineCount());
+    let endLine = Math.min(start.line + height, document.lineCount());
     let endColumn = startColumn + width;
 
     let lines = [];
     for (let line = startLine; line <= endLine; line++) {
       let start = document.positionToOffset({line, column: 0}, true /* clamp */);
+      if (line === document.lineCount())
+        start = document.length() + 1;
       if (line > startLine)
         lines[lines.length - 1].end = start - 1;
       if (line < endLine)
@@ -70,6 +70,7 @@ export class Viewport {
     }
 
     this._styleToDecorations = new Map();
+    this._document = document;
     this._lines = lines;
     this._ranges = ranges;
     this._startLine = startLine;
