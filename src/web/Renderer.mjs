@@ -321,7 +321,8 @@ export class Renderer {
     ctx.restore();
 
     ctx.save();
-    this._drawScrollbarMarkers(ctx, viewport, decorators, this._vScrollbar.rect);
+    const scrollbarRatio = this._document.lineCount() * this._metrics.lineHeight / (this._cssHeight + this._maxScrollTop);
+    this._drawScrollbarMarkers(ctx, viewport, decorators, this._vScrollbar.rect, scrollbarRatio);
     this._vScrollbar.draw(ctx);
     this._hScrollbar.draw(ctx);
     ctx.restore();
@@ -440,8 +441,8 @@ export class Renderer {
     }
   }
 
-  _drawScrollbarMarkers(ctx, viewport, decorators, rect) {
-    const ratio = rect.height / viewport.document().lineCount();
+  _drawScrollbarMarkers(ctx, viewport, decorators, rect, scrollbarRatio) {
+    const ratio = rect.height * scrollbarRatio / viewport.document().lineCount();
     const range = {from: 0, to: viewport.document().length()};
     for (let decorator of decorators) {
       const styleToDecorations = decorator.styleToDecorations(range);

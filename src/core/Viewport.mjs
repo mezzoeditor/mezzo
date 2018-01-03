@@ -74,7 +74,7 @@ export class Viewport {
     this._ranges = ranges;
     this._startLine = startLine;
     this._endLine = endLine;
-    this._range = {from: ranges[0].from, to: ranges[ranges.length - 1].to};
+    this._range = {from: ranges[0].from, to: Math.min(document.length(), ranges[ranges.length - 1].to + 1)};
     this._startPosition = start;
     this._endPosition = {line: start.line + height, column: start.column + width};
   }
