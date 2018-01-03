@@ -1,4 +1,5 @@
 import { TextUtils } from "../utils/TextUtils.mjs";
+import { Viewport } from "../core/Viewport.mjs";
 
 class FontMetrics {
   constructor(charWidth, lineHeight, charHeight, baseline) {
@@ -301,13 +302,14 @@ export class Renderer {
       line: Math.ceil((this._scrollTop + this._cssHeight) / lineHeight),
       column: Math.ceil((this._scrollLeft + this._cssWidth) / charWidth)
     };
-    const viewport = this._document.buildViewport(start, end.column - start.column, end.line - start.line);
+    const viewport = new Viewport(this._document, start, end.column - start.column, end.line - start.line);
+    const decorators = this._document.decorateViewport(viewport);
 
     ctx.save();
     ctx.beginPath();
     ctx.rect(this._gutterRect.x, this._gutterRect.y, this._gutterRect.width, this._gutterRect.height);
     ctx.clip();
-    this._drawGutter(ctx, viewport);
+    this._drawGutter(ctx, viewport, decorators);
     ctx.restore();
 
     ctx.save();
@@ -315,11 +317,11 @@ export class Renderer {
     ctx.rect(this._editorRect.x - EDITOR_MARGIN_LEFT, this._editorRect.y, this._editorRect.width + EDITOR_MARGIN_LEFT, this._editorRect.height);
     ctx.clip();
     ctx.translate(-this._scrollLeft + this._editorRect.x, -this._scrollTop + this._editorRect.y);
-    this._drawText(ctx, viewport);
+    this._drawText(ctx, viewport, decorators);
     ctx.restore();
 
     ctx.save();
-    this._drawScrollbarMarkers(ctx, viewport, this._vScrollbar.rect);
+    this._drawScrollbarMarkers(ctx, viewport, decorators, this._vScrollbar.rect);
     this._vScrollbar.draw(ctx);
     this._hScrollbar.draw(ctx);
     ctx.restore();
@@ -335,7 +337,7 @@ export class Renderer {
     }
   }
 
-  _drawGutter(ctx, viewport) {
+  _drawGutter(ctx, viewport, decorators) {
     const {lineHeight, charWidth} = this._metrics;
     const textOffset = this._metrics.textOffset();
     ctx.fillStyle = '#eee';
@@ -357,7 +359,7 @@ export class Renderer {
     }
   }
 
-  _drawText(ctx, viewport) {
+  _drawText(ctx, viewport, decorators) {
     const {lineHeight, charWidth} = this._metrics;
     const textOffset = this._metrics.textOffset();
     const lines = viewport.lines();
@@ -366,97 +368,101 @@ export class Renderer {
     const endColumn = viewport.endPosition().column;
     const range = viewport.range();
 
-    const styleToDecorations = viewport.styleToDecorations();
-    for (let styleName of Object.keys(this._theme)) {
-      const decorations = styleToDecorations.get(styleName);
-      if (!decorations)
-        continue;
-      const style = this._theme[styleName];
-      for (let decoration of decorations) {
-        if (style.text) {
-          const from = viewport.offsetToPosition(Math.max(decoration.from, range.from));
-          const to = viewport.offsetToPosition(Math.min(decoration.to, range.to));
-          ctx.fillStyle = style.text.color || 'rgb(33, 33, 33)';
-          for (let lineNumber = from.line; lineNumber <= to.line; lineNumber++) {
-            let line = lines[lineNumber - startLine];
-            let lineFrom = Math.max(line.from, decoration.from);
-            let lineTo = Math.min(line.to, decoration.to);
-            if (lineFrom < lineTo) {
-              let text = viewport.lineContent(line).substring(lineFrom - line.from, lineTo - line.from);
-              let column = lineFrom - line.from + startColumn;
-              ctx.fillText(text, column * charWidth, lineNumber * lineHeight + textOffset);
+    for (let decorator of decorators) {
+      const styleToDecorations = decorator.styleToDecorations(viewport.range());
+      for (let styleName of Object.keys(this._theme)) {
+        const decorations = styleToDecorations.get(styleName);
+        if (!decorations)
+          continue;
+        const style = this._theme[styleName];
+        for (let decoration of decorations) {
+          if (style.text) {
+            const from = viewport.offsetToPosition(Math.max(decoration.from, range.from));
+            const to = viewport.offsetToPosition(Math.min(decoration.to, range.to));
+            ctx.fillStyle = style.text.color || 'rgb(33, 33, 33)';
+            for (let lineNumber = from.line; lineNumber <= to.line; lineNumber++) {
+              let line = lines[lineNumber - startLine];
+              let lineFrom = Math.max(line.from, decoration.from);
+              let lineTo = Math.min(line.to, decoration.to);
+              if (lineFrom < lineTo) {
+                let text = viewport.lineContent(line).substring(lineFrom - line.from, lineTo - line.from);
+                let column = lineFrom - line.from + startColumn;
+                ctx.fillText(text, column * charWidth, lineNumber * lineHeight + textOffset);
+              }
             }
           }
-        }
-        // TODO: note that some editors only show selection up to line length. Setting?
-        if (style.background && style.background.color) {
-          const from = viewport.offsetToPosition(Math.max(decoration.from, range.from));
-          const to = viewport.offsetToPosition(Math.min(decoration.to, range.to));
-          ctx.fillStyle = style.background.color;
-          if (from.column < endColumn) {
-            let rEnd = endColumn;
-            if (to.line === from.line && to.column < endColumn)
-              rEnd = to.column;
-            let rBegin = from.column;
-            ctx.fillRect(rBegin * charWidth, from.line * lineHeight, charWidth * (rEnd - rBegin), lineHeight);
+          // TODO: note that some editors only show selection up to line length. Setting?
+          if (style.background && style.background.color) {
+            const from = viewport.offsetToPosition(Math.max(decoration.from, range.from));
+            const to = viewport.offsetToPosition(Math.min(decoration.to, range.to));
+            ctx.fillStyle = style.background.color;
+            if (from.column < endColumn) {
+              let rEnd = endColumn;
+              if (to.line === from.line && to.column < endColumn)
+                rEnd = to.column;
+              let rBegin = from.column;
+              ctx.fillRect(rBegin * charWidth, from.line * lineHeight, charWidth * (rEnd - rBegin), lineHeight);
+            }
+            if (to.line - from.line > 1) {
+              let rBegin = Math.max(startColumn - 1, 0);
+              let rHeight = to.line - from.line - 1;
+              ctx.fillRect(rBegin * charWidth, (from.line + 1) * lineHeight, charWidth * (endColumn - rBegin), lineHeight * rHeight);
+            }
+            if (from.line < to.line && to.column > startColumn) {
+              let rBegin = Math.max(startColumn - 1, 0);
+              ctx.fillRect(rBegin * charWidth, to.line * lineHeight, charWidth * (to.column - rBegin), lineHeight);
+            }
           }
-          if (to.line - from.line > 1) {
-            let rBegin = Math.max(startColumn - 1, 0);
-            let rHeight = to.line - from.line - 1;
-            ctx.fillRect(rBegin * charWidth, (from.line + 1) * lineHeight, charWidth * (endColumn - rBegin), lineHeight * rHeight);
+          // TODO: lines of width not divisble by ratio should be snapped by 1 / ratio.
+          if (style.border) {
+            const from = viewport.offsetToPosition(decoration.from);
+            const to = viewport.offsetToPosition(decoration.to);
+            ctx.strokeStyle = style.border.color || 'transparent';
+            ctx.lineWidth = (style.border.width || 1) / this._ratio;
+            ctx.beginPath();
+            if (decoration.from === decoration.to) {
+              ctx.moveTo(from.column * charWidth, from.line * lineHeight);
+              ctx.lineTo(from.column * charWidth, from.line * lineHeight + lineHeight);
+            } else {
+              const width = to.column - from.column;
+              const height = to.line - from.line + 1;
+              // TODO: border.radius should actually clip background.
+              const radius = Math.min(style.border.radius || 0, Math.min(lineHeight, width * charWidth) / 2) / this._ratio;
+              if (radius)
+                roundRect(ctx, from.column * charWidth, from.line * lineHeight, width * charWidth, height * lineHeight, radius);
+              else
+                ctx.rect(from.column * charWidth, from.line * lineHeight, width * charWidth, height * lineHeight);
+            }
+            ctx.stroke();
           }
-          if (from.line < to.line && to.column > startColumn) {
-            let rBegin = Math.max(startColumn - 1, 0);
-            ctx.fillRect(rBegin * charWidth, to.line * lineHeight, charWidth * (to.column - rBegin), lineHeight);
-          }
-        }
-        // TODO: lines of width not divisble by ratio should be snapped by 1 / ratio.
-        if (style.border) {
-          const from = viewport.offsetToPosition(decoration.from);
-          const to = viewport.offsetToPosition(decoration.to);
-          ctx.strokeStyle = style.border.color || 'transparent';
-          ctx.lineWidth = (style.border.width || 1) / this._ratio;
-          ctx.beginPath();
-          if (decoration.from === decoration.to) {
-            ctx.moveTo(from.column * charWidth, from.line * lineHeight);
-            ctx.lineTo(from.column * charWidth, from.line * lineHeight + lineHeight);
-          } else {
-            const width = to.column - from.column;
-            const height = to.line - from.line + 1;
-            // TODO: border.radius should actually clip background.
-            const radius = Math.min(style.border.radius || 0, Math.min(lineHeight, width * charWidth) / 2) / this._ratio;
-            if (radius)
-              roundRect(ctx, from.column * charWidth, from.line * lineHeight, width * charWidth, height * lineHeight, radius);
-            else
-              ctx.rect(from.column * charWidth, from.line * lineHeight, width * charWidth, height * lineHeight);
-          }
-          ctx.stroke();
         }
       }
     }
   }
 
-  _drawScrollbarMarkers(ctx, viewport, rect) {
-    const styleToDecorations = viewport.styleToDecorations();
+  _drawScrollbarMarkers(ctx, viewport, decorators, rect) {
     const ratio = rect.height / viewport.document().lineCount();
-    const range = viewport.range();
-    for (let styleName of Object.keys(this._theme)) {
-      const decorations = styleToDecorations.get(styleName);
-      if (!decorations)
-        continue;
-      const style = this._theme[styleName];
-      for (let decoration of decorations) {
-        if (style.scrollbar && style.scrollbar.color) {
-          const from = viewport.offsetToPosition(Math.max(decoration.from, range.from));
-          const to = viewport.offsetToPosition(Math.min(decoration.to, range.to));
-          let top = Math.round(ratio * from.line);
-          let bottom = Math.round(ratio * (to.line + 1));
-          let left = Math.round(rect.width * (style.scrollbar.left || 0) / 100);
-          let right = Math.round(rect.width * (style.scrollbar.right || 100) / 100);
-          if (top === bottom)
-            bottom++;
-          ctx.fillStyle = style.scrollbar.color;
-          ctx.fillRect(rect.x + left, rect.y + top, right - left, bottom - top);
+    const range = {from: 0, to: viewport.document().length()};
+    for (let decorator of decorators) {
+      const styleToDecorations = decorator.styleToDecorations(range);
+      for (let styleName of Object.keys(this._theme)) {
+        const decorations = styleToDecorations.get(styleName);
+        if (!decorations)
+          continue;
+        const style = this._theme[styleName];
+        for (let decoration of decorations) {
+          if (style.scrollbar && style.scrollbar.color) {
+            const from = viewport.offsetToPosition(decoration.from);
+            const to = viewport.offsetToPosition(decoration.to);
+            let top = Math.round(ratio * from.line);
+            let bottom = Math.round(ratio * (to.line + 1));
+            let left = Math.round(rect.width * (style.scrollbar.left || 0) / 100);
+            let right = Math.round(rect.width * (style.scrollbar.right || 100) / 100);
+            if (top === bottom)
+              bottom++;
+            ctx.fillStyle = style.scrollbar.color;
+            ctx.fillRect(rect.x + left, rect.y + top, right - left, bottom - top);
+          }
         }
       }
     }

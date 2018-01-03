@@ -1,3 +1,4 @@
+import { Decorator } from "../core/Decorator.mjs";
 import { OffsetRange } from "../utils/Types.mjs";
 import { TextUtils } from "../utils/TextUtils.mjs";
 import { Segments } from "../core/Segments.mjs";
@@ -19,6 +20,7 @@ export class Selection {
    */
   constructor(document) {
     this._document = document;
+    this._decorator = new Decorator();
     this._segments = Segments.empty();
     this._upDownCleared = true;
     this._muted = 0;
@@ -101,18 +103,37 @@ export class Selection {
   // -------- Plugin --------
 
   /**
+   * @override
+   * @param {!Document} document
+   */
+  onAdded(document) {
+    document.addDecorator(this._decorator);
+  }
+
+  /**
+   * @override
+   * @param {!Document} document
+   */
+  onRemoved(document) {
+    document.removeDecorator(this._decorator);
+  }
+
+  /**
+   * @override
    * @param {!Viewport} viewport
    */
   onViewport(viewport) {
+    this._decorator.clear();
     for (let segment of this._segments.all()) {
       let focus = this._focus(segment);
-      viewport.addDecoration(focus, focus, 'selection.focus');
+      this._decorator.add(focus, focus, 'selection.focus');
       if (segment.from !== segment.to)
-        viewport.addDecoration(segment.from, segment.to, 'selection.range');
+        this._decorator.add(segment.from, segment.to, 'selection.range');
     }
   }
 
   /**
+   * @override
    * @param {number} from
    * @param {number} to
    * @param {number} inserted
@@ -125,6 +146,7 @@ export class Selection {
   }
 
   /**
+   * @override
    * @return {*}
    */
   onSave() {
@@ -132,6 +154,7 @@ export class Selection {
   }
 
   /**
+   * @override
    * @param {!Array<{from: number, to: number, inserted: number}>} replacements
    * @param {*|undefined} data
    */
@@ -146,6 +169,7 @@ export class Selection {
   }
 
   /**
+   * @override
    * @param {string} command
    * @param {*} data
    * @return {*}

@@ -1,3 +1,4 @@
+import { Decorator } from "../src/core/Decorator.mjs";
 import { WebEditor } from "../src/web/WebEditor.mjs";
 import { Random } from "../src/core/Random.mjs";
 import { TextUtils } from "../src/utils/TextUtils.mjs";
@@ -58,7 +59,16 @@ class TokenHighlighter {
   constructor(editor) {
     this._editor = editor;
     this._token = '';
+    this._decorator = new Decorator();
     this._editor.document().addPlugin('token-highlighter', this);
+  }
+
+  onAdded(document) {
+    document.addDecorator(this._decorator);
+  }
+
+  onRemoved(document) {
+    document.removeDecorator(this._decorator);
   }
 
   setToken(token) {
@@ -69,6 +79,7 @@ class TokenHighlighter {
   }
 
   onViewport(viewport) {
+    this._decorator.clear();
     if (!this._token)
       return;
     for (let line of viewport.lines()) {
@@ -76,7 +87,7 @@ class TokenHighlighter {
       let offset = Math.max(0, line.from - this._token.length);
       let index = text.indexOf(this._token);
       while (index !== -1) {
-        viewport.addDecoration(
+        this._decorator.add(
           offset + index,
           offset + index + this._token.length,
           ['red', 'green', 'blue'][line.line % 3]

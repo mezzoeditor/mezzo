@@ -69,7 +69,6 @@ export class Viewport {
         ranges.push({from: lines[i].from, to: lines[i].to});
     }
 
-    this._styleToDecorations = new Map();
     this._document = document;
     this._lines = lines;
     this._ranges = ranges;
@@ -204,29 +203,6 @@ export class Viewport {
       else
         return {line: line.line, column: offset - line.start};
     }
-  }
-
-  /**
-   * @param {number} from
-   * @param {number} to
-   * @param {string} style
-   */
-  addDecoration(from, to, style) {
-    if (this._range.from > to || this._range.to < from)
-      return;
-    let styleToDecorations = this._styleToDecorations.get(style);
-    if (!styleToDecorations) {
-      styleToDecorations = [];
-      this._styleToDecorations.set(style, styleToDecorations);
-    }
-    styleToDecorations.push({from, to, style});
-  }
-
-  /**
-   * @return {!Map<string, !Array<{from: number, to: number, style: string}>>}
-   */
-  styleToDecorations() {
-    return this._styleToDecorations;
   }
 
   cleanup() {

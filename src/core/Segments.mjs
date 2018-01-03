@@ -165,7 +165,6 @@ export class Segments {
     let segments = [];
     visit(root, 0, segments);
     let result = undefined;
-    let delta = inserted - (to - from);
     for (let segment of segments) {
       let start = segment.from;
       let end = segment.to;

@@ -1,3 +1,4 @@
+import { Decorator } from "./Decorator.mjs";
 import { History } from "./History.mjs";
 import { Text } from "./Text.mjs";
 import { Viewport } from "./Viewport.mjs";
@@ -9,6 +10,7 @@ export class Document {
   constructor(onInvalidate) {
     this._onInvalidate = onInvalidate;
     this._plugins = new Map();
+    this._decorators = new Set();
     this._history = new History({
       text: Text.withContent(''),
       replacements: [],
@@ -46,23 +48,6 @@ export class Document {
 
   invalidate() {
     this._onInvalidate.call(null);
-  }
-
-  /**
-   * @param {TextPosition} start
-   * @param {number} width
-   * @param {number} height
-   * @return {!Viewport}
-   */
-  buildViewport(start, width, height) {
-    this._frozen = true;
-    let viewport = new Viewport(this, start, width, height);
-    for (let plugin of this._plugins.values()) {
-      if (plugin.onViewport)
-        plugin.onViewport(viewport);
-    }
-    this._frozen = false;
-    return viewport;
   }
 
   /**
@@ -211,6 +196,8 @@ export class Document {
     if (this._plugins.get(name))
       throw 'Duplicate plugin';
     this._plugins.set(name, plugin);
+    if (plugin.onAdded)
+      plugin.onAdded(this);
     if (plugin.onViewport)
       this.invalidate();
   }
@@ -223,8 +210,32 @@ export class Document {
     if (this._plugins.get(name) !== plugin)
       throw 'No such plugin';
     this._plugins.delete(name);
+    if (plugin.onRemoved)
+      plugin.onRemoved(this);
     if (plugin.onViewport)
       this.invalidate();
+  }
+
+  /**
+   * @param {!Decorator} decorator
+   */
+  addDecorator(decorator) {
+    if (this._frozen)
+      throw 'Cannot mutate while building viewport';
+    this._decorators.add(decorator);
+    this.invalidate();
+  }
+
+  /**
+   * @param {!Decorator} decorator
+   */
+  removeDecorator(decorator) {
+    if (this._frozen)
+      throw 'Cannot mutate while building viewport';
+    if (!this._decorators.has(decorator))
+      throw 'No such decorator';
+    this._decorators.delete(decorator);
+    this.invalidate();
   }
 
   /**
@@ -303,6 +314,21 @@ export class Document {
    */
   positionToOffset(position, clamp) {
     return this._text.positionToOffset(position, clamp);
+  }
+
+  /**
+   * @package
+   * @param {!Viewport} viewport
+   * @return {!Set<!Decorator>}
+   */
+  decorateViewport(viewport) {
+    this._frozen = true;
+    for (let plugin of this._plugins.values()) {
+      if (plugin.onViewport)
+        plugin.onViewport(viewport);
+    }
+    this._frozen = false;
+    return this._decorators;
   }
 };
 

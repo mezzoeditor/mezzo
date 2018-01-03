@@ -3,7 +3,24 @@
  */
 class Plugin {
   /**
-   * Called on every render of viewport. See Viewport for api.
+   * Called when this plugin is added to the document.
+   * Typically plugin adds Decorator(s) to the document here.
+   * @param {!Document} document
+   */
+  onAdded(document) {
+  }
+
+  /**
+   * Called when this plugin is removed from the document.
+   * Typically plugin removes Decorator(s) from the document here.
+   * @param {!Document} document
+   */
+  onRemoved(document) {
+  }
+
+  /**
+   * Called on every render of viewport. Plugin is expected to manipulate
+   * Decorator object(s) to affect the rendering.
    * @param {!Viewport} viewport
    */
   onViewport(viewport) {
