@@ -25,24 +25,6 @@ export class WebEditor {
     this._document.addPlugin('syntax-highlight', this._syntaxHighlighter);
   }
 
-  /**
-   * @param {string} name
-   * @param {!Plugin} plugin
-   */
-  addPlugin(name, plugin) {
-    this._document.addPlugin(name, plugin);
-    this.invalidate();
-  }
-
-  /**
-   * @param {string} name
-   * @param {!Plugin} plugin
-   */
-  removePlugin(name, plugin) {
-    this._document.removePlugin(name, plugin);
-    this.invalidate();
-  }
-
   invalidate() {
     this._renderer.invalidate();
   }

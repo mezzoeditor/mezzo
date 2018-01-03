@@ -58,7 +58,7 @@ class TokenHighlighter {
   constructor(editor) {
     this._editor = editor;
     this._token = '';
-    this._editor.addPlugin('token-highlighter', this);
+    this._editor.document().addPlugin('token-highlighter', this);
   }
 
   setToken(token) {
