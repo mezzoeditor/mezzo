@@ -32,7 +32,7 @@ export class Selection {
    * @return {!Array<!OffsetRange>}
    */
   ranges() {
-    return this._ranges.map(range => ({from: range.from, to: range.to}));
+    return this._ranges.map(range => ({from: Math.min(range.anchor, range.focus), to: Math.max(range.anchor, range.focus)}));
   }
 
   /**
@@ -59,6 +59,7 @@ export class Selection {
       focus: range.to
     })));
     this._document.end('selection');
+    this._reveal();
   }
 
   /**
@@ -73,6 +74,7 @@ export class Selection {
       newRanges.push({id: this._ranges[i].id, upDownColumn: -1, anchor: ranges[i].from, focus: ranges[i].to});
     this._ranges = this._rebuild(newRanges);
     this._document.end('selection');
+    this._reveal();
   }
 
   mute() {
@@ -184,7 +186,7 @@ export class Selection {
 
     if (command ===  'selection.copy') {
       let lines = [];
-      for (let range of this._ranges.all())
+      for (let range of this._ranges)
         lines.push(this._document.content(Math.min(range.anchor, range.focus), Math.max(range.anchor, range.focus)));
       return lines.join('\n');
     }
@@ -330,6 +332,7 @@ export class Selection {
       }
     }
     this._document.end('selection');
+    this._reveal();
     return true;
   }
 
@@ -351,6 +354,7 @@ export class Selection {
     this._document.begin('selection');
     this._ranges = ranges;
     this._document.end('selection');
+    this._reveal();
     return true;
   }
 
@@ -400,6 +404,12 @@ export class Selection {
       return (aFrom - bFrom) || (aTo - bTo);
     });
     return this._join(ranges);
+  }
+
+  _reveal() {
+    let focus = this.focus();
+    if (focus !== null)
+      this._document.reveal(focus);
   }
 };
 

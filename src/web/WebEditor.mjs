@@ -11,7 +11,7 @@ export class WebEditor {
    */
   constructor(domDocument) {
     this._createDOM(domDocument);
-    this._document = new Document(() => this._renderer.invalidate());
+    this._document = new Document(() => this._renderer.invalidate(), offset => this._renderer.reveal(offset));
     this._createRenderer(domDocument);
     this._setupSelection();
     this._setupEditing();

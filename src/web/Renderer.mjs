@@ -277,6 +277,23 @@ export class Renderer {
     this._scheduleRender();
   }
 
+  reveal(offset) {
+    let {line, column} = this._document.offsetToPosition(offset);
+    let scrollTop = line * this._metrics.lineHeight;
+    if (scrollTop < this._scrollTop) {
+      this._scrollTop = scrollTop;
+    } else if (scrollTop + this._metrics.lineHeight > this._scrollTop + this._editorRect.height) {
+      this._scrollTop = scrollTop + this._metrics.lineHeight - this._editorRect.height;
+    }
+    let scrollLeft = column * this._metrics.charWidth;
+    if (scrollLeft < this._scrollLeft) {
+      this._scrollLeft = scrollLeft;
+    } else if (scrollLeft + this._metrics.charWidth > this._scrollLeft + this._editorRect.width) {
+      this._scrollLeft = scrollLeft + this._metrics.charWidth - this._editorRect.width;
+    }
+    this.invalidate();
+  }
+
   _scheduleRender() {
     if (!this._animationFrameId)
       this._animationFrameId = requestAnimationFrame(this._render);

@@ -6,9 +6,11 @@ import { Viewport } from "./Viewport.mjs";
 export class Document {
   /**
    * @param {function()} onInvalidate
+   * @param {function(number)} onReveal
    */
-  constructor(onInvalidate) {
+  constructor(onInvalidate, onReveal) {
     this._onInvalidate = onInvalidate;
+    this._onReveal = onReveal;
     this._plugins = new Map();
     this._decorators = new Set();
     this._history = new History({
@@ -48,6 +50,13 @@ export class Document {
 
   invalidate() {
     this._onInvalidate.call(null);
+  }
+
+  /**
+   * @param {number} offset
+   */
+  reveal(offset) {
+    this._onReveal.call(null, offset);
   }
 
   /**
