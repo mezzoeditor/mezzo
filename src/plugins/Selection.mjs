@@ -1,14 +1,14 @@
 import { Decorator } from "../core/Decorator.mjs";
-import { OffsetRange } from "../utils/Types.mjs";
 import { TextUtils } from "../utils/TextUtils.mjs";
 import { Segments } from "../core/Segments.mjs";
 
 /**
  * @typedef {{
- *   data: {reversed: boolean|undefined, upDownColumn: number|undefined},
- *   from: number,
- *   to: number
- * }} Segment;
+ *   anchor: number,
+ *   focus: number,
+ *   id: number,
+ *   upDownColumn: number
+ * }} SelectionRange;
  */
 
 /**
@@ -21,51 +21,9 @@ export class Selection {
   constructor(document) {
     this._document = document;
     this._decorator = new Decorator();
-    this._segments = Segments.empty();
-    this._upDownCleared = true;
+    this._ranges = [];
     this._muted = 0;
-  }
-
-  /**
-   * @param {!Array<!Segment>} segments
-   */
-  _setSegments(segments) {
-    this._segments = Segments.empty();
-    for (let segment of segments)
-      this._segments = this._segments.add(segment.from, segment.to, segment.data);
-  }
-
-  /**
-   * @param {!Segment} segment
-   * @return {number}
-   */
-  _focus(segment) {
-    return segment.data.reversed ? segment.from : segment.to;
-  }
-
-  /**
-   * @param {!Segment} segment
-   * @return {number}
-   */
-  _anchor(segment) {
-    return segment.data.reversed ? segment.to : segment.from;
-  }
-
-  /**
-   * @param {!Segment} segment
-   * @param {number} focus
-   */
-  _moveFocus(segment, focus) {
-    let anchor = this._anchor(segment);
-    if (anchor > focus) {
-      segment.from = focus;
-      segment.to = anchor;
-      segment.data.reversed = true;
-    } else {
-      segment.from = anchor;
-      segment.to = focus;
-      delete segment.data.reversed;
-    }
+    this._lastId = 0;
   }
 
   // -------- Public API --------
@@ -74,7 +32,19 @@ export class Selection {
    * @return {!Array<!OffsetRange>}
    */
   ranges() {
-    return this._segments.all();
+    return this._ranges.map(range => ({from: range.from, to: range.to}));
+  }
+
+  /**
+   * @return {?number}
+   */
+  focus() {
+    let max = null;
+    for (let range of this._ranges) {
+      if (max === null || max.id < range.id)
+        max = range;
+    }
+    return max ? max.focus : null;
   }
 
   /**
@@ -82,13 +52,26 @@ export class Selection {
    */
   setRanges(ranges) {
     this._document.begin('selection');
-    this._upDownCleared = true;
-    let segments = ranges.map(range => {
-      if (range.from > range.to)
-        return {from: range.to, to: range.from, data: {reversed: true}};
-      return {from: range.from, to: range.to, data: {}};
-    });
-    this._setSegments(this._rebuild(segments));
+    this._ranges = this._rebuild(ranges.map(range => ({
+      id: ++this._lastId,
+      upDownColumn: -1,
+      anchor: range.from,
+      focus: range.to
+    })));
+    this._document.end('selection');
+  }
+
+  /**
+   * @param {!Array<!OffsetRange>} ranges
+   */
+  updateRanges(ranges) {
+    if (ranges.length !== this._ranges.length)
+      throw 'Wrong number of ranges to update';
+    this._document.begin('selection');
+    let newRanges = [];
+    for (let i = 0; i < ranges.length; i++)
+      newRanges.push({id: this._ranges[i].id, upDownColumn: -1, anchor: ranges[i].from, focus: ranges[i].to});
+    this._ranges = this._rebuild(newRanges);
     this._document.end('selection');
   }
 
@@ -124,11 +107,10 @@ export class Selection {
    */
   onViewport(viewport) {
     this._decorator.clear();
-    for (let segment of this._segments.all()) {
-      let focus = this._focus(segment);
-      this._decorator.add(focus, focus, 'selection.focus');
-      if (segment.from !== segment.to)
-        this._decorator.add(segment.from, segment.to, 'selection.range');
+    for (let range of this._ranges) {
+      this._decorator.add(range.focus, range.focus, 'selection.focus');
+      if (range.focus !== range.anchor)
+        this._decorator.add(Math.min(range.focus, range.anchor), Math.max(range.focus, range.anchor), 'selection.range');
     }
   }
 
@@ -141,8 +123,30 @@ export class Selection {
   onReplace(from, to, inserted) {
     if (this._muted)
       return;
-    this._upDownCleared = true;
-    this._segments = this._segments.replace(from, to, inserted);
+
+    let ranges = [];
+    for (let range of this._ranges) {
+      let start = Math.min(range.anchor, range.focus);
+      let end = Math.max(range.anchor, range.focus);
+      if (from < start && to > start)
+        continue;
+
+      if (from <= start)
+        start = to >= start ? from : start - (to - from);
+      if (from <= end)
+        end = to >= end ? from : end - (to - from);
+
+      if (from <= start)
+        start += inserted;
+      if (from <= end)
+        end += inserted;
+
+      if (range.anchor > range.focus)
+        ranges.push({id: range.id, upDownColumn: -1, anchor: end, focus: start});
+      else
+        ranges.push({id: range.id, upDownColumn: -1, anchor: start, focus: end});
+    }
+    this._ranges = this._rebuild(ranges);
   }
 
   /**
@@ -150,7 +154,7 @@ export class Selection {
    * @return {*}
    */
   onSave() {
-    return {segments: this._segments, upDownCleared: this._upDownCleared};
+    return this._ranges;
   }
 
   /**
@@ -159,13 +163,7 @@ export class Selection {
    * @param {*|undefined} data
    */
   onRestore(replacements, data) {
-    if (data) {
-      this._segments = data.segments;
-      this._upDownCleared = data.upDownCleared;
-    } else {
-      this._segments = Segments.empty();
-      this._upDownCleared = true;
-    }
+    this._ranges = data || [];
   }
 
   /**
@@ -186,155 +184,148 @@ export class Selection {
 
     if (command ===  'selection.copy') {
       let lines = [];
-      for (let segment of this._segments.all())
-        lines.push(this._document.content(segment.from, segment.to));
+      for (let range of this._ranges.all())
+        lines.push(this._document.content(Math.min(range.anchor, range.focus), Math.max(range.anchor, range.focus)));
       return lines.join('\n');
     }
 
     this._document.begin('selection');
     switch (command) {
       case 'selection.select.all': {
-        this._setSegments([{from: 0, to: this._document.length(), data:{}}]);
+        this._ranges = [{anchor: 0, focus: this._document.length(), upDownColumn: -1, id: ++this._lastId}];
         break;
       }
       case 'selection.move.left': {
-        this._upDownCleared = true;
-        let segments = this._segments.all();
-        for (let segment of segments) {
-          if (segment.from === segment.to)
-            segment.from = segment.to = TextUtils.previousOffset(this._document, segment.from);
-          else
-            segment.to = segment.from;
+        let ranges = [];
+        for (let range of this._ranges) {
+          let offset = Math.min(range.anchor, range.focus);
+          if (range.anchor === range.focus)
+            offset = TextUtils.previousOffset(this._document, range.focus);
+          ranges.push({id: range.id, upDownColumn: -1, anchor: offset, focus: offset});
         }
-        this._setSegments(this._join(segments));
+        this._ranges = this._join(ranges);
         break;
       }
       case 'selection.select.left': {
-        this._upDownCleared = true;
-        let segments = this._segments.all();
-        for (let segment of segments)
-          this._moveFocus(segment, TextUtils.previousOffset(this._document, this._focus(segment)));
-        this._setSegments(this._join(segments));
+        let ranges = [];
+        for (let range of this._ranges)
+          ranges.push({id: range.id, upDownColumn: -1, anchor: range.anchor, focus: TextUtils.previousOffset(this._document, range.focus)});
+        this._ranges = this._join(ranges);
         break;
       }
       case 'selection.move.right': {
-        this._upDownCleared = true;
-        let segments = this._segments.all();
-        for (let segment of segments) {
-          if (segment.from === segment.to)
-            segment.from = segment.to = TextUtils.nextOffset(this._document, segment.from);
-          else
-            segment.from = segment.to;
+        let ranges = [];
+        for (let range of this._ranges) {
+          let offset = Math.max(range.anchor, range.focus);
+          if (range.anchor === range.focus)
+            offset = TextUtils.nextOffset(this._document, range.focus);
+          ranges.push({id: range.id, upDownColumn: -1, anchor: offset, focus: offset});
         }
-        this._setSegments(this._join(segments));
+        this._ranges = this._join(ranges);
         break;
       }
       case 'selection.select.right': {
         this._upDownCleared = true;
-        let segments = this._segments.all();
-        for (let segment of segments)
-          this._moveFocus(segment, TextUtils.nextOffset(this._document, this._focus(segment)));
-        this._setSegments(this._join(segments));
+        let ranges = [];
+        for (let range of this._ranges)
+          ranges.push({id: range.id, upDownColumn: -1, anchor: range.anchor, focus: TextUtils.nextOffset(this._document, range.focus)});
+        this._ranges = this._join(ranges);
         break;
       }
       case 'selection.move.up': {
-        let segments = this._segments.all();
-        for (let segment of segments) {
-          if (segment.from === segment.to) {
-            let {line, column} = this._document.offsetToPosition(segment.from);
-            if (!this._upDownCleared && segment.data.upDownColumn !== undefined)
-              column = segment.data.upDownColumn;
-            segment.data.upDownColumn = column;
+        let ranges = [];
+        for (let range of this._ranges) {
+          let offset = Math.min(range.anchor, range.focus);
+          let upDownColumn = range.upDownColumn;
+          if (range.anchor === range.focus) {
+            let {line, column} = this._document.offsetToPosition(range.focus);
+            upDownColumn = range.upDownColumn === -1 ? column : range.upDownColumn;
             if (line)
               line--;
-            segment.from = segment.to = this._document.positionToOffset({line, column}, true /* clamp */);
-          } else {
-            segment.to = segment.from;
+            offset = this._document.positionToOffset({line, column: upDownColumn}, true /* clamp */);
           }
+          ranges.push({id: range.id, upDownColumn, anchor: offset, focus: offset});
         }
-        this._upDownCleared = false;
-        this._setSegments(this._join(segments));
+        this._ranges = this._join(ranges);
         break;
       }
       case 'selection.select.up': {
-        let segments = this._segments.all();
-        for (let segment of segments) {
-          let {line, column} = this._document.offsetToPosition(this._focus(segment));
-          if (!this._upDownCleared && segment.data.upDownColumn !== undefined)
-            column = segment.data.upDownColumn;
-          segment.data.upDownColumn = column;
+        let ranges = [];
+        for (let range of this._ranges) {
+          let {line, column} = this._document.offsetToPosition(range.focus);
+          let upDownColumn = range.upDownColumn === -1 ? column : range.upDownColumn;
           if (line)
             line--;
-          this._moveFocus(segment, this._document.positionToOffset({line, column}, true /* clamp */));
+          let focus = this._document.positionToOffset({line, column: upDownColumn}, true /* clamp */);
+          ranges.push({id: range.id, upDownColumn, anchor: range.anchor, focus});
         }
-        this._upDownCleared = false;
-        this._setSegments(this._join(segments));
+        this._ranges = this._join(ranges);
         break;
       }
       case 'selection.move.down': {
-        let segments = this._segments.all();
-        for (let segment of segments) {
-          if (segment.from === segment.to) {
-            let {line, column} = this._document.offsetToPosition(segment.from);
-            if (!this._upDownCleared && segment.data.upDownColumn !== undefined)
-              column = segment.data.upDownColumn;
-            segment.data.upDownColumn = column;
+        let ranges = [];
+        for (let range of this._ranges) {
+          let offset = Math.max(range.anchor, range.focus);
+          let upDownColumn = range.upDownColumn;
+          if (range.anchor === range.focus) {
+            let {line, column} = this._document.offsetToPosition(range.focus);
+            upDownColumn = range.upDownColumn === -1 ? column : range.upDownColumn;
             if (line < this._document.lineCount() - 1)
               line++;
-            segment.from = segment.to = this._document.positionToOffset({line, column}, true /* clamp */);
-          } else {
-            segment.from = segment.to;
+            offset = this._document.positionToOffset({line, column: upDownColumn}, true /* clamp */);
           }
+          ranges.push({id: range.id, upDownColumn, anchor: offset, focus: offset});
         }
-        this._upDownCleared = false;
-        this._setSegments(this._join(segments));
+        this._ranges = this._join(ranges);
         break;
       }
       case 'selection.select.down': {
-        let segments = this._segments.all();
-        for (let segment of segments) {
-          let {line, column} = this._document.offsetToPosition(this._focus(segment));
-          if (!this._upDownCleared && segment.data.upDownColumn !== undefined)
-            column = segment.data.upDownColumn;
-          segment.data.upDownColumn = column;
+        let ranges = [];
+        for (let range of this._ranges) {
+          let {line, column} = this._document.offsetToPosition(range.focus);
+          let upDownColumn = range.upDownColumn === -1 ? column : range.upDownColumn;
           if (line < this._document.lineCount() - 1)
             line++;
-          this._moveFocus(segment, this._document.positionToOffset({line, column}, true /* clamp */));
+          let focus = this._document.positionToOffset({line, column: upDownColumn}, true /* clamp */);
+          ranges.push({id: range.id, upDownColumn, anchor: range.anchor, focus});
         }
-        this._upDownCleared = false;
-        this._setSegments(this._join(segments));
+        this._ranges = this._join(ranges);
         break;
       }
       case 'selection.move.linestart': {
-        this._upDownCleared = true;
-        let segments = this._segments.all();
-        for (let segment of segments)
-          segment.from = segment.to = TextUtils.lineStartOffset(this._document, this._focus(segment));
-        this._setSegments(this._join(segments));
+        let ranges = [];
+        for (let range of this._ranges) {
+          let offset = TextUtils.lineStartOffset(this._document, range.focus);
+          ranges.push({id: range.id, upDownColumn: -1, anchor: offset, focus: offset});
+        }
+        this._ranges = this._join(ranges);
         break;
       }
       case 'selection.select.linestart': {
-        this._upDownCleared = true;
-        let segments = this._segments.all();
-        for (let segment of segments)
-          this._moveFocus(segment, TextUtils.lineStartOffset(this._document, this._focus(segment)));
-        this._setSegments(this._join(segments));
+        let ranges = [];
+        for (let range of this._ranges) {
+          let focus = TextUtils.lineStartOffset(this._document, range.focus);
+          ranges.push({id: range.id, upDownColumn: -1, anchor: range.anchor, focus});
+        }
+        this._ranges = this._join(ranges);
         break;
       }
       case 'selection.move.lineend': {
-        this._upDownCleared = true;
-        let segments = this._segments.all();
-        for (let segment of segments)
-          segment.from = segment.to = TextUtils.lineEndOffset(this._document, this._focus(segment));
-        this._setSegments(this._join(segments));
+        let ranges = [];
+        for (let range of this._ranges) {
+          let offset = TextUtils.lineEndOffset(this._document, range.focus);
+          ranges.push({id: range.id, upDownColumn: -1, anchor: offset, focus: offset});
+        }
+        this._ranges = this._join(ranges);
         break;
       }
       case 'selection.select.lineend': {
-        this._upDownCleared = true;
-        let segments = this._segments.all();
-        for (let segment of segments)
-          this._moveFocus(segment, TextUtils.lineEndOffset(this._document, this._focus(segment)));
-        this._setSegments(this._join(segments));
+        let ranges = [];
+        for (let range of this._ranges) {
+          let focus = TextUtils.lineEndOffset(this._document, range.focus);
+          ranges.push({id: range.id, upDownColumn: -1, anchor: range.anchor, focus});
+        }
+        this._ranges = this._join(ranges);
         break;
       }
     }
@@ -348,57 +339,67 @@ export class Selection {
    * @return {boolean|undefined}
    */
   _collapse() {
-    let segments = this._segments.all();
     let collapsed = false;
-    for (let segment of segments) {
-      if (segment.from !== segment.to) {
+    let ranges = [];
+    for (let range of this._ranges) {
+      if (range.anchor !== range.focus)
         collapsed = true;
-        segment.from = segment.to = this._anchor(segment);
-      }
+      ranges.push({id: range.id, upDownColumn: -1, anchor: range.anchor, focus: range.anchor});
     }
     if (!collapsed)
       return false;
     this._document.begin('selection');
-    this._upDownCleared = true;
-    this._setSegments(segments);
+    this._ranges = ranges;
     this._document.end('selection');
     return true;
   }
 
   /**
-   * @param {!Array<!Segment>} segments
-   * @return {!Array<!Segment>}
+   * @param {!Array<!SelectionRange>} ranges
+   * @return {!Array<!SelectionRange>}
    */
-  _join(segments) {
+  _join(ranges) {
+    if (!ranges.length)
+      return ranges;
     let length = 1;
-    for (let i = 1; i < segments.length; i++) {
-      let last = segments[length - 1];
-      let next = segments[i];
-      if (OffsetRange.intersects(last, next)) {
-        let {from, to} = OffsetRange.join(last, next);
-        last.from = from;
-        last.to = to;
+    for (let i = 1; i < ranges.length; i++) {
+      let last = ranges[length - 1];
+      let lastTo = Math.max(last.anchor, last.focus);
+      let next = ranges[i];
+      let nextFrom = Math.min(next.anchor, next.focus);
+      let nextTo = Math.max(next.anchor, next.focus);
+      if (nextFrom <= lastTo && nextTo > lastTo) {
+        if (last.anchor > last.focus)
+          last.anchor = nextTo;
+        else
+          last.focus = nextTo;
       } else {
-        segments[length++] = next;
+        ranges[length++] = next;
       }
     }
-    if (length !== segments.length)
-      segments.splice(length, segments.length - length);
-    return segments;
+    if (length !== ranges.length)
+      ranges.splice(length, ranges.length - length);
+    return ranges;
   }
 
   /**
-   * @param {!Array<!Segment>} segments
-   * @return {!Array<!Segment>}
+   * @param {!Array<!SelectionRange>} ranges
+   * @return {!Array<!SelectionRange>}
    */
-  _rebuild(segments) {
-    for (let segment of segments) {
-      let {from, to} = TextUtils.clampRange(this._document, segment);
-      segment.from = from;
-      segment.to = to;
+  _rebuild(ranges) {
+    let length = this._document.length();
+    for (let range of ranges) {
+      range.anchor = Math.max(0, Math.min(range.anchor, length));
+      range.focus = Math.max(0, Math.min(range.focus, length));
     }
-    segments.sort(OffsetRange.compare);
-    return this._join(segments);
+    ranges.sort((a, b) => {
+      let aFrom = Math.min(a.focus, a.anchor);
+      let aTo = Math.max(a.focus, a.anchor);
+      let bFrom = Math.min(b.focus, b.anchor);
+      let bTo = Math.max(b.focus, b.anchor);
+      return (aFrom - bFrom) || (aTo - bTo);
+    });
+    return this._join(ranges);
   }
 };
 

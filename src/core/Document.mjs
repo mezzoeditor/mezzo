@@ -107,7 +107,6 @@ export class Document {
         state.data.set(name, data);
     }
     this._history.push(state);
-    console.log('pushed', state, name);
     this.invalidate();
   }
 
@@ -142,7 +141,6 @@ export class Document {
         plugin.onRestore(replacements, data);
     }
     this.invalidate();
-    console.log('undone', undone);
     return true;
   }
 

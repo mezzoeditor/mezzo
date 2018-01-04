@@ -72,8 +72,8 @@ export class Editing {
       newRanges.push({from: replaced.from + s.length, to: replaced.from + s.length});
       delta += s.length - (replaced.to - replaced.from);
     }
-    this._selection.unmute(newRanges);
-    this._selection.setRanges(newRanges);
+    this._selection.unmute();
+    this._selection.updateRanges(newRanges);
   }
 };
 
