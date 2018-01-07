@@ -8,10 +8,10 @@ import PlainHighlighter from "../src/syntax/plain.mjs";
 let random = Random(17);
 
 const examples = [
+  'index.js',
   'jquery.min.js',
   'shakespeare.txt',
   'megaline.txt',
-  'index.js',
 ];
 
 const jsHighlighter = new JSHighlighter();
@@ -31,7 +31,7 @@ function addHighlights(editor) {
   const tokenHighlighter = new TokenHighlighter(editor);
 
   const select = document.querySelector('.highlights');
-  const highlights = ['e', 'the', 'The', '(', ''];
+  const highlights = ['', 'e', 'the', 'The', '('];
   for (const highlight of highlights) {
     const option = document.createElement('option');
     option.textContent = highlight;
@@ -41,10 +41,31 @@ function addHighlights(editor) {
   select.addEventListener('input', () => tokenHighlighter.setToken(select.value), false);
 }
 
+function addSearch(editor) {
+  const input = document.querySelector('.search');
+  input.addEventListener('input', event => {
+    if (!input.value)
+      editor.findCancel();
+    else
+      editor.find(input.value);
+  }, false);
+  document.querySelector('.next').addEventListener('click', event => {
+    editor.findNext();
+  }, false);
+  document.querySelector('.prev').addEventListener('click', event => {
+    editor.findPrevious();
+  }, false);
+  const info = document.querySelector('.search-info');
+  editor.onSearchUpdate((total, current) => {
+    info.textContent = `${current + 1} of ${total}`;
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const editor = new WebEditor(document);
   addExamples(editor);
   addHighlights(editor);
+  addSearch(editor);
 
   editor.element().classList.add('editor');
   document.body.appendChild(editor.element());
@@ -79,7 +100,7 @@ class TokenHighlighter {
   }
 
   onViewport(viewport) {
-    this._decorator.clear();
+    this._decorator.clearAll();
     if (!this._token)
       return;
     for (let line of viewport.lines()) {

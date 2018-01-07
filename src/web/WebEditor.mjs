@@ -2,6 +2,7 @@ import { Document } from "../core/Document.mjs";
 import { Renderer } from "./Renderer.mjs";
 import { Selection } from "../plugins/Selection.mjs";
 import { Editing } from "../plugins/Editing.mjs";
+import { Search } from "../plugins/Search.mjs";
 import { DefaultTheme } from "../themes/DefaultTheme.mjs";
 import PlainHighlighter from "../syntax/plain.mjs";
 
@@ -15,6 +16,7 @@ export class WebEditor {
     this._createRenderer(domDocument);
     this._setupSelection();
     this._setupEditing();
+    this._setupSearch();
     this._syntaxHighlighter = new PlainHighlighter();
     this._document.addPlugin('syntax-highlight', this._syntaxHighlighter);
   }
@@ -268,5 +270,39 @@ export class WebEditor {
       }
     });
     this._document.addPlugin('editing', this._editing);
+  }
+
+  _setupSearch() {
+    let lastTotal = 0;
+    let lastCurrent = -1;
+    let onUpdate = null;
+
+    this._search = new Search(this._document, this._selection, () => {
+      if (!onUpdate)
+        return;
+      let total = this._search.matchesCount();
+      let current = this._search.currentMatchIndex();
+      if (total !== lastTotal || current !== lastCurrent) {
+        lastTotal = total;
+        lastCurrent = current;
+        onUpdate.call(null, lastTotal, lastCurrent);
+      }
+    });
+
+    this.find = query => {
+      this._document.perform('search.find', {query});
+    };
+    this.findCancel = () => {
+      this._document.perform('search.cancel');
+    };
+    this.findNext = () => {
+      this._document.perform('search.next');
+    };
+    this.findPrevious = () => {
+      this._document.perform('search.previous');
+    };
+    this.onSearchUpdate = callback => { onUpdate = callback; };
+
+    this._document.addPlugin('search', this._search);
   }
 }

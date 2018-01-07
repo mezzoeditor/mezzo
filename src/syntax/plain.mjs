@@ -27,7 +27,7 @@ export default class {
    */
   onViewport(viewport) {
     let {from, to} = viewport.range();
-    this._decorator.clear();
+    this._decorator.clearAll();
     this._decorator.add(from, to, 'syntax.default');
   }
 };

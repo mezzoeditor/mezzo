@@ -15,6 +15,17 @@ export let DefaultTheme = {
       right: 60,
     },
   },
+  'search.match': {
+    background: {
+      color: 'hsla(36, 96%, 56%, 0.4)'
+    },
+  },
+  'search.match.current': {
+    border: {
+      width: 1,
+      color: 'hsl(39, 100%, 50%)'
+    },
+  },
   'syntax.default': {
     text: {
       color: 'rgb(33, 33, 33)',

@@ -108,7 +108,7 @@ export class Selection {
    * @param {!Viewport} viewport
    */
   onViewport(viewport) {
-    this._decorator.clear();
+    this._decorator.clearAll();
     for (let range of this._ranges) {
       this._decorator.add(range.focus, range.focus, 'selection.focus');
       if (range.focus !== range.anchor)

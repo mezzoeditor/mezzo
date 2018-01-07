@@ -1,4 +1,12 @@
-export class Decorator {
+/**
+ * @typdef {{
+ *   from: number,
+ *   to: number,
+ *   style: string,
+ * }} Decoration
+ */
+
+ export class Decorator {
   constructor() {
     this._decorations = [];
   }
@@ -12,8 +20,36 @@ export class Decorator {
     this._decorations.push({from, to, style});
   }
 
-  clear() {
+  /**
+   * @param {number} from
+   * @param {number} to
+   * @param {string} style
+   */
+  remove(from, to, style) {
+    for (let i = 0; i < this._decorations.length; i++) {
+      let decoration = this._decorations[i];
+      if (decoration.from === from && decoration.to === to && decoration.style === style) {
+        this._decorations.splice(i, 1);
+        return;
+      }
+    }
+  }
+
+  clearAll() {
     this._decorations = [];
+  }
+
+  /**
+   * @param {number} from
+   * @param {number} to
+   */
+  clear(from, to) {
+    let decorations = [];
+    for (let decoration of this._decorations) {
+      if (decoration.from >= to || decoration.to <= from)
+        decorations.push(decoration);
+    }
+    this._decorations = decorations;
   }
 
   /**
@@ -42,6 +78,60 @@ export class Decorator {
       decorations.push({from: start, to: end, style: decoration.style});
     }
     this._decorations = decorations;
+  }
+
+  /**
+   * @return {!Array<!Decoration>}
+   */
+  all() {
+    return this._decorations;
+  }
+
+  /**
+   * @param {number} from
+   * @param {number} to
+   */
+  count(from, to) {
+    let count = 0;
+    for (let decoration of this._decorations) {
+      if (!(decoration.from > to || decoration.to < from))
+        count++;
+    }
+    return count;
+  }
+
+  /**
+   * @param {number} offset
+   * @return {?Decoration}
+   */
+  after(offset) {
+    let result = null;
+    for (let decoration of this._decorations) {
+      if (decoration.from < offset)
+        continue;
+      if (!result || result.from > decoration.from ||
+          (result.from === decoration.from && result.to > decoration.to)) {
+        result = decoration;
+      }
+    }
+    return result;
+  }
+
+  /**
+   * @param {number} offset
+   * @return {?Decoration}
+   */
+  before(offset) {
+    let result = null;
+    for (let decoration of this._decorations) {
+      if (decoration.to > offset)
+        continue;
+      if (!result || result.to < decoration.to ||
+          (result.to === decoration.to && result.from < decoration.from)) {
+        result = decoration;
+      }
+    }
+    return result;
   }
 
   /**

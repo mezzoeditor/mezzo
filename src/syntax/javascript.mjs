@@ -31,7 +31,7 @@ export default class {
    * @param {!Viewport} viewport
    */
   onViewport(viewport) {
-    this._decorator.clear();
+    this._decorator.clearAll();
     for (let range of viewport.ranges())
       tokenizeText(viewport.rangeContent(range), range.from, this._decorator);
   }
