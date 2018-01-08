@@ -1,5 +1,5 @@
 import { Decorator } from "../core/Decorator.mjs";
-import {Parser, TokenTypes, KeywordTypes} from './jslexer/index.js';
+import {Parser, TokenTypes, KeywordTypes} from './jslexer/index.mjs';
 import {TextUtils} from "../utils/TextUtils.mjs";
 
 /**

@@ -1,7 +1,7 @@
-import {reservedWords, keywords} from "./identifier.js"
-import {types as tt} from "./tokentype.js"
-import {lineBreak} from "./whitespace.js"
-import {getOptions} from "./options.js"
+import {reservedWords, keywords} from "./identifier.mjs"
+import {types as tt} from "./tokentype.mjs"
+import {lineBreak} from "./whitespace.mjs"
+import {getOptions} from "./options.mjs"
 
 function keywordRegexp(words) {
   return new RegExp("^(?:" + words.replace(/ /g, "|") + ")$")

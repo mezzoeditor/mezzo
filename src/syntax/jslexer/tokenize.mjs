@@ -1,7 +1,7 @@
-import {isIdentifierStart, isIdentifierChar} from "./identifier.js"
-import {types as tt, keywords as keywordTypes} from "./tokentype.js"
-import {Parser} from "./state.js"
-import {lineBreak, lineBreakG, isNewLine, nonASCIIwhitespace} from "./whitespace.js"
+import {isIdentifierStart, isIdentifierChar} from "./identifier.mjs"
+import {types as tt, keywords as keywordTypes} from "./tokentype.mjs"
+import {Parser} from "./state.mjs"
+import {lineBreak, lineBreakG, isNewLine, nonASCIIwhitespace} from "./whitespace.mjs"
 
 // Object type used to represent tokens. Note that normally, tokens
 // simply exist as properties on the parser object. This is only
