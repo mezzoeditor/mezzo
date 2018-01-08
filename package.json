@@ -1,0 +1,25 @@
+{
+  "name": "editor",
+  "version": "1.0.0",
+  "description": "Editor",
+  "main": "index.js",
+  "engines": {
+    "node": ">=9.2.0"
+  },
+  "scripts": {
+    "unit-lexer": "node --experimental-modules src/syntax/jslexer/test.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dgozman/editor.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/dgozman/editor/issues"
+  },
+  "homepage": "https://github.com/dgozman/editor#readme",
+  "devDependencies": {
+    "text-diff": "^1.0.1"
+  }
+}

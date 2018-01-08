@@ -1,0 +1,8 @@
+lineComment
+keyword
+name
+eq
+num
+semi
+lineComment
+lineComment
