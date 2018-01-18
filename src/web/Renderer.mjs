@@ -134,7 +134,7 @@ export class Renderer {
 
   _initializeMetrics() {
     const ctx = this._canvas.getContext('2d');
-    ctx.font = '14px menlo';
+    ctx.font = '14px monospace';
     ctx.textBaseline = 'top';
 
     const metrics = ctx.measureText('M');
