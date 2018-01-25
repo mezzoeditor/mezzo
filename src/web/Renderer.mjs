@@ -398,14 +398,13 @@ export class Renderer {
             const from = viewport.offsetToPosition(Math.max(decoration.from, range.from));
             const to = viewport.offsetToPosition(Math.min(decoration.to, range.to));
             ctx.fillStyle = style.text.color || 'rgb(33, 33, 33)';
-            for (let lineNumber = from.line; lineNumber <= to.line; lineNumber++) {
-              let line = lines[lineNumber - startLine];
+            for (let line of viewport.lines()) {
               let lineFrom = Math.max(line.from, decoration.from);
               let lineTo = Math.min(line.to, decoration.to);
               if (lineFrom < lineTo) {
                 let text = viewport.lineContent(line).substring(lineFrom - line.from, lineTo - line.from);
                 let column = lineFrom - line.from + startColumn;
-                ctx.fillText(text, column * charWidth, lineNumber * lineHeight + textOffset);
+                ctx.fillText(text, column * charWidth, line.line * lineHeight + textOffset);
               }
             }
           }
