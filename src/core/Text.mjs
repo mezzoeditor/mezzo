@@ -505,7 +505,7 @@ export class Text {
     let {from, to} = this._clamp(fromOffset, toOffset);
     let chunks = [];
     let iterator = this.iterator(from, from, to);
-    return iterator.slice(to);
+    return iterator.substr(to - from + 1);
   }
 
   /**
@@ -636,11 +636,10 @@ Text.Iterator = class {
    * @param {number} to
    * @return {string}
    */
-  slice(to) {
-    if (to <= this.offset)
-      return '';
+  substr(length) {
     let chunks = [];
     let iterator = this._iterator.clone();
+    let to = this.offset + length;
     do {
       let chunk = iterator.node().chunk;
       let start = Math.max(0, this.offset - iterator.before());
