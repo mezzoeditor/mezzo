@@ -645,8 +645,11 @@ Text.Iterator = class {
   find(query) {
     // fast-path: search in current chunk.
     let index = this._chunk.indexOf(query, this._pos);
-    if (index !== -1)
+    if (index !== -1) {
+      if (this.offset + index - this._pos + query.length > this._to)
+        return false;
       return this.advance(index - this._pos);
+    }
 
     let startIterator = this._iterator.clone();
     skipEmpty(startIterator);
