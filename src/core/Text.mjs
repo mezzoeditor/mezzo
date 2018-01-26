@@ -680,7 +680,7 @@ Text.Iterator = class {
     this.offset += x;
     this._pos += x;
     while (this._pos >= this._chunk.length) {
-      this._pos -= this._chunk.length - 1;
+      this._pos -= this._chunk.length;
       this._iterator.next();
       this._chunk = this._iterator.node().chunk;
     }
