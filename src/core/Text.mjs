@@ -289,7 +289,7 @@ class TreeIterator {
    */
   constructor(node, stack, from, to, before, after) {
     this._node = node;
-    this._stack = [];
+    this._stack = stack;
     this._from = from;
     this._to = to;
     this._before = before;
