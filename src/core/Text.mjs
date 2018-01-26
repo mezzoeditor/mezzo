@@ -639,6 +639,59 @@ Text.Iterator = class {
   }
 
   /**
+   * @param {string} query
+   * @return {boolean}
+   */
+  find(query) {
+    // fast-path: search in current chunk.
+    let index = this._chunk.indexOf(query, this._pos);
+    if (index !== -1)
+      return this.advance(index - this._pos);
+
+    let startIterator = this._iterator.clone();
+    skipEmpty(startIterator);
+    let searchWindow = startIterator.node().chunk;
+
+    let endIterator = startIterator.clone();
+    do {
+      if (!endIterator.next() || !skipEmpty(endIterator))
+        return false;
+      searchWindow += endIterator.node().chunk;
+    } while (searchWindow.length < query.length);
+
+    let pos = this._pos;
+    let offset = this.offset;
+
+    while (true) {
+      let index = searchWindow.indexOf(query, pos);
+      if (index !== -1) {
+        if (offset + index + query.length > this._to)
+          return false;
+        this._iterator = startIterator;
+        this.offset = offset;
+        this._pos = pos;
+        return this.advance(index);
+      }
+      pos = 0;
+      offset += startIterator.node().chunk.length;
+      searchWindow = searchWindow.substring(startIterator.node().chunk.length);
+      startIterator.next();
+      skipEmpty(startIterator);
+      if (!endIterator.next() || !skipEmpty(endIterator))
+        return false;
+      searchWindow += endIterator.node().chunk;
+    }
+
+    function skipEmpty(iterator) {
+      while (!iterator.node().chunk.length) {
+        if (!iterator.next())
+          return false;
+      }
+      return true;
+    }
+  }
+
+  /**
    * @return {!Text.Iterator}
    */
   clone() {
