@@ -192,12 +192,12 @@ export class Search {
    */
   _updateCurrentMatch(match) {
     if (this._currentMatch) {
-      this._decorator.remove(this._currentMatch.from, this._currentMatch.to, 'search.match.current');
+      this._decorator.clear(this._currentMatch.from, this._currentMatch.to);
       this._decorator.add(this._currentMatch.from, this._currentMatch.to, 'search.match');
     }
     this._currentMatch = match;
     if (this._currentMatch) {
-      this._decorator.remove(this._currentMatch.from, this._currentMatch.to, 'search.match');
+      this._decorator.clear(this._currentMatch.from, this._currentMatch.to);
       this._decorator.add(this._currentMatch.from, this._currentMatch.to, 'search.match.current');
       this._selection.setRanges([this._currentMatch]);
     }
