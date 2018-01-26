@@ -757,6 +757,19 @@ Text.Iterator = class {
   }
 
   /**
+   * @param {number} offset
+   * @return {number}
+   */
+  charCodeAt(offset) {
+    if (this._pos + offset < this._chunk.length)
+      return this._chunk.charCodeAt(this._pos + offset);
+    let it = this.clone();
+    if (!it.advance(offset))
+      return NaN;
+    return it.current.charCodeAt(0);
+  }
+
+  /**
    * @return {number}
    */
   length() {
