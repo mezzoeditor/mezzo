@@ -616,17 +616,7 @@ Text.Iterator = class {
    * @return {boolean}
    */
   next() {
-    if (this.offset === this._to)
-      return false;
-    while (this._pos === this._chunk.length - 1) {
-      this._iterator.next();
-      this._chunk = this._iterator.node().chunk;
-      this._pos = -1;
-    }
-    ++this.offset;
-    ++this._pos;
-    this.current = this._chunk[this._pos];
-    return true;
+    return this.advance(1);
   }
 
   /**
@@ -644,5 +634,30 @@ Text.Iterator = class {
     --this._pos;
     this.current = this._chunk[this._pos];
     return true;
+  }
+
+  /**
+   * @param {number} x
+   * @return {boolean}
+   */
+  advance(x) {
+    if (this.offset + x > this._to)
+      return false;
+    this.offset += x;
+    this._pos += x;
+    while (this._pos >= this._chunk.length) {
+      this._pos -= this._chunk.length - 1;
+      this._iterator.next();
+      this._chunk = this._iterator.node().chunk;
+    }
+    this.current = this._chunk[this._pos];
+    return true;
+  }
+
+  /**
+   * @return {number}
+   */
+  length() {
+    return this._to - this._from + 1;
   }
 };
