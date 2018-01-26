@@ -280,15 +280,40 @@ const kRight = 2;
 
 class TreeIterator {
   /**
+   * @param {!TreeNode} node
+   * @param {!Array<!TreeNode>} stack
+   * @param {number} from
+   * @param {number} to
+   * @param {number} before
+   * @param {number} after
+   */
+  constructor(node, stack, from, to, before, after) {
+    this._node = node;
+    this._stack = [];
+    this._from = from;
+    this._to = to;
+    this._before = before;
+    this._after = after;
+  }
+
+  /**
    * @param {!TreeNode} root
    * @param {number} position
    * @param {number} from
    * @param {number} to
+   * @return {!TreeIterator}
    */
-  constructor(root, position, from, to) {
-    this._from = from;
-    this._to = to;
-    this._init(root, position);
+  static create(root, position, from, to) {
+    let it = new TreeIterator(root, [], from, to, 0, 0);
+    it._init(root, position);
+    return it;
+  }
+
+  /**
+   * @return {!TreeIterator}
+   */
+  clone() {
+    return new TreeIterator(this._node, this._stack.slice(), this._from, this._to, this._before, this._after);
   }
 
   /**
@@ -479,7 +504,7 @@ export class Text {
   content(fromOffset, toOffset) {
     let {from, to} = this._clamp(fromOffset, toOffset);
     let chunks = [];
-    let iterator = new TreeIterator(this._root, from, from, to);
+    let iterator = TreeIterator.create(this._root, from, from, to);
     do {
       let chunk = iterator.node().chunk;
       let start = Math.max(0, from - iterator.before());
@@ -499,7 +524,8 @@ export class Text {
     let {from, to} = this._clamp(fromOffset, toOffset);
     offset = Math.max(from, offset);
     offset = Math.min(to, offset);
-    return new Text.Iterator(this, offset, from, to);
+    let it = TreeIterator.create(this._root, offset, from, to);
+    return new Text.Iterator(it, offset, from, to);
   }
 
   /**
@@ -596,13 +622,13 @@ export class Text {
 
 Text.Iterator = class {
   /**
-   * @param {!Text} text
+   * @param {!TreeIterator} iterator
    * @param {number} offset
    * @param {number} from
    * @param {number} to
    */
-  constructor(text, offset, from, to) {
-    this._iterator = new TreeIterator(text._root, offset, from, to);
+  constructor(iterator, offset, from, to) {
+    this._iterator = iterator;
     this._from = from;
     this._to = to;
 
@@ -610,6 +636,14 @@ Text.Iterator = class {
     this._chunk = this._iterator.node().chunk;
     this._pos = offset - this._iterator.before();
     this.current = this._chunk[this._pos];
+  }
+
+  /**
+   * @return {!Text.Iterator}
+   */
+  clone() {
+    let it = this._iterator.clone();
+    return new Text.Iterator(it, this.offset, this._from, this._to);
   }
 
   /**
