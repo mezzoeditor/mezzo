@@ -85,13 +85,12 @@ export class Search {
       let to = Math.min(this._document.length(), range.to + query.length);
       this._decorator.clear(from, range.to);
 
-      let text = viewport.rangeContent(range, query.length, query.length);
-      let index = text.indexOf(query);
-      while (index !== -1) {
-        this._decorator.add(from + index, from + index + query.length, 'search.match');
+      let iterator = viewport.document().iterator(range.from, range.from, range.to);
+      while (iterator.find(query)) {
+        this._decorator.add(iterator.offset, iterator.offset + query.length, 'search.match');
         if (!this._currentMatch)
           setTimeout(0, () => this._updateCurrentMatch({from: from + index, to: from + index + query.length}));
-        index = text.indexOf(query, index + query.length);
+        iterator.advance(query.length);
       }
 
       this._searched(from, to - query.length);
@@ -253,15 +252,12 @@ export class Search {
 
     let query = this._options.query;
     to = Math.min(this._document.length(), to + query.length);
-    let text = this._document.content(from, to);
-    this._decorator.clear(from, to);
-
-    let index = text.indexOf(query);
-    while (index !== -1) {
-      this._decorator.add(from + index, from + index + query.length, 'search.match');
+    let iterator = this._document.iterator(from, from, to);
+    while (iterator.find(query)) {
+      this._decorator.add(iterator.offset, iterator.offset + query.length, 'search.match');
       if (!this._currentMatch)
-        this._updateCurrentMatch({from: from + index, to: from + index + query.length});
-      index = text.indexOf(query, index + query.length);
+        this._updateCurrentMatch({from: iterator.offset, to: iterator.offset + query.length});
+      iterator.advance(query.length);
     }
 
     if (this._onUpdate)
