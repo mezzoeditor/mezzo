@@ -657,12 +657,14 @@ Text.Iterator = class {
     // fast-path: search in current chunk.
     let index = this._chunk.indexOf(query, this._pos);
     if (index !== -1) {
-      if (this.offset + index - this._pos + query.length > this._to)
+      index -= this._pos;
+      if (this.offset + index + query.length > this._to)
         return false;
-      return this.advance(index - this._pos);
+      this.advance(index);
+      return true;
     }
 
-    let startIterator = this._iterator.clone();
+    let startIterator = this._iterator;
     skipEmpty(startIterator);
     let searchWindow = startIterator.node().chunk;
 
@@ -673,22 +675,17 @@ Text.Iterator = class {
       searchWindow += endIterator.node().chunk;
     } while (searchWindow.length < query.length);
 
-    let pos = this._pos;
-    let offset = this.offset;
-
     while (true) {
-      let index = searchWindow.indexOf(query, pos);
+      let index = searchWindow.indexOf(query, this._pos);
       if (index !== -1) {
-        index -= pos;
-        if (offset + index + query.length > this._to)
+        index -= this._pos;
+        if (this.offset + index + query.length > this._to)
           return false;
-        this._iterator = startIterator;
-        this.offset = offset;
-        this._pos = pos;
-        return this.advance(index);
+        this.advance(index);
+        return true;
       }
-      offset += startIterator.node().chunk.length - pos;
-      pos = 0;
+      this.offset += startIterator.node().chunk.length - this._pos;
+      this._pos = 0;
       searchWindow = searchWindow.substring(startIterator.node().chunk.length);
       startIterator.next();
       skipEmpty(startIterator);
@@ -714,46 +711,34 @@ Text.Iterator = class {
     return new Text.Iterator(it, this.offset, this._from, this._to);
   }
 
-  /**
-   * @return {boolean}
-   */
   next() {
     return this.advance(1);
   }
 
-  /**
-   * @return {boolean}
-   */
   prev() {
-    if (this.offset === this._from)
-      return false;
-    while (!this._pos) {
-      this._iterator.prev();
-      this._chunk = this._iterator.node().chunk;
-      this._pos = this._chunk.length;
-    }
-    --this.offset;
-    --this._pos;
-    this.current = this._chunk[this._pos];
-    return true;
+    return this.advance(-1);
   }
 
   /**
    * @param {number} x
-   * @return {boolean}
    */
   advance(x) {
-    if (this.offset + x > this._to)
-      return false;
+    if (x === 0)
+      return;
     this.offset += x;
     this._pos += x;
-    while (this._pos >= this._chunk.length) {
-      this._pos -= this._chunk.length;
-      this._iterator.next();
-      this._chunk = this._iterator.node().chunk;
+    if (x > 0) {
+      while (this._pos >= this._chunk.length && this._iterator.next()) {
+        this._pos -= this._chunk.length;
+        this._chunk = this._iterator.node().chunk;
+      }
+    } else {
+      while (this._pos < 0 && this._iterator.prev()) {
+        this._chunk = this._iterator.node().chunk;
+        this._pos += this._chunk.length;
+      }
     }
     this.current = this._chunk[this._pos];
-    return true;
   }
 
   /**
@@ -764,15 +749,21 @@ Text.Iterator = class {
     if (this._pos + offset < this._chunk.length)
       return this._chunk.charCodeAt(this._pos + offset);
     let it = this.clone();
-    if (!it.advance(offset))
-      return NaN;
-    return it.current.charCodeAt(0);
+    it.advance(offset);
+    return it.outOfBounds() ? NaN : it.current.charCodeAt(0);
   }
 
   /**
    * @return {number}
    */
   length() {
-    return this._to - this._from + 1;
+    return this._to - this._from;
+  }
+
+  /**
+   * @return {boolean}
+   */
+  outOfBounds() {
+    return this.offset < this._from || this.offset >= this._to;
   }
 };
