@@ -504,14 +504,8 @@ export class Text {
   content(fromOffset, toOffset) {
     let {from, to} = this._clamp(fromOffset, toOffset);
     let chunks = [];
-    let iterator = TreeIterator.create(this._root, from, from, to);
-    do {
-      let chunk = iterator.node().chunk;
-      let start = Math.max(0, from - iterator.before());
-      let end = chunk.length - Math.max(0, iterator.after() - to);
-      chunks.push(chunk.substring(start, end));
-    } while (iterator.next());
-    return chunks.join('');
+    let iterator = this.iterator(from, from, to);
+    return iterator.slice(to);
   }
 
   /**
@@ -636,6 +630,24 @@ Text.Iterator = class {
     this._chunk = this._iterator.node().chunk;
     this._pos = offset - this._iterator.before();
     this.current = this._chunk[this._pos];
+  }
+
+  /**
+   * @param {number} to
+   * @return {string}
+   */
+  slice(to) {
+    if (to <= this.offset)
+      return '';
+    let chunks = [];
+    let iterator = this._iterator.clone();
+    do {
+      let chunk = iterator.node().chunk;
+      let start = Math.max(0, this.offset - iterator.before());
+      let end = chunk.length - Math.max(0, iterator.after() - to);
+      chunks.push(chunk.substring(start, end));
+    } while (iterator.next());
+    return chunks.join('');
   }
 
   /**
