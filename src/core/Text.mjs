@@ -665,6 +665,7 @@ Text.Iterator = class {
     while (true) {
       let index = searchWindow.indexOf(query, pos);
       if (index !== -1) {
+        index -= pos;
         if (offset + index + query.length > this._to)
           return false;
         this._iterator = startIterator;
@@ -672,8 +673,8 @@ Text.Iterator = class {
         this._pos = pos;
         return this.advance(index);
       }
+      offset += startIterator.node().chunk.length - pos;
       pos = 0;
-      offset += startIterator.node().chunk.length;
       searchWindow = searchWindow.substring(startIterator.node().chunk.length);
       startIterator.next();
       skipEmpty(startIterator);
