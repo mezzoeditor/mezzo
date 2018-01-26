@@ -255,6 +255,7 @@ export class Search {
     let query = this._options.query;
     to = Math.min(this._document.length(), to + query.length);
     let iterator = this._document.iterator(from, from, to);
+    this._decorator.clear(from, to);
     while (iterator.find(query)) {
       this._decorator.add(iterator.offset, iterator.offset + query.length, 'search.match');
       if (!this._currentMatch)
