@@ -85,15 +85,17 @@ export class Search {
       let to = Math.min(this._document.length(), range.to + query.length);
       this._decorator.clear(from, range.to);
 
-      let iterator = viewport.document().iterator(range.from, range.from, range.to);
+      let iterator = viewport.document().iterator(from, from, to);
       while (iterator.find(query)) {
         this._decorator.add(iterator.offset, iterator.offset + query.length, 'search.match');
-        if (!this._currentMatch)
-          setTimeout(0, () => this._updateCurrentMatch({from: from + index, to: from + index + query.length}));
+        if (!this._currentMatch) {
+          this._currentMatch = {from: iterator.offset, to: iterator.offset + query.length};
+          setTimeout(() => this._updateCurrentMatch(this._currentMatch), 0);
+        }
         iterator.advance(query.length);
       }
 
-      this._searched(from, to - query.length);
+      this._searched(from, range.to);
     }
 
     if (this._onUpdate)
