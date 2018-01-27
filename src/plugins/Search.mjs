@@ -254,31 +254,36 @@ export class Search {
 
   _schedule() {
     if (this._searchRange && !this._scheduledTimeout)
-      this._scheduledTimeout = setTimeout(this._performScheduledSearch.bind(this), 100);
+      this._scheduledTimeout = requestIdleCallback(this._performScheduledSearch.bind(this), {timeout: 1000});
   }
 
   _clearScheduled() {
     if (this._scheduledTimeout)
-      clearTimeout(this._scheduledTimeout);
+      cancelIdleCallback(this._scheduledTimeout);
     this._scheduledTimeout = null;
   }
 
-  _performScheduledSearch() {
+  /**
+   * @param {!IdleDeadline} deadline
+   */
+  _performScheduledSearch(deadline) {
     this._scheduledTimeout = null;
 
-    let from = this._searchRange.from;
-    let to = Math.min(this._searchRange.to, from + 10000);
-    this._searched(from, to);
+    while ((deadline.timeRemaining() > 0 || deadline.didTimeout) && this._searchRange) {
+      let from = this._searchRange.from;
+      let to = Math.min(this._searchRange.to, from + 10000);
+      this._searched(from, to);
 
-    let query = this._options.query;
-    let iterator = this._document.iterator(from, from, to + query.length);
-    this._decorator.clearStarting(from, to);
-    this._currentMatchDecorator.clearStarting(from, to);
-    while (iterator.find(query)) {
-      this._decorator.add(iterator.offset, iterator.offset + query.length, 'search.match');
-      if (!this._currentMatch)
-        this._updateCurrentMatch({from: iterator.offset, to: iterator.offset + query.length});
-      iterator.advance(query.length);
+      let query = this._options.query;
+      let iterator = this._document.iterator(from, from, to + query.length);
+      this._decorator.clearStarting(from, to);
+      this._currentMatchDecorator.clearStarting(from, to);
+      while (iterator.find(query)) {
+        this._decorator.add(iterator.offset, iterator.offset + query.length, 'search.match');
+        if (!this._currentMatch)
+          this._updateCurrentMatch({from: iterator.offset, to: iterator.offset + query.length});
+        iterator.advance(query.length);
+      }
     }
 
     if (this._onUpdate)
