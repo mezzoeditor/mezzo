@@ -24,6 +24,7 @@ export class Selection {
     this._ranges = [];
     this._muted = 0;
     this._lastId = 0;
+    this._staleDecorations = true;
   }
 
   // -------- Public API --------
@@ -59,6 +60,7 @@ export class Selection {
       anchor: range.from,
       focus: range.to
     })));
+    this._staleDecorations = true;
     this._document.end('selection');
     if (!noReveal)
       this._reveal();
@@ -76,6 +78,7 @@ export class Selection {
       newRanges.push({id: this._ranges[i].id, upDownColumn: -1, anchor: ranges[i].from, focus: ranges[i].to});
     this._ranges = this._rebuild(newRanges);
     this._document.end('selection');
+    this._staleDecorations = true;
     this._reveal();
   }
 
@@ -110,6 +113,9 @@ export class Selection {
    * @param {!Viewport} viewport
    */
   onViewport(viewport) {
+    if (!this._staleDecorations)
+      return;
+    this._staleDecorations = false;
     this._decorator.clearAll();
     for (let range of this._ranges) {
       this._decorator.add(range.focus, range.focus, 'selection.focus');
@@ -151,6 +157,7 @@ export class Selection {
         ranges.push({id: range.id, upDownColumn: -1, anchor: start, focus: end});
     }
     this._ranges = this._rebuild(ranges);
+    this._staleDecorations = true;
   }
 
   /**
@@ -168,6 +175,7 @@ export class Selection {
    */
   onRestore(replacements, data) {
     this._ranges = data || [];
+    this._staleDecorations = true;
   }
 
   /**
@@ -334,6 +342,7 @@ export class Selection {
       }
     }
     this._document.end('selection');
+    this._staleDecorations = true;
     this._reveal();
     return true;
   }
@@ -356,6 +365,7 @@ export class Selection {
     this._document.begin('selection');
     this._ranges = ranges;
     this._document.end('selection');
+    this._staleDecorations = true;
     this._reveal();
     return true;
   }
