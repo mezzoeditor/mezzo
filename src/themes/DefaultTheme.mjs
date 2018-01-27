@@ -22,8 +22,8 @@ export let DefaultTheme = {
   },
   'search.match.current': {
     border: {
-      width: 1,
-      color: 'hsl(39, 100%, 50%)'
+      width: 2,
+      color: 'hsl(39, 96%, 28%)'
     },
   },
   'syntax.default': {

@@ -49,6 +49,13 @@ function addSearch(editor) {
     else
       editor.find(input.value);
   }, false);
+  input.addEventListener('keydown', event => {
+    if (event.key === 'Enter') {
+      editor.findNext();
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  }, false);
   document.querySelector('.next').addEventListener('click', event => {
     editor.findNext();
   }, false);

@@ -40,6 +40,8 @@
   }
 
   /**
+   * Leaves all decorations start..end, for which
+   *   end <= from  or  start >= to.
    * @param {number} from
    * @param {number} to
    */
@@ -47,6 +49,20 @@
     let decorations = [];
     for (let decoration of this._decorations) {
       if (decoration.from >= to || decoration.to <= from)
+        decorations.push(decoration);
+    }
+    this._decorations = decorations;
+  }
+
+  /**
+   * Removes all decorations which start at [from, to].
+   * @param {number} from
+   * @param {number} to
+   */
+  clearStarting(from, to) {
+    let decorations = [];
+    for (let decoration of this._decorations) {
+      if (decoration.from < from || decoration.from > to)
         decorations.push(decoration);
     }
     this._decorations = decorations;

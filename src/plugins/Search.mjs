@@ -17,8 +17,10 @@ export class Search {
     this._selection = selection;
     this._onUpdate = onUpdate;
     this._decorator = new Decorator();
+    this._currentMatchDecorator = new Decorator();
     this._options = null;
     this._currentMatch = null;
+    // Range of possible starts of the query, |to| included.
     this._searchRange = null;
     this._scheduledTimeout = null;
   }
@@ -61,6 +63,7 @@ export class Search {
    */
   onAdded(document) {
     document.addDecorator(this._decorator);
+    document.addDecorator(this._currentMatchDecorator);
   }
 
   /**
@@ -69,6 +72,7 @@ export class Search {
    */
   onRemoved(document) {
     document.removeDecorator(this._decorator);
+    document.removeDecorator(this._currentMatchDecorator);
   }
 
   /**
@@ -80,21 +84,36 @@ export class Search {
       return;
 
     let query = this._options.query;
+    let selectionUpdated = false;
     for (let range of viewport.ranges()) {
       let from = Math.max(0, range.from - query.length);
-      let to = Math.min(this._document.length(), range.to + query.length);
-      this._decorator.clear(from, range.to);
+      let to = Math.min(this._document.length() - query.length, range.to);
+      to = Math.max(from, to);
+      this._decorator.clearStarting(from, to);
+      this._currentMatchDecorator.clearStarting(from, to);
 
-      let iterator = viewport.document().iterator(from, from, to);
+      let updateCurrentMatchPosition = to + 1;
+      if (!this._currentMatch)
+        updateCurrentMatchPosition = from;
+      else if (this._currentMatch.from >= from && this._currentMatch.from <= to)
+        updateCurrentMatchPosition = this._currentMatch.from;
+
+      let iterator = viewport.document().iterator(from, from, to + query.length);
       while (iterator.find(query)) {
         this._decorator.add(iterator.offset, iterator.offset + query.length, 'search.match');
-        if (!this._currentMatch)
-          this._updateCurrentMatch({from: iterator.offset, to: iterator.offset + query.length});
+        if (iterator.offset >= updateCurrentMatchPosition) {
+          updateCurrentMatchPosition = to + 1;
+          this._updateCurrentMatch({from: iterator.offset, to: iterator.offset + query.length}, true /* noReveal */);
+          selectionUpdated = true;
+        }
         iterator.advance(query.length);
       }
 
-      this._searched(from, range.to);
+      this._searched(from, to);
     }
+
+    if (selectionUpdated)
+      this._selection.onViewport(viewport);
 
     if (this._onUpdate)
       this._onUpdate.call(null);
@@ -108,10 +127,12 @@ export class Search {
    */
   onReplace(from, to, inserted) {
     this._decorator.onReplace(from, to, inserted);
-    this._searched(from, to);
+    this._currentMatchDecorator.onReplace(from, to, inserted);
     if (this._options) {
-      from = Math.max(0, from - this._options.query.length);
-      to = Math.min(this._document.length(), from + inserted + this._options.query.length);
+      let length = this._options.query.length;
+      this._searched(from, to - length);
+      from = Math.max(0, from - length);
+      to = Math.min(this._document.length() - length, from + inserted);
       this._search(from, to);
     }
   }
@@ -129,7 +150,7 @@ export class Search {
       case 'search.find': {
         this._cancel();
         this._options = data;
-        this._search(0, this._document.length());
+        this._search(0, this._document.length() - this._options.query.length);
         this._document.invalidate();
         if (this._onUpdate)
           this._onUpdate.call(null);
@@ -181,23 +202,22 @@ export class Search {
     this._clearScheduled();
     this._searchRange = null;
     this._decorator.clearAll();
+    this._currentMatchDecorator.clearAll();
     this._currentMatch = null;
     this._options = null;
   }
 
   /**
    * @param {?OffsetRange} match
+   * @param {boolean=} noReveal
    */
-  _updateCurrentMatch(match) {
-    if (this._currentMatch) {
-      this._decorator.clear(this._currentMatch.from, this._currentMatch.to);
-      this._decorator.add(this._currentMatch.from, this._currentMatch.to, 'search.match');
-    }
+  _updateCurrentMatch(match, noReveal) {
+    if (this._currentMatch)
+      this._currentMatchDecorator.remove(this._currentMatch.from, this._currentMatch.to, 'search.match.current');
     this._currentMatch = match;
     if (this._currentMatch) {
-      this._decorator.clear(this._currentMatch.from, this._currentMatch.to);
-      this._decorator.add(this._currentMatch.from, this._currentMatch.to, 'search.match.current');
-      this._selection.setRanges([this._currentMatch], true /* noReveal */);
+      this._currentMatchDecorator.add(this._currentMatch.from, this._currentMatch.to, 'search.match.current');
+      this._selection.setRanges([this._currentMatch], noReveal);
     }
   }
 
@@ -251,9 +271,9 @@ export class Search {
     this._searched(from, to);
 
     let query = this._options.query;
-    to = Math.min(this._document.length(), to + query.length);
-    let iterator = this._document.iterator(from, from, to);
-    this._decorator.clear(from, to);
+    let iterator = this._document.iterator(from, from, to + query.length);
+    this._decorator.clearStarting(from, to);
+    this._currentMatchDecorator.clearStarting(from, to);
     while (iterator.find(query)) {
       this._decorator.add(iterator.offset, iterator.offset + query.length, 'search.match');
       if (!this._currentMatch)
