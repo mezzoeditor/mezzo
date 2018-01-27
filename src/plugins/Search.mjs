@@ -88,10 +88,8 @@ export class Search {
       let iterator = viewport.document().iterator(from, from, to);
       while (iterator.find(query)) {
         this._decorator.add(iterator.offset, iterator.offset + query.length, 'search.match');
-        if (!this._currentMatch) {
-          this._currentMatch = {from: iterator.offset, to: iterator.offset + query.length};
-          setTimeout(() => this._updateCurrentMatch(this._currentMatch), 0);
-        }
+        if (!this._currentMatch)
+          this._updateCurrentMatch({from: iterator.offset, to: iterator.offset + query.length});
         iterator.advance(query.length);
       }
 
@@ -199,7 +197,7 @@ export class Search {
     if (this._currentMatch) {
       this._decorator.clear(this._currentMatch.from, this._currentMatch.to);
       this._decorator.add(this._currentMatch.from, this._currentMatch.to, 'search.match.current');
-      this._selection.setRanges([this._currentMatch]);
+      this._selection.setRanges([this._currentMatch], true /* noReveal */);
     }
   }
 

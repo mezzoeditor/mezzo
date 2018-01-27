@@ -49,8 +49,9 @@ export class Selection {
 
   /**
    * @param {!Array<!OffsetRange>} ranges
+   * @param {boolean=} noReveal
    */
-  setRanges(ranges) {
+  setRanges(ranges, noReveal) {
     this._document.begin('selection');
     this._ranges = this._rebuild(ranges.map(range => ({
       id: ++this._lastId,
@@ -59,7 +60,8 @@ export class Selection {
       focus: range.to
     })));
     this._document.end('selection');
-    this._reveal();
+    if (!noReveal)
+      this._reveal();
   }
 
   /**

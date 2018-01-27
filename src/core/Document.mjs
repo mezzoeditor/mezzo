@@ -32,7 +32,7 @@ export class Document {
     if (this._operations.length)
       throw 'Cannot reset during operation';
     if (this._frozen)
-      throw 'Cannot mutate while building viewport';
+      throw 'Cannot edit while building viewport';
     let to = this._text.length();
     this._history.reset({
       text: Text.withContent(text),
@@ -56,6 +56,8 @@ export class Document {
    * @param {number} offset
    */
   reveal(offset) {
+    if (this._frozen)
+      throw 'Cannot reveal while building viewport';
     this._onReveal.call(null, offset);
   }
 
@@ -68,7 +70,7 @@ export class Document {
     if (!this._operations.length)
       throw 'Cannot edit outside of operation';
     if (this._frozen)
-      throw 'Cannot mutate while building viewport';
+      throw 'Cannot edit while building viewport';
     this._replacements.push({from, to, inserted: insertion.length});
     let text = this._text.replace(from, to, insertion);
     this._text.resetCache();
@@ -83,8 +85,6 @@ export class Document {
    * @param {string} name
    */
   begin(name) {
-    if (this._frozen)
-      throw 'Cannot mutate while building viewport';
     this._operations.push(name);
   }
 
@@ -126,8 +126,6 @@ export class Document {
   undo(name) {
     if (this._operations.length)
       throw 'Cannot undo during operation';
-    if (this._frozen)
-      throw 'Cannot mutate while building viewport';
 
     let undone = this._history.undo(state => this._filterHistory(state, name));
     if (!undone)
@@ -160,8 +158,6 @@ export class Document {
   redo(name) {
     if (this._operations.length)
       throw 'Cannot redo during operation';
-    if (this._frozen)
-      throw 'Cannot mutate while building viewport';
 
     let redone = this._history.redo(state => this._filterHistory(state, name));
     if (!redone)
@@ -228,7 +224,7 @@ export class Document {
    */
   addDecorator(decorator) {
     if (this._frozen)
-      throw 'Cannot mutate while building viewport';
+      throw 'Cannot change decorators while building viewport';
     this._decorators.add(decorator);
     this.invalidate();
   }
@@ -238,7 +234,7 @@ export class Document {
    */
   removeDecorator(decorator) {
     if (this._frozen)
-      throw 'Cannot mutate while building viewport';
+      throw 'Cannot change decorators while building viewport';
     if (!this._decorators.has(decorator))
       throw 'No such decorator';
     this._decorators.delete(decorator);
@@ -251,8 +247,6 @@ export class Document {
    * @return {*}
    */
   perform(command, data) {
-    if (this._frozen)
-      throw 'Cannot mutate while building viewport';
     if (command === 'history.undo')
       return this.undo(data);
     if (command === 'history.redo')
