@@ -8,7 +8,7 @@ function keywordRegexp(words) {
 }
 
 export class Parser {
-  constructor(options, input, startPos = 0) {
+  constructor(options, iterator) {
     this.options = options = getOptions(options)
     this.keywords = keywordRegexp(keywords[options.ecmaVersion >= 6 ? 6 : 5])
     let reserved = ""
@@ -21,7 +21,8 @@ export class Parser {
     let reservedStrict = (reserved ? reserved + " " : "") + reservedWords.strict
     this.reservedWordsStrict = keywordRegexp(reservedStrict)
     this.reservedWordsStrictBind = keywordRegexp(reservedStrict + " " + reservedWords.strictBind)
-    this.input = String(input)
+
+    this.it = iterator;
 
     // Used to signal to callers of `readWord1` whether the word
     // contained any escape sequences. This is needed because words with
@@ -30,19 +31,18 @@ export class Parser {
 
     // Set up token state
 
-    // The current position of the tokenizer in the input.
-    this.pos = startPos
-
     // Properties of the current token:
     // Its type
     this.type = tt.eof
     // For tokens that include more information than their type, the value
     this.value = null
     // Its start and end offset
-    this.start = this.end = this.pos
+    this.start = this.it.clone();
+    this.end = this.it.clone();
 
     // Position information for the previous token
-    this.lastTokStart = this.lastTokEnd = this.pos
+    this.lastTokStart = this.it.clone();
+    this.lastTokEnd = this.it.clone();
 
     // The context stack is used to superficially track syntactic
     // context to predict whether a regular expression is allowed in a

@@ -33,22 +33,22 @@ export default class {
   onViewport(viewport) {
     this._decorator.clearAll();
     for (let range of viewport.ranges())
-      tokenizeText(viewport.rangeContent(range), range.from, this._decorator);
+      tokenizeText(viewport.document().iterator(range.from, range.from, range.to), this._decorator);
   }
 };
 
-function tokenizeText(text, offset, decorator) {
+function tokenizeText(text, decorator) {
   let tt = new Parser({allowHashBang: true}, text);
   for (let token of tt) {
     if (token.type.keyword || (token.type === TokenTypes.name && token.value === 'let'))
-      decorator.add(token.start + offset, token.end + offset, 'syntax.keyword');
+      decorator.add(token.start, token.end, 'syntax.keyword');
     else if (token.type === TokenTypes.string || token.type === TokenTypes.regexp || token.type === TokenTypes.template || token.type === TokenTypes.invalidTemplate)
-      decorator.add(token.start + offset, token.end + offset, 'syntax.string');
+      decorator.add(token.start, token.end, 'syntax.string');
     else if (token.type === TokenTypes.num)
-      decorator.add(token.start + offset, token.end + offset, 'syntax.number');
+      decorator.add(token.start, token.end, 'syntax.number');
     else if (token.type === TokenTypes.blockComment || token.type === TokenTypes.lineComment)
-      decorator.add(token.start + offset, token.end + offset, 'syntax.comment');
+      decorator.add(token.start, token.end, 'syntax.comment');
     else
-      decorator.add(token.start + offset, token.end + offset, 'syntax.default');
+      decorator.add(token.start, token.end, 'syntax.default');
   }
 }

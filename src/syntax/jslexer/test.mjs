@@ -15,6 +15,7 @@
  */
 import {TestRunner, Reporter, Matchers} from '../../../utils/testrunner/index.mjs';
 import {GoldenMatchers} from '../../../utils/GoldenMatchers';
+import {Document} from '../../core/Document.mjs';
 import fs from 'fs';
 import path from 'path';
 import __dirname from './__dirname.js';
@@ -42,7 +43,9 @@ for (let fileName of files) {
     continue;
   runner.it(fileName, async () => {
     let text = await readFile(path.join(TESTDIR, fileName));
-    let tt = new Parser({allowHashBang: true}, text);
+    let document = new Document(() => {}, () => {});
+    document.reset(text);
+    let tt = new Parser({allowHashBang: true}, document.iterator(0));
     const tokens = [];
     for (let token of tt)
       tokens.push(tokenTypeNames.get(token.type));
