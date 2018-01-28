@@ -19,8 +19,21 @@ class Plugin {
   }
 
   /**
+   * Called before every render of viewport. Plugin is expected to do any
+   * postponed work which should synchronously affect the viewport.
+   * Example: perform search on the small document based on last search parameters.
+   * Mutating the state which can affect viewport is prohibited,
+   * e.g. editing the document or revealing position.
+   * @param {!Viewport} viewport
+   */
+  onBeforeViewport(viewport) {
+  }
+
+  /**
    * Called on every render of viewport. Plugin is expected to manipulate
-   * Decorator object(s) to affect the rendering.
+   * Decorator(s) to affect the rendering.
+   * Mutating the state which can affect viewport is prohibited,
+   * e.g. editing the document or revealing position.
    * @param {!Viewport} viewport
    */
   onViewport(viewport) {
@@ -28,6 +41,7 @@ class Plugin {
 
   /**
    * Called when range in the text is replaced with something else.
+   * It is usually a good idea to call onReplace on plugin's Decorator(s) here.
    * @param {number} from
    * @param {number} to
    * @param {number} inserted
@@ -55,16 +69,12 @@ class Plugin {
   /**
    * Called when history state is about to be restored,
    * with the data returned from onSaveState (if any).
+   * Applying |replacements| in the passed order (similarly to |onReplace|)
+   * to the Document's content before |onRestore| will produce it's current
+   * content.
    * @param {!Array<{from: number, to: number, inserted: number}>} replacements
    * @param {*|undefined} data
    */
   onRestore(replacements, data) {
-  }
-
-  /**
-   * On idle for background work. TBD.
-   * @param {?} limit
-   */
-  onIdle(limit) {
   }
 };

@@ -79,11 +79,26 @@ export class Search {
    * @override
    * @param {!Viewport} viewport
    */
+  onBeforeViewport(viewport) {
+    if (!this._searchRange || (this._searchRange.to - this._searchRange.from > 20000))
+      return;
+    this._searchChunk(this._searchRange.from, this._searchRange.to, true /* noReveal */);
+    this._onUpdate();
+  }
+
+  /**
+   * @override
+   * @param {!Viewport} viewport
+   */
   onViewport(viewport) {
-    if (!this._options)
+    if (!this._searchRange)
       return;
 
     let query = this._options.query;
+    let viewportRange = viewport.range();
+    if (this._searchRange.from >= viewportRange.to || this._searchRange.to <= viewportRange.from - query.length)
+      return;
+
     let updateSelection = false;
     for (let range of viewport.ranges()) {
       let from = Math.max(0, range.from - query.length);
@@ -263,26 +278,17 @@ export class Search {
     this._searched(from, to);
     let query = this._options.query;
     this._decorator.clearStarting(from, to);
-    this._currentMatchDecorator.clearStarting(from, to);
 
-    let updateCurrentMatchPosition = to + 1;
-    if (!this._currentMatch)
-      updateCurrentMatchPosition = from;
-    else if (this._currentMatch.from >= from && this._currentMatch.from <= to)
-      updateCurrentMatchPosition = this._currentMatch.from;
     let currentMatchUpdated = false;
-
     let iterator = this._document.iterator(from, from, to + query.length);
     while (iterator.find(query)) {
       this._decorator.add(iterator.offset, iterator.offset + query.length, 'search.match');
-      if (iterator.offset >= updateCurrentMatchPosition) {
-        updateCurrentMatchPosition = to + 1;
+      if (!this._currentMatch) {
         this._updateCurrentMatch({from: iterator.offset, to: iterator.offset + query.length}, noReveal);
         currentMatchUpdated = true;
       }
       iterator.advance(query.length);
     }
-
     return currentMatchUpdated;
   }
 };

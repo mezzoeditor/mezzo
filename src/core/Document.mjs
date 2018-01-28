@@ -325,6 +325,10 @@ export class Document {
   decorateViewport(viewport) {
     this._frozen = true;
     for (let plugin of this._plugins.values()) {
+      if (plugin.onBeforeViewport)
+        plugin.onBeforeViewport(viewport);
+    }
+    for (let plugin of this._plugins.values()) {
       if (plugin.onViewport)
         plugin.onViewport(viewport);
     }
