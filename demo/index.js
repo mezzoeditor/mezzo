@@ -57,6 +57,11 @@ function addSearch(editor) {
         editor.findNext();
       event.preventDefault();
       event.stopPropagation();
+    } else if (event.key === 'Escape') {
+      editor.findCancel();
+      editor.focus();
+      event.preventDefault();
+      event.stopPropagation();
     }
   }, false);
   document.querySelector('.next').addEventListener('click', event => {
