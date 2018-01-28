@@ -74,6 +74,17 @@ function addSearch(editor) {
   editor.onSearchUpdate((total, current) => {
     info.textContent = `${current + 1} of ${total}`;
   });
+
+  const isMac = navigator.platform.toUpperCase().indexOf('MAC') !== -1;
+
+  document.addEventListener('keydown', event => {
+    let isSearchTriggered = (isMac ? event.metaKey : event.ctrlKey) && event.key === 'f';
+    if (isSearchTriggered) {
+      input.focus();
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  }, true);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
