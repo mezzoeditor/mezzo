@@ -391,7 +391,7 @@ class TreeIterator {
     if (this._node.left) {
       let left = this._node.left;
       while (left.right) {
-        this._stack.push(right);
+        this._stack.push(left.right);
         left = left.right;
       }
       this._stack.push(left);
