@@ -51,7 +51,10 @@ function addSearch(editor) {
   }, false);
   input.addEventListener('keydown', event => {
     if (event.key === 'Enter') {
-      editor.findNext();
+      if (event.shiftKey)
+        editor.findPrevious();
+      else
+        editor.findNext();
       event.preventDefault();
       event.stopPropagation();
     }
