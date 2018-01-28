@@ -19,6 +19,11 @@ export let DefaultTheme = {
     background: {
       color: 'hsla(36, 96%, 56%, 0.4)'
     },
+    scrollbar: {
+      color: 'hsla(36, 96%, 56%, 0.4)',
+      left: 0,
+      right: 20,
+    },
   },
   'search.match.current': {
     border: {

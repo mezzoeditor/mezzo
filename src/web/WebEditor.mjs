@@ -282,6 +282,7 @@ export class WebEditor {
       if (!onUpdate || updateRAF)
         return;
       updateRAF = requestAnimationFrame(() => {
+        this._renderer.invalidate();
         updateRAF = null;
         let total = this._search.matchesCount();
         let current = this._search.currentMatchIndex();
