@@ -637,16 +637,19 @@ Text.Iterator = class {
    * @return {string}
    */
   substr(length) {
-    let chunks = [];
+    if (this.outOfBounds())
+      return '';
+    let result = '';
     let iterator = this._iterator.clone();
-    let to = this.offset + length;
+    let pos = this._pos;
     do {
       let chunk = iterator.node().chunk;
-      let start = Math.max(0, this.offset - iterator.before());
-      let end = chunk.length - Math.max(0, iterator.after() - to);
-      chunks.push(chunk.substring(start, end));
-    } while (iterator.next());
-    return chunks.join('');
+      let word = chunk.substr(pos, length);
+      pos = 0;
+      result += word;
+      length -= word.length;
+    } while (length && iterator.next());
+    return result;
   }
 
   /**
