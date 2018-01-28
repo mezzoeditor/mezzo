@@ -7,7 +7,8 @@
     "node": ">=9.2.0"
   },
   "scripts": {
-    "unit-lexer": "node --experimental-modules src/syntax/jslexer/test.mjs"
+    "unit-lexer": "node --experimental-modules src/syntax/jslexer/test.mjs",
+    "serve": "static . -p 9123"
   },
   "repository": {
     "type": "git",
@@ -20,6 +21,7 @@
   },
   "homepage": "https://github.com/dgozman/editor#readme",
   "devDependencies": {
+    "node-static": "^0.7.10",
     "text-diff": "^1.0.1"
   }
 }
