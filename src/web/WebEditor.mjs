@@ -276,17 +276,21 @@ export class WebEditor {
     let lastTotal = 0;
     let lastCurrent = -1;
     let onUpdate = null;
+    let updateRAF = null;
 
     this._search = new Search(this._document, this._selection, () => {
-      if (!onUpdate)
+      if (!onUpdate || updateRAF)
         return;
-      let total = this._search.matchesCount();
-      let current = this._search.currentMatchIndex();
-      if (total !== lastTotal || current !== lastCurrent) {
-        lastTotal = total;
-        lastCurrent = current;
-        onUpdate.call(null, lastTotal, lastCurrent);
-      }
+      updateRAF = requestAnimationFrame(() => {
+        updateRAF = null;
+        let total = this._search.matchesCount();
+        let current = this._search.currentMatchIndex();
+        if (total !== lastTotal || current !== lastCurrent) {
+          lastTotal = total;
+          lastCurrent = current;
+          onUpdate.call(null, lastTotal, lastCurrent);
+        }
+      });
     });
 
     this.find = query => {
