@@ -15,7 +15,7 @@ export class Search {
   constructor(document, selection, onUpdate) {
     this._document = document;
     this._selection = selection;
-    this._onUpdate = onUpdate;
+    this._onUpdate = (onUpdate || function() {}).bind(null);
     this._decorator = new Decorator();
     this._currentMatchDecorator = new Decorator();
     this._options = null;
@@ -84,39 +84,17 @@ export class Search {
       return;
 
     let query = this._options.query;
-    let selectionUpdated = false;
+    let updateSelection = false;
     for (let range of viewport.ranges()) {
       let from = Math.max(0, range.from - query.length);
       let to = Math.min(this._document.length() - query.length, range.to);
       to = Math.max(from, to);
-      this._decorator.clearStarting(from, to);
-      this._currentMatchDecorator.clearStarting(from, to);
-
-      let updateCurrentMatchPosition = to + 1;
-      if (!this._currentMatch)
-        updateCurrentMatchPosition = from;
-      else if (this._currentMatch.from >= from && this._currentMatch.from <= to)
-        updateCurrentMatchPosition = this._currentMatch.from;
-
-      let iterator = viewport.document().iterator(from, from, to + query.length);
-      while (iterator.find(query)) {
-        this._decorator.add(iterator.offset, iterator.offset + query.length, 'search.match');
-        if (iterator.offset >= updateCurrentMatchPosition) {
-          updateCurrentMatchPosition = to + 1;
-          this._updateCurrentMatch({from: iterator.offset, to: iterator.offset + query.length}, true /* noReveal */);
-          selectionUpdated = true;
-        }
-        iterator.advance(query.length);
-      }
-
-      this._searched(from, to);
+      if (this._searchChunk(from, to, true /* noReveal */))
+        updateSelection = true;
     }
-
-    if (selectionUpdated)
+    if (updateSelection)
       this._selection.onViewport(viewport);
-
-    if (this._onUpdate)
-      this._onUpdate.call(null);
+    this._onUpdate();
   }
 
   /**
@@ -152,8 +130,7 @@ export class Search {
         this._options = data;
         this._search(0, this._document.length() - this._options.query.length);
         this._document.invalidate();
-        if (this._onUpdate)
-          this._onUpdate.call(null);
+        this._onUpdate();
         return true;
       }
       case 'search.next': {
@@ -168,8 +145,7 @@ export class Search {
         if (!match)
           return false;
         this._updateCurrentMatch(match);
-        if (this._onUpdate)
-          this._onUpdate.call(null);
+        this._onUpdate();
         return true;
       }
       case 'search.previous': {
@@ -184,19 +160,19 @@ export class Search {
         if (!match)
           return false;
         this._updateCurrentMatch(match);
-        if (this._onUpdate)
-          this._onUpdate.call(null);
+        this._onUpdate();
         return true;
       }
       case 'search.cancel': {
         this._cancel();
         this._document.invalidate();
-        if (this._onUpdate)
-          this._onUpdate.call(null);
+        this._onUpdate();
         return true;
       }
     }
   }
+
+  // ------ Internals -------
 
   _cancel() {
     this._clearScheduled();
@@ -268,28 +244,46 @@ export class Search {
    */
   _performScheduledSearch(deadline) {
     this._scheduledTimeout = null;
-
     while ((deadline.timeRemaining() > 0 || deadline.didTimeout) && this._searchRange) {
       let from = this._searchRange.from;
       let to = Math.min(this._searchRange.to, from + 10000);
-      this._searched(from, to);
+      this._searchChunk(from, to);
+    }
+    this._onUpdate();
+    this._schedule();
+  }
 
-      let query = this._options.query;
-      let iterator = this._document.iterator(from, from, to + query.length);
-      this._decorator.clearStarting(from, to);
-      this._currentMatchDecorator.clearStarting(from, to);
-      while (iterator.find(query)) {
-        this._decorator.add(iterator.offset, iterator.offset + query.length, 'search.match');
-        if (!this._currentMatch)
-          this._updateCurrentMatch({from: iterator.offset, to: iterator.offset + query.length});
-        iterator.advance(query.length);
+  /**
+   * @param {number} from
+   * @param {number} to
+   * @param {boolean=} noReveal
+   * @return {boolean} Whether current match was updated.
+   */
+  _searchChunk(from, to, noReveal) {
+    this._searched(from, to);
+    let query = this._options.query;
+    this._decorator.clearStarting(from, to);
+    this._currentMatchDecorator.clearStarting(from, to);
+
+    let updateCurrentMatchPosition = to + 1;
+    if (!this._currentMatch)
+      updateCurrentMatchPosition = from;
+    else if (this._currentMatch.from >= from && this._currentMatch.from <= to)
+      updateCurrentMatchPosition = this._currentMatch.from;
+    let currentMatchUpdated = false;
+
+    let iterator = this._document.iterator(from, from, to + query.length);
+    while (iterator.find(query)) {
+      this._decorator.add(iterator.offset, iterator.offset + query.length, 'search.match');
+      if (iterator.offset >= updateCurrentMatchPosition) {
+        updateCurrentMatchPosition = to + 1;
+        this._updateCurrentMatch({from: iterator.offset, to: iterator.offset + query.length}, noReveal);
+        currentMatchUpdated = true;
       }
+      iterator.advance(query.length);
     }
 
-    if (this._onUpdate)
-      this._onUpdate.call(null);
-
-    this._schedule();
+    return currentMatchUpdated;
   }
 };
 
