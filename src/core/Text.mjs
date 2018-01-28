@@ -745,15 +745,33 @@ Text.Iterator = class {
   }
 
   /**
+   * @param {number} x
+   */
+  setOffset(x) {
+    this.advance(x - this.offset);
+  }
+
+  /**
    * @param {number} offset
    * @return {number}
    */
   charCodeAt(offset) {
-    if (this._pos + offset < this._chunk.length)
+    if (this._pos + offset < this._chunk.length && this._pos + offset >= 0)
       return this._chunk.charCodeAt(this._pos + offset);
+    let char = this.charAt(offset);
+    return char ? char.charCodeAt(0) : NaN;
+  }
+
+  /**
+   * @param {number} offset
+   * @return {number}
+   */
+  charAt(offset) {
+    if (this._pos + offset < this._chunk.length && this._pos + offset >= 0)
+      return this._chunk.charAt(this._pos + offset);
     let it = this.clone();
     it.advance(offset);
-    return it.outOfBounds() ? NaN : it.current.charCodeAt(0);
+    return it.current;
   }
 
   /**
