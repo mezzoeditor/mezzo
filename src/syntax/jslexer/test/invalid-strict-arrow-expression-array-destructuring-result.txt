@@ -1,0 +1,8 @@
+parenL
+bracketL
+bracketR
+parenR
+arrow
+braceL
+string
+braceR

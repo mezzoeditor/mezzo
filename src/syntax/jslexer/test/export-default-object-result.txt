@@ -1,0 +1,8 @@
+keyword
+keyword
+braceL
+name
+colon
+num
+braceR
+semi

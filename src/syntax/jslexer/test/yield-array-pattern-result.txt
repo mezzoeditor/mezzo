@@ -1,0 +1,7 @@
+parenL
+bracketL
+name
+bracketR
+eq
+name
+parenR

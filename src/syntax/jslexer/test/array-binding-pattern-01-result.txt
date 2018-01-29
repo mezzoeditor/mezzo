@@ -1,0 +1,10 @@
+parenL
+bracketL
+name
+bracketR
+parenR
+arrow
+bracketL
+num
+bracketR
+semi

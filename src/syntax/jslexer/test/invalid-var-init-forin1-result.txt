@@ -1,0 +1,12 @@
+string
+semi
+keyword
+parenL
+keyword
+name
+eq
+num
+keyword
+name
+parenR
+semi

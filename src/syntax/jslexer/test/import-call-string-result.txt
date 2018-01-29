@@ -1,0 +1,10 @@
+keyword
+parenL
+string
+parenR
+dot
+name
+parenL
+name
+parenR
+semi

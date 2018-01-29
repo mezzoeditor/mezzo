@@ -1,0 +1,14 @@
+keyword
+parenL
+parenL
+parenR
+arrow
+braceL
+name
+keyword
+name
+braceR
+semi
+semi
+parenR
+semi

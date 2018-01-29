@@ -1,0 +1,15 @@
+name
+eq
+braceL
+name
+colon
+keyword
+parenL
+name
+comma
+ellipsis
+name
+parenR
+braceL
+braceR
+braceR

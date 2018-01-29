@@ -1,0 +1,10 @@
+string
+semi
+name
+colon
+keyword
+name
+parenL
+parenR
+braceL
+braceR

@@ -1,0 +1,12 @@
+parenL
+bracketL
+name
+comma
+ellipsis
+name
+comma
+bracketR
+parenR
+arrow
+num
+semi

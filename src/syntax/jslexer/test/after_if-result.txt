@@ -1,0 +1,12 @@
+keyword
+parenL
+name
+parenR
+braceL
+braceR
+regexp
+dot
+name
+parenL
+name
+parenR

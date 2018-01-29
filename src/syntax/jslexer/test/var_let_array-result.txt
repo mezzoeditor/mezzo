@@ -1,0 +1,7 @@
+keyword
+bracketL
+name
+bracketR
+eq
+name
+semi

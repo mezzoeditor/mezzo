@@ -1,0 +1,5 @@
+keyword
+star
+name
+string
+semi

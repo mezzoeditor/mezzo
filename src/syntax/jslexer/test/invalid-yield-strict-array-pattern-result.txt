@@ -1,0 +1,9 @@
+string
+semi
+parenL
+bracketL
+name
+bracketR
+eq
+name
+parenR

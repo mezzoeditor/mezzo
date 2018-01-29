@@ -1,0 +1,12 @@
+keyword
+parenL
+keyword
+bracketL
+name
+bracketR
+eq
+name
+name
+name
+parenR
+semi

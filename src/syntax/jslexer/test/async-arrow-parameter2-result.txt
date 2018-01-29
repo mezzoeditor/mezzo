@@ -1,0 +1,7 @@
+keyword
+name
+eq
+name
+arrow
+num
+semi

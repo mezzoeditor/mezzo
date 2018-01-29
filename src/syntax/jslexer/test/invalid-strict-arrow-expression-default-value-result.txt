@@ -1,0 +1,9 @@
+parenL
+name
+eq
+num
+parenR
+arrow
+braceL
+string
+braceR

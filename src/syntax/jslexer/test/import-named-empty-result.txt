@@ -1,0 +1,6 @@
+keyword
+braceL
+braceR
+name
+string
+semi

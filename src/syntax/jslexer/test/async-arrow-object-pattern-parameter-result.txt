@@ -1,0 +1,12 @@
+name
+parenL
+braceL
+name
+colon
+name
+eq
+name
+braceR
+parenR
+arrow
+name

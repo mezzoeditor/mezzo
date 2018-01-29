@@ -59,8 +59,8 @@ export const types = {
   eof: new TokenType("eof"),
 
   invalid: new TokenType("invalid"),
-  blockComment: new TokenType("blockComment"),
-  lineComment: new TokenType("lineComment"),
+  blockComment: new TokenType("blockComment", {beforeExpr: true}),
+  lineComment: new TokenType("lineComment", {beforeExpr: true}),
 
   // Punctuation token types.
   bracketL: new TokenType("[", {beforeExpr: true, startsExpr: true}),

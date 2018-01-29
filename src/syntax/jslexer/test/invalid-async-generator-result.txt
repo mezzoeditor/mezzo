@@ -1,0 +1,11 @@
+name
+eq
+braceL
+name
+star
+name
+parenL
+parenR
+braceL
+braceR
+braceR

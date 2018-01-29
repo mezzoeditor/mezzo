@@ -1,0 +1,10 @@
+parenL
+keyword
+star
+parenL
+ellipsis
+name
+parenR
+braceL
+braceR
+parenR

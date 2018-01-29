@@ -1,0 +1,10 @@
+bracketL
+ellipsis
+name
+bracketL
+num
+bracketR
+bracketR
+eq
+num
+semi

@@ -1,0 +1,7 @@
+parenL
+bracketL
+bracketR
+parenR
+arrow
+num
+semi

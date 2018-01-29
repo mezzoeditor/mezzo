@@ -1,0 +1,12 @@
+keyword
+name
+braceL
+name
+bracketL
+string
+bracketR
+parenL
+parenR
+braceL
+braceR
+braceR

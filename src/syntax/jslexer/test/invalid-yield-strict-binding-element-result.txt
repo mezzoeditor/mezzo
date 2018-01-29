@@ -1,0 +1,11 @@
+string
+semi
+keyword
+braceL
+name
+colon
+name
+braceR
+eq
+name
+semi

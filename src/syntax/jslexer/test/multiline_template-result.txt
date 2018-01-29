@@ -1,0 +1,11 @@
+keyword
+name
+parenL
+parenR
+braceL
+keyword
+backQuote
+template
+backQuote
+semi
+braceR

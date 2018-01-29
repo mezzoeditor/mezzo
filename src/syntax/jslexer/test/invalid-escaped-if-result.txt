@@ -1,0 +1,6 @@
+invalid
+parenL
+num
+parenR
+braceL
+braceR

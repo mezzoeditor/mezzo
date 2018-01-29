@@ -1,0 +1,6 @@
+bracketL
+comma
+comma
+bracketR
+eq
+num

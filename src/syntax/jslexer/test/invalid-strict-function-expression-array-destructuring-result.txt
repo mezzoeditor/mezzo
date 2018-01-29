@@ -1,0 +1,11 @@
+parenL
+keyword
+parenL
+bracketL
+bracketR
+parenR
+braceL
+string
+semi
+braceR
+parenR

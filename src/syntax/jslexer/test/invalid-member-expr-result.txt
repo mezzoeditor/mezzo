@@ -1,0 +1,12 @@
+parenL
+braceL
+name
+colon
+name
+bracketL
+num
+bracketR
+braceR
+parenR
+arrow
+num

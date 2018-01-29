@@ -1,0 +1,14 @@
+string
+semi
+keyword
+parenL
+keyword
+braceL
+name
+braceR
+eq
+num
+keyword
+name
+parenR
+semi

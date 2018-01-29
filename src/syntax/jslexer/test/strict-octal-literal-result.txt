@@ -1,0 +1,6 @@
+string
+semi
+backQuote
+template
+backQuote
+semi

@@ -1,0 +1,6 @@
+parenL
+comma
+parenR
+arrow
+num
+semi

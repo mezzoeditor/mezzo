@@ -1,0 +1,8 @@
+parenL
+name
+parenR
+arrow
+name
+star
+name
+semi

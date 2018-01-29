@@ -1,0 +1,9 @@
+keyword
+bracketL
+ellipsis
+braceL
+name
+braceR
+bracketR
+eq
+name

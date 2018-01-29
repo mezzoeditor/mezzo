@@ -1,0 +1,6 @@
+name
+star
+name
+starstar
+plusMin
+name

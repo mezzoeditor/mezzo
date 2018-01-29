@@ -1,0 +1,15 @@
+keyword
+name
+eq
+name
+keyword
+parenL
+parenR
+braceL
+keyword
+braceL
+name
+colon
+name
+braceR
+braceR

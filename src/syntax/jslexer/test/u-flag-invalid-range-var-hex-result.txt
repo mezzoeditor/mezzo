@@ -1,0 +1,5 @@
+keyword
+name
+eq
+regexp
+semi

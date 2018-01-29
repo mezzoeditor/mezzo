@@ -1,0 +1,8 @@
+keyword
+name
+name
+string
+semi
+keyword
+name
+semi

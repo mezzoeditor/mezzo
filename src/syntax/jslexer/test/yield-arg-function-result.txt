@@ -1,0 +1,13 @@
+keyword
+star
+name
+parenL
+parenR
+braceL
+name
+keyword
+parenL
+parenR
+braceL
+braceR
+braceR

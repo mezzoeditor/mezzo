@@ -1,0 +1,11 @@
+keyword
+star
+name
+name
+comma
+braceL
+name
+braceR
+name
+string
+semi

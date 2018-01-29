@@ -1,0 +1,10 @@
+string
+semi
+parenL
+name
+eq
+name
+parenR
+arrow
+braceL
+braceR

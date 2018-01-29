@@ -1,0 +1,10 @@
+keyword
+keyword
+name
+eq
+name
+name
+arrow
+name
+star
+name

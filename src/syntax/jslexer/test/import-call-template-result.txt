@@ -1,0 +1,16 @@
+keyword
+parenL
+backQuote
+template
+dollarBraceL
+name
+braceR
+template
+backQuote
+parenR
+dot
+name
+parenL
+name
+parenR
+semi

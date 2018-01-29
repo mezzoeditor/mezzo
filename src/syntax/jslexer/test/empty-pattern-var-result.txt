@@ -1,0 +1,6 @@
+keyword
+bracketL
+bracketR
+eq
+num
+semi

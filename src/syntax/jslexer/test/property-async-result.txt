@@ -1,0 +1,7 @@
+name
+eq
+braceL
+name
+colon
+keyword
+braceR

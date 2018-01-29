@@ -1,0 +1,17 @@
+keyword
+name
+keyword
+name
+braceL
+name
+parenL
+parenR
+braceL
+parenL
+parenR
+arrow
+keyword
+parenL
+parenR
+braceR
+braceR

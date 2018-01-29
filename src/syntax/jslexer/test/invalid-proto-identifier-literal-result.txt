@@ -1,0 +1,11 @@
+parenL
+braceL
+name
+colon
+keyword
+comma
+string
+colon
+keyword
+braceR
+parenR

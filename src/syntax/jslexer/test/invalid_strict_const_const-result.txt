@@ -1,0 +1,7 @@
+string
+semi
+keyword
+keyword
+eq
+num
+semi

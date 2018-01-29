@@ -1,0 +1,11 @@
+keyword
+star
+name
+parenL
+ellipsis
+name
+parenR
+braceL
+string
+semi
+braceR
