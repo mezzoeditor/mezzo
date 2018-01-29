@@ -262,6 +262,7 @@ export class Search {
       let to = Math.min(this._searchRange.to, from + 10000);
       this._searchChunk(from, to);
     }
+    this._document.invalidate();
     this._onUpdate();
     this._schedule();
   }
