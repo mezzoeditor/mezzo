@@ -124,9 +124,7 @@ export class Search {
     if (this._options) {
       let length = this._options.query.length;
       this._searched(from, to - length);
-      from = Math.max(0, from - length);
-      to = Math.min(this._document.length() - length, from + inserted);
-      this._search(from, to);
+      this._search(Math.max(0, from - length), Math.min(this._document.length() - length, from + inserted));
     }
   }
 
