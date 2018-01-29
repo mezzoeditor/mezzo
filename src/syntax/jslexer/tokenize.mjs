@@ -24,7 +24,6 @@ const pp = Parser.prototype
 
 pp.next = function() {
   this.lastTokEnd = this.end.clone();
-  this.lastTokStart = this.start.clone();
   this.nextToken()
 }
 

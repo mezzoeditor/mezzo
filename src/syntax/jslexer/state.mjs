@@ -41,7 +41,6 @@ export class Parser {
     this.end = this.it.clone();
 
     // Position information for the previous token
-    this.lastTokStart = this.it.clone();
     this.lastTokEnd = this.it.clone();
 
     // The context stack is used to superficially track syntactic
