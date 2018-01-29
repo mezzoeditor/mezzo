@@ -159,7 +159,7 @@ export class WebEditor {
       event.preventDefault();
     });
     this._element.addEventListener('mousemove', event => {
-      if (!mouseRangeStartOffset)
+      if (mouseRangeStartOffset === null)
         return;
       let offset = this._renderer.mouseEventToTextOffset(event);
       this._selection.setRanges([{from: mouseRangeStartOffset, to: offset}]);
