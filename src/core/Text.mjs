@@ -657,6 +657,9 @@ Text.Iterator = class {
    * @return {boolean}
    */
   find(query) {
+    if (this.outOfBounds())
+      return false;
+
     // fast-path: search in current chunk.
     let index = this._chunk.indexOf(query, this._pos);
     if (index !== -1) {
@@ -667,42 +670,34 @@ Text.Iterator = class {
       return true;
     }
 
-    let startIterator = this._iterator;
-    skipEmpty(startIterator);
-    let searchWindow = startIterator.node().chunk;
-
-    let endIterator = startIterator.clone();
-    do {
-      if (!endIterator.next() || !skipEmpty(endIterator))
-        return false;
-      searchWindow += endIterator.node().chunk;
-    } while (searchWindow.length < query.length);
+    let searchWindow = this._chunk.substring(this._pos);
+    let endIterator = this._iterator.clone();
 
     while (true) {
-      let index = searchWindow.indexOf(query, this._pos);
+      let skip = this._chunk.length - this._pos;
+
+      while (searchWindow.length - skip < query.length - 1) {
+        if (!endIterator.next())
+          break;
+        searchWindow += endIterator.node().chunk;
+      }
+
+      let index = searchWindow.indexOf(query);
       if (index !== -1) {
-        index -= this._pos;
         if (this.offset + index + query.length > this._to)
           return false;
         this.advance(index);
         return true;
       }
-      this.offset += startIterator.node().chunk.length - this._pos;
-      this._pos = 0;
-      searchWindow = searchWindow.substring(startIterator.node().chunk.length);
-      startIterator.next();
-      skipEmpty(startIterator);
-      if (!endIterator.next() || !skipEmpty(endIterator))
-        return false;
-      searchWindow += endIterator.node().chunk;
-    }
 
-    function skipEmpty(iterator) {
-      while (!iterator.node().chunk.length) {
-        if (!iterator.next())
-          return false;
+      searchWindow = searchWindow.substring(skip);
+      this.offset += skip;
+      if (!this._iterator.next()) {
+        this._pos = this._chunk.length;
+        return false;
       }
-      return true;
+      this._chunk = this._iterator.node().chunk;
+      this._pos = 0;
     }
   }
 
