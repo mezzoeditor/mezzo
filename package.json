@@ -8,6 +8,7 @@
   },
   "scripts": {
     "unit-lexer": "node --experimental-modules src/syntax/jslexer/test.mjs",
+    "unit-core": "node --experimental-modules src/core/test.mjs",
     "serve": "static . -p 9123"
   },
   "repository": {

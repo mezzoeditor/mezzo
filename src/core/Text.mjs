@@ -694,10 +694,12 @@ Text.Iterator = class {
       this.offset += skip;
       if (!this._iterator.next()) {
         this._pos = this._chunk.length;
+        this.current = undefined;
         return false;
       }
       this._chunk = this._iterator.node().chunk;
       this._pos = 0;
+      this.current = this._chunk[this._pos];
     }
   }
 
