@@ -460,6 +460,8 @@ export class Renderer {
   }
 
   _drawScrollbarMarkers(ctx, viewport, decorators, rect, scrollbarRatio) {
+    // TODO(dgozman): this is a very hot function when searching, because most
+    // offsetToPosition calls are outside of viewport.
     const ratio = rect.height * scrollbarRatio / viewport.document().lineCount();
     const range = {from: 0, to: viewport.document().length()};
     for (let decorator of decorators) {

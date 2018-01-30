@@ -9,11 +9,14 @@ import { Decorator } from "../core/Decorator.mjs";
 export class Search {
   /**
    * @param {!Document} document
+   * @param {!Scheduler} scheduler
    * @param {!Selection} selection
    * @param {function()=} onUpdate
    */
-  constructor(document, selection, onUpdate) {
+  constructor(document, scheduler, selection, onUpdate) {
     this._document = document;
+    this._scheduler = scheduler;
+    this._scheduler.init(this._performScheduledSearch.bind(this), this._performedScheduledSearch.bind(this));
     this._selection = selection;
     this._onUpdate = (onUpdate || function() {}).bind(null);
     this._decorator = new Decorator();
@@ -22,7 +25,6 @@ export class Search {
     this._currentMatch = null;
     // Range of possible starts of the query, |to| included.
     this._searchRange = null;
-    this._scheduledTimeout = null;
   }
 
   /**
@@ -188,7 +190,7 @@ export class Search {
   // ------ Internals -------
 
   _cancel() {
-    this._clearScheduled();
+    this._scheduler.cancel();
     this._searchRange = null;
     this._decorator.clearAll();
     this._currentMatchDecorator.clearAll();
@@ -220,7 +222,7 @@ export class Search {
       to = Math.max(to, this._searchRange.to);
     }
     this._searchRange = {from, to};
-    this._schedule();
+    this._scheduler.schedule();
   }
 
   /**
@@ -232,7 +234,7 @@ export class Search {
       return;
     if (from <= this._searchRange.from && to >= this._searchRange.to) {
       this._searchRange = null;
-      this._clearScheduled();
+      this._scheduler.cancel();
       return;
     }
     if (from <= this._searchRange.from && to >= this._searchRange.from)
@@ -241,30 +243,21 @@ export class Search {
       this._searchRange.to = from;
   }
 
-  _schedule() {
-    if (this._searchRange && !this._scheduledTimeout)
-      this._scheduledTimeout = requestIdleCallback(this._performScheduledSearch.bind(this), {timeout: 1000});
-  }
-
-  _clearScheduled() {
-    if (this._scheduledTimeout)
-      cancelIdleCallback(this._scheduledTimeout);
-    this._scheduledTimeout = null;
-  }
-
   /**
-   * @param {!IdleDeadline} deadline
+   * @return {boolean}
    */
-  _performScheduledSearch(deadline) {
-    this._scheduledTimeout = null;
-    while ((deadline.timeRemaining() > 0 || deadline.didTimeout) && this._searchRange) {
-      let from = this._searchRange.from;
-      let to = Math.min(this._searchRange.to, from + 10000);
-      this._searchChunk(from, to);
-    }
+  _performScheduledSearch() {
+    if (!this._searchRange)
+      return false;
+    let from = this._searchRange.from;
+    let to = Math.min(this._searchRange.to, from + 20000);
+    this._searchChunk(from, to);
+    return !!this._searchRange;
+  }
+
+  _performedScheduledSearch() {
     this._document.invalidate();
     this._onUpdate();
-    this._schedule();
   }
 
   /**

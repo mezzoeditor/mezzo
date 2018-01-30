@@ -3,6 +3,7 @@ import { Renderer } from "./Renderer.mjs";
 import { Selection } from "../plugins/Selection.mjs";
 import { Editing } from "../plugins/Editing.mjs";
 import { Search } from "../plugins/Search.mjs";
+import { IdleScheduler } from "./IdleScheduler.mjs";
 import { DefaultTheme } from "../themes/DefaultTheme.mjs";
 import PlainHighlighter from "../syntax/plain.mjs";
 
@@ -278,7 +279,7 @@ export class WebEditor {
     let onUpdate = null;
     let updateRAF = null;
 
-    this._search = new Search(this._document, this._selection, () => {
+    this._search = new Search(this._document, new IdleScheduler(), this._selection, () => {
       if (!onUpdate || updateRAF)
         return;
       updateRAF = requestAnimationFrame(() => {
