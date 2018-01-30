@@ -629,7 +629,7 @@ Text.Iterator = class {
     this.offset = offset;
     this._chunk = this._iterator.node().chunk;
     this._pos = offset - this._iterator.before();
-    this.current = this._chunk[this._pos];
+    this.current = this.outOfBounds() ? undefined : this._chunk[this._pos];
   }
 
   /**
@@ -665,9 +665,10 @@ Text.Iterator = class {
     if (index !== -1) {
       index -= this._pos;
       if (this.offset + index + query.length > this._to)
-        return false;
-      this.advance(index);
-      return true;
+        this.advance(this._to - this.offset);
+      else
+        this.advance(index);
+      return !this.outOfBounds();
     }
 
     let searchWindow = this._chunk.substring(this._pos);
@@ -685,9 +686,10 @@ Text.Iterator = class {
       let index = searchWindow.indexOf(query);
       if (index !== -1) {
         if (this.offset + index + query.length > this._to)
-          return false;
-        this.advance(index);
-        return true;
+          this.advance(this._to - this.offset);
+        else
+          this.advance(index);
+        return !this.outOfBounds();
       }
 
       searchWindow = searchWindow.substring(skip);
@@ -725,6 +727,11 @@ Text.Iterator = class {
   advance(x) {
     if (x === 0)
       return;
+    if (this.offset + x > this._to)
+      x = this._to - this.offset;
+    else if (this.offset + x < this._from)
+      x = this._from - this.offset;
+
     this.offset += x;
     this._pos += x;
     if (x > 0) {
@@ -738,14 +745,7 @@ Text.Iterator = class {
         this._pos += this._chunk.length;
       }
     }
-    this.current = this._chunk[this._pos];
-  }
-
-  /**
-   * @param {number} x
-   */
-  setOffset(x) {
-    this.advance(x - this.offset);
+    this.current = this.outOfBounds() ? undefined : this._chunk[this._pos];
   }
 
   /**
@@ -753,8 +753,6 @@ Text.Iterator = class {
    * @return {number}
    */
   charCodeAt(offset) {
-    if (this._pos + offset < this._chunk.length && this._pos + offset >= 0)
-      return this._chunk.charCodeAt(this._pos + offset);
     let char = this.charAt(offset);
     return char ? char.charCodeAt(0) : NaN;
   }
@@ -764,8 +762,9 @@ Text.Iterator = class {
    * @return {number}
    */
   charAt(offset) {
-    if (this._pos + offset < this._chunk.length && this._pos + offset >= 0)
-      return this._chunk.charAt(this._pos + offset);
+    if (!offset)
+      return this.current;
+
     let it = this.clone();
     it.advance(offset);
     return it.current;

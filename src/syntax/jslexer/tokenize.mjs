@@ -90,8 +90,6 @@ pp.readBlockComment = function() {
   this.it.advance(2);
   if (this.it.find("*/"))
     this.it.advance(2);
-  else
-    this.it.setOffset(this.it.length());
   return this.finishToken(tt.blockComment);
 }
 
@@ -335,7 +333,6 @@ pp.readRegexp = function() {
   let escaped, inClass
   for (;;) {
     if (this.it.outOfBounds()) {
-      this.it.setOffset(this.it.length());
       return this.finishToken(tt.regexp);
     }
     let ch = this.it.current;
@@ -445,7 +442,6 @@ pp.readString = function(quote) {
   this.it.next()
   for (;;) {
     if (this.it.outOfBounds()) {
-      this.it.setOffset(this.it.length());
       return this.finishToken(tt.string);
     }
     let ch = this.it.charCodeAt(0)
@@ -484,7 +480,6 @@ pp.tryReadTemplateToken = function() {
 pp.readTmplToken = function() {
   for (;;) {
     if (this.it.outOfBounds()) {
-      this.it.setOffset(this.it.length());
       return this.finishToken(tt.template);
     }
 

@@ -47,6 +47,46 @@ describe('core', () => {
     expect(it.find('eee')).toBe(false);
     expect(it.offset).toBe(12);
     expect(it.current).toBe(undefined);
+
+    it = doc.iterator(0, 0, 3);
+    expect(it.find('hello')).toBe(false);
+    expect(it.offset).toBe(3);
+    expect(it.current).toBe(undefined);
+  });
+  it('Text.Iterator constraints', ({doc}) => {
+    doc.reset('hello');
+    let it = doc.iterator(0, 0, 2);
+    expect(it.offset).toBe(0);
+    expect(it.current).toBe('h');
+
+    it.prev();
+    expect(it.offset).toBe(0);
+    expect(it.current).toBe('h');
+
+    it.next();
+    expect(it.offset).toBe(1);
+    expect(it.current).toBe('e');
+
+    it.next();
+    expect(it.offset).toBe(2);
+    expect(it.current).toBe(undefined);
+
+    it.next();
+    expect(it.offset).toBe(2);
+    expect(it.current).toBe(undefined);
+
+    it.advance(-2);
+    expect(it.offset).toBe(0);
+    expect(it.current).toBe('h');
+  });
+  it('Text.Iterator out-of-bounds API', ({doc}) => {
+    doc.reset('abcdefg');
+    let it = doc.iterator(4, 2, 4);
+    expect(it.offset).toBe(4);
+    expect(it.current).toBe(undefined);
+    expect(it.charCodeAt(0)).toBe(NaN);
+    expect(it.charAt(0)).toBe(undefined);
+    expect(it.substr(2)).toBe('');
   });
 });
 

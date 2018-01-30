@@ -52,7 +52,7 @@ class Expect {
 const DefaultMatchers = {
   toBe: function(value, other, message) {
     message = message || `${value} == ${other}`;
-    return { pass: value === other, message };
+    return { pass: Object.is(value, other), message };
   },
 
   toBeFalsy: function(value, message) {
