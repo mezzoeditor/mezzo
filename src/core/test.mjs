@@ -14,6 +14,11 @@ describe('core', () => {
     state.doc = new Document(() => {}, () => {});
   });
 
+  it('Document.content', ({doc}) => {
+    doc.reset('world');
+    expect(doc.content(1,3)).toBe('or');
+  });
+
   it('Text.Iterator basics', ({doc}) => {
     doc.reset('world');
     let it = doc.iterator(0);

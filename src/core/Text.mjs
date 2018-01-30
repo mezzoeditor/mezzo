@@ -505,7 +505,7 @@ export class Text {
     let {from, to} = this._clamp(fromOffset, toOffset);
     let chunks = [];
     let iterator = this.iterator(from, from, to);
-    return iterator.substr(to - from + 1);
+    return iterator.substr(to - from);
   }
 
   /**
