@@ -302,6 +302,8 @@ export class Renderer {
   _render() {
     let time = window.performance.now();
 
+    this._document.beforeViewport();
+
     this._animationFrameId = 0;
 
     const ctx = this._canvas.getContext('2d');

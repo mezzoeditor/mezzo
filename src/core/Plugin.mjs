@@ -21,12 +21,10 @@ class Plugin {
   /**
    * Called before every render of viewport. Plugin is expected to do any
    * postponed work which should synchronously affect the viewport.
+   * This is a last chance to affect viewport somehow before it is rendered.
    * Example: perform search on the small document based on last search parameters.
-   * Mutating the state which can affect viewport is prohibited,
-   * e.g. editing the document or revealing position.
-   * @param {!Viewport} viewport
    */
-  onBeforeViewport(viewport) {
+  onBeforeViewport() {
   }
 
   /**

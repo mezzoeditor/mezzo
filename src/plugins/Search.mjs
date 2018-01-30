@@ -79,10 +79,10 @@ export class Search {
    * @override
    * @param {!Viewport} viewport
    */
-  onBeforeViewport(viewport) {
+  onBeforeViewport() {
     if (!this._searchRange || (this._searchRange.to - this._searchRange.from > 20000))
       return;
-    this._searchChunk(this._searchRange.from, this._searchRange.to, true /* noReveal */);
+    this._searchChunk(this._searchRange.from, this._searchRange.to);
     this._onUpdate();
   }
 

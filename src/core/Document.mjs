@@ -317,6 +317,13 @@ export class Document {
     return this._text.positionToOffset(position, clamp);
   }
 
+  beforeViewport() {
+    for (let plugin of this._plugins.values()) {
+      if (plugin.onBeforeViewport)
+        plugin.onBeforeViewport();
+    }
+  }
+
   /**
    * @package
    * @param {!Viewport} viewport
@@ -324,10 +331,6 @@ export class Document {
    */
   decorateViewport(viewport) {
     this._frozen = true;
-    for (let plugin of this._plugins.values()) {
-      if (plugin.onBeforeViewport)
-        plugin.onBeforeViewport(viewport);
-    }
     for (let plugin of this._plugins.values()) {
       if (plugin.onViewport)
         plugin.onViewport(viewport);
