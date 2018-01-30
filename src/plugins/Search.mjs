@@ -1,4 +1,5 @@
 import { Decorator } from "../core/Decorator.mjs";
+import { RangeScheduler } from "../core/RangeScheduler.mjs";
 
 /**
  * @typdef {{
@@ -15,16 +16,19 @@ export class Search {
    */
   constructor(document, scheduler, selection, onUpdate) {
     this._document = document;
-    this._scheduler = scheduler;
-    this._scheduler.init(this._performScheduledSearch.bind(this), this._performedScheduledSearch.bind(this));
+    this._scheduler = new RangeScheduler(
+        scheduler,
+        this._visibleRangeToProcessingRange.bind(this),
+        this._searchRange.bind(this),
+        20000,
+        this._updated.bind(this));
     this._selection = selection;
     this._onUpdate = (onUpdate || function() {}).bind(null);
     this._decorator = new Decorator();
     this._currentMatchDecorator = new Decorator();
     this._options = null;
     this._currentMatch = null;
-    // Range of possible starts of the query, |to| included.
-    this._searchRange = null;
+    this._noReveal = false;
   }
 
   /**
@@ -82,10 +86,7 @@ export class Search {
    * @param {!Viewport} viewport
    */
   onBeforeViewport() {
-    if (!this._searchRange || (this._searchRange.to - this._searchRange.from > 20000))
-      return;
-    this._searchChunk(this._searchRange.from, this._searchRange.to);
-    this._onUpdate();
+    this._scheduler.onBeforeViewport();
   }
 
   /**
@@ -93,25 +94,12 @@ export class Search {
    * @param {!Viewport} viewport
    */
   onViewport(viewport) {
-    if (!this._searchRange)
-      return;
-
-    let query = this._options.query;
-    let viewportRange = viewport.range();
-    if (this._searchRange.from >= viewportRange.to || this._searchRange.to <= viewportRange.from - query.length)
-      return;
-
-    let updateSelection = false;
-    for (let range of viewport.ranges()) {
-      let from = Math.max(0, range.from - query.length);
-      let to = Math.min(this._document.length() - query.length, range.to);
-      to = Math.max(from, to);
-      if (this._searchChunk(from, to, true /* noReveal */))
-        updateSelection = true;
-    }
-    if (updateSelection)
+    this._noReveal = true;
+    let hadCurrentMatch = !!this._currentMatch;
+    this._scheduler.onViewport(viewport);
+    this._noReveal = false;
+    if (!hadCurrentMatch && this._currentMatch)
       this._selection.onViewport(viewport);
-    this._onUpdate();
   }
 
   /**
@@ -123,11 +111,8 @@ export class Search {
   onReplace(from, to, inserted) {
     this._decorator.onReplace(from, to, inserted);
     this._currentMatchDecorator.onReplace(from, to, inserted);
-    if (this._options) {
-      let length = this._options.query.length;
-      this._searched(from, to - length);
-      this._search(Math.max(0, from - length), Math.min(this._document.length() - length, from + inserted));
-    }
+    if (this._options)
+      this._scheduler.onReplace(from, to, inserted);
   }
 
   /**
@@ -143,9 +128,8 @@ export class Search {
       case 'search.find': {
         this._cancel();
         this._options = data;
-        this._search(0, this._document.length() - this._options.query.length);
-        this._document.invalidate();
-        this._onUpdate();
+        this._scheduler.start(this._document);
+        this._updated();
         return true;
       }
       case 'search.next': {
@@ -160,7 +144,7 @@ export class Search {
         if (!match)
           return false;
         this._updateCurrentMatch(match);
-        this._onUpdate();
+        this._updated();
         return true;
       }
       case 'search.previous': {
@@ -175,13 +159,12 @@ export class Search {
         if (!match)
           return false;
         this._updateCurrentMatch(match);
-        this._onUpdate();
+        this._updated();
         return true;
       }
       case 'search.cancel': {
         this._cancel();
-        this._document.invalidate();
-        this._onUpdate();
+        this._updated();
         return true;
       }
     }
@@ -190,8 +173,7 @@ export class Search {
   // ------ Internals -------
 
   _cancel() {
-    this._scheduler.cancel();
-    this._searchRange = null;
+    this._scheduler.stop();
     this._decorator.clearAll();
     this._currentMatchDecorator.clearAll();
     this._currentMatch = null;
@@ -212,76 +194,40 @@ export class Search {
     }
   }
 
-  /**
-   * @param {number} from
-   * @param {number} to
-   */
-  _search(from, to) {
-    if (this._searchRange) {
-      from = Math.min(from, this._searchRange.from);
-      to = Math.max(to, this._searchRange.to);
-    }
-    this._searchRange = {from, to};
-    this._scheduler.schedule();
-  }
-
-  /**
-   * @param {number} from
-   * @param {number} to
-   */
-  _searched(from, to) {
-    if (!this._searchRange)
-      return;
-    if (from <= this._searchRange.from && to >= this._searchRange.to) {
-      this._searchRange = null;
-      this._scheduler.cancel();
-      return;
-    }
-    if (from <= this._searchRange.from && to >= this._searchRange.from)
-      this._searchRange.from = to;
-    else if (from <= this._searchRange.to && to >= this._searchRange.to)
-      this._searchRange.to = from;
-  }
-
-  /**
-   * @return {boolean}
-   */
-  _performScheduledSearch() {
-    if (!this._searchRange)
-      return false;
-    let from = this._searchRange.from;
-    let to = Math.min(this._searchRange.to, from + 20000);
-    this._searchChunk(from, to);
-    return !!this._searchRange;
-  }
-
-  _performedScheduledSearch() {
+  _updated() {
     this._document.invalidate();
     this._onUpdate();
   }
 
   /**
-   * @param {number} from
-   * @param {number} to
-   * @param {boolean=} noReveal
-   * @return {boolean} Whether current match was updated.
+   * @param {!OffsetRange} range
+   * @return {!OffsetRange}
    */
-  _searchChunk(from, to, noReveal) {
-    this._searched(from, to);
+  _searchRange(range) {
+    let {from, to} = range;
     let query = this._options.query;
     this._decorator.clearStarting(from, to);
-
-    let currentMatchUpdated = false;
     let iterator = this._document.iterator(from, from, to + query.length);
     while (iterator.find(query)) {
       this._decorator.add(iterator.offset, iterator.offset + query.length, 'search.match');
-      if (!this._currentMatch) {
-        this._updateCurrentMatch({from: iterator.offset, to: iterator.offset + query.length}, noReveal);
-        currentMatchUpdated = true;
-      }
+      if (!this._currentMatch)
+        this._updateCurrentMatch({from: iterator.offset, to: iterator.offset + query.length}, this._noReveal);
       iterator.advance(query.length);
     }
-    return currentMatchUpdated;
+    return range;
+  }
+
+  /**
+   * @param {!OffsetRange} range
+   * @return {?OffsetRange}
+   */
+  _visibleRangeToProcessingRange(range) {
+    if (!this._options)
+      return null;
+    let from = Math.max(0, range.from - this._options.query.length);
+    let to = Math.min(range.to, this._document.length() - this._options.query.length);
+    to = Math.max(from, to);
+    return {from, to};
   }
 };
 
