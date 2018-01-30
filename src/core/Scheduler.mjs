@@ -10,7 +10,8 @@ class Scheduler {
    * too large (for workload balancing).
    *
    * |doneSomeWork| is called after no more work will be done
-   * synchornously, with maybe some more work later.
+   * synchornously, with maybe some more work later. |doneSomeWork|
+   * callback is expected to be instant.
    *
    * @param {function():boolean} doSomeWork
    * @param {function()=} doneSomeWork
