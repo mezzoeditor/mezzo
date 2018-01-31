@@ -1,5 +1,5 @@
 import {TestRunner, Reporter, Matchers} from '../../utils/testrunner/index.mjs';
-import {Document} from './Document.mjs';
+import {Text} from './Text.mjs';
 
 const runner = new TestRunner();
 
@@ -9,19 +9,15 @@ const {beforeAll, beforeEach, afterAll, afterEach} = runner;
 
 const {expect} = new Matchers();
 
-describe('core', () => {
-  beforeAll(state => {
-    state.doc = new Document(() => {}, () => {});
+describe('Text', () => {
+  it('Text.content', () => {
+    let text = Text.withContent('world');
+    expect(text.content(1,3)).toBe('or');
   });
 
-  it('Document.content', ({doc}) => {
-    doc.reset('world');
-    expect(doc.content(1,3)).toBe('or');
-  });
-
-  it('Text.Iterator basics', ({doc}) => {
-    doc.reset('world');
-    let it = doc.iterator(0);
+  it('Text.Iterator basics', () => {
+    let text = Text.withContent('world');
+    let it = text.iterator(0);
     expect(it.current).toBe('w');
     expect(it.offset).toBe(0);
     it.next();
@@ -31,36 +27,40 @@ describe('core', () => {
     expect(it.current).toBe('w');
     expect(it.offset).toBe(0);
   });
-  it('Text.Iterator.advance', ({doc}) => {
-    doc.reset('world');
-    let it = doc.iterator(0);
+
+  it('Text.Iterator.advance', () => {
+    let text = Text.withContent('world');
+    let it = text.iterator(0);
     it.advance(4);
     expect(it.current).toBe('d');
     it.advance(-2);
     expect(it.current).toBe('r');
   });
-  it('Text.Iterator.find successful', ({doc}) => {
-    doc.reset('hello, world');
-    let it = doc.iterator(0);
+
+  it('Text.Iterator.find successful', () => {
+    let text = Text.withContent('hello, world');
+    let it = text.iterator(0);
     expect(it.find('world')).toBe(true);
     expect(it.offset).toBe(7);
     expect(it.current).toBe('w');
   });
-  it('Text.Iterator.find unsuccessful', ({doc}) => {
-    doc.reset('hello, world');
-    let it = doc.iterator(0);
+
+  it('Text.Iterator.find unsuccessful', () => {
+    let text = Text.withContent('hello, world');
+    let it = text.iterator(0);
     expect(it.find('eee')).toBe(false);
     expect(it.offset).toBe(12);
     expect(it.current).toBe(undefined);
 
-    it = doc.iterator(0, 0, 3);
+    it = text.iterator(0, 0, 3);
     expect(it.find('hello')).toBe(false);
     expect(it.offset).toBe(3);
     expect(it.current).toBe(undefined);
   });
-  it('Text.Iterator constraints', ({doc}) => {
-    doc.reset('hello');
-    let it = doc.iterator(0, 0, 2);
+
+  it('Text.Iterator constraints', () => {
+    let text = Text.withContent('hello');
+    let it = text.iterator(0, 0, 2);
     expect(it.offset).toBe(0);
     expect(it.current).toBe('h');
 
@@ -84,9 +84,10 @@ describe('core', () => {
     expect(it.offset).toBe(0);
     expect(it.current).toBe('h');
   });
-  it('Text.Iterator out-of-bounds API', ({doc}) => {
-    doc.reset('abcdefg');
-    let it = doc.iterator(4, 2, 4);
+
+  it('Text.Iterator out-of-bounds API', () => {
+    let text = Text.withContent('abcdefg');
+    let it = text.iterator(4, 2, 4);
     expect(it.offset).toBe(4);
     expect(it.current).toBe(undefined);
     expect(it.charCodeAt(0)).toBe(NaN);
