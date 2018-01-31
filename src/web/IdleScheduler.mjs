@@ -47,10 +47,14 @@ export class IdleScheduler {
   _onIdle(deadline) {
     this._scheduledId = null;
     let hasMoreWork = true;
-    while (deadline.timeRemaining() > 0 || deadline.didTimeout) {
+    if (deadline.didTimeout) {
       hasMoreWork = this._work();
-      if (!hasMoreWork)
-        break;
+    } else {
+      while (deadline.timeRemaining() > 0) {
+        hasMoreWork = this._work();
+        if (!hasMoreWork)
+          break;
+      }
     }
     this._done();
     if (hasMoreWork)

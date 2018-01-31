@@ -389,7 +389,7 @@ export class Renderer {
     const range = viewport.range();
 
     for (let decorator of decorators) {
-      const styleToDecorations = decorator.styleToDecorations(viewport.range());
+      const styleToDecorations = decorator.mapTouching(viewport.range());
       for (let styleName of Object.keys(this._theme)) {
         const decorations = styleToDecorations.get(styleName);
         if (!decorations)
@@ -465,7 +465,7 @@ export class Renderer {
     const ratio = rect.height * scrollbarRatio / viewport.document().lineCount();
     const range = {from: 0, to: viewport.document().length()};
     for (let decorator of decorators) {
-      const styleToDecorations = decorator.styleToDecorations(range);
+      const styleToDecorations = decorator.mapTouching(range);
       for (let styleName of Object.keys(this._theme)) {
         const decorations = styleToDecorations.get(styleName);
         if (!decorations)

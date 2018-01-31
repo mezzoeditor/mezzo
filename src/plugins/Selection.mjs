@@ -1,6 +1,5 @@
 import { Decorator } from "../core/Decorator.mjs";
 import { TextUtils } from "../utils/TextUtils.mjs";
-import { Segments } from "../core/Segments.mjs";
 
 /**
  * @typedef {{

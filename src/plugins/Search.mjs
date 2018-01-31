@@ -35,14 +35,14 @@ export class Search {
    * @return {number}
    */
   matchesCount() {
-    return this._decorator.all().length;
+    return this._decorator.countAll();
   }
 
   /**
    * @return {!Array<!OffsetRange>}
    */
   matches() {
-    return this._decorator.all();
+    return this._decorator.listAll();
   }
 
   /**
@@ -58,7 +58,7 @@ export class Search {
   currentMatchIndex() {
     if (!this._currentMatch)
       return -1;
-    return this._decorator.count(0, this._currentMatch.from) - 1;
+    return this._decorator.countStarting(0, this._currentMatch.from) - 1;
   }
 
   // ------- Plugin -------
@@ -111,8 +111,11 @@ export class Search {
   onReplace(from, to, inserted) {
     this._decorator.onReplace(from, to, inserted);
     this._currentMatchDecorator.onReplace(from, to, inserted);
-    if (this._options)
+    if (this._options) {
+      if (this._currentMatch && this._currentMatch.from > from - this._options.query.length && this._currentMatch.from < to)
+        this._updateCurrentMatch(null);
       this._scheduler.onReplace(from, to, inserted);
+    }
   }
 
   /**
@@ -138,9 +141,9 @@ export class Search {
           offset = this._currentMatch.from;
         if (offset === null)
           return false;
-        let match = this._decorator.after(offset + 1);
+        let match = this._decorator.firstStarting(offset + 1, this._document.length());
         if (!match)
-          match = this._decorator.after(0);
+          match = this._decorator.firstStarting(0, this._document.length());
         if (!match)
           return false;
         this._updateCurrentMatch(match);
@@ -153,9 +156,9 @@ export class Search {
           offset = this._currentMatch.from;
         if (offset === null)
           return false;
-        let match = this._decorator.before(offset - 1);
+        let match = this._decorator.lastEnding(0, offset - 1);
         if (!match)
-          match = this._decorator.before(this._document.length());
+          match = this._decorator.lastEnding(0, this._document.length());
         if (!match)
           return false;
         this._updateCurrentMatch(match);
@@ -186,7 +189,7 @@ export class Search {
    */
   _updateCurrentMatch(match, noReveal) {
     if (this._currentMatch)
-      this._currentMatchDecorator.remove(this._currentMatch.from, this._currentMatch.to, 'search.match.current');
+      this._currentMatchDecorator.clearAll();
     this._currentMatch = match;
     if (this._currentMatch) {
       this._currentMatchDecorator.add(this._currentMatch.from, this._currentMatch.to, 'search.match.current');
