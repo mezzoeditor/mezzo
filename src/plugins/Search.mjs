@@ -111,11 +111,25 @@ export class Search {
   onReplace(from, to, inserted) {
     this._decorator.onReplace(from, to, inserted);
     this._currentMatchDecorator.onReplace(from, to, inserted);
-    if (this._options) {
-      if (this._currentMatch && this._currentMatch.from > from - this._options.query.length && this._currentMatch.from < to)
-        this._updateCurrentMatch(null);
-      this._scheduler.onReplace(from, to, inserted);
+    this._noReveal = true;
+    if (this._currentMatch && this._currentMatch.from >= to) {
+      let delta = inserted - (to - from);
+      this._updateCurrentMatch({from: this._currentMatch.from + delta, to: this._currentMatch.to + delta});
+    } else if (this._currentMatch && this._currentMatch.to > from) {
+      this._updateCurrentMatch(null);
     }
+    this._noReveal = false;
+    if (this._options)
+      this._scheduler.onReplace(from, to, inserted);
+  }
+
+  /**
+   * @param {!Array<{from: number, to: number, inserted: number}>} replacements
+   * @param {*|undefined} data
+   */
+  onRestore(replacements, data) {
+    for (let replacement of replacements)
+      this.onReplace(replacement.from, replacement.to, replacement);
   }
 
   /**
@@ -193,6 +207,7 @@ export class Search {
     this._currentMatch = match;
     if (this._currentMatch) {
       this._currentMatchDecorator.add(this._currentMatch.from, this._currentMatch.to, 'search.match.current');
+      // TODO: this probably should not go into history, or it messes up with undo.
       this._selection.setRanges([this._currentMatch], noReveal);
     }
   }
