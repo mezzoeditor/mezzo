@@ -354,7 +354,7 @@ export class Decorator {
    * @param {number} to
    * @return {?Decoration}
    */
-  lastEnding(offset) {
+  lastEnding(from, to) {
     let tmp = split(this._root, from - 1, kTo);
     let tmp2 = split(tmp.right, to, kTo);
     let result = null;
