@@ -290,8 +290,8 @@ export class Decorator {
    * @return {!Array<!Decoration>}
    */
   listTouching(from, to) {
-    let tmp = split(this._root, from, kTo);
-    let tmp2 = split(tmp.right, to, kFrom);
+    let tmp = split(this._root, from - 1, kTo);
+    let tmp2 = split(tmp.right, to + 1, kFrom);
     let result = [];
     visit(tmp2.left, result.push.bind(result));
     this._root = merge(tmp.left, merge(tmp2.left, tmp2.right));
@@ -305,8 +305,8 @@ export class Decorator {
    * @param {function(!Decoration)} visitor
    */
   visitTouching(from, to, visitor) {
-    let tmp = split(this._root, from, kTo);
-    let tmp2 = split(tmp.right, to, kFrom);
+    let tmp = split(this._root, from - 1, kTo);
+    let tmp2 = split(tmp.right, to + 1, kFrom);
     visit(tmp2.left, visitor);
     this._root = merge(tmp.left, merge(tmp2.left, tmp2.right));
   }

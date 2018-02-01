@@ -309,18 +309,18 @@ export class WebEditor {
 function eventToHash(event) {
   let hash = [];
   if (event.ctrlKey)
-    hash.push('Ctrl');
+    hash.push('CTRL');
   if (event.metaKey)
-    hash.push('Cmd');
+    hash.push('CMD');
   if (event.altKey)
-    hash.push('Alt');
+    hash.push('ALT');
   if (event.shiftKey)
-    hash.push('Shift');
+    hash.push('SHIFT');
   let key = event.key.toUpperCase();
   if (key.startsWith('ARROW'))
     hash.push(key.substring('ARROW'.length));
   else if (key !== 'META' && key !== 'CONTROL' && key !== 'ALT' && key !== 'SHIFT')
-    hash.push(event.key);
+    hash.push(key);
   return hash.join('-');
 }
 
@@ -332,13 +332,13 @@ function stringToHash(eventString) {
 
   let hash = [];
   if (ctrl)
-    hash.push('Ctrl');
+    hash.push('CTRL');
   if (cmd)
-    hash.push('Cmd');
+    hash.push('CMD');
   if (tokens.includes('ALT'))
-    hash.push('Alt');
+    hash.push('ALT');
   if (tokens.includes('SHIFT'))
-    hash.push('Shift');
+    hash.push('SHIFT');
   tokens = tokens.filter(token => token !== 'ALT' && token !== 'CTRL' && token !== 'SHIFT' && token !== 'CMD' && token !== 'CMD/CTRL');
   tokens.sort();
   hash.push(...tokens);
