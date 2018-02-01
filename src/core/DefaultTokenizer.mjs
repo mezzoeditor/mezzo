@@ -1,13 +1,11 @@
-/**
- * @interface
- */
-export class Tokenizer {
+export class DefaultTokenizer {
   /**
    * @param {!Text.Iterator} it
    * @return {boolean}
    * Return weather the char belongs to the word
    */
   isWordChar(it) {
+    return !this.isSpaceChar(it) && !this.isPunctuationChar(it);
   }
 
   /**
@@ -16,6 +14,7 @@ export class Tokenizer {
    * Return weather the char belongs to the word
    */
   isSpaceChar(it) {
+    return /\s/.test(it.current);
   }
 
   /**
@@ -24,5 +23,8 @@ export class Tokenizer {
    * Return weather the char belongs to the word
    */
   isPunctuationChar(it) {
+    let char = it.current;
+    return (char > ' ' && char < '0') || (char > '9' && char < 'A') || (char > 'Z' && char < '_') ||
+        (char > '_' && char < 'a') || (char > 'z' && char <= '~');
   }
-};
+}

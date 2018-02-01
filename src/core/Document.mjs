@@ -2,7 +2,7 @@ import { Decorator } from "./Decorator.mjs";
 import { History } from "./History.mjs";
 import { Text } from "./Text.mjs";
 import { Viewport } from "./Viewport.mjs";
-import { Tokenizer, DefaultTokenizer } from "./Tokenizer.mjs";
+import { DefaultTokenizer } from "./DefaultTokenizer.mjs";
 
 export class Document {
   /**
