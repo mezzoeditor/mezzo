@@ -71,8 +71,11 @@ function addSearch(editor) {
     editor.findPrevious();
   }, false);
   const info = document.querySelector('.search-info');
-  editor.onSearchUpdate((total, current) => {
-    info.textContent = `${current + 1} of ${total}`;
+  editor.onSearchUpdate((current, total) => {
+    if (current === -1)
+      info.textContent = `${total} matches`;
+    else
+      info.textContent = `${current + 1} of ${total} matches`;
   });
 
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') !== -1;

@@ -12,7 +12,8 @@ export class Search {
    * @param {!Document} document
    * @param {!Scheduler} scheduler
    * @param {!Selection} selection
-   * @param {function()=} onUpdate
+   * @param {function(number, number)=} onUpdate
+   *   Takes currentMatchIndex and totalMatchesCount.
    */
   constructor(document, scheduler, selection, onUpdate) {
     this._document = document;
@@ -21,14 +22,18 @@ export class Search {
         this._visibleRangeToProcessingRange.bind(this),
         this._searchRange.bind(this),
         20000,
-        this._updated.bind(this));
+        () => document.invalidate());
     this._selection = selection;
-    this._onUpdate = (onUpdate || function() {}).bind(null);
     this._decorator = new Decorator();
     this._currentMatchDecorator = new Decorator();
     this._options = null;
     this._currentMatch = null;
     this._noReveal = false;
+
+    this._onUpdate = (onUpdate || function() {}).bind(null);
+    this._updated = false;
+    this._lastReportedCurrentMatchIndex = -1;
+    this._lastReportedMatchesCount = 0;
   }
 
   /**
@@ -100,6 +105,17 @@ export class Search {
     this._noReveal = false;
     if (!hadCurrentMatch && this._currentMatch)
       this._selection.onViewport(viewport);
+    if (this._updated) {
+      this._updated = false;
+      let currentMatchIndex = this.currentMatchIndex();
+      let matchesCount = this.matchesCount();
+      if (currentMatchIndex !== this._lastReportedCurrentMatchIndex ||
+          matchesCount !== this._lastReportedMatchesCount) {
+        this._lastReportedCurrentMatchIndex = currentMatchIndex;
+        this._lastReportedMatchesCount = matchesCount;
+        this._onUpdate(currentMatchIndex, matchesCount);
+      }
+    }
   }
 
   /**
@@ -119,6 +135,7 @@ export class Search {
       this._updateCurrentMatch(null);
     }
     this._noReveal = false;
+    this._updated = true;
     if (this._options)
       this._scheduler.onReplace(from, to, inserted);
   }
@@ -129,7 +146,7 @@ export class Search {
    */
   onRestore(replacements, data) {
     for (let replacement of replacements)
-      this.onReplace(replacement.from, replacement.to, replacement);
+      this.onReplace(replacement.from, replacement.to, replacement.inserted);
   }
 
   /**
@@ -146,7 +163,8 @@ export class Search {
         this._cancel();
         this._options = data;
         this._scheduler.start(this._document);
-        this._updated();
+        this._updated = true;
+        this._document.invalidate();
         return true;
       }
       case 'search.next': {
@@ -161,7 +179,8 @@ export class Search {
         if (!match)
           return false;
         this._updateCurrentMatch(match);
-        this._updated();
+        this._updated = true;
+        this._document.invalidate();
         return true;
       }
       case 'search.previous': {
@@ -176,12 +195,14 @@ export class Search {
         if (!match)
           return false;
         this._updateCurrentMatch(match);
-        this._updated();
+        this._updated = true;
+        this._document.invalidate();
         return true;
       }
       case 'search.cancel': {
         this._cancel();
-        this._updated();
+        this._updated = true;
+        this._document.invalidate();
         return true;
       }
     }
@@ -212,11 +233,6 @@ export class Search {
     }
   }
 
-  _updated() {
-    this._document.invalidate();
-    this._onUpdate();
-  }
-
   /**
    * @param {!OffsetRange} range
    * @return {!OffsetRange}
@@ -232,6 +248,7 @@ export class Search {
         this._updateCurrentMatch({from: iterator.offset, to: iterator.offset + query.length}, this._noReveal);
       iterator.advance(query.length);
     }
+    this._updated = true;
     return range;
   }
 

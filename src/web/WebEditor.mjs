@@ -274,25 +274,13 @@ export class WebEditor {
   }
 
   _setupSearch() {
-    let lastTotal = 0;
-    let lastCurrent = -1;
-    let onUpdate = null;
-    let updateRAF = null;
-
-    this._search = new Search(this._document, new IdleScheduler(), this._selection, () => {
-      if (!onUpdate || updateRAF)
-        return;
-      updateRAF = requestAnimationFrame(() => {
-        updateRAF = null;
-        let total = this._search.matchesCount();
-        let current = this._search.currentMatchIndex();
-        if (total !== lastTotal || current !== lastCurrent) {
-          lastTotal = total;
-          lastCurrent = current;
-          onUpdate.call(null, lastTotal, lastCurrent);
-        }
-      });
-    });
+    let updateCallback = null;
+    this.onSearchUpdate = callback => { updateCallback = callback; };
+    let onUpdate = (currentMatchIndex, totalMatchesCount) => {
+      if (updateCallback)
+      updateCallback.call(null, currentMatchIndex, totalMatchesCount);
+    };
+    this._search = new Search(this._document, new IdleScheduler(), this._selection, onUpdate);
 
     this.find = query => {
       this._document.perform('search.find', {query});
@@ -306,7 +294,6 @@ export class WebEditor {
     this.findPrevious = () => {
       this._document.perform('search.previous');
     };
-    this.onSearchUpdate = callback => { onUpdate = callback; };
 
     this._document.addPlugin('search', this._search);
   }
