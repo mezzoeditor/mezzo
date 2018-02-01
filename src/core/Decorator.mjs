@@ -103,15 +103,28 @@ function split(node, offset, splitBy) {
 
 /**
  * @param {!TreeNode|undefined} node
- * @param {!Array<!Decoration>} result
+ * @param {function(!Decorator)} visitor
  */
-function visitList(node, result) {
+function visit(node, visitor) {
   if (!node)
     return;
+
   node = normalize(node);
-  visitList(node.left, result);
-  result.push({from: node.from, to: node.to, style: node.style});
-  visitList(node.right, result);
+  let nodes = [];
+  while (true) {
+    while (node.left) {
+      nodes.push(node);
+      node = normalize(node.left);
+    }
+    visitor(node);
+    while (!node.right) {
+      node = nodes.pop();
+      if (!node)
+        return;
+      visitor(node);
+    }
+    node = normalize(node.right);
+  }
 };
 
 /**
@@ -238,14 +251,12 @@ export class Decorator {
    * @return {!TreeNode}
    */
   _process(root, from, to, inserted) {
-    let decorations = [];
-    visitList(root, decorations);
     let result = undefined;
-    for (let decoration of decorations) {
+    visit(root, decoration => {
       let start = decoration.from;
       let end = decoration.to;
       if (from < start && to > start)
-        continue;
+        return;
 
       if (from <= start)
         start = to >= start ? from : start - (to - from);
@@ -259,7 +270,7 @@ export class Decorator {
 
       let node = {style: decoration.style, from: start, to: end, h: random(), size: 1};
       result = merge(result, node);
-    }
+    });
     return result;
   }
 
@@ -268,7 +279,7 @@ export class Decorator {
    */
   listAll() {
     let result = [];
-    visitList(this._root, result);
+    visit(this._root, result.push.bind(result));
     return result;
   }
 
@@ -279,12 +290,25 @@ export class Decorator {
    * @return {!Array<!Decoration>}
    */
   listTouching(from, to) {
-    let tmp = split(this._root, range.from, kTo);
-    let tmp2 = split(tmp.right, range.to, kFrom);
+    let tmp = split(this._root, from, kTo);
+    let tmp2 = split(tmp.right, to, kFrom);
     let result = [];
-    visitList(tmp2.left, result);
+    visit(tmp2.left, result.push.bind(result));
     this._root = merge(tmp.left, merge(tmp2.left, tmp2.right));
     return result;
+  }
+
+  /**
+   * Visits all decorations which intersect or touch [from, to].
+   * @param {number} from
+   * @param {number} to
+   * @param {function(!Decoration)} visitor
+   */
+  visitTouching(from, to, visitor) {
+    let tmp = split(this._root, from, kTo);
+    let tmp2 = split(tmp.right, to, kFrom);
+    visit(tmp2.left, visitor);
+    this._root = merge(tmp.left, merge(tmp2.left, tmp2.right));
   }
 
   /**
@@ -338,23 +362,6 @@ export class Decorator {
       let node = last(tmp2.left);
       result = {from: node.from, to: node.to, style: node.style};
     }
-    this._root = merge(tmp.left, merge(tmp2.left, tmp2.right));
-    return result;
-  }
-
-  /**
-   * Maps all styles to decorations which intersect or touch [from, to].
-   * @param {number} from
-   * @param {number} to
-   * @return {!Map<string, !Array<!OffsetRange>>}
-   */
-  mapTouching(range) {
-    // TODO: creating this map is really slow, we should optimize iterating over
-    // decorations.
-    let result = new Map();
-    let tmp = split(this._root, range.from, kTo);
-    let tmp2 = split(tmp.right, range.to, kFrom);
-    visitMap(tmp2.left, result);
     this._root = merge(tmp.left, merge(tmp2.left, tmp2.right));
     return result;
   }

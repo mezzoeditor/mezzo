@@ -1,3 +1,5 @@
+const kSyncProcessing = false;
+
 /**
  * This class helps to schedule full document processing by chunking work.
  * It operates on ranges, starting with full document range and reducing
@@ -32,6 +34,15 @@ export class RangeScheduler {
   }
 
   onBeforeViewport() {
+    if (kSyncProcessing) {
+      if (!this._rangeToProcess)
+        return;
+      while (this._rangeToProcess)
+        this._processNextChunk();
+      this._doneProcessing();
+      return;
+    }
+
     if (!this._rangeToProcess || (this._rangeToProcess.to - this._rangeToProcess.from > this._chunkSize))
       return;
     this._processNextChunk();
