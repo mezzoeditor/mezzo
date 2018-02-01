@@ -171,6 +171,10 @@ export class Decorator {
   }
 
   /**
+   * Adds a single decoration. Note that decorations must be:
+   *   - not degenerate (|from| <= |to|);
+   *   - disjoiint (no decorations have common interior point);
+   *   - different (no collapsed decorations are at the same point).
    * @param {number} from
    * @param {number} to
    * @param {string} style
@@ -188,38 +192,33 @@ export class Decorator {
   }
 
   /**
+   * Removes a single decoration. Typically throws if the decoration
+   * is not present, but that can be disabled by |relaxed|.
    * @param {number} from
    * @param {number} to
    * @param {string} style
+   * @param {boolean=} relaxed
    */
-  remove(from, to, style) {
+  remove(from, to, style, relaxed) {
     let collapsed = from === to;
     let tmp = split(this._root, from, collapsed ? kFrom : kBetween);
     let tmp2 = split(tmp.right, to, collapsed ? kBetween : kFrom);
     let removed = tmp2.left;
-    if (!removed || removed.from !== from || removed.to !== to)
+    if (!relaxed && (!removed || removed.from !== from || removed.to !== to))
       throw 'Decoration is not present';
-    if (removed.left || removed.right)
+    if (removed && (removed.left || removed.right))
       throw 'Inconsistent';
     this._root = merge(tmp.left, tmp2.right);
   }
 
-  clearAll() {
-    this._root = undefined;
-  }
-
   /**
-   * Removes all decorations which start at [from, to].
-   * @param {number} from
-   * @param {number} to
-   */
-  clearStarting(from, to) {
-    let tmp = split(this._root, from, kFrom);
-    let tmp2 = split(tmp.right, to + 1, kFrom);
-    this._root = merge(tmp.left, tmp2.right);
-  }
-
-  /**
+   * Adjusts decoration according to the replacement.
+   * The first of the following rules is applied to each decoration:
+   *   - decorations covered by replaced range are removed;
+   *   - decorations covering replaced range are resized by |inserted - to + from|;
+   *   - decorations covering |from| are cropped to |from|;
+   *   - decorations covering |to| are extended to |from + inserted];
+   *   - decorations starting after |to| are moved by |inserted - to + from|.
    * @param {number} from
    * @param {number} to
    * @param {number} inserted
@@ -241,6 +240,292 @@ export class Decorator {
     if (right)
       right.add = (right.add || 0) + delta;
     this._root = merge(left, merge(merge(processed1, processed2), right));
+  }
+
+  /**
+   * Returns the total number of decorations.
+   * @return {number}
+   */
+  countAll() {
+    return this._root ? this._root.size : 0;
+  }
+
+  /**
+   * Returns the number of decorations which start at [from, to].
+   * @param {number} from
+   * @param {number} to
+   * @return {number}
+   */
+  countStarting(from, to) {
+    return this._starting(from, to, node => node ? node.size : 0);
+  }
+
+  /**
+   * Returns the number of decorations which end at [from, to].
+   * @param {number} from
+   * @param {number} to
+   * @return {number}
+   */
+  countEnding(from, to) {
+    return this._ending(from, to, node => node ? node.size : 0);
+  }
+
+  /**
+   * Returns the number of decorations which intersect or touch [from, to].
+   * @param {number} from
+   * @param {number} to
+   * @return {number}
+   */
+  countTouching(from, to) {
+    return this._touching(from, to, node => node ? node.size : 0);
+  }
+
+  /**
+   * Lists all decorations.
+   * @return {!Array<!Decoration>}
+   */
+  listAll() {
+    let result = [];
+    visit(this._root, result.push.bind(result));
+    return result;
+  }
+
+  /**
+   * Lists all decorations which start at [from, to].
+   * @param {number} from
+   * @param {number} to
+   * @return {!Array<!Decoration>}
+   */
+  listStarting(from, to) {
+    let result = [];
+    this._starting(from, to, node => visit(node, result.push.bind(result)));
+    return result;
+  }
+
+  /**
+   * Lists all decorations which end at [from, to].
+   * @param {number} from
+   * @param {number} to
+   * @return {!Array<!Decoration>}
+   */
+  listEnding(from, to) {
+    let result = [];
+    this._ending(from, to, node => visit(node, result.push.bind(result)));
+    return result;
+  }
+
+  /**
+   * Lists all decorations which intersect or touch [from, to].
+   * @param {number} from
+   * @param {number} to
+   * @return {!Array<!Decoration>}
+   */
+  listTouching(from, to) {
+    let result = [];
+    this._touching(from, to, node => visit(node, result.push.bind(result)));
+    return result;
+  }
+
+  /**
+   * Removes all decorations.
+   */
+  clearAll() {
+    this._root = undefined;
+  }
+
+  /**
+   * Removes all decorations which start at [from, to].
+   * @param {number} from
+   * @param {number} to
+   */
+  clearStarting(from, to) {
+    this._starting(from, to, null);
+  }
+
+  /**
+   * Removes all decorations which end at [from, to].
+   * @param {number} from
+   * @param {number} to
+   */
+  clearEnding(from, to) {
+    this._ending(from, to, null);
+  }
+
+  /**
+   * Removes all decorations which intersect or touch [from, to].
+   * @param {number} from
+   * @param {number} to
+   */
+  clearTouching(from, to) {
+    this._touching(from, to, null);
+  }
+
+  /**
+   * Visits all decorations.
+   * @param {function(!Decoration)} visitor
+   */
+  visitAll(visitor) {
+    visit(this._root, visitor);
+  }
+
+  /**
+   * Visits all decorations which start at [from, to].
+   * @param {number} from
+   * @param {number} to
+   * @param {function(!Decoration)} visitor
+   */
+  visitStarting(from, to, visitor) {
+    this._starting(from, to, node => visit(node, visitor));
+  }
+
+  /**
+   * Visits all decorations which end at [from, to].
+   * @param {number} from
+   * @param {number} to
+   * @param {function(!Decoration)} visitor
+   */
+  visitEnding(from, to, visitor) {
+    this._ending(from, to, node => visit(node, visitor));
+  }
+
+  /**
+   * Visits all decorations which intersect or touch [from, to].
+   * @param {number} from
+   * @param {number} to
+   * @param {function(!Decoration)} visitor
+   */
+  visitTouching(from, to, visitor) {
+    this._touching(from, to, node => visit(node, visitor));
+  }
+
+  /**
+   * Returns the first (sorted by position) decoration.
+   * @return {?Decoration}
+   */
+  firstAll(from, to) {
+    return this._root ? first(this._root) : null;
+  }
+
+  /**
+   * Returns the first (sorted by position) decoration which starts at [from, to].
+   * @param {number} from
+   * @param {number} to
+   * @return {?Decoration}
+   */
+  firstStarting(from, to) {
+    return this._starting(from, to, node => node ? first(node) : null);
+  }
+
+  /**
+   * Returns the first (sorted by position) decoration which ends at [from, to].
+   * @param {number} from
+   * @param {number} to
+   * @return {?Decoration}
+   */
+  firstEnding(from, to) {
+    return this._ending(from, to, node => node ? first(node) : null);
+  }
+
+  /**
+   * Returns the first (sorted by position) decoration which intersects or touches [from, to].
+   * @param {number} from
+   * @param {number} to
+   * @return {?Decoration}
+   */
+  firstTouching(from, to) {
+    return this._touching(from, to, node => node ? first(node) : null);
+  }
+
+  /**
+   * Returns the last (sorted by position) decoration.
+   * @return {?Decoration}
+   */
+  lastAll(from, to) {
+    return this._root ? last(this._root) : null;
+  }
+
+  /**
+   * Returns the last (sorted by position) decoration which starts at [from, to].
+   * @param {number} from
+   * @param {number} to
+   * @return {?Decoration}
+   */
+  lastStarting(from, to) {
+    return this._starting(from, to, node => node ? last(node) : null);
+  }
+
+  /**
+   * Returns the last (sorted by position) decoration which ends at [from, to].
+   * @param {number} from
+   * @param {number} to
+   * @return {?Decoration}
+   */
+  lastEnding(from, to) {
+    return this._ending(from, to, node => node ? last(node) : null);
+  }
+
+  /**
+   * Returns the last (sorted by position) decoration which intersects or touches [from, to].
+   * @param {number} from
+   * @param {number} to
+   * @return {?Decoration}
+   */
+  lastTouching(from, to) {
+    return this._touching(from, to, node => node ? last(node) : null);
+  }
+
+  /**
+   * @template T
+   * @param {number} from
+   * @param {number} to
+   * @param {?function(!TreeNode|undefined):T} callback
+   * @return {T}
+   */
+  _starting(from, to, callback) {
+    return this._handleRange(from, kFrom, to + 1, kFrom, callback);
+  }
+
+  /**
+   * @template T
+   * @param {number} from
+   * @param {number} to
+   * @param {?function(!TreeNode|undefined):T} callback
+   * @return {T}
+   */
+  _ending(from, to, callback) {
+    return this._handleRange(from - 1, kTo, to, kTo, callback);
+  }
+
+  /**
+   * @template T
+   * @param {number} from
+   * @param {number} to
+   * @param {?function(!TreeNode|undefined):T} callback
+   * @return {T}
+   */
+  _touching(from, to, callback) {
+    return this._handleRange(from - 1, kTo, to + 1, kFrom, callback);
+  }
+
+  /**
+   * @template T
+   * @param {number} offset1
+   * @param {number} by1
+   * @param {number} offset2
+   * @param {number} by2
+   * @param {?function(!TreeNode|undefined):T} callback
+   * @return {T}
+   */
+  _handleRange(offset1, by1, offset2, by2, callback) {
+    let tmp = split(this._root, offset1, by1);
+    let tmp2 = split(tmp.right, offset2, by2);
+    let result;
+    if (callback)
+      result = callback(tmp2.left);
+    else
+      tmp2.left = undefined;
+    this._root = merge(tmp.left, merge(tmp2.left, tmp2.right));
+    return result;
   }
 
   /**
@@ -271,98 +556,6 @@ export class Decorator {
       let node = {style: decoration.style, from: start, to: end, h: random(), size: 1};
       result = merge(result, node);
     });
-    return result;
-  }
-
-  /**
-   * @return {!Array<!Decoration>}
-   */
-  listAll() {
-    let result = [];
-    visit(this._root, result.push.bind(result));
-    return result;
-  }
-
-  /**
-   * Lists all decorations which intersect or touch [from, to].
-   * @param {number} from
-   * @param {number} to
-   * @return {!Array<!Decoration>}
-   */
-  listTouching(from, to) {
-    let tmp = split(this._root, from - 1, kTo);
-    let tmp2 = split(tmp.right, to + 1, kFrom);
-    let result = [];
-    visit(tmp2.left, result.push.bind(result));
-    this._root = merge(tmp.left, merge(tmp2.left, tmp2.right));
-    return result;
-  }
-
-  /**
-   * Visits all decorations which intersect or touch [from, to].
-   * @param {number} from
-   * @param {number} to
-   * @param {function(!Decoration)} visitor
-   */
-  visitTouching(from, to, visitor) {
-    let tmp = split(this._root, from - 1, kTo);
-    let tmp2 = split(tmp.right, to + 1, kFrom);
-    visit(tmp2.left, visitor);
-    this._root = merge(tmp.left, merge(tmp2.left, tmp2.right));
-  }
-
-  /**
-   * Returns the number of decorations which start at [from, to].
-   * @param {number} from
-   * @param {number} to
-   * @return {number}
-   */
-  countStarting(from, to) {
-    let tmp = split(this._root, from, kFrom);
-    let tmp2 = split(tmp.right, to + 1, kFrom);
-    let result = tmp2.left ? tmp2.left.size : 0;
-    this._root = merge(tmp.left, merge(tmp2.left, tmp2.right));
-    return result;
-  }
-
-  /**
-   * @return {number}
-   */
-  countAll() {
-    return this._root ? this._root.size : 0;
-  }
-
-  /**
-   * @param {number} from
-   * @param {number} to
-   * @return {?Decoration}
-   */
-  firstStarting(from, to) {
-    let tmp = split(this._root, from, kFrom);
-    let tmp2 = split(tmp.right, to + 1, kFrom);
-    let result = null;
-    if (tmp2.left) {
-      let node = first(tmp2.left);
-      result = {from: node.from, to: node.to, style: node.style};
-    }
-    this._root = merge(tmp.left, merge(tmp2.left, tmp2.right));
-    return result;
-  }
-
-  /**
-   * @param {number} from
-   * @param {number} to
-   * @return {?Decoration}
-   */
-  lastEnding(from, to) {
-    let tmp = split(this._root, from - 1, kTo);
-    let tmp2 = split(tmp.right, to, kTo);
-    let result = null;
-    if (tmp2.left) {
-      let node = last(tmp2.left);
-      result = {from: node.from, to: node.to, style: node.style};
-    }
-    this._root = merge(tmp.left, merge(tmp2.left, tmp2.right));
     return result;
   }
 };
