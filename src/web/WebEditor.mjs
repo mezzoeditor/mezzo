@@ -41,6 +41,10 @@ export class WebEditor {
       'End': 'selection.move.lineend',
       'End-Shift': 'selection.select.lineend',
       'Cmd/Ctrl-a': 'selection.select.all',
+      'Cmd-Left': 'selection.move.linestart',
+      'Cmd-Right': 'selection.move.lineend',
+      'Shift-Cmd-Left': 'selection.select.linestart',
+      'Shift-Cmd-Right': 'selection.select.lineend',
       'Esc': 'selection.collapse',
     });
   }
