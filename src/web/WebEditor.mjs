@@ -7,6 +7,8 @@ import { IdleScheduler } from "./IdleScheduler.mjs";
 import { DefaultTheme } from "../themes/DefaultTheme.mjs";
 import PlainHighlighter from "../syntax/plain.mjs";
 
+const isMac = navigator.platform.toUpperCase().indexOf('MAC') !== -1;
+
 export class WebEditor {
   /**
    * @param {!Document} domDocument
@@ -20,6 +22,35 @@ export class WebEditor {
     this._setupSearch();
     this._syntaxHighlighter = new PlainHighlighter();
     this._document.addPlugin('syntax-highlight', this._syntaxHighlighter);
+    this._keymap = new Map();
+    this._installKeyMap({
+      'Up': 'selection.move.up',
+      'Down': 'selection.move.down',
+      'Left': 'selection.move.left',
+      'Right': 'selection.move.right',
+      'Alt-Left': 'selection.move.word.left',
+      'Alt-Right': 'selection.move.word.right',
+      'Shift-Up': 'selection.select.up',
+      'Shift-Down': 'selection.select.down',
+      'Shift-Left': 'selection.select.left',
+      'Shift-Right': 'selection.select.right',
+      'Alt-Shift-Left': 'selection.select.word.left',
+      'Alt-Shift-Right': 'selection.select.word.right',
+      'Home': 'selection.move.linestart',
+      'Home-Shift': 'selection.select.linestart',
+      'End': 'selection.move.lineend',
+      'End-Shift': 'selection.select.lineend',
+      'Cmd/Ctrl-a': 'selection.select.all',
+      'Esc': 'selection.collapse',
+    });
+  }
+
+  _installKeyMap(keyMap) {
+    this._keymap.clear();
+    for (let key in keyMap) {
+      let value = keyMap[key];
+      this._keymap.set(stringToHash(key), value);
+    }
   }
 
   setHighlighter(highlighter) {
@@ -113,45 +144,9 @@ export class WebEditor {
     this._selection = new Selection(this._document);
     this._input.addEventListener('keydown', event => {
       let handled = false;
-      switch (event.key) {
-        case 'ArrowLeft':
-          if (event.shiftKey) {
-            handled = this._document.perform(event.altKey ? 'selection.select.word.left' : 'selection.select.left');
-          } else {
-            handled = this._document.perform(event.altKey ? 'selection.move.word.left' : 'selection.move.left');
-          }
-          break;
-        case 'ArrowRight':
-          if (event.shiftKey) {
-            handled = this._document.perform(event.altKey ? 'selection.select.word.right' : 'selection.select.right');
-          } else {
-            handled = this._document.perform(event.altKey ? 'selection.move.word.right' : 'selection.move.right');
-          }
-          break;
-        case 'ArrowUp':
-          handled = this._document.perform(event.shiftKey ? 'selection.select.up' : 'selection.move.up');
-          break;
-        case 'ArrowDown':
-          handled = this._document.perform(event.shiftKey ? 'selection.select.down' : 'selection.move.down');
-          break;
-        case 'Home':
-          handled = this._document.perform(event.shiftKey ? 'selection.select.linestart' : 'selection.move.linestart');
-          break;
-        case 'End':
-          handled = this._document.perform(event.shiftKey ? 'selection.select.lineend' : 'selection.move.lineend');
-          break;
-        case 'a':
-        case 'A':
-          // TODO: handle shortcuts properly.
-          if (!event.shiftKey && (event.metaKey || event.ctrlKey))
-            handled = this._document.perform('selection.select.all');
-          break;
-      }
-      switch (event.keyCode) {
-        case 27: /* escape */
-          handled = this._document.perform('selection.collapse');
-          break;
-      }
+      let command = this._keymap.get(eventToHash(event));
+      if (command)
+        handled = this._document.perform(command);
       if (handled) {
         this._revealCursors();
         event.preventDefault();
@@ -306,3 +301,43 @@ export class WebEditor {
     this._document.addPlugin('search', this._search);
   }
 }
+
+function eventToHash(event) {
+  let hash = [];
+  if (event.ctrlKey)
+    hash.push('Ctrl');
+  if (event.metaKey)
+    hash.push('Cmd');
+  if (event.altKey)
+    hash.push('Alt');
+  if (event.shiftKey)
+    hash.push('Shift');
+  let key = event.key.toUpperCase();
+  if (key.startsWith('ARROW'))
+    hash.push(key.substring('ARROW'.length));
+  else if (key !== 'META' && key !== 'CONTROL' && key !== 'ALT' && key !== 'SHIFT')
+    hash.push(event.key);
+  return hash.join('-');
+}
+
+function stringToHash(eventString) {
+  let tokens = eventString.toUpperCase().split('-');
+  let ctrlOrCmd = tokens.includes('CMD/CTRL');
+  let ctrl = tokens.includes('CTRL') || (ctrlOrCmd && !isMac);
+  let cmd = tokens.includes('CMD') || (ctrlOrCmd && isMac);
+
+  let hash = [];
+  if (ctrl)
+    hash.push('Ctrl');
+  if (cmd)
+    hash.push('Cmd');
+  if (tokens.includes('ALT'))
+    hash.push('Alt');
+  if (tokens.includes('SHIFT'))
+    hash.push('Shift');
+  tokens = tokens.filter(token => token !== 'ALT' && token !== 'CTRL' && token !== 'SHIFT' && token !== 'CMD' && token !== 'CMD/CTRL');
+  tokens.sort();
+  hash.push(...tokens);
+  return hash.join('-');
+}
+
