@@ -115,10 +115,18 @@ export class WebEditor {
       let handled = false;
       switch (event.key) {
         case 'ArrowLeft':
-          handled = this._document.perform(event.shiftKey ? 'selection.select.left' : 'selection.move.left');
+          if (event.shiftKey) {
+            handled = this._document.perform(event.altKey ? 'selection.select.word.left' : 'selection.select.left');
+          } else {
+            handled = this._document.perform(event.altKey ? 'selection.move.word.left' : 'selection.move.left');
+          }
           break;
         case 'ArrowRight':
-          handled = this._document.perform(event.shiftKey ? 'selection.select.right' : 'selection.move.right');
+          if (event.shiftKey) {
+            handled = this._document.perform(event.altKey ? 'selection.select.word.right' : 'selection.select.right');
+          } else {
+            handled = this._document.perform(event.altKey ? 'selection.move.word.right' : 'selection.move.right');
+          }
           break;
         case 'ArrowUp':
           handled = this._document.perform(event.shiftKey ? 'selection.select.up' : 'selection.move.up');

@@ -217,10 +217,28 @@ export class Selection {
         this._ranges = this._join(ranges);
         break;
       }
+      case 'selection.move.word.left': {
+        let ranges = [];
+        for (let range of this._ranges) {
+          let offset = Math.min(range.anchor, range.focus);
+          if (range.anchor === range.focus)
+            offset = TextUtils.previousWord(this._document, range.focus);
+          ranges.push({id: range.id, upDownColumn: -1, anchor: offset, focus: offset});
+        }
+        this._ranges = this._join(ranges);
+        break;
+      }
       case 'selection.select.left': {
         let ranges = [];
         for (let range of this._ranges)
           ranges.push({id: range.id, upDownColumn: -1, anchor: range.anchor, focus: TextUtils.previousOffset(this._document, range.focus)});
+        this._ranges = this._join(ranges);
+        break;
+      }
+      case 'selection.select.word.left': {
+        let ranges = [];
+        for (let range of this._ranges)
+          ranges.push({id: range.id, upDownColumn: -1, anchor: range.anchor, focus: TextUtils.previousWord(this._document, range.focus)});
         this._ranges = this._join(ranges);
         break;
       }
@@ -235,11 +253,30 @@ export class Selection {
         this._ranges = this._join(ranges);
         break;
       }
+      case 'selection.move.word.right': {
+        let ranges = [];
+        for (let range of this._ranges) {
+          let offset = Math.max(range.anchor, range.focus);
+          if (range.anchor === range.focus)
+            offset = TextUtils.nextWord(this._document, range.focus);
+          ranges.push({id: range.id, upDownColumn: -1, anchor: offset, focus: offset});
+        }
+        this._ranges = this._join(ranges);
+        break;
+      }
       case 'selection.select.right': {
         this._upDownCleared = true;
         let ranges = [];
         for (let range of this._ranges)
           ranges.push({id: range.id, upDownColumn: -1, anchor: range.anchor, focus: TextUtils.nextOffset(this._document, range.focus)});
+        this._ranges = this._join(ranges);
+        break;
+      }
+      case 'selection.select.word.right': {
+        this._upDownCleared = true;
+        let ranges = [];
+        for (let range of this._ranges)
+          ranges.push({id: range.id, upDownColumn: -1, anchor: range.anchor, focus: TextUtils.nextWord(this._document, range.focus)});
         this._ranges = this._join(ranges);
         break;
       }
@@ -430,12 +467,16 @@ Selection.Commands = new Set([
   'selection.select.all',
   'selection.select.left',
   'selection.select.right',
+  'selection.select.word.left',
+  'selection.select.word.right',
   'selection.select.up',
   'selection.select.down',
   'selection.select.lineend',
   'selection.select.linestart',
   'selection.move.left',
   'selection.move.right',
+  'selection.move.word.left',
+  'selection.move.word.right',
   'selection.move.up',
   'selection.move.down',
   'selection.move.lineend',

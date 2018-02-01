@@ -114,10 +114,53 @@ TextUtils.previousOffset = function(document, offset) {
  * @param {number} offset
  * @return {number}
  */
+TextUtils.previousWord = function(document, offset) {
+  let it = document.iterator(offset - 1);
+  let tokenizer = document.tokenizer();
+  while (it.offset && tokenizer.isSpaceChar(it))
+    it.prev();
+  if (!it.offset)
+    return 0;
+  if (tokenizer.isPunctuationChar(it)) {
+    while (it.offset && tokenizer.isPunctuationChar(it))
+      it.prev();
+  } else {
+    while (it.offset && tokenizer.isWordChar(it))
+      it.prev();
+  }
+  return it.offset + 1;
+}
+
+/**
+ * @param {!Document} document
+ * @param {number} offset
+ * @return {number}
+ */
 TextUtils.nextOffset = function(document, offset) {
   return Math.min(document.length(), offset + 1);
 };
 
+/**
+ * @param {!Document} document
+ * @param {number} offset
+ * @return {number}
+ */
+TextUtils.nextWord = function(document, offset) {
+  let it = document.iterator(offset + 1);
+  let tokenizer = document.tokenizer();
+  while (!it.outOfBounds() && tokenizer.isSpaceChar(it))
+    it.next();
+  if (it.outOfBounds())
+    return it.offset;
+  if (tokenizer.isPunctuationChar(it)) {
+    while (!it.outOfBounds() && tokenizer.isPunctuationChar(it))
+      it.next();
+  } else {
+    while (!it.outOfBounds() && tokenizer.isWordChar(it))
+      it.next();
+  }
+  return it.offset;
+}
 /**
  * @param {!Document} document
  * @param {number} offset
