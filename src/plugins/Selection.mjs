@@ -287,10 +287,14 @@ export class Selection {
           let upDownColumn = range.upDownColumn;
           if (range.anchor === range.focus) {
             let {line, column} = this._document.offsetToPosition(range.focus);
-            upDownColumn = range.upDownColumn === -1 ? column : range.upDownColumn;
-            if (line)
+            let upDownColumn = range.upDownColumn === -1 ? column : range.upDownColumn;
+            if (line) {
               line--;
-            offset = this._document.positionToOffset({line, column: upDownColumn}, true /* clamp */);
+              column = upDownColumn;
+            } else {
+              column = 0;
+            }
+            offset = this._document.positionToOffset({line, column}, true /* clamp */);
           }
           ranges.push({id: range.id, upDownColumn, anchor: offset, focus: offset});
         }
@@ -302,9 +306,13 @@ export class Selection {
         for (let range of this._ranges) {
           let {line, column} = this._document.offsetToPosition(range.focus);
           let upDownColumn = range.upDownColumn === -1 ? column : range.upDownColumn;
-          if (line)
+          if (line) {
             line--;
-          let focus = this._document.positionToOffset({line, column: upDownColumn}, true /* clamp */);
+            column = upDownColumn;
+          } else {
+            column = 0;
+          }
+          let focus = this._document.positionToOffset({line, column}, true /* clamp */);
           ranges.push({id: range.id, upDownColumn, anchor: range.anchor, focus});
         }
         this._ranges = this._join(ranges);
@@ -317,10 +325,14 @@ export class Selection {
           let upDownColumn = range.upDownColumn;
           if (range.anchor === range.focus) {
             let {line, column} = this._document.offsetToPosition(range.focus);
-            upDownColumn = range.upDownColumn === -1 ? column : range.upDownColumn;
-            if (line < this._document.lineCount() - 1)
+            let upDownColumn = range.upDownColumn === -1 ? column : range.upDownColumn;
+            if (line < this._document.lineCount() - 1) {
               line++;
-            offset = this._document.positionToOffset({line, column: upDownColumn}, true /* clamp */);
+              column = upDownColumn;
+            } else {
+              column = this._document.length();
+            }
+            offset = this._document.positionToOffset({line, column}, true /* clamp */);
           }
           ranges.push({id: range.id, upDownColumn, anchor: offset, focus: offset});
         }
@@ -332,9 +344,13 @@ export class Selection {
         for (let range of this._ranges) {
           let {line, column} = this._document.offsetToPosition(range.focus);
           let upDownColumn = range.upDownColumn === -1 ? column : range.upDownColumn;
-          if (line < this._document.lineCount() - 1)
+          if (line < this._document.lineCount() - 1) {
             line++;
-          let focus = this._document.positionToOffset({line, column: upDownColumn}, true /* clamp */);
+            column = upDownColumn;
+          } else {
+            column = this._document.length();
+          }
+          let focus = this._document.positionToOffset({line, column}, true /* clamp */);
           ranges.push({id: range.id, upDownColumn, anchor: range.anchor, focus});
         }
         this._ranges = this._join(ranges);
@@ -420,7 +436,9 @@ export class Selection {
       let next = ranges[i];
       let nextFrom = Math.min(next.anchor, next.focus);
       let nextTo = Math.max(next.anchor, next.focus);
-      if (nextFrom <= lastTo && nextTo > lastTo) {
+      if (nextTo < lastTo)
+        throw 'Inconsistent';
+      if (nextFrom <= lastTo) {
         if (last.anchor > last.focus)
           last.anchor = nextTo;
         else
