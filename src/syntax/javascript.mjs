@@ -7,33 +7,18 @@ import {TextUtils} from "../utils/TextUtils.mjs";
  */
 export default class {
   constructor() {
-    this._decorator = new Decorator();
-  }
-
-  /**
-   * @override
-   * @param {!Document} document
-   */
-  onAdded(document) {
-    document.addDecorator(this._decorator);
-  }
-
-  /**
-   * @override
-   * @param {!Document} document
-   */
-  onRemoved(document) {
-    document.removeDecorator(this._decorator);
   }
 
   /**
    * Called on every render of viewport. See Viewport for api.
    * @param {!Frame} frame
+   * @return {!Array<!Decorator>}
    */
   onFrame(frame) {
-    this._decorator.clearAll();
+    let decorator = new Decorator();
     for (let range of frame.ranges())
-      tokenizeText(frame.document().iterator(range.from, range.from, range.to), this._decorator);
+      tokenizeText(frame.document().iterator(range.from, range.from, range.to), decorator);
+    return [decorator];
   }
 };
 

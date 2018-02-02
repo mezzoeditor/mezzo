@@ -109,16 +109,7 @@ class TokenHighlighter {
   constructor(editor) {
     this._editor = editor;
     this._token = '';
-    this._decorator = new Decorator();
     this._editor.document().addPlugin('token-highlighter', this);
-  }
-
-  onAdded(document) {
-    document.addDecorator(this._decorator);
-  }
-
-  onRemoved(document) {
-    document.removeDecorator(this._decorator);
   }
 
   setToken(token) {
@@ -128,16 +119,16 @@ class TokenHighlighter {
     this._editor.invalidate();
   }
 
-  onViewport(viewport) {
-    this._decorator.clearAll();
+  onFrame(frame) {
     if (!this._token)
-      return;
-    for (let line of viewport.lines()) {
-      let text = viewport.lineContent(line, this._token.length, this._token.length);
+      return [];
+    let decorator = new Decorator();
+    for (let line of frame.lines()) {
+      let text = frame.lineContent(line, this._token.length, this._token.length);
       let offset = Math.max(0, line.from - this._token.length);
       let index = text.indexOf(this._token);
       while (index !== -1) {
-        this._decorator.add(
+        decorator.add(
           offset + index,
           offset + index + this._token.length,
           ['red', 'green', 'blue'][line.line % 3]
@@ -145,6 +136,7 @@ class TokenHighlighter {
         index = text.indexOf(this._token, index + this._token.length);
       }
     }
+    return [decorator];
   }
 }
 

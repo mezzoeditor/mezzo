@@ -70,24 +70,6 @@ export class Search {
 
   /**
    * @override
-   * @param {!Document} document
-   */
-  onAdded(document) {
-    document.addDecorator(this._decorator);
-    document.addDecorator(this._currentMatchDecorator);
-  }
-
-  /**
-   * @override
-   * @param {!Document} document
-   */
-  onRemoved(document) {
-    document.removeDecorator(this._decorator);
-    document.removeDecorator(this._currentMatchDecorator);
-  }
-
-  /**
-   * @override
    */
   onBeforeFrame() {
     this._scheduler.onBeforeFrame();
@@ -96,6 +78,7 @@ export class Search {
   /**
    * @override
    * @param {!Frame} frame
+   * @return {!Array<!Decorator>}
    */
   onFrame(frame) {
     this._noReveal = true;
@@ -115,6 +98,7 @@ export class Search {
         this._onUpdate(currentMatchIndex, matchesCount);
       }
     }
+    return [this._decorator, this._currentMatchDecorator];
   }
 
   /**

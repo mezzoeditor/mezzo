@@ -93,34 +93,20 @@ export class Selection {
 
   /**
    * @override
-   * @param {!Document} document
-   */
-  onAdded(document) {
-    document.addDecorator(this._decorator);
-  }
-
-  /**
-   * @override
-   * @param {!Document} document
-   */
-  onRemoved(document) {
-    document.removeDecorator(this._decorator);
-  }
-
-  /**
-   * @override
    * @param {!Frame} frame
+   * @return {!Array<!Decorator>}
    */
   onFrame(frame) {
-    if (!this._staleDecorations)
-      return;
-    this._staleDecorations = false;
-    this._decorator.clearAll();
-    for (let range of this._ranges) {
-      this._decorator.add(range.focus, range.focus, 'selection.focus');
-      if (range.focus !== range.anchor)
-        this._decorator.add(Math.min(range.focus, range.anchor), Math.max(range.focus, range.anchor), 'selection.range');
+    if (this._staleDecorations) {
+      this._staleDecorations = false;
+      this._decorator.clearAll();
+      for (let range of this._ranges) {
+        this._decorator.add(range.focus, range.focus, 'selection.focus');
+        if (range.focus !== range.anchor)
+          this._decorator.add(Math.min(range.focus, range.anchor), Math.max(range.focus, range.anchor), 'selection.range');
+      }
     }
+    return [this._decorator];
   }
 
   /**

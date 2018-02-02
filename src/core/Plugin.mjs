@@ -28,11 +28,12 @@ class Plugin {
   }
 
   /**
-   * Called on every frame creation. Plugin is expected to manipulate
-   * Decorator(s) to affect the rendering.
+   * Called on every frame creation. Returns decorators which should be
+   * used to decorate the frame.
    * Mutating the state which can affect viewport is prohibited,
    * e.g. editing the document or revealing position.
    * @param {!Frame} frame
+   * @return {!Array<!Decorator>}
    */
   onFrame(frame) {
   }

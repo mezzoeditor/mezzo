@@ -13,7 +13,6 @@ export class Document {
     this._onInvalidate = onInvalidate;
     this._onReveal = onReveal;
     this._plugins = new Map();
-    this._decorators = new Set();
     this._history = new History({
       text: Text.withContent(''),
       replacements: [],
@@ -229,28 +228,6 @@ export class Document {
   }
 
   /**
-   * @param {!Decorator} decorator
-   */
-  addDecorator(decorator) {
-    if (this._frozen)
-      throw 'Cannot change decorators while building frame';
-    this._decorators.add(decorator);
-    this.invalidate();
-  }
-
-  /**
-   * @param {!Decorator} decorator
-   */
-  removeDecorator(decorator) {
-    if (this._frozen)
-      throw 'Cannot change decorators while building frame';
-    if (!this._decorators.has(decorator))
-      throw 'No such decorator';
-    this._decorators.delete(decorator);
-    this.invalidate();
-  }
-
-  /**
    * @param {string} command
    * @param {*} data
    * @return {*}
@@ -340,12 +317,13 @@ export class Document {
    */
   decorateFrame(frame) {
     this._frozen = true;
+    let decorators = [];
     for (let plugin of this._plugins.values()) {
       if (plugin.onFrame)
-        plugin.onFrame(frame);
+        decorators.push(...plugin.onFrame(frame));
     }
     this._frozen = false;
-    return this._decorators;
+    return decorators;
   }
 };
 
