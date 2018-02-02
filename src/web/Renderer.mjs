@@ -1,5 +1,5 @@
 import { TextUtils } from "../utils/TextUtils.mjs";
-import { Viewport } from "../core/Viewport.mjs";
+import { Frame } from "../core/Frame.mjs";
 
 class FontMetrics {
   constructor(charWidth, lineHeight, charHeight, baseline) {
@@ -304,7 +304,7 @@ export class Renderer {
     let time = window.performance.now();
     this._decorationsCount = 0;
 
-    this._document.beforeViewport();
+    this._document.beforeFrame();
 
     this._animationFrameId = 0;
 
@@ -323,14 +323,14 @@ export class Renderer {
       line: Math.ceil((this._scrollTop + this._cssHeight) / lineHeight),
       column: Math.ceil((this._scrollLeft + this._cssWidth) / charWidth)
     };
-    const viewport = new Viewport(this._document, start, end.column - start.column, end.line - start.line);
-    const decorators = this._document.decorateViewport(viewport);
+    const frame = new Frame(this._document, start, end.column - start.column, end.line - start.line);
+    const decorators = this._document.decorateFrame(frame);
 
     ctx.save();
     ctx.beginPath();
     ctx.rect(this._gutterRect.x, this._gutterRect.y, this._gutterRect.width, this._gutterRect.height);
     ctx.clip();
-    this._drawGutter(ctx, viewport, decorators);
+    this._drawGutter(ctx, frame, decorators);
     ctx.restore();
 
     ctx.save();
@@ -338,17 +338,17 @@ export class Renderer {
     ctx.rect(this._editorRect.x - EDITOR_MARGIN_LEFT, this._editorRect.y, this._editorRect.width + EDITOR_MARGIN_LEFT, this._editorRect.height);
     ctx.clip();
     ctx.translate(-this._scrollLeft + this._editorRect.x, -this._scrollTop + this._editorRect.y);
-    this._drawText(ctx, viewport, decorators);
+    this._drawText(ctx, frame, decorators);
     ctx.restore();
 
     ctx.save();
     const scrollbarRatio = this._document.lineCount() * this._metrics.lineHeight / (this._cssHeight + this._maxScrollTop);
-    this._drawScrollbarMarkers(ctx, viewport, decorators, this._vScrollbar.rect, scrollbarRatio);
+    this._drawScrollbarMarkers(ctx, frame, decorators, this._vScrollbar.rect, scrollbarRatio);
     this._vScrollbar.draw(ctx);
     this._hScrollbar.draw(ctx);
     ctx.restore();
 
-    viewport.cleanup();
+    frame.cleanup();
 
     time = window.performance.now() - time;
     this._renderTime += time;
@@ -361,7 +361,7 @@ export class Renderer {
     }
   }
 
-  _drawGutter(ctx, viewport, decorators) {
+  _drawGutter(ctx, frame, decorators) {
     const {lineHeight, charWidth} = this._metrics;
     const textOffset = this._metrics.textOffset();
     ctx.fillStyle = '#eee';
@@ -377,23 +377,23 @@ export class Renderer {
     ctx.textAlign = 'right';
     ctx.fillStyle = 'rgb(128, 128, 128)';
     const textX = this._gutterRect.width - GUTTER_PADDING_LEFT_RIGHT;
-    for (let line of viewport.lines()) {
+    for (let line of frame.lines()) {
       const number = (line.line + 1) + '';
       ctx.fillText(number, textX, line.line * lineHeight + textOffset);
     }
   }
 
-  _drawText(ctx, viewport, decorators) {
+  _drawText(ctx, frame, decorators) {
     const {lineHeight, charWidth} = this._metrics;
     const textOffset = this._metrics.textOffset();
-    const lines = viewport.lines();
+    const lines = frame.lines();
     const startLine = lines[0].line;
-    const startColumn = viewport.startPosition().column;
-    const endColumn = viewport.endPosition().column;
+    const startColumn = frame.startPosition().column;
+    const endColumn = frame.endPosition().column;
 
     for (let decorator of decorators) {
       for (let line of lines) {
-        let lineContent = viewport.lineContent(line);
+        let lineContent = frame.lineContent(line);
         decorator.visitTouching(line.from, line.to, decoration => {
           this._decorationsCount++;
           const style = this._theme[decoration.style];
@@ -450,19 +450,19 @@ export class Renderer {
     }
   }
 
-  _drawScrollbarMarkers(ctx, viewport, decorators, rect, scrollbarRatio) {
+  _drawScrollbarMarkers(ctx, frame, decorators, rect, scrollbarRatio) {
     // TODO(dgozman): this is a very hot function when searching, because most
     // offsetToPosition calls are outside of viewport.
-    const ratio = rect.height * scrollbarRatio / viewport.document().lineCount();
-    const range = {from: 0, to: viewport.document().length()};
+    const ratio = rect.height * scrollbarRatio / frame.document().lineCount();
+    const range = {from: 0, to: frame.document().length()};
     for (let decorator of decorators) {
       decorator.visitTouching(range.from, range.to, decoration => {
         const style = this._theme[decoration.style];
         if (!style)
           return;
         if (style.scrollbar && style.scrollbar.color) {
-          const from = viewport.offsetToPosition(decoration.from);
-          const to = viewport.offsetToPosition(decoration.to);
+          const from = frame.offsetToPosition(decoration.from);
+          const to = frame.offsetToPosition(decoration.to);
           let top = Math.round(ratio * from.line);
           let bottom = Math.round(ratio * (to.line + 1));
           let left = Math.round(rect.width * (style.scrollbar.left || 0) / 100);

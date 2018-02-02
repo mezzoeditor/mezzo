@@ -19,22 +19,22 @@ class Plugin {
   }
 
   /**
-   * Called before every render of viewport. Plugin is expected to do any
-   * postponed work which should synchronously affect the viewport.
+   * Called before building a frame. Plugin is expected to do any
+   * postponed work which should synchronously affect the frame.
    * This is a last chance to affect viewport somehow before it is rendered.
    * Example: perform search on the small document based on last search parameters.
    */
-  onBeforeViewport() {
+  onBeforeFrame() {
   }
 
   /**
-   * Called on every render of viewport. Plugin is expected to manipulate
+   * Called on every frame creation. Plugin is expected to manipulate
    * Decorator(s) to affect the rendering.
    * Mutating the state which can affect viewport is prohibited,
    * e.g. editing the document or revealing position.
-   * @param {!Viewport} viewport
+   * @param {!Frame} frame
    */
-  onViewport(viewport) {
+  onFrame(frame) {
   }
 
   /**

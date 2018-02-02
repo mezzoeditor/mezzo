@@ -28,12 +28,12 @@ export default class {
 
   /**
    * Called on every render of viewport. See Viewport for api.
-   * @param {!Viewport} viewport
+   * @param {!Frame} frame
    */
-  onViewport(viewport) {
+  onFrame(frame) {
     this._decorator.clearAll();
-    for (let range of viewport.ranges())
-      tokenizeText(viewport.document().iterator(range.from, range.from, range.to), this._decorator);
+    for (let range of frame.ranges())
+      tokenizeText(frame.document().iterator(range.from, range.from, range.to), this._decorator);
   }
 };
 

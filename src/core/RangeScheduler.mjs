@@ -33,7 +33,7 @@ export class RangeScheduler {
     this._scheduler.init(this._processNextChunk.bind(this), this._doneProcessing);
   }
 
-  onBeforeViewport() {
+  onBeforeFrame() {
     if (kSyncProcessing) {
       if (!this._rangeToProcess)
         return;
@@ -50,18 +50,18 @@ export class RangeScheduler {
   }
 
   /**
-   * @param {!Viewport} viewport
+   * @param {!Frame} frame
    */
-  onViewport(viewport) {
+  onFrame(frame) {
     if (!this._rangeToProcess)
       return;
 
-    let viewportRange = this._visibleRangeToProcessingRange(viewport.range());
-    if (!viewportRange || this._rangeToProcess.from >= viewportRange.to || this._rangeToProcess.to <= viewportRange.from)
+    let frameRange = this._visibleRangeToProcessingRange(frame.range());
+    if (!frameRange || this._rangeToProcess.from >= frameRange.to || this._rangeToProcess.to <= frameRange.from)
       return;
 
     let didProcessSomething = false;
-    for (let range of viewport.ranges()) {
+    for (let range of frame.ranges()) {
       let processingRange = this._visibleRangeToProcessingRange(range);
       if (processingRange) {
         this._processed(this._processRange(processingRange));

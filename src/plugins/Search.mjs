@@ -88,23 +88,22 @@ export class Search {
 
   /**
    * @override
-   * @param {!Viewport} viewport
    */
-  onBeforeViewport() {
-    this._scheduler.onBeforeViewport();
+  onBeforeFrame() {
+    this._scheduler.onBeforeFrame();
   }
 
   /**
    * @override
-   * @param {!Viewport} viewport
+   * @param {!Frame} frame
    */
-  onViewport(viewport) {
+  onFrame(frame) {
     this._noReveal = true;
     let hadCurrentMatch = !!this._currentMatch;
-    this._scheduler.onViewport(viewport);
+    this._scheduler.onFrame(frame);
     this._noReveal = false;
     if (!hadCurrentMatch && this._currentMatch)
-      this._selection.onViewport(viewport);
+      this._selection.onFrame(frame);
     if (this._updated) {
       this._updated = false;
       let currentMatchIndex = this.currentMatchIndex();

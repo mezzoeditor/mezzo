@@ -109,9 +109,9 @@ export class Selection {
 
   /**
    * @override
-   * @param {!Viewport} viewport
+   * @param {!Frame} frame
    */
-  onViewport(viewport) {
+  onFrame(frame) {
     if (!this._staleDecorations)
       return;
     this._staleDecorations = false;

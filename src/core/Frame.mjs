@@ -19,7 +19,7 @@ import { TextUtils } from '../utils/TextUtils.mjs';
  * }} Range;
  */
 
-export class Viewport {
+export class Frame {
   /**
    * @param {!Document} document
    * @param {!TextPosition} start

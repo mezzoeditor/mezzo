@@ -23,10 +23,10 @@ export default class {
 
   /**
    * @override
-   * @param {!Viewport} viewport
+   * @param {!Frame} frame
    */
-  onViewport(viewport) {
-    let {from, to} = viewport.range();
+  onFrame(frame) {
+    let {from, to} = frame.range();
     this._decorator.clearAll();
     this._decorator.add(from, to, 'syntax.default');
   }

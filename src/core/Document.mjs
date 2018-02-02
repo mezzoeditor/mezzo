@@ -1,7 +1,7 @@
 import { Decorator } from "./Decorator.mjs";
 import { History } from "./History.mjs";
 import { Text } from "./Text.mjs";
-import { Viewport } from "./Viewport.mjs";
+import { Frame } from "./Frame.mjs";
 import { DefaultTokenizer } from "./DefaultTokenizer.mjs";
 
 export class Document {
@@ -41,7 +41,7 @@ export class Document {
     if (this._operations.length)
       throw 'Cannot reset during operation';
     if (this._frozen)
-      throw 'Cannot edit while building viewport';
+      throw 'Cannot edit while building frame';
     let to = this._text.length();
     this._history.reset({
       text: Text.withContent(text),
@@ -66,7 +66,7 @@ export class Document {
    */
   reveal(offset) {
     if (this._frozen)
-      throw 'Cannot reveal while building viewport';
+      throw 'Cannot reveal while building frame';
     this._onReveal.call(null, offset);
   }
 
@@ -79,7 +79,7 @@ export class Document {
     if (!this._operations.length)
       throw 'Cannot edit outside of operation';
     if (this._frozen)
-      throw 'Cannot edit while building viewport';
+      throw 'Cannot edit while building frame';
     this._replacements.push({from, to, inserted: insertion.length});
     let text = this._text.replace(from, to, insertion);
     this._text.resetCache();
@@ -210,7 +210,7 @@ export class Document {
     this._plugins.set(name, plugin);
     if (plugin.onAdded)
       plugin.onAdded(this);
-    if (plugin.onViewport)
+    if (plugin.onFrame)
       this.invalidate();
   }
 
@@ -224,7 +224,7 @@ export class Document {
     this._plugins.delete(name);
     if (plugin.onRemoved)
       plugin.onRemoved(this);
-    if (plugin.onViewport)
+    if (plugin.onFrame)
       this.invalidate();
   }
 
@@ -233,7 +233,7 @@ export class Document {
    */
   addDecorator(decorator) {
     if (this._frozen)
-      throw 'Cannot change decorators while building viewport';
+      throw 'Cannot change decorators while building frame';
     this._decorators.add(decorator);
     this.invalidate();
   }
@@ -243,7 +243,7 @@ export class Document {
    */
   removeDecorator(decorator) {
     if (this._frozen)
-      throw 'Cannot change decorators while building viewport';
+      throw 'Cannot change decorators while building frame';
     if (!this._decorators.has(decorator))
       throw 'No such decorator';
     this._decorators.delete(decorator);
@@ -326,23 +326,23 @@ export class Document {
     return this._text.positionToOffset(position, clamp);
   }
 
-  beforeViewport() {
+  beforeFrame() {
     for (let plugin of this._plugins.values()) {
-      if (plugin.onBeforeViewport)
-        plugin.onBeforeViewport();
+      if (plugin.onBeforeFrame)
+        plugin.onBeforeFrame();
     }
   }
 
   /**
    * @package
-   * @param {!Viewport} viewport
+   * @param {!Frame} frame
    * @return {!Set<!Decorator>}
    */
-  decorateViewport(viewport) {
+  decorateFrame(frame) {
     this._frozen = true;
     for (let plugin of this._plugins.values()) {
-      if (plugin.onViewport)
-        plugin.onViewport(viewport);
+      if (plugin.onFrame)
+        plugin.onFrame(frame);
     }
     this._frozen = false;
     return this._decorators;
