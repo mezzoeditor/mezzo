@@ -18,6 +18,7 @@ const GUTTER_PADDING_LEFT_RIGHT = 4;
 const EDITOR_MARGIN_LEFT = 4;
 const SCROLLBAR_WIDTH = 15;
 const MIN_THUMB_SIZE = 30;
+const kMinScrollbarDecorationHeight = 5;
 
 const MouseDownStates = {
   VSCROLL_DRAG: 'VSCROLL_DRAG',
@@ -490,8 +491,7 @@ export class Renderer {
         const to = frame.offsetToPosition(decoration.to);
         let top = Math.floor(ratio * from.line);
         let bottom = Math.floor(ratio * (to.line + 1));
-        if (top === bottom)
-          bottom++;
+        bottom = Math.max(bottom, top + kMinScrollbarDecorationHeight);
 
         if (top <= lastBottom) {
           lastBottom = bottom;
@@ -502,8 +502,8 @@ export class Renderer {
           lastBottom = bottom;
         }
 
-        let line = Math.ceil(bottom / ratio);
-        return Math.max(decoration.to + 1, frame.positionToOffset({line, column: 0}, true /* clamp */));
+        let line = Math.max(to.line, Math.floor(bottom / ratio));
+        return Math.max(decoration.to, frame.positionToOffset({line, column: 0}, true /* clamp */));
       });
       if (lastTop >= 0)
         ctx.fillRect(rect.x + left, rect.y + lastTop, right - left, lastBottom - lastTop);

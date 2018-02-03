@@ -167,22 +167,15 @@ function last(node) {
 
 /**
  * @param {!TreeNode|undefined} node
- * @param {function(!Decoration):number} visitor
  * @param {number} from
- * @return {number}
+ * @return {!TreeNode|undefined}
  */
-function sparseVisit(node, visitor, from) {
+function find(node, offset) {
   if (!node)
-    return from;
-  if (node.from >= from)
-    from = sparseVisit(node.left, visitor, from);
-  if (node.from >= from) {
-    let result = visitor(node);
-    if (result < node.from)
-      throw 'Return value of visitor must not be less than decoration.from';
-    from = result;
-  }
-  return sparseVisit(node.right, visitor, from);
+    return;
+  if (node.from >= offset)
+    return find(node.left, offset) || node;
+  return find(node.right, offset);
 };
 
 export class Decorator {
@@ -526,7 +519,16 @@ export class Decorator {
   sparseVisitAll(visitor) {
     if (!this._root)
       return;
-    sparseVisit(this._root, visitor, first(this._root).from);
+    let from = first(this._root).from;
+    while (true) {
+      let node = find(this._root, from);
+      if (!node)
+        return;
+      let next = visitor(node);
+      if (next < node.from)
+        throw 'Return value of visitor must not be less than decoration.from';
+      from = Math.max(from + 1, Math.max(node.to, next));
+    }
   }
 
   /**
