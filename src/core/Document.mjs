@@ -12,7 +12,7 @@ export class Document {
   constructor(onInvalidate, onReveal) {
     this._onInvalidate = onInvalidate;
     this._onReveal = onReveal;
-    this._plugins = new Map();
+    this._plugins = [];
     this._history = new History({
       text: Text.withContent(''),
       replacements: [],
@@ -49,7 +49,7 @@ export class Document {
       operation: '__initial__'
     });
     this._text = this._history.current().text;
-    for (let plugin of this._plugins.values()) {
+    for (let plugin of this._plugins) {
       if (plugin.onReplace)
         plugin.onReplace(0, to, text.length);
     }
@@ -83,7 +83,7 @@ export class Document {
     let text = this._text.replace(from, to, insertion);
     this._text.resetCache();
     this._text = text;
-    for (let plugin of this._plugins.values()) {
+    for (let plugin of this._plugins) {
       if (plugin.onReplace)
         plugin.onReplace(from, to, insertion.length);
     }
@@ -113,15 +113,14 @@ export class Document {
       operation: name
     };
     this._replacements = [];
-    for (let name of this._plugins.keys()) {
-      let plugin = this._plugins.get(name);
-      let data;
+    for (let plugin of this._plugins) {
       // TODO: investigate not saving state every time if we can collapse states.
       //       Or maybe presistent data structures will save us?
-      if (plugin.onSave)
-        data = plugin.onSave();
-      if (data !== undefined)
-        state.data.set(name, data);
+      if (plugin.onSave) {
+        let data = plugin.onSave();
+        if (data !== undefined)
+          state.data.set(plugin, data);
+      }
     }
     this._history.push(state);
     this.invalidate();
@@ -149,11 +148,11 @@ export class Document {
 
     let current = this._history.current();
     this._text = current.text;
-    for (let name of this._plugins.keys()) {
-      let plugin = this._plugins.get(name);
-      let data = current.data.get(name);
-      if (plugin.onRestore)
+    for (let plugin of this._plugins) {
+      if (plugin.onRestore) {
+        let data = current.data.get(plugin);
         plugin.onRestore(replacements, data);
+      }
     }
     this.invalidate();
     return true;
@@ -177,11 +176,11 @@ export class Document {
 
     let current = this._history.current();
     this._text = current.text;
-    for (let name of this._plugins.keys()) {
-      let plugin = this._plugins.get(name);
-      let data = current.data.get(name);
-      if (plugin.onRestore)
+    for (let plugin of this._plugins) {
+      if (plugin.onRestore) {
+        let data = current.data.get(plugin);
         plugin.onRestore(replacements, data);
+      }
     }
     this.invalidate();
     return true;
@@ -200,25 +199,24 @@ export class Document {
   }
 
   /**
-   * @param {string} name
    * @param {!Plugin} plugin
    */
-  addPlugin(name, plugin) {
-    if (this._plugins.get(name))
+  addPlugin(plugin) {
+    if (this._plugins.indexOf(plugin) !== -1)
       throw 'Duplicate plugin';
-    this._plugins.set(name, plugin);
+    this._plugins.push(plugin);
     if (plugin.onFrame)
       this.invalidate();
   }
 
   /**
-   * @param {string} name
    * @param {!Plugin} plugin
    */
-  removePlugin(name, plugin) {
-    if (this._plugins.get(name) !== plugin)
+  removePlugin(plugin) {
+    let index = this._plugins.indexOf(plugin);
+    if (index === -1)
       throw 'No such plugin';
-    this._plugins.delete(name);
+    this._plugins.splice(index, 1);
     if (plugin.onFrame)
       this.invalidate();
   }
@@ -233,12 +231,12 @@ export class Document {
       return this.undo(data);
     if (command === 'history.redo')
       return this.redo(data);
-    for (let plugin of this._plugins.values()) {
-      if (!plugin.onCommand)
-        continue;
-      let result = plugin.onCommand(command, data);
-      if (result !== undefined)
-        return result;
+    for (let plugin of this._plugins) {
+      if (plugin.onCommand) {
+        let result = plugin.onCommand(command, data);
+        if (result !== undefined)
+          return result;
+      }
     }
   }
 
@@ -300,7 +298,7 @@ export class Document {
   }
 
   beforeFrame() {
-    for (let plugin of this._plugins.values()) {
+    for (let plugin of this._plugins) {
       if (plugin.onBeforeFrame)
         plugin.onBeforeFrame();
     }
@@ -314,7 +312,7 @@ export class Document {
   decorateFrame(frame) {
     this._frozen = true;
     let decorators = [];
-    for (let plugin of this._plugins.values()) {
+    for (let plugin of this._plugins) {
       if (plugin.onFrame)
         decorators.push(...plugin.onFrame(frame));
     }

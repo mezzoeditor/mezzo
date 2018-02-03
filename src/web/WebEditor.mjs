@@ -21,7 +21,7 @@ export class WebEditor {
     this._setupEditing();
     this._setupSearch();
     this._syntaxHighlighter = new PlainHighlighter();
-    this._document.addPlugin('syntax-highlight', this._syntaxHighlighter);
+    this._document.addPlugin(this._syntaxHighlighter);
     this._keymap = new Map();
     this._installKeyMap({
       'Up': 'selection.move.up',
@@ -58,9 +58,9 @@ export class WebEditor {
   }
 
   setHighlighter(highlighter) {
-    this._document.removePlugin('syntax-highlight', this._syntaxHighlighter);
+    this._document.removePlugin(this._syntaxHighlighter);
     this._syntaxHighlighter = highlighter;
-    this._document.addPlugin('syntax-highlight', this._syntaxHighlighter);
+    this._document.addPlugin(this._syntaxHighlighter);
   }
 
   invalidate() {
@@ -219,7 +219,7 @@ export class WebEditor {
     };
     this._revealCursors();
 
-    this._document.addPlugin('selection', this._selection);
+    this._document.addPlugin(this._selection);
   }
 
   _setupEditing() {
@@ -277,7 +277,7 @@ export class WebEditor {
         event.stopPropagation();
       }
     });
-    this._document.addPlugin('editing', this._editing);
+    this._document.addPlugin(this._editing);
   }
 
   _setupSearch() {
@@ -302,7 +302,7 @@ export class WebEditor {
       this._document.perform('search.previous');
     };
 
-    this._document.addPlugin('search', this._search);
+    this._document.addPlugin(this._search);
   }
 }
 
