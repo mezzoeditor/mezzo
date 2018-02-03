@@ -206,9 +206,7 @@ export class Selection {
       case 'selection.move.word.left': {
         let ranges = [];
         for (let range of this._ranges) {
-          let offset = Math.min(range.anchor, range.focus);
-          if (range.anchor === range.focus)
-            offset = TextUtils.previousWord(this._document, range.focus);
+          let offset = TextUtils.previousWord(this._document, range.focus);
           ranges.push({id: range.id, upDownColumn: -1, anchor: offset, focus: offset});
         }
         this._ranges = this._join(ranges);
@@ -242,9 +240,7 @@ export class Selection {
       case 'selection.move.word.right': {
         let ranges = [];
         for (let range of this._ranges) {
-          let offset = Math.max(range.anchor, range.focus);
-          if (range.anchor === range.focus)
-            offset = TextUtils.nextWord(this._document, range.focus);
+          let offset = TextUtils.nextWord(this._document, range.focus);
           ranges.push({id: range.id, upDownColumn: -1, anchor: offset, focus: offset});
         }
         this._ranges = this._join(ranges);
