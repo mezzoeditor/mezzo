@@ -207,8 +207,6 @@ export class Document {
     if (this._plugins.get(name))
       throw 'Duplicate plugin';
     this._plugins.set(name, plugin);
-    if (plugin.onAdded)
-      plugin.onAdded(this);
     if (plugin.onFrame)
       this.invalidate();
   }
@@ -221,8 +219,6 @@ export class Document {
     if (this._plugins.get(name) !== plugin)
       throw 'No such plugin';
     this._plugins.delete(name);
-    if (plugin.onRemoved)
-      plugin.onRemoved(this);
     if (plugin.onFrame)
       this.invalidate();
   }

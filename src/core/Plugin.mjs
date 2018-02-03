@@ -3,22 +3,6 @@
  */
 class Plugin {
   /**
-   * Called when this plugin is added to the document.
-   * Typically plugin adds Decorator(s) to the document here.
-   * @param {!Document} document
-   */
-  onAdded(document) {
-  }
-
-  /**
-   * Called when this plugin is removed from the document.
-   * Typically plugin removes Decorator(s) from the document here.
-   * @param {!Document} document
-   */
-  onRemoved(document) {
-  }
-
-  /**
    * Called before building a frame. Plugin is expected to do any
    * postponed work which should synchronously affect the frame.
    * This is a last chance to affect viewport somehow before it is rendered.
