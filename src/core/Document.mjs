@@ -3,16 +3,16 @@ import { History } from "./History.mjs";
 import { Text } from "./Text.mjs";
 import { Frame } from "./Frame.mjs";
 import { DefaultTokenizer } from "./DefaultTokenizer.mjs";
+import { Viewport } from "./Viewport.mjs";
 
 export class Document {
   /**
    * @param {function()} onInvalidate
    * @param {function(number)} onReveal
    */
-  constructor(onInvalidate, onReveal) {
-    this._onInvalidate = onInvalidate;
-    this._onReveal = onReveal;
+  constructor() {
     this._plugins = [];
+    this._viewports = [];
     this._history = new History({
       text: Text.withContent(''),
       replacements: [],
@@ -31,6 +31,17 @@ export class Document {
    */
   tokenizer() {
     return this._tokenizer;
+  }
+
+  /**
+   * @param {number} fontLineHeight
+   * @param {number} fontCharWidth
+   * @return {!Viewport}
+   */
+  createViewport(fontLineHeight, fontCharWidth) {
+    let viewport = new Viewport(this, fontLineHeight, fontCharWidth);
+    this._viewports.push(viewport);
+    return viewport;
   }
 
   /**
@@ -57,16 +68,16 @@ export class Document {
   }
 
   invalidate() {
-    this._onInvalidate.call(null);
+    for (let viewport of this._viewports)
+      viewport.invalidate();
   }
 
   /**
    * @param {number} offset
    */
   reveal(offset) {
-    if (this._frozen)
-      throw 'Cannot reveal while building frame';
-    this._onReveal.call(null, offset);
+    for (let viewport of this._viewports)
+      viewport.reveal(offset);
   }
 
   /**
@@ -307,7 +318,7 @@ export class Document {
   /**
    * @package
    * @param {!Frame} frame
-   * @return {!Set<!Decorator>}
+   * @return {!Array<!Decorator>}
    */
   decorateFrame(frame) {
     this._frozen = true;

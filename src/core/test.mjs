@@ -1,5 +1,6 @@
 import {TestRunner, Reporter, Matchers} from '../../utils/testrunner/index.mjs';
 import {Text} from './Text.mjs';
+import {Document} from './Document.mjs';
 
 const runner = new TestRunner();
 
@@ -93,6 +94,48 @@ describe('Text', () => {
     expect(it.charCodeAt(0)).toBe(NaN);
     expect(it.charAt(0)).toBe(undefined);
     expect(it.substr(2)).toBe('');
+  });
+});
+
+describe('Viewport', () => {
+  beforeEach(state => {
+    let document = new Document();
+    document.reset(new Array(10).fill('').join('\n'));
+    state.viewport = document.createViewport(10, 10);
+    state.viewport.setSize(100, 100);
+    state.viewport.vScrollbar.setSize(100);
+  });
+
+  describe('Viewport.Scrollbars', () => {
+    it('should update thumb', ({viewport}) => {
+      expect(viewport.vScrollbar.thumbOffset()).toBe(0);
+      expect(viewport.vScrollbar.thumbSize()).toBe(100);
+
+      viewport.setPadding({ top: 100 });
+      expect(viewport.vScrollbar.thumbOffset()).toBe(0);
+      expect(viewport.vScrollbar.thumbSize()).toBe(50);
+      expect(viewport.maxScrollTop()).toBe(100);
+
+      viewport.advanceScroll(50, 50);
+      expect(viewport.scrollLeft()).toBe(0);
+      expect(viewport.vScrollbar.thumbOffset()).toBe(25);
+      expect(viewport.vScrollbar.thumbSize()).toBe(50);
+    });
+    it('Scrollbar coordinate conversion', ({viewport}) => {
+      let scrollbar = viewport.vScrollbar;
+
+      viewport.setPadding({ top: 100 });
+      expect(scrollbar.thumbOffset()).toBe(0);
+      expect(scrollbar.thumbSize()).toBe(50);
+      expect(scrollbar.contentOffsetToScrollbarOffset(50)).toBe(25);
+      expect(scrollbar.scrollbarOffsetToContentOffset(25)).toBe(50);
+
+      scrollbar.setSize(200);
+      expect(scrollbar.thumbOffset()).toBe(0);
+      expect(scrollbar.thumbSize()).toBe(100);
+      expect(scrollbar.contentOffsetToScrollbarOffset(50)).toBe(50);
+      expect(scrollbar.scrollbarOffsetToContentOffset(50)).toBe(50);
+    });
   });
 });
 
