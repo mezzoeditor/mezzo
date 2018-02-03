@@ -103,7 +103,7 @@ function split(node, offset, splitBy) {
 
 /**
  * @param {!TreeNode|undefined} node
- * @param {function(!Decorator)} visitor
+ * @param {function(!Decoration)} visitor
  */
 function visit(node, visitor) {
   if (!node)
@@ -165,9 +165,47 @@ function last(node) {
   return node;
 };
 
+/**
+ * @param {!TreeNode|undefined} node
+ * @param {function(!Decoration):number} visitor
+ * @param {number} from
+ * @return {number}
+ */
+function sparseVisit(node, visitor, from) {
+  if (!node)
+    return from;
+  if (node.from >= from)
+    from = sparseVisit(node.left, visitor, from);
+  if (node.from >= from) {
+    let result = visitor(node);
+    if (result < node.from)
+      throw 'Return value of visitor must not be less than decoration.from';
+    from = result;
+  }
+  return sparseVisit(node.right, visitor, from);
+};
+
 export class Decorator {
   constructor() {
     this._root = undefined;
+    this._scrollbarStyle = null;
+  }
+
+  /**
+   * Decorations which should be visible on the scrollbar must have their own decorator.
+   * The |scrollbarStyle| is used for these decorations to decorate the scrollbar.
+   * Note that |style| passed with each decoration will still be used to decorate viewport.
+   * @param {?string} scrollbarStyle
+   */
+  setScrollbarStyle(scrollbarStyle) {
+    this._scrollbarStyle = scrollbarStyle;
+  }
+
+  /**
+   * @return {?string}
+   */
+  scrollbarStyle() {
+    return this._scrollbarStyle;
   }
 
   /**
@@ -472,6 +510,23 @@ export class Decorator {
    */
   lastTouching(from, to) {
     return this._touching(from, to, node => node ? last(node) : null);
+  }
+
+  /**
+   * Visits all decorations, skipping some.
+   * The returned value of |visitor| is treated as the minimum |from| of the
+   * next decoration to visit. This means that the range
+   * from |decoration.to| to |returnValue| is effectively skipped.
+   *
+   * Passing the following function will not skip anything
+   * (based on decorations being disjoint):
+   *   let visitor = decoration => decoration.to;
+   * @param {function(decoration: !Decoration):number} visitor
+   */
+  sparseVisitAll(visitor) {
+    if (!this._root)
+      return;
+    sparseVisit(this._root, visitor, first(this._root).from);
   }
 
   /**

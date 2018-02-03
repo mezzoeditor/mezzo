@@ -12,6 +12,7 @@ const examples = [
   'jquery.min.js',
   'shakespeare.txt',
   'megaline.txt',
+  'megacolumn.txt',
 ];
 
 const jsHighlighter = new JSHighlighter();
@@ -149,6 +150,8 @@ async function setupEditor(editor, exampleName) {
     editor.setHighlighter(plainHighlighter);
   if (exampleName.indexOf('jquery') !== -1)
     editor.document().reset(new Array(1000).fill(text).join(''));
+  else if (exampleName.indexOf('megacolumn') !== -1)
+    editor.document().reset(new Array(10000).fill(text).join(''));
   else
     editor.document().reset(text);
   //editor.document().reset('abc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\n');

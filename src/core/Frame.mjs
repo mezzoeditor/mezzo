@@ -205,6 +205,15 @@ export class Frame {
     }
   }
 
+  /**
+   * @param {!TextPosition} position
+   * @param {boolean=} clamp
+   * @return {number}
+   */
+  positionToOffset(position, clamp) {
+    return this._document.positionToOffset(position, clamp);
+  }
+
   cleanup() {
     delete this._range._cache;
     for (let line of this._lines)

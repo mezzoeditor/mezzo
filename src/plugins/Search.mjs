@@ -25,6 +25,7 @@ export class Search {
         () => document.invalidate());
     this._selection = selection;
     this._decorator = new Decorator();
+    this._decorator.setScrollbarStyle('search.match');
     this._currentMatchDecorator = new Decorator();
     this._options = null;
     this._currentMatch = null;

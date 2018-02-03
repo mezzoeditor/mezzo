@@ -19,7 +19,10 @@ export class Selection {
    */
   constructor(document) {
     this._document = document;
-    this._decorator = new Decorator();
+    this._rangeDecorator = new Decorator();
+    this._rangeDecorator.setScrollbarStyle('selection.range');
+    this._focusDecorator = new Decorator();
+    this._focusDecorator.setScrollbarStyle('selection.focus');
     this._ranges = [];
     this._muted = 0;
     this._lastId = 0;
@@ -99,14 +102,15 @@ export class Selection {
   onFrame(frame) {
     if (this._staleDecorations) {
       this._staleDecorations = false;
-      this._decorator.clearAll();
+      this._rangeDecorator.clearAll();
+      this._focusDecorator.clearAll();
       for (let range of this._ranges) {
-        this._decorator.add(range.focus, range.focus, 'selection.focus');
+        this._focusDecorator.add(range.focus, range.focus, 'selection.focus');
         if (range.focus !== range.anchor)
-          this._decorator.add(Math.min(range.focus, range.anchor), Math.max(range.focus, range.anchor), 'selection.range');
+          this._rangeDecorator.add(Math.min(range.focus, range.anchor), Math.max(range.focus, range.anchor), 'selection.range');
       }
     }
-    return [this._decorator];
+    return [this._rangeDecorator, this._focusDecorator];
   }
 
   /**

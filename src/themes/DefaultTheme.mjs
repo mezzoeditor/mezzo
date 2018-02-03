@@ -75,11 +75,6 @@ export let DefaultTheme = {
     background: {
       color: 'rgba(0, 255, 0, 0.2)',
     },
-    scrollbar: {
-      color: 'rgba(0, 200, 0, 1.0)',
-      left: 0,
-      right: 40,
-    }
   },
   'blue': {
     text: {

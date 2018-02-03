@@ -88,9 +88,8 @@ export class Renderer {
       scrollTop: 0
     };
 
-    this._renderTime = 0;
+    this._counters = new Map();
     this._renderCount = 0;
-    this._renderDecorationsCount = 0;
   }
 
   theme() {
@@ -300,11 +299,18 @@ export class Renderer {
       this._animationFrameId = requestAnimationFrame(this._render);
   }
 
+  _measureTime(name, time) {
+    let now = window.performance.now();
+    this._counters.set(name, (this._counters.get(name) || 0) + (now - time));
+    return now;
+  }
+
   _render() {
     let time = window.performance.now();
-    this._decorationsCount = 0;
+    let startTime = time;
 
     this._document.beforeFrame();
+    time = this._measureTime('beforeFrame', time);
 
     this._animationFrameId = 0;
 
@@ -323,8 +329,13 @@ export class Renderer {
       line: Math.ceil((this._scrollTop + this._cssHeight) / lineHeight),
       column: Math.ceil((this._scrollLeft + this._cssWidth) / charWidth)
     };
+
+    time = this._measureTime('setup', time);
+
     const frame = new Frame(this._document, start, end.column - start.column, end.line - start.line);
     const decorators = this._document.decorateFrame(frame);
+
+    time = this._measureTime('frame', time);
 
     ctx.save();
     ctx.beginPath();
@@ -332,6 +343,8 @@ export class Renderer {
     ctx.clip();
     this._drawGutter(ctx, frame, decorators);
     ctx.restore();
+
+    time = this._measureTime('gutter', time);
 
     ctx.save();
     ctx.beginPath();
@@ -341,6 +354,8 @@ export class Renderer {
     this._drawText(ctx, frame, decorators);
     ctx.restore();
 
+    time = this._measureTime('text', time);
+
     ctx.save();
     const scrollbarRatio = this._document.lineCount() * this._metrics.lineHeight / (this._cssHeight + this._maxScrollTop);
     this._drawScrollbarMarkers(ctx, frame, decorators, this._vScrollbar.rect, scrollbarRatio);
@@ -348,16 +363,20 @@ export class Renderer {
     this._hScrollbar.draw(ctx);
     ctx.restore();
 
+    time = this._measureTime('scrollbar', time);
+
     frame.cleanup();
 
-    time = window.performance.now() - time;
-    this._renderTime += time;
-    this._renderDecorationsCount += this._decorationsCount;
+    time = this._measureTime('cleanup', time);
+    this._measureTime('render', startTime);
+
     if (++this._renderCount === 100) {
-      console.log(`Avg render time: ${this._renderTime / 100}; decorations: ${this._renderDecorationsCount / 100}`);
+      console.groupCollapsed(`Avg render time: ${this._counters.get('render') / 100}`);
+      for (let key of this._counters.keys())
+        console.log(`${key}: ${this._counters.get(key) / 100}`);
+      console.groupEnd();
+      this._counters.clear();
       this._renderCount = 0;
-      this._renderTime = 0;
-      this._renderDecorationsCount = 0;
     }
   }
 
@@ -395,7 +414,7 @@ export class Renderer {
       for (let line of lines) {
         let lineContent = frame.lineContent(line);
         decorator.visitTouching(line.from, line.to, decoration => {
-          this._decorationsCount++;
+          this._counters.set('decorations-text', (this._counters.get('decorations-text') || 0) + 1);
           const style = this._theme[decoration.style];
           if (!style)
             return;
@@ -451,28 +470,43 @@ export class Renderer {
   }
 
   _drawScrollbarMarkers(ctx, frame, decorators, rect, scrollbarRatio) {
-    // TODO(dgozman): this is a very hot function when searching, because most
-    // offsetToPosition calls are outside of viewport.
     const ratio = rect.height * scrollbarRatio / frame.document().lineCount();
-    const range = {from: 0, to: frame.document().length()};
     for (let decorator of decorators) {
-      decorator.visitTouching(range.from, range.to, decoration => {
-        const style = this._theme[decoration.style];
-        if (!style)
-          return;
-        if (style.scrollbar && style.scrollbar.color) {
-          const from = frame.offsetToPosition(decoration.from);
-          const to = frame.offsetToPosition(decoration.to);
-          let top = Math.round(ratio * from.line);
-          let bottom = Math.round(ratio * (to.line + 1));
-          let left = Math.round(rect.width * (style.scrollbar.left || 0) / 100);
-          let right = Math.round(rect.width * (style.scrollbar.right || 100) / 100);
-          if (top === bottom)
-            bottom++;
-          ctx.fillStyle = style.scrollbar.color;
-          ctx.fillRect(rect.x + left, rect.y + top, right - left, bottom - top);
+      const styleName = decorator.scrollbarStyle();
+      if (!styleName)
+        continue;
+      const style = this._theme[styleName];
+      if (!style || !style.scrollbar || !style.scrollbar.color)
+        continue;
+      ctx.fillStyle = style.scrollbar.color;
+      let left = Math.round(rect.width * (style.scrollbar.left || 0) / 100);
+      let right = Math.round(rect.width * (style.scrollbar.right || 100) / 100);
+
+      let lastTop = -1;
+      let lastBottom = -1;
+      decorator.sparseVisitAll(decoration => {
+        this._counters.set('decorations-scrollbar', (this._counters.get('decorations-scrollbar') || 0) + 1);
+        const from = frame.offsetToPosition(decoration.from);
+        const to = frame.offsetToPosition(decoration.to);
+        let top = Math.floor(ratio * from.line);
+        let bottom = Math.floor(ratio * (to.line + 1));
+        if (top === bottom)
+          bottom++;
+
+        if (top <= lastBottom) {
+          lastBottom = bottom;
+        } else {
+          if (lastTop >= 0)
+            ctx.fillRect(rect.x + left, rect.y + lastTop, right - left, lastBottom - lastTop);
+          lastTop = top;
+          lastBottom = bottom;
         }
+
+        let line = Math.ceil(bottom / ratio);
+        return Math.max(decoration.to + 1, frame.positionToOffset({line, column: 0}, true /* clamp */));
       });
+      if (lastTop >= 0)
+        ctx.fillRect(rect.x + left, rect.y + lastTop, right - left, lastBottom - lastTop);
     }
   }
 }
