@@ -10,6 +10,7 @@ export default class {
   }
 
   onReplace(from, to, inserted) {
+    this._speculativeHighlight.clearTouching(from, to);
     this._speculativeHighlight.onReplace(from, to, inserted);
   }
 
