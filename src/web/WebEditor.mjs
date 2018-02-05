@@ -145,7 +145,7 @@ export class WebEditor {
   }
 
   _setupSelection() {
-    this._selection = new Selection(this._document);
+    this._selection = new Selection(this._renderer.viewport());
     this._input.addEventListener('keydown', event => {
       let handled = false;
       let command = this._keymap.get(eventToHash(event));

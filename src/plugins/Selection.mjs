@@ -17,8 +17,9 @@ export class Selection {
   /**
    * @param {!Document} document
    */
-  constructor(document) {
-    this._document = document;
+  constructor(viewport) {
+    this._viewport = viewport;
+    this._document = viewport.document();
     this._rangeDecorator = new Decorator();
     this._rangeDecorator.setScrollbarStyle('selection.range');
     this._focusDecorator = new Decorator();
@@ -461,7 +462,7 @@ export class Selection {
   _reveal() {
     let focus = this.focus();
     if (focus !== null)
-      this._document.reveal(focus);
+      this._viewport.reveal(focus);
   }
 };
 

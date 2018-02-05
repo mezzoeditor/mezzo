@@ -6,10 +6,6 @@ import { DefaultTokenizer } from "./DefaultTokenizer.mjs";
 import { Viewport } from "./Viewport.mjs";
 
 export class Document {
-  /**
-   * @param {function()} onInvalidate
-   * @param {function(number)} onReveal
-   */
   constructor() {
     this._plugins = [];
     this._viewports = [];
@@ -70,14 +66,6 @@ export class Document {
   invalidate() {
     for (let viewport of this._viewports)
       viewport.invalidate();
-  }
-
-  /**
-   * @param {number} offset
-   */
-  reveal(offset) {
-    for (let viewport of this._viewports)
-      viewport.reveal(offset);
   }
 
   /**

@@ -58,6 +58,13 @@ export class Viewport {
   }
 
   /**
+   * @return {!Document}
+   */
+  document() {
+    return this._document;
+  }
+
+  /**
    * @param {function()} invalidateCallback
    */
   setInvalidateCallback(invalidateCallback) {

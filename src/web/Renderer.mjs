@@ -92,6 +92,13 @@ export class Renderer {
     this._renderCount = 0;
   }
 
+  /**
+   * @return {!Viewport}
+   */
+  viewport() {
+    return this._viewport;
+  }
+
   theme() {
     return this._theme;
   }
