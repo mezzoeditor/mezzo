@@ -49,6 +49,7 @@ export class Viewport {
     this._maxScrollTop = 0;
     this._maxScrollLeft = 0;
     this._padding = { left: 0, right: 0, top: 0, bottom: 0};
+    this._frozen = false;
 
     this.hScrollbar = new Scrollbar(offset => this.setScrollLeft(offset));
     this.vScrollbar = new Scrollbar(offset => this.setScrollTop(offset));
@@ -72,7 +73,7 @@ export class Viewport {
   }
 
   /**
-   * @param {function()} invalidateCallback
+   * @param {function()} revealCallback
    */
   setRevealCallback(revealCallback) {
     this._revealCallback = revealCallback;
@@ -203,7 +204,7 @@ export class Viewport {
    * @param {number} offset
    */
   reveal(offset) {
-    if (this._document._frozen)
+    if (this._frozen)
       throw 'Cannot reveal while building frame';
 
     let {line, column} = this._document.offsetToPosition(offset);
@@ -228,10 +229,12 @@ export class Viewport {
    */
   createFrame() {
     this._document.beforeFrame();
+    this._frozen = true;
     const start = this.viewportPositionToTextPosition({x: 0, y: 0});
     const end = this.viewportPositionToTextPosition({x: this._width + this._metrics.charWidth, y: this._height + this._metrics.lineHeight});
     const frame = new Frame(this._document, start, end.column - start.column, end.line - start.line);
     const decorators = this._document.decorateFrame(frame);
+    this._frozen = false;
     return {frame, decorators};
   }
 

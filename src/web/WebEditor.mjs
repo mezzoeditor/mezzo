@@ -184,20 +184,20 @@ export class WebEditor {
         return;
       lastMouserEvent = event;
       let offset = this._renderer.mouseEventToTextOffset(event);
-      this._selection.setRanges([{
-        from: Math.min(offset, mouseRangeStartOffset),
-        to: Math.max(offset, mouseRangeEndOffset)
-      }]);
+      if (offset <= mouseRangeStartOffset)
+        this._selection.setRanges([{from: mouseRangeEndOffset, to: offset}]);
+      else if (offset >= mouseRangeEndOffset)
+        this._selection.setRanges([{from: mouseRangeStartOffset, to: offset}]);
       this._revealCursors();
     });
     this._element.addEventListener('wheel', event => {
       if (mouseRangeStartOffset === null)
         return;
       let offset = this._renderer.mouseEventToTextOffset(lastMouserEvent);
-      this._selection.setRanges([{
-        from: Math.min(offset, mouseRangeStartOffset),
-        to: Math.max(offset, mouseRangeEndOffset)
-      }]);
+      if (offset <= mouseRangeStartOffset)
+        this._selection.setRanges([{from: mouseRangeEndOffset, to: offset}]);
+      else if (offset >= mouseRangeEndOffset)
+        this._selection.setRanges([{from: mouseRangeStartOffset, to: offset}]);
       this._revealCursors();
     });
     this._element.addEventListener('mouseup', event => {
