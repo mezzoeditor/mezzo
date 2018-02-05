@@ -160,9 +160,9 @@ export class WebEditor {
 
     let mouseRangeStartOffset = null;
     let mouseRangeEndOffset = null;
-    let lastMouserEvent = null;
+    let lastMouseEvent = null;
     this._element.addEventListener('mousedown', event => {
-      lastMouserEvent = event;
+      lastMouseEvent = event;
       let offset = this._renderer.mouseEventToTextOffset(event);
       if (event.detail > 1) {
         let offset = this._renderer.mouseEventToTextOffset(event);
@@ -182,7 +182,7 @@ export class WebEditor {
     this._element.addEventListener('mousemove', event => {
       if (mouseRangeStartOffset === null)
         return;
-      lastMouserEvent = event;
+      lastMouseEvent = event;
       let offset = this._renderer.mouseEventToTextOffset(event);
       if (offset <= mouseRangeStartOffset)
         this._selection.setRanges([{from: mouseRangeEndOffset, to: offset}]);
@@ -193,7 +193,7 @@ export class WebEditor {
     this._element.addEventListener('wheel', event => {
       if (mouseRangeStartOffset === null)
         return;
-      let offset = this._renderer.mouseEventToTextOffset(lastMouserEvent);
+      let offset = this._renderer.mouseEventToTextOffset(lastMouseEvent);
       if (offset <= mouseRangeStartOffset)
         this._selection.setRanges([{from: mouseRangeEndOffset, to: offset}]);
       else if (offset >= mouseRangeEndOffset)
