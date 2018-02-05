@@ -189,7 +189,6 @@ export class Renderer {
   _onScroll(event) {
     this._viewport.advanceScroll(event.deltaY, event.deltaX);
     this.invalidate();
-    event.stopPropagation();
     event.preventDefault();
   }
 
