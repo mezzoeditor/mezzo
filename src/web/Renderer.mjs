@@ -66,6 +66,7 @@ export class Renderer {
     this._canvas.addEventListener('mousedown', event => this._onMouseDown(event));
     this._canvas.addEventListener('mousemove', event => this._onMouseMove(event));
     this._canvas.addEventListener('mouseup', event => this._onMouseUp(event));
+    this._canvas.addEventListener('mouseout', event => this._onMouseOut(event));
     this._canvas.addEventListener('wheel', event => this._onScroll(event));
 
     // Rects are in css pixels, in canvas coordinates.
@@ -233,6 +234,18 @@ export class Renderer {
     this._hScrollbar.dragged = false;
     this._vScrollbar.hovered = rectHasPoint(this._vScrollbar.thumbRect, canvasPosition.x, canvasPosition.y);
     this._hScrollbar.hovered = rectHasPoint(this._hScrollbar.thumbRect, canvasPosition.x, canvasPosition.y);
+    this._scheduleRender();
+  }
+
+  _onMouseOut(event) {
+    const canvasPosition = this._mouseEventToCanvas(event);
+    this._lastCoordinates.mouseUp = canvasPosition;
+    this._mouseDownState.name = null;
+    this._mouseDownState.insideThumb = null;
+    this._vScrollbar.dragged = false;
+    this._hScrollbar.dragged = false;
+    this._vScrollbar.hovered = false;
+    this._hScrollbar.hovered = false;
     this._scheduleRender();
   }
 
