@@ -25,7 +25,7 @@ export default class {
       let from = range.from;
       let decoration = this._speculativeHighlight.lastTouching(from, from);
       if (decoration) {
-        decorator.add(from, decoration.to, decoration.style);
+        decorator.add(from, Math.min(decoration.to, range.to), decoration.style);
         from = decoration.to;
       }
 
