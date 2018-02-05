@@ -76,8 +76,18 @@ export class Renderer {
     this._editorRect = {
       x: 0, y: 0, width: 0, height: 0
     };
-    this._vScrollbar = new Scrollbar(true /** isVertical */);
-    this._hScrollbar = new Scrollbar(false /** isVertical */);
+    this._vScrollbar = {
+      rect: {x: 0, y: 0, width: 0, height: 0},
+      thumbRect: {x: 0, y: 0, width: 0, height: 0},
+      hovered: false,
+      dragged: false
+    };
+    this._hScrollbar = {
+      rect: {x: 0, y: 0, width: 0, height: 0},
+      thumbRect: {x: 0, y: 0, width: 0, height: 0},
+      hovered: false,
+      dragged: false
+    };
 
     this._lastCoordinates = {
       mouseDown: null,
@@ -364,8 +374,8 @@ export class Renderer {
 
     ctx.save();
     this._drawScrollbarMarkers(ctx, frame, decorators, this._vScrollbar.rect, this._viewport.vScrollbar);
-    this._vScrollbar.draw(ctx);
-    this._hScrollbar.draw(ctx);
+    this._drawScrollbar(ctx, this._vScrollbar, true /* isVertical */);
+    this._drawScrollbar(ctx, this._hScrollbar, false /* isVertical */);
     ctx.restore();
 
     time = this._measureTime('scrollbar', time);
@@ -475,6 +485,23 @@ export class Renderer {
     }
   }
 
+  _drawScrollbar(ctx, scrollbar, isVertical) {
+    if (!scrollbar.rect.width || !scrollbar.rect.height)
+      return;
+    if (isVertical) {
+      ctx.strokeStyle = 'rgba(100, 100, 100, 0.2)';
+      ctx.strokeRect(scrollbar.rect.x, scrollbar.rect.y, scrollbar.rect.width, scrollbar.rect.height);
+    }
+
+    if (scrollbar.dragged)
+      ctx.fillStyle = 'rgba(100, 100, 100, 0.8)';
+    else if (scrollbar.hovered)
+      ctx.fillStyle = 'rgba(100, 100, 100, 0.6)';
+    else
+      ctx.fillStyle = 'rgba(100, 100, 100, 0.4)'
+    ctx.fillRect(scrollbar.thumbRect.x, scrollbar.thumbRect.y, scrollbar.thumbRect.width, scrollbar.thumbRect.height);
+  }
+
   _drawScrollbarMarkers(ctx, frame, decorators, rect, scrollbar) {
     for (let decorator of decorators) {
       const styleName = decorator.scrollbarStyle();
@@ -517,32 +544,5 @@ export class Renderer {
       if (lastTop >= 0)
         ctx.fillRect(rect.x + left, rect.y + lastTop, right - left, lastBottom - lastTop);
     }
-  }
-}
-
-class Scrollbar {
-  constructor(isVertical) {
-    this._vertical = !!isVertical;
-    this.hovered = false;
-
-    this.rect = {x: 0, y: 0, width: 0, height: 0};
-    this.thumbRect = {x: 0, y: 0, width: 0, height: 0};
-  }
-
-  draw(ctx) {
-    if (!this.rect.width || !this.rect.height)
-      return;
-    if (this._vertical) {
-      ctx.strokeStyle = 'rgba(100, 100, 100, 0.2)';
-      ctx.strokeRect(this.rect.x, this.rect.y, this.rect.width, this.rect.height);
-    }
-
-    if (this.dragged)
-      ctx.fillStyle = 'rgba(100, 100, 100, 0.8)';
-    else if (this.hovered)
-      ctx.fillStyle = 'rgba(100, 100, 100, 0.6)';
-    else
-      ctx.fillStyle = 'rgba(100, 100, 100, 0.4)'
-    ctx.fillRect(this.thumbRect.x, this.thumbRect.y, this.thumbRect.width, this.thumbRect.height);
   }
 }
