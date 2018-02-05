@@ -226,7 +226,7 @@ export class Renderer {
       this._vScrollbar.hovered = rectHasPoint(this._vScrollbar.thumbRect, canvasPosition.x, canvasPosition.y);
       this._hScrollbar.hovered = rectHasPoint(this._hScrollbar.thumbRect, canvasPosition.x, canvasPosition.y);
       let textHovered = rectHasPoint(this._editorRect, canvasPosition.x, canvasPosition.y);
-      if (textHovered)
+      if (textHovered && !this._hScrollbar.hovered && !this._vScrollbar.hovered)
         this._canvas.style.setProperty('cursor', 'text');
       else
         this._canvas.style.setProperty('cursor', 'default' || gutterHovered);
