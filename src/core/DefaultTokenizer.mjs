@@ -23,8 +23,6 @@ export class DefaultTokenizer {
    * Return weather the char belongs to the word
    */
   isPunctuationChar(it) {
-    let char = it.current;
-    return (char > ' ' && char < '0') || (char > '9' && char < 'A') || (char > 'Z' && char < '_') ||
-        (char > '_' && char < 'a') || (char > 'z' && char <= '~');
+    return `\`~!@#$%^&*()-=+[{]}\\|;:\'",.<>/?`.indexOf(it.current) !== -1;
   }
 }
