@@ -2,19 +2,19 @@
 * [x] 60fps rendering
 * [x] million lines editing
 * [x] million columns editing
-* [x] undo/redo
-* [x] multiple cursors
+* [x] instant undo/redo
+* [x] performant multiple cursors
 * [x] unicode (same-width chars)
-* [x] decorations
-* [x] scrollbar markers
-* [x] plugins system
-* [x] gutter
+* [x] rich decorations
+* [x] rich scrollbar markers
+* [x] easy plugins system
+* [ ] rich gutter markers
 
 #### Tier 1 features
 * [x] search/replace
 * [x] keyboard bindings
 * [ ] auto-indent
-* [ ] indent block
+* [ ] instant indent block
 * [ ] inline widgets (width = multiple of character)
 * [ ] gutter widgets
 * [ ] multi-line widgets
@@ -22,7 +22,8 @@
 * [ ] custom themes
 
 #### Content type features
-* [ ] syntax highlight
+* [ ] syntax highlight:
+    - JavaScript
 * [ ] syntax-indent
 * [ ] bracket matching
 * [ ] auto-closing brackets
