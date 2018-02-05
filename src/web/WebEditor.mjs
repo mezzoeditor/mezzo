@@ -159,10 +159,21 @@ export class WebEditor {
     });
 
     let mouseRangeStartOffset = null;
+    let mouseRangeEndOffset = null;
     this._element.addEventListener('mousedown', event => {
       let offset = this._renderer.mouseEventToTextOffset(event);
+      if (event.detail > 1) {
+        let offset = this._renderer.mouseEventToTextOffset(event);
+        let range = this._selection.selectWordContaining(offset);
+        mouseRangeStartOffset = range.from;
+        mouseRangeEndOffset = range.to;
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
       this._selection.setRanges([{from: offset, to: offset}]);
       mouseRangeStartOffset = offset;
+      mouseRangeEndOffset = offset;
       event.stopPropagation();
       event.preventDefault();
     });
@@ -170,11 +181,15 @@ export class WebEditor {
       if (mouseRangeStartOffset === null)
         return;
       let offset = this._renderer.mouseEventToTextOffset(event);
-      this._selection.setRanges([{from: mouseRangeStartOffset, to: offset}]);
+      this._selection.setRanges([{
+        from: Math.min(offset, mouseRangeStartOffset),
+        to: Math.max(offset, mouseRangeEndOffset)
+      }]);
       this._revealCursors();
     });
     this._element.addEventListener('mouseup', event => {
       mouseRangeStartOffset = null;
+      mouseRangeEndOffset = null;
     });
     this._element.addEventListener('copy', event => {
       let text = this._document.perform('selection.copy');
@@ -183,7 +198,7 @@ export class WebEditor {
         event.preventDefault();
         event.stopPropagation();
       }
-    });
+    }, false);
 
     let theme = this._renderer.theme();
     let selectionFocusTheme = theme['selection.focus'];

@@ -69,6 +69,15 @@ export class Selection {
       this._reveal();
   }
 
+  selectWordContaining(offset) {
+    let range = {
+      from: TextUtils.previousWord(this._document, offset),
+      to: TextUtils.nextWord(this._document, offset),
+    };
+    this.setRanges([range]);
+    return range;
+  }
+
   /**
    * @param {!Array<!OffsetRange>} ranges
    */
