@@ -225,10 +225,11 @@ export class Renderer {
     if (!this._mouseDownState.name) {
       this._vScrollbar.hovered = rectHasPoint(this._vScrollbar.thumbRect, canvasPosition.x, canvasPosition.y);
       this._hScrollbar.hovered = rectHasPoint(this._hScrollbar.thumbRect, canvasPosition.x, canvasPosition.y);
-      if (this._vScrollbar.hovered || this._hScrollbar.hovered)
-        this._canvas.style.setProperty('cursor', 'default');
-      else
+      let textHovered = rectHasPoint(this._editorRect, canvasPosition.x, canvasPosition.y);
+      if (textHovered)
         this._canvas.style.setProperty('cursor', 'text');
+      else
+        this._canvas.style.setProperty('cursor', 'default' || gutterHovered);
       this._scheduleRender();
     } else if (this._mouseDownState.name === MouseDownStates.VSCROLL_DRAG) {
       let scrollbarOffset = canvasPosition.y - this._vScrollbar.rect.y + this._mouseDownState.insideThumb;
