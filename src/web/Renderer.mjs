@@ -14,6 +14,7 @@ class FontMetrics {
   }
 }
 
+const MIN_THUMB_SIZE = 30;
 const GUTTER_PADDING_LEFT_RIGHT = 4;
 const SCROLLBAR_WIDTH = 15;
 const kMinScrollbarDecorationHeight = 5;
@@ -182,7 +183,7 @@ export class Renderer {
     if (this._vScrollbar.hovered) {
       this._vScrollbar.dragged = true;
       this._mouseDownState.name = MouseDownStates.VSCROLL_DRAG;
-      this._mouseDownState.insideThumb = this._vScrollbar.thumbRect.y - canvasPosition.y;
+      this._mouseDownState.insideThumb = this._viewport.vScrollbar.thumbOffset() - (canvasPosition.y - this._vScrollbar.rect.y);
       this._scheduleRender();
       event.stopPropagation();
       event.preventDefault();
@@ -192,7 +193,7 @@ export class Renderer {
     if (this._hScrollbar.hovered) {
       this._hScrollbar.dragged = true;
       this._mouseDownState.name = MouseDownStates.HSCROLL_DRAG;
-      this._mouseDownState.insideThumb = this._hScrollbar.thumbRect.x - canvasPosition.x;
+      this._mouseDownState.insideThumb = this._viewport.hScrollbar.thumbOffset() - (canvasPosition.x - this._hScrollbar.rect.x);
       this._scheduleRender();
       event.stopPropagation();
       event.preventDefault();
@@ -267,6 +268,11 @@ export class Renderer {
     this._vScrollbar.thumbRect.y = this._viewport.vScrollbar.thumbOffset();
     this._vScrollbar.thumbRect.width = this._vScrollbar.rect.width;
     this._vScrollbar.thumbRect.height = this._viewport.vScrollbar.thumbSize();
+    if (this._vScrollbar.thumbRect.height < MIN_THUMB_SIZE) {
+      let delta = MIN_THUMB_SIZE - this._vScrollbar.thumbRect.height;
+      this._vScrollbar.thumbRect.y -= delta * this._viewport.vScrollbar.scrolledPercentage();
+      this._vScrollbar.thumbRect.height = MIN_THUMB_SIZE;
+    }
 
     this._hScrollbar.rect.x = this._gutterRect.width;
     this._hScrollbar.rect.y = this._cssHeight - SCROLLBAR_WIDTH;
@@ -276,6 +282,11 @@ export class Renderer {
     this._hScrollbar.thumbRect.y = this._hScrollbar.rect.y;
     this._hScrollbar.thumbRect.width = this._viewport.hScrollbar.thumbSize();
     this._hScrollbar.thumbRect.height = this._hScrollbar.rect.height;
+    if (this._hScrollbar.thumbRect.width < MIN_THUMB_SIZE) {
+      let delta = MIN_THUMB_SIZE - this._hScrollbar.thumbRect.width;
+      this._hScrollbar.thumbRect.x -= delta * this._viewport.hScrollbar.scrolledPercentage();
+      this._hScrollbar.thumbRect.width = MIN_THUMB_SIZE;
+    }
 
     this._scheduleRender();
   }

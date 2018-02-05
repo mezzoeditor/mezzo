@@ -257,6 +257,7 @@ class Scrollbar {
     this._viewportMaxScroll = 0;
     this._viewportScroll = 0;
     this._viewportSize = 0;
+    this._scrolledPercentage = 0;
     this._scrollCallback = scrollCallback;
   }
 
@@ -265,6 +266,13 @@ class Scrollbar {
    */
   isScrollable() {
     return this._viewportMaxScroll > 0;
+  }
+
+  /**
+   * @return {number}
+   */
+  scrolledPercentage() {
+    return this._scrolledPercentage;
   }
 
   /**
@@ -329,6 +337,7 @@ class Scrollbar {
     this._viewportMaxScroll = viewportMaxScroll;
     this._viewportScroll = viewportScroll;
     this._viewportSize = viewportSize;
+    this._scrolledPercentage = viewportScroll / viewportMaxScroll;
     this._recompute();
   }
 
