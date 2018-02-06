@@ -4,8 +4,8 @@ import { Selection } from "../plugins/Selection.mjs";
 import { Editing } from "../plugins/Editing.mjs";
 import { Search } from "../plugins/Search.mjs";
 import { IdleScheduler } from "./IdleScheduler.mjs";
-import { DefaultTheme } from "../themes/DefaultTheme.mjs";
-import PlainHighlighter from "../syntax/plain.mjs";
+import { DefaultTheme } from "../default/DefaultTheme.mjs";
+import { DefaultHighlighter } from "../default/DefaultHighlighter.mjs";
 
 const isMac = navigator.platform.toUpperCase().indexOf('MAC') !== -1;
 
@@ -20,7 +20,7 @@ export class WebEditor {
     this._setupSelection();
     this._setupEditing();
     this._setupSearch();
-    this._syntaxHighlighter = new PlainHighlighter();
+    this._syntaxHighlighter = new DefaultHighlighter();
     this._document.addPlugin(this._syntaxHighlighter);
     this._keymap = new Map();
     this._installKeyMap({

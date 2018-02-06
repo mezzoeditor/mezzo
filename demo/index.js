@@ -3,7 +3,7 @@ import { WebEditor } from "../src/web/WebEditor.mjs";
 import { Random } from "../src/core/Random.mjs";
 import { TextUtils } from "../src/utils/TextUtils.mjs";
 import JSHighlighter from "../src/syntax/javascript.mjs";
-import PlainHighlighter from "../src/syntax/plain.mjs";
+import { DefaultHighlighter } from "../src/default/DefaultHighlighter.mjs";
 
 let random = Random(17);
 
@@ -16,7 +16,7 @@ const examples = [
 ];
 
 const jsHighlighter = new JSHighlighter();
-const plainHighlighter = new PlainHighlighter();
+const defaultHighlighter = new DefaultHighlighter();
 
 function addExamples(editor) {
   const select = document.querySelector('.examples');
@@ -147,7 +147,7 @@ async function setupEditor(editor, exampleName) {
   if (exampleName.endsWith('.js'))
     editor.setHighlighter(jsHighlighter);
   else
-    editor.setHighlighter(plainHighlighter);
+    editor.setHighlighter(defaultHighlighter);
   if (exampleName.indexOf('jquery') !== -1)
     editor.document().reset(new Array(1000).fill(text).join(''));
   else if (exampleName.indexOf('megacolumn') !== -1)

@@ -2,7 +2,6 @@ import { Decorator } from "./Decorator.mjs";
 import { History } from "./History.mjs";
 import { Text } from "./Text.mjs";
 import { Frame } from "./Frame.mjs";
-import { DefaultTokenizer } from "./DefaultTokenizer.mjs";
 import { Viewport } from "./Viewport.mjs";
 
 export class Document {
@@ -19,11 +18,11 @@ export class Document {
     this._operations = [];
     this._replacements = [];
     this._frozen = false;
-    this._tokenizer = new DefaultTokenizer();
+    this._tokenizer = null;
   }
 
   /**
-   * @return {!Tokenizer}
+   * @return {?Tokenizer}
    */
   tokenizer() {
     return this._tokenizer;

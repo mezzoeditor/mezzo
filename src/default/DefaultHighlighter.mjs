@@ -1,6 +1,6 @@
 import { Decorator } from "../core/Decorator.mjs";
 
-export default class {
+export class DefaultHighlighter {
   constructor() {
   }
 
