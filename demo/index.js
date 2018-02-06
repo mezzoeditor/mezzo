@@ -2,7 +2,7 @@ import { Decorator } from "../src/core/Decorator.mjs";
 import { WebEditor } from "../src/web/WebEditor.mjs";
 import { Random } from "../src/core/Random.mjs";
 import { TextUtils } from "../src/utils/TextUtils.mjs";
-import JSHighlighter from "../src/syntax/javascript.mjs";
+import { JSHighlighter } from "../src/javascript/JSHighlighter.mjs";
 import { DefaultHighlighter } from "../src/default/DefaultHighlighter.mjs";
 
 let random = Random(17);

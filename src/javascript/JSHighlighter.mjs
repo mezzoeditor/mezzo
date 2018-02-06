@@ -1,21 +1,27 @@
 import { Decorator } from "../core/Decorator.mjs";
-import {Parser, TokenTypes, KeywordTypes} from './jslexer/index.mjs';
+import { Parser, TokenTypes, KeywordTypes } from './jslexer/index.mjs';
 
 /**
- * @interface
+ * @implements Plugin
  */
-export default class {
+export class JSHighlighter {
   constructor() {
     this._speculativeHighlight = new Decorator();
   }
 
+  /**
+   * @override
+   * @param {number} from
+   * @param {number} to
+   * @param {number} inserted
+   */
   onReplace(from, to, inserted) {
     this._speculativeHighlight.clearTouching(from, to);
     this._speculativeHighlight.onReplace(from, to, inserted);
   }
 
   /**
-   * Called on every render of viewport. See Viewport for api.
+   * @override
    * @param {!Frame} frame
    * @return {!Array<!Decorator>}
    */
