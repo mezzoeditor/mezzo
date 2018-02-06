@@ -164,11 +164,30 @@ export class WebEditor {
     this._element.addEventListener('mousedown', event => {
       lastMouseEvent = event;
       let offset = this._renderer.mouseEventToTextOffset(event);
-      if (event.detail > 1) {
+      if (event.detail === 2) {
         let offset = this._renderer.mouseEventToTextOffset(event);
         let range = this._selection.selectWordContaining(offset);
         mouseRangeStartOffset = range.from;
         mouseRangeEndOffset = range.to;
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+      if (event.detail > 2) {
+        let offset = this._renderer.mouseEventToTextOffset(event);
+        let position = this._document.offsetToPosition(offset);
+        let from = this._document.positionToOffset({
+          line: position.line,
+          column: 0
+        });
+        let to = this._document.positionToOffset({
+          line: position.line + 1,
+          column: 0
+        });
+
+        this._selection.setRanges([{from, to}]);
+        mouseRangeStartOffset = from;
+        mouseRangeEndOffset = to;
         event.preventDefault();
         event.stopPropagation();
         return;
