@@ -48,38 +48,69 @@ describe('Chunk', () => {
   });
 });
 
-describe('Text', () => {
-  it('Text.content manual', () => {
+fdescribe('Text', () => {
+  it('Text.* manual', () => {
     let chunks = ['ab\ncd', 'def', '\n', '', 'a\n\n\nbbbc', 'xy', 'za\nh', 'pp', '\n', ''];
     let content = chunks.join('');
     let text = Text.test.fromChunks(chunks);
+    expect(text.lineCount()).toBe(8);
+    expect(text.longestLineLength()).toBe(8);
+    expect(text.length()).toBe(content.length);
     for (let from = 0; from <= content.length; from++) {
       for (let to = from; to <= content.length; to++)
         expect(text.content(from, to)).toBe(content.substring(from, to));
     }
   });
 
-  it('Text.content all sizes', () => {
+  it('Text.* all sizes', () => {
+    let lineCount = 200;
     let chunks = [];
-    for (let i = 0; i < 1000; i++) {
+    let longest = 0;
+    let positionQueries = [];
+    let offset = 0;
+    for (let i = 0; i < lineCount; i++) {
       let s = 'abcdefghijklmnopqrstuvwxyz';
       let length = 1 + (random() % (s.length - 1));
-      chunks.push(s.substring(0, length));
+      longest = Math.max(longest, length);
+      chunks.push(s.substring(0, length) + '\n');
+      positionQueries.push({line: i, column: 0, offset: offset});
+      positionQueries.push({line: i, column: 1, offset: offset + 1});
+      positionQueries.push({line: i, column: length, offset: offset + length});
+      positionQueries.push({line: i, column: length + 1, offset: offset + length, clampOnly: true});
+      positionQueries.push({line: i, column: length + 100, offset: offset + length, clampOnly: true});
+      let column = random() % length;
+      positionQueries.push({line: i, column: column, offset: offset + column});
+      offset += length + 1;
     }
     let content = chunks.join('');
 
-    let queries = [];
+    let contentQueries = [];
     for (let i = 0; i < 1000; i++) {
       let from = random() % content.length;
       let to = from + (random() % (content.length - from));
-      queries.push({from, to});
+      contentQueries.push({from, to});
     }
 
     for (let chunkSize = 1; chunkSize <= 100; chunkSize++) {
       Text.test.setDefaultChunkSize(chunkSize);
       let text = Text.withContent(content);
-      for (let {from, to} of queries)
+      expect(text.lineCount()).toBe(lineCount + 1);
+      expect(text.longestLineLength()).toBe(longest);
+      expect(text.length()).toBe(content.length);
+      for (let {from, to} of contentQueries)
         expect(text.content(from, to)).toBe(content.substring(from, to));
+      expect(text.offsetToPosition(0)).toEqual({line: 0, column: 0, offset: 0});
+      expect(text.offsetToPosition(content.length)).toEqual({line: lineCount, column: 0, offset: content.length});
+      expect(text.offsetToPosition(content.length + 1)).toBe(null);
+      for (let {line, column, offset, clampOnly} of positionQueries) {
+        if (clampOnly) {
+          expect(text.positionToOffset({line, column}, true)).toBe(offset);
+        } else {
+          expect(text.offsetToPosition(offset)).toEqual({line, column, offset});
+          expect(text.positionToOffset({line, column}, true)).toBe(offset);
+          expect(text.positionToOffset({line, column}, false)).toBe(offset);
+        }
+      }
     }
   });
 });
