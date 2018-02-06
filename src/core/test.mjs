@@ -114,10 +114,10 @@ describe('Viewport', () => {
       viewport.setPadding({ top: 100 });
       expect(viewport.vScrollbar.thumbOffset()).toBe(0);
       expect(viewport.vScrollbar.thumbSize()).toBe(50);
-      expect(viewport.maxScrollTop()).toBe(100);
+      expect(viewport._maxScrollTop).toBe(100);
 
       viewport.advanceScroll(50, 50);
-      expect(viewport.scrollLeft()).toBe(0);
+      expect(viewport._scrollLeft).toBe(0);
       expect(viewport.vScrollbar.thumbOffset()).toBe(25);
       expect(viewport.vScrollbar.thumbSize()).toBe(50);
     });
