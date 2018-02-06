@@ -42,6 +42,9 @@ Chunk.metrics = function(chunk) {
 Chunk.positionToOffset = function(chunk, before, position, clamp) {
   let {line, column, offset} = before;
 
+  if (position.line < line || (position.line === line && position.column < column))
+    throw 'Inconsistent';
+
   let index = 0;
   while (line < position.line) {
     let nextLine = chunk.indexOf('\n', index);

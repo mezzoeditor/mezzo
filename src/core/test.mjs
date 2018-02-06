@@ -1,4 +1,5 @@
 import {TestRunner, Reporter, Matchers} from '../../utils/testrunner/index.mjs';
+import {Chunk} from './Chunk.mjs';
 import {Text} from './Text.mjs';
 import {Document} from './Document.mjs';
 
@@ -9,6 +10,40 @@ const {it, fit, xit} = runner;
 const {beforeAll, beforeEach, afterAll, afterEach} = runner;
 
 const {expect} = new Matchers();
+
+describe('Chunk', () => {
+  it('Chunk.metrics', () => {
+    expect(Chunk.metrics('one line')).toEqual({length: 8, first: 8, last: 8, longest: 8});
+    expect(Chunk.metrics('\none line')).toEqual({length: 9, first: 0, last: 8, longest: 8, lines: 1});
+    expect(Chunk.metrics('one line\n')).toEqual({length: 9, first: 8, last: 0, longest: 8, lines: 1});
+    expect(Chunk.metrics('\none line\n')).toEqual({length: 10, first: 0, last: 0, longest: 8, lines: 2});
+    expect(Chunk.metrics('short\nlongest\nlonger\ntiny')).toEqual({length: 25, first: 5, last: 4, longest: 7, lines: 3});
+  });
+
+  it('Chunk.offsetToPosition and positionToOffset', () => {
+    let tests = [
+      {chunk: 'short', before: {offset: 15, line: 3, column: 8}, position: {line: 3, column: 11, offset: 18}},
+      {chunk: 'short\nlonger', before: {offset: 15, line: 3, column: 8}, position: {line: 3, column: 11, offset: 18}},
+      {chunk: 'short\nlonger', before: {offset: 15, line: 3, column: 8}, position: {line: 3, column: 13, offset: 20}},
+      {chunk: 'short\nlonger', before: {offset: 15, line: 3, column: 8}, position: {line: 4, column: 0, offset: 21}},
+      {chunk: '1\n23\n456\n78\n9\n0', before: {offset: 15, line: 3, column: 8}, position: {line: 7, column: 1, offset: 28}},
+    ];
+    for (let test of tests) {
+      expect(Chunk.offsetToPosition(test.chunk, test.before, test.position.offset)).toEqual(test.position);
+      expect(Chunk.positionToOffset(test.chunk, test.before, test.position, false /* clamp */)).toEqual(test.position.offset);
+      expect(Chunk.positionToOffset(test.chunk, test.before, test.position, true /* clamp */)).toEqual(test.position.offset);
+    }
+
+    let clamped = [
+      {chunk: 'short', before: {offset: 15, line: 3, column: 8}, position: {line: 3, column: 22}, offset: 20},
+      {chunk: 'short\nlonger', before: {offset: 15, line: 3, column: 8}, position: {line: 3, column: 22}, offset: 20},
+      {chunk: 'short\nlonger', before: {offset: 15, line: 3, column: 8}, position: {line: 4, column: 22}, offset: 27},
+      {chunk: '1\n23\n456\n78\n9\n0', before: {offset: 15, line: 3, column: 8}, position: {line: 7, column: 22}, offset: 28},
+    ];
+    for (let test of clamped)
+      expect(Chunk.positionToOffset(test.chunk, test.before, test.position, true /* clamp */)).toEqual(test.offset);
+  });
+});
 
 describe('Text', () => {
   it('Text.content', () => {
