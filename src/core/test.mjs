@@ -2,6 +2,9 @@ import {TestRunner, Reporter, Matchers} from '../../utils/testrunner/index.mjs';
 import {Chunk} from './Chunk.mjs';
 import {Text} from './Text.mjs';
 import {Document} from './Document.mjs';
+import {Random} from './Random.mjs';
+
+const random = Random(143);
 
 const runner = new TestRunner();
 
@@ -46,11 +49,42 @@ describe('Chunk', () => {
 });
 
 describe('Text', () => {
-  it('Text.content', () => {
-    let text = Text.withContent('world');
-    expect(text.content(1,3)).toBe('or');
+  it('Text.content manual', () => {
+    let chunks = ['ab\ncd', 'def', '\n', '', 'a\n\n\nbbbc', 'xy', 'za\nh', 'pp', '\n', ''];
+    let content = chunks.join('');
+    let text = Text.test.fromChunks(chunks);
+    for (let from = 0; from <= content.length; from++) {
+      for (let to = from; to <= content.length; to++)
+        expect(text.content(from, to)).toBe(content.substring(from, to));
+    }
   });
 
+  it('Text.content all sizes', () => {
+    let chunks = [];
+    for (let i = 0; i < 1000; i++) {
+      let s = 'abcdefghijklmnopqrstuvwxyz';
+      let length = 1 + (random() % (s.length - 1));
+      chunks.push(s.substring(0, length));
+    }
+    let content = chunks.join('');
+
+    let queries = [];
+    for (let i = 0; i < 1000; i++) {
+      let from = random() % content.length;
+      let to = from + (random() % (content.length - from));
+      queries.push({from, to});
+    }
+
+    for (let chunkSize = 1; chunkSize <= 100; chunkSize++) {
+      Text.test.setDefaultChunkSize(chunkSize);
+      let text = Text.withContent(content);
+      for (let {from, to} of queries)
+        expect(text.content(from, to)).toBe(content.substring(from, to));
+    }
+  });
+});
+
+describe('Text.Iterator', () => {
   it('Text.Iterator basics', () => {
     let text = Text.withContent('world');
     let it = text.iterator(0);

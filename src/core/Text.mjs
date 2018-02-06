@@ -5,7 +5,7 @@ import { Random } from "./Random.mjs";
 let origin = { offset: 0, line: 0, column: 0 };
 let random = Random(42);
 
-const kDefaultChunkSize = 100;
+let kDefaultChunkSize = 100;
 
 /**
  * @typedef {{
@@ -783,4 +783,22 @@ Text.Iterator = class {
   outOfBounds() {
     return this.offset < this._from || this.offset >= this._to;
   }
+};
+
+Text.test = {};
+
+/**
+ * @param {!Array<string>} chunks
+ * @return {!Text}
+ */
+Text.test.fromChunks = function(chunks) {
+  let nodes = chunks.map(chunk => createNode(chunk));
+  return new Text(buildTree(nodes));
+};
+
+/**
+ * @param {number}
+ */
+Text.test.setDefaultChunkSize = function(chunkSize) {
+  kDefaultChunkSize = chunkSize;
 };
