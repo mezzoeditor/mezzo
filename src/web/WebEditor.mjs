@@ -188,6 +188,8 @@ export class WebEditor {
         this._selection.setRanges([{from: mouseRangeEndOffset, to: offset}]);
       else if (offset >= mouseRangeEndOffset)
         this._selection.setRanges([{from: mouseRangeStartOffset, to: offset}]);
+      else
+        this._selection.setRanges([{from: mouseRangeStartOffset, to: mouseRangeEndOffset}]);
       this._revealCursors();
     });
     this._element.addEventListener('wheel', event => {
@@ -198,6 +200,8 @@ export class WebEditor {
         this._selection.setRanges([{from: mouseRangeEndOffset, to: offset}]);
       else if (offset >= mouseRangeEndOffset)
         this._selection.setRanges([{from: mouseRangeStartOffset, to: offset}]);
+      else
+        this._selection.setRanges([{from: mouseRangeStartOffset, to: mouseRangeEndOffset}]);
       this._revealCursors();
     });
     this._element.addEventListener('mouseup', event => {
