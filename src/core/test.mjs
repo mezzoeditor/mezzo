@@ -145,6 +145,30 @@ describe('Text.Iterator', () => {
     expect(it.current).toBe('w');
   });
 
+  it('Text.Iterator.find manual chunks 1', () => {
+    let text = Text.test.fromChunks(['hello, w', 'o', 'r', 'ld!!!']);
+    let it = text.iterator(0);
+    expect(it.find('world')).toBe(true);
+    expect(it.offset).toBe(7);
+    expect(it.current).toBe('w');
+  });
+
+  it('Text.Iterator.find manual chunks 2', () => {
+    let text = Text.test.fromChunks(['hello', ',', ' ', 'w', 'orl', 'd!!!']);
+    let it = text.iterator(0);
+    expect(it.find('world')).toBe(true);
+    expect(it.offset).toBe(7);
+    expect(it.current).toBe('w');
+  });
+
+  it('Text.Iterator.find manual chunks 3', () => {
+    let text = Text.test.fromChunks(['hello, w', 'or', 'ld', '!!!']);
+    let it = text.iterator(0);
+    expect(it.find('world')).toBe(true);
+    expect(it.offset).toBe(7);
+    expect(it.current).toBe('w');
+  });
+
   it('Text.Iterator.find unsuccessful', () => {
     let text = Text.withContent('hello, world');
     let it = text.iterator(0);
