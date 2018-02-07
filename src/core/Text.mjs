@@ -391,7 +391,7 @@ class TreeIterator {
     if (this._node.left) {
       let left = this._node.left;
       while (left.right) {
-        this._stack.push(left.right);
+        this._stack.push(left);
         left = left.right;
       }
       this._stack.push(left);
@@ -639,6 +639,7 @@ Text.Iterator = class {
   substr(length) {
     if (this.outOfBounds())
       return '';
+    length = Math.min(length, this._to - this.offset);
     let result = '';
     let iterator = this._iterator.clone();
     let pos = this._pos;

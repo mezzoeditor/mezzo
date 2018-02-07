@@ -4,8 +4,6 @@ import {Text} from './Text.mjs';
 import {Document} from './Document.mjs';
 import {Random} from './Random.mjs';
 
-const random = Random(143);
-
 const runner = new TestRunner();
 
 const {describe, xdescribe, fdescribe} = runner;
@@ -48,7 +46,7 @@ describe('Chunk', () => {
   });
 });
 
-fdescribe('Text', () => {
+describe('Text', () => {
   it('Text.* manual', () => {
     let chunks = ['ab\ncd', 'def', '\n', '', 'a\n\n\nbbbc', 'xy', 'za\nh', 'pp', '\n', ''];
     let content = chunks.join('');
@@ -63,6 +61,7 @@ fdescribe('Text', () => {
   });
 
   it('Text.* all sizes', () => {
+    let random = Random(143);
     let lineCount = 200;
     let chunks = [];
     let longest = 0;
@@ -194,6 +193,46 @@ describe('Text.Iterator', () => {
     expect(it.charCodeAt(0)).toBe(NaN);
     expect(it.charAt(0)).toBe(undefined);
     expect(it.substr(2)).toBe('');
+  });
+
+  it('Text.Iterator all sizes', () => {
+    let random = Random(144);
+    let lineCount = 20;
+    let chunks = [];
+    for (let i = 0; i < lineCount; i++) {
+      let s = 'abcdefghijklmnopqrstuvwxyz';
+      let length = 1 + (random() % (s.length - 1));
+      chunks.push(s.substring(0, length) + '\n');
+    }
+    let content = chunks.join('');
+
+    for (let chunkSize = 1; chunkSize <= 101; chunkSize += 10) {
+      Text.test.setDefaultChunkSize(chunkSize);
+      let text = Text.withContent(content);
+      for (let from = 0; from <= content.length; from++) {
+        let it = text.iterator(from, from, content.length);
+        let length = content.length - from;
+        expect(it.length()).toBe(length);
+        let s = content.substring(from, content.length);
+        let p = new Array(length).fill(0);
+        for (let i = 1; i < length; i++) {
+          let j = random() % (i + 1);
+          p[i] = p[j];
+          p[j] = i;
+        }
+
+        for (let i = 0; i < length; i++) {
+          it.advance(p[i] - (i ? p[i - 1] : 0));
+          expect(it.offset).toBe(from + p[i]);
+          expect(it.current).toBe(s[p[i]]);
+          if (i <= 1) {
+            for (let len = 0; len <= length - p[i] + 1; len++)
+              expect(it.substr(len)).toBe(s.substring(p[i], p[i] + len));
+          }
+          expect(it.outOfBounds()).toBe(false);
+        }
+      }
+    }
   });
 });
 
