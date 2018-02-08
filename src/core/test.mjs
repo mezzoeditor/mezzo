@@ -112,6 +112,44 @@ describe('Text', () => {
       }
     }
   });
+
+  it('Text.replace all sizes', () => {
+    let random = Random(142);
+    let lineCount = 10;
+    let chunks = [];
+    for (let i = 0; i < lineCount; i++) {
+      let s = 'abcdefg';
+      let length = 1 + (random() % (s.length - 1));
+      chunks.push(s.substring(0, length) + '\n');
+    }
+    let content = chunks.join('');
+
+    let editQueries = [];
+    for (let i = 0; i < 20; i++) {
+      let from = random() % content.length;
+      let to = from + (random() % (content.length - from));
+      let s = 'abcdefg\n';
+      let length = 1 + (random() % (s.length - 1));
+      let insertion = s.substring(0, length);
+      editQueries.push({from, to, insertion});
+      content = content.substring(0, from) + insertion + content.substring(to, content.length);
+    }
+
+    for (let chunkSize = 1; chunkSize <= 100; chunkSize++) {
+      Text.test.setDefaultChunkSize(chunkSize);
+      content = chunks.join('');
+      let text = Text.withContent(content);
+      for (let {from, to, insertion} of editQueries) {
+        text = text.replace(from, to, insertion);
+        content = content.substring(0, from) + insertion + content.substring(to, content.length);
+        expect(text.length()).toBe(content.length);
+        for (let from = 0; from <= content.length; from++) {
+          for (let to = from; to <= content.length; to++)
+            expect(text.content(from, to)).toBe(content.substring(from, to));
+        }
+      }
+    }
+  });
 });
 
 describe('Text.Iterator', () => {
