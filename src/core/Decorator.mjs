@@ -433,7 +433,7 @@ export class Decorator {
    * Returns the first (sorted by position) decoration.
    * @return {?Decoration}
    */
-  firstAll(from, to) {
+  firstAll() {
     return this._root ? first(this._root) : null;
   }
 
@@ -471,7 +471,7 @@ export class Decorator {
    * Returns the last (sorted by position) decoration.
    * @return {?Decoration}
    */
-  lastAll(from, to) {
+  lastAll() {
     return this._root ? last(this._root) : null;
   }
 

@@ -3,6 +3,7 @@ import {Chunk} from './Chunk.mjs';
 import {Text} from './Text.mjs';
 import {Document} from './Document.mjs';
 import {Random} from './Random.mjs';
+import {Decorator} from './Decorator.mjs';
 
 const runner = new TestRunner();
 
@@ -337,6 +338,118 @@ describe('Viewport', () => {
       expect(scrollbar.contentOffsetToScrollbarOffset(50)).toBe(50);
       expect(scrollbar.scrollbarOffsetToContentOffset(50)).toBe(50);
     });
+  });
+});
+
+describe('Decorator', () => {
+  it('Decorator getters', () => {
+    let dec = new Decorator();
+    let a = {from: 0, to: 1, style: 'a'};
+    let b = {from: 0, to: 0, style: 'b'};
+    let c = {from: 2, to: 3, style: 'c'};
+    let d = {from: 15, to: 33, style: 'd'};
+    let e = {from: 8, to: 12, style: 'e'};
+    let f = {from: 8, to: 8, style: 'f'};
+    let g = {from: 12, to: 12, style: 'g'};
+    for (let x of [a, b, c, d, e, f, g])
+      dec.add(x.from, x.to, x.style);
+
+    function checkOne(got, expected) {
+      if (!expected) {
+        expect(got).toBe(null);
+      } else {
+        expect(got.from).toBe(expected.from);
+        expect(got.to).toBe(expected.to);
+        expect(got.style).toBe(expected.style);
+      }
+    }
+
+    function checkList(got, expected) {
+      expect(got.length).toBe(expected.length);
+      for (let i = 0; i < got.length; i++)
+        checkOne(got[i], expected[i]);
+    }
+
+    function checkVisitor(callback, expected) {
+      let got = [];
+      callback(got.push.bind(got));
+      checkList(got, expected);
+    }
+
+    expect(dec.countAll()).toBe(7);
+    expect(dec.countStarting(0, 4)).toBe(3);
+    expect(dec.countStarting(1, 4)).toBe(1);
+    expect(dec.countStarting(9, 10)).toBe(0);
+    expect(dec.countStarting(12, 12)).toBe(1);
+    expect(dec.countEnding(3, 8)).toBe(2);
+    expect(dec.countEnding(0, 40)).toBe(7);
+    expect(dec.countEnding(8, 8)).toBe(1);
+    expect(dec.countEnding(2, 4)).toBe(1);
+    expect(dec.countTouching(0, 0)).toBe(2);
+    expect(dec.countTouching(0, 14)).toBe(6);
+    expect(dec.countTouching(1, 15)).toBe(6);
+    expect(dec.countTouching(9, 10)).toBe(1);
+    expect(dec.countTouching(13, 14)).toBe(0);
+
+    checkList(dec.listAll(), [b, a, c, f, e, g, d]);
+    checkList(dec.listStarting(0, 4), [b, a, c]);
+    checkList(dec.listStarting(1, 4), [c]);
+    checkList(dec.listStarting(9, 10), []);
+    checkList(dec.listStarting(12, 12), [g]);
+    checkList(dec.listEnding(3, 8), [c, f]);
+    checkList(dec.listEnding(0, 40), [b, a, c, f, e, g, d]);
+    checkList(dec.listEnding(8, 8), [f]);
+    checkList(dec.listEnding(2, 4), [c]);
+    checkList(dec.listTouching(0, 0), [b, a]);
+    checkList(dec.listTouching(0, 14), [b, a, c, f, e, g]);
+    checkList(dec.listTouching(1, 15), [a, c, f, e, g, d]);
+    checkList(dec.listTouching(9, 10), [e]);
+    checkList(dec.listTouching(13, 14), []);
+
+    checkOne(dec.firstAll(), b);
+    checkOne(dec.firstStarting(0, 4), b);
+    checkOne(dec.firstStarting(1, 4), c);
+    checkOne(dec.firstStarting(9, 10), null);
+    checkOne(dec.firstStarting(12, 12), g);
+    checkOne(dec.firstEnding(3, 8), c);
+    checkOne(dec.firstEnding(0, 40), b);
+    checkOne(dec.firstEnding(8, 8), f);
+    checkOne(dec.firstEnding(2, 4), c);
+    checkOne(dec.firstTouching(0, 0), b);
+    checkOne(dec.firstTouching(0, 14), b);
+    checkOne(dec.firstTouching(1, 15), a);
+    checkOne(dec.firstTouching(9, 10), e);
+    checkOne(dec.firstTouching(13, 14), null);
+
+    checkOne(dec.lastAll(), d);
+    checkOne(dec.lastStarting(0, 4), c);
+    checkOne(dec.lastStarting(1, 4), c);
+    checkOne(dec.lastStarting(9, 10), null);
+    checkOne(dec.lastStarting(12, 12), g);
+    checkOne(dec.lastEnding(3, 8), f);
+    checkOne(dec.lastEnding(0, 40), d);
+    checkOne(dec.lastEnding(8, 8), f);
+    checkOne(dec.lastEnding(2, 4), c);
+    checkOne(dec.lastTouching(0, 0), a);
+    checkOne(dec.lastTouching(0, 14), g);
+    checkOne(dec.lastTouching(1, 15), d);
+    checkOne(dec.lastTouching(9, 10), e);
+    checkOne(dec.lastTouching(13, 14), null);
+
+    checkVisitor(v => dec.visitAll(v), [b, a, c, f, e, g, d]);
+    checkVisitor(v => dec.visitStarting(0, 4, v), [b, a, c]);
+    checkVisitor(v => dec.visitStarting(1, 4, v), [c]);
+    checkVisitor(v => dec.visitStarting(9, 10, v), []);
+    checkVisitor(v => dec.visitStarting(12, 12, v), [g]);
+    checkVisitor(v => dec.visitEnding(3, 8, v), [c, f]);
+    checkVisitor(v => dec.visitEnding(0, 40, v), [b, a, c, f, e, g, d]);
+    checkVisitor(v => dec.visitEnding(8, 8, v), [f]);
+    checkVisitor(v => dec.visitEnding(2, 4, v), [c]);
+    checkVisitor(v => dec.visitTouching(0, 0, v), [b, a]);
+    checkVisitor(v => dec.visitTouching(0, 14, v), [b, a, c, f, e, g]);
+    checkVisitor(v => dec.visitTouching(1, 15, v), [a, c, f, e, g, d]);
+    checkVisitor(v => dec.visitTouching(9, 10, v), [e]);
+    checkVisitor(v => dec.visitTouching(13, 14, v), []);
   });
 });
 
