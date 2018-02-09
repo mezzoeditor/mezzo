@@ -227,10 +227,9 @@ export class Decorator {
    * is not present, but that can be disabled by |relaxed|.
    * @param {number} from
    * @param {number} to
-   * @param {string} style
    * @param {boolean=} relaxed
    */
-  remove(from, to, style, relaxed) {
+  remove(from, to, relaxed) {
     let collapsed = from === to;
     let tmp = split(this._root, from, collapsed ? kFrom : kBetween);
     let tmp2 = split(tmp.right, to, collapsed ? kBetween : kFrom);

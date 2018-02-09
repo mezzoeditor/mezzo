@@ -342,6 +342,28 @@ describe('Viewport', () => {
 });
 
 describe('Decorator', () => {
+  function checkOne(got, expected) {
+    if (!expected) {
+      expect(got).toBe(null);
+    } else {
+      expect(got.from).toBe(expected.from);
+      expect(got.to).toBe(expected.to);
+      expect(got.style).toBe(expected.style);
+    }
+  }
+
+  function checkList(got, expected) {
+    expect(got.length).toBe(expected.length);
+    for (let i = 0; i < got.length; i++)
+      checkOne(got[i], expected[i]);
+  }
+
+  function checkVisitor(callback, expected) {
+    let got = [];
+    callback(got.push.bind(got));
+    checkList(got, expected);
+  }
+
   it('Decorator getters', () => {
     let dec = new Decorator();
     let a = {from: 0, to: 1, style: 'a'};
@@ -353,28 +375,6 @@ describe('Decorator', () => {
     let g = {from: 12, to: 12, style: 'g'};
     for (let x of [a, b, c, d, e, f, g])
       dec.add(x.from, x.to, x.style);
-
-    function checkOne(got, expected) {
-      if (!expected) {
-        expect(got).toBe(null);
-      } else {
-        expect(got.from).toBe(expected.from);
-        expect(got.to).toBe(expected.to);
-        expect(got.style).toBe(expected.style);
-      }
-    }
-
-    function checkList(got, expected) {
-      expect(got.length).toBe(expected.length);
-      for (let i = 0; i < got.length; i++)
-        checkOne(got[i], expected[i]);
-    }
-
-    function checkVisitor(callback, expected) {
-      let got = [];
-      callback(got.push.bind(got));
-      checkList(got, expected);
-    }
 
     expect(dec.countAll()).toBe(7);
     expect(dec.countStarting(0, 4)).toBe(3);
@@ -450,6 +450,104 @@ describe('Decorator', () => {
     checkVisitor(v => dec.visitTouching(1, 15, v), [a, c, f, e, g, d]);
     checkVisitor(v => dec.visitTouching(9, 10, v), [e]);
     checkVisitor(v => dec.visitTouching(13, 14, v), []);
+  });
+
+  it('Decorator.onReplace manual', () => {
+    let before = {from: 10, to: 20};
+    let cases = [
+      {from: 0, to: 1, inserted: 5, expected: [{from: 14, to: 24}]},
+      {from: 30, to: 40, inserted: 5, expected: [{from: 10, to: 20}]},
+      {from: 5, to: 5, inserted: 5, expected: [{from: 15, to: 25}]},
+      {from: 2, to: 7, inserted: 0, expected: [{from: 5, to: 15}]},
+      {from: 5, to: 10, inserted: 0, expected: [{from: 5, to: 15}]},
+      {from: 5, to: 10, inserted: 3, expected: [{from: 8, to: 18}]},
+      {from: 20, to: 20, inserted: 4, expected: [{from: 10, to: 24}]},
+      {from: 20, to: 30, inserted: 3, expected: [{from: 10, to: 23}]},
+      {from: 5, to: 25, inserted: 30, expected: []},
+      {from: 10, to: 10, inserted: 5, expected: [{from: 15, to: 25}]},
+      {from: 10, to: 20, inserted: 3, expected: [{from: 13, to: 13}]},
+      {from: 12, to: 15, inserted: 0, expected: [{from: 10, to: 17}]},
+      {from: 13, to: 17, inserted: 4, expected: [{from: 10, to: 20}]},
+      {from: 13, to: 17, inserted: 14, expected: [{from: 10, to: 30}]},
+      {from: 8, to: 15, inserted: 0, expected: []},
+      {from: 8, to: 15, inserted: 6, expected: []},
+      {from: 15, to: 25, inserted: 0, expected: [{from: 10, to: 15}]},
+      {from: 15, to: 25, inserted: 3, expected: [{from: 10, to: 18}]},
+      {from: 15, to: 20, inserted: 4, expected: [{from: 10, to: 19}]},
+    ];
+
+    for (let test of cases) {
+      let {from, to, inserted, expected} = test;
+      let dec = new Decorator();
+      dec.add(before.from, before.to, '');
+      dec.onReplace(from, to, inserted);
+      let got = dec.listAll();
+      expect(got.length).toBe(expected.length, `test: ${JSON.stringify(test)}`);
+      for (let i = 0; i < got.length; i++) {
+        expect(got[i].from).toBe(expected[i].from, `test: ${JSON.stringify(test)}`);
+        expect(got[i].to).toBe(expected[i].to, `test: ${JSON.stringify(test)}`);
+      }
+    }
+  });
+
+  it('Decorator.onReplace large list to the right', () => {
+    let dec = new Decorator();
+    let count = 10000;
+    for (let i = 0; i < count; i++)
+      dec.add(i + 200, i + 200, '');
+    for (let i = 0; i < 99; i++)
+      dec.onReplace(2 * i, 2 * i + 1, 2);
+    let list = dec.listAll();
+    expect(list.length).toBe(count);
+    for (let i = 0; i < count; i++) {
+      expect(list[i].from).toBe(i + 200 + 99);
+      expect(list[i].to).toBe(i + 200 + 99);
+    }
+  });
+
+  it('Decorator.editing', () => {
+    let dec = new Decorator();
+    let a = {from: 0, to: 1, style: 'a'};
+    let b = {from: 2, to: 3, style: 'b'};
+    let c = {from: 3, to: 3, style: 'c'};
+    let d = {from: 10, to: 20, style: 'd'};
+    let e = {from: 21, to: 100, style: 'e'};
+
+    for (let x of [c, a, d, b, e])
+      dec.add(x.from, x.to, x.style);
+    checkList(dec.listAll(), [a, b, c, d, e]);
+
+    dec.remove(e.from, e.to, false /* relaxed */);
+    checkList(dec.listAll(), [a, b, c, d]);
+
+    dec.remove(e.from, e.to, true /* relaxed */);
+    checkList(dec.listAll(), [a, b, c, d]);
+
+    dec.clearStarting(5, 15);
+    checkList(dec.listAll(), [a, b, c]);
+
+    dec.add(e.from, e.to, e.style);
+    checkList(dec.listAll(), [a, b, c, e]);
+
+    dec.clearEnding(0, 3);
+    checkList(dec.listAll(), [e]);
+
+    dec.add(a.from, a.to, a.style);
+    dec.add(b.from, b.to, b.style);
+    dec.add(c.from, c.to, c.style);
+    dec.add(d.from, d.to, d.style);
+    checkList(dec.listAll(), [a, b, c, d, e]);
+
+    dec.clearTouching(3, 10);
+    checkList(dec.listAll(), [a, e]);
+
+    dec.add(d.from, d.to, d.style);
+    dec.remove(a.from, a.to, true /* relaxed */);
+    dec.remove(42, 42, true /* relaxed */);
+    checkList(dec.listAll(), [d, e]);
+
+    dec.clearAll();
+    checkList(dec.listAll(), []);
   });
 });
 
