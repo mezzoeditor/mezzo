@@ -7,6 +7,9 @@ import { RangeScheduler } from "../core/RangeScheduler.mjs";
  * }} SearchOptions
  */
 
+/**
+ * @implements Plugin
+ */
 export class Search {
   /**
    * @param {!Document} document

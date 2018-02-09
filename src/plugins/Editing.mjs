@@ -1,5 +1,8 @@
 import { TextUtils } from "../utils/TextUtils.mjs";
 
+/**
+ * @implements Plugin
+ */
 export class Editing {
   /**
    * @param {!Document} document
