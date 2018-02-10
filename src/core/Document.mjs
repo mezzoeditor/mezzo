@@ -29,6 +29,13 @@ export class Document {
   }
 
   /**
+   * @param {?Tokenizer} tokenizer
+   */
+  setTokenizer(tokenizer) {
+    this._tokenizer = tokenizer;
+  }
+
+  /**
    * @param {number} fontLineHeight
    * @param {number} fontCharWidth
    * @return {!Viewport}

@@ -1,5 +1,3 @@
-import { DefaultTokenizer } from '../default/DefaultTokenizer.mjs';
-
 export let TextUtils = {};
 
 /**
@@ -118,7 +116,9 @@ TextUtils.previousOffset = function(document, offset) {
  */
 TextUtils.previousWord = function(document, offset) {
   let it = document.iterator(offset - 1);
-  let tokenizer = document.tokenizer() || DefaultTokenizer.instance();
+  let tokenizer = document.tokenizer();
+  if (!tokenizer)
+    return offset;
   while (it.offset && tokenizer.isSpaceChar(it))
     it.prev();
   if (!it.offset)
@@ -149,7 +149,9 @@ TextUtils.nextOffset = function(document, offset) {
  */
 TextUtils.nextWord = function(document, offset) {
   let it = document.iterator(offset + 1);
-  let tokenizer = document.tokenizer() || DefaultTokenizer.instance();
+  let tokenizer = document.tokenizer();
+  if (!tokenizer)
+    return offset;
   while (!it.outOfBounds() && tokenizer.isSpaceChar(it))
     it.next();
   if (it.outOfBounds())

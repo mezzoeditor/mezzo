@@ -6,6 +6,7 @@ import { Search } from "../plugins/Search.mjs";
 import { IdleScheduler } from "./IdleScheduler.mjs";
 import { DefaultTheme } from "../default/DefaultTheme.mjs";
 import { DefaultHighlighter } from "../default/DefaultHighlighter.mjs";
+import { DefaultTokenizer } from "../default/DefaultTokenizer.mjs";
 
 const isMac = navigator.platform.toUpperCase().indexOf('MAC') !== -1;
 
@@ -16,6 +17,7 @@ export class WebEditor {
   constructor(domDocument) {
     this._createDOM(domDocument);
     this._document = new Document();
+    this._document.setTokenizer(new DefaultTokenizer());
     this._createRenderer(domDocument);
     this._setupSelection();
     this._setupEditing();

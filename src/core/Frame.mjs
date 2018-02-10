@@ -1,5 +1,3 @@
-import { TextUtils } from '../utils/TextUtils.mjs';
-
 /**
  * @typedef {{
  *   line: number,

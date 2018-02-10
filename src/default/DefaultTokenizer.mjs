@@ -1,12 +1,4 @@
-let instance;
-
 export class DefaultTokenizer {
-  static instance() {
-    if (!instance)
-      instance = new DefaultTokenizer();
-    return instance;
-  }
-
   /**
    * @param {!Text.Iterator} it
    * @return {boolean}
