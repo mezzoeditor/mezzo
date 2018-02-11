@@ -37,7 +37,7 @@ export class Parser {
     // For tokens that include more information than their type, the value
     this.value = null
     // Its start and end offset
-    this.start = this.it.clone();
+    this.startOffset = this.it.offset;
     this.end = this.it.clone();
 
     // Position information for the previous token

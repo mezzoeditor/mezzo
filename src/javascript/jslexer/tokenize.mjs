@@ -11,7 +11,7 @@ export class Token {
   constructor(p) {
     this.type = p.type
     this.value = p.value
-    this.start = p.start.offset
+    this.start = p.startOffset
     this.end = p.end.offset
   }
 }
@@ -22,13 +22,9 @@ const pp = Parser.prototype
 
 // Move to the next token
 
-pp.next = function() {
+pp.getToken = function() {
   this.lastTokEnd = this.end.clone();
   this.nextToken()
-}
-
-pp.getToken = function() {
-  this.next()
   return new Token(this)
 }
 
@@ -60,7 +56,7 @@ pp.nextToken = function() {
   let curContext = this.curContext()
   if (!curContext || !curContext.preserveSpace) this.skipSpace()
 
-  this.start = this.it.clone();
+  this.startOffset = this.it.offset;
   if (this.it.outOfBounds()) return this.finishToken(tt.eof)
 
   if (curContext.override) return curContext.override(this)
@@ -136,11 +132,10 @@ pp.skipSpace = function() {
 // right position.
 
 pp.finishToken = function(type, val) {
-  this.end = this.it.clone();
   let prevType = this.type
+  this.end = this.it.clone();
   this.type = type
   this.value = val
-
   this.updateContext(prevType)
 }
 
@@ -485,7 +480,7 @@ pp.readTmplToken = function() {
 
     let ch = this.it.charCodeAt(0)
     if (ch === 96 || ch === 36 && this.it.charCodeAt(1) === 123) { // '`', '${'
-      if (this.it.offset === this.start.offset && (this.type === tt.template || this.type === tt.invalidTemplate)) {
+      if (this.it.offset === this.startOffset && (this.type === tt.template || this.type === tt.invalidTemplate)) {
         if (ch === 36) {
           this.it.advance(2);
           return this.finishToken(tt.dollarBraceL)

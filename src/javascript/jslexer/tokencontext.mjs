@@ -46,7 +46,7 @@ pp.braceIsBlock = function(prevType) {
   // after a `yield` or `of` construct. See the `updateContext` for
   // `tt.name`.
   if (prevType === tt._return || prevType == tt.name && this.exprAllowed)
-    return lineBreak.test(this.lastTokEnd.substr(this.start.offset - this.lastTokEnd.offset))
+    return lineBreak.test(this.lastTokEnd.substr(this.startOffset - this.lastTokEnd.offset))
   if (prevType === tt._else || prevType === tt.semi || prevType === tt.eof || prevType === tt.parenR || prevType == tt.arrow)
     return true
   if (prevType == tt.braceL)
