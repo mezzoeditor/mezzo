@@ -731,7 +731,7 @@ Text.Iterator = class {
     if (this.offset + x > this._to)
       x = this._to - this.offset;
     else if (this.offset + x < this._from)
-      x = this._from - this.offset;
+      x = this._from - this.offset - 1;
 
     this.offset += x;
     this._pos += x;

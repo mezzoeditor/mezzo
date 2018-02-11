@@ -228,6 +228,14 @@ describe('Text.Iterator', () => {
     expect(it.current).toBe('h');
 
     it.prev();
+    expect(it.offset).toBe(-1);
+    expect(it.current).toBe(undefined);
+
+    it.prev();
+    expect(it.offset).toBe(-1);
+    expect(it.current).toBe(undefined);
+
+    it.next();
     expect(it.offset).toBe(0);
     expect(it.current).toBe('h');
 
