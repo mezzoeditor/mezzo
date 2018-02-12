@@ -1,4 +1,11 @@
 /**
+ * @typdef {{
+ *   text: !Array<!TextDecorator>|undefined,
+ *   scrollbar: !Array<!ScrollbarDecorator>|undefined
+ * }} PluginFrameResult
+ */
+
+/**
  * @interface
  */
 class Plugin {
@@ -17,7 +24,7 @@ class Plugin {
    * Mutating the state which can affect viewport is prohibited,
    * e.g. editing the document or revealing position.
    * @param {!Frame} frame
-   * @return {!Array<!Decorator>}
+   * @return {!PluginFrameResult}
    */
   onFrame(frame) {
   }

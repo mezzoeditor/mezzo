@@ -225,7 +225,7 @@ export class Viewport {
   }
 
   /**
-   * @return {!{frame: !Frame, decorators: !Array<!Decorator>}}
+   * @return {!{frame: !Frame, text: !Array<!TextDecorator>, scrollbar: !Array<!ScrollbarDecorator>}}
    */
   createFrame() {
     this._document.beforeFrame();
@@ -233,9 +233,9 @@ export class Viewport {
     const start = this.viewportPositionToTextPosition({x: 0, y: 0});
     const end = this.viewportPositionToTextPosition({x: this._width + this._metrics.charWidth, y: this._height + this._metrics.lineHeight});
     const frame = new Frame(this._document, start, end.column - start.column, end.line - start.line);
-    const decorators = this._document.decorateFrame(frame);
+    const {text, scrollbar} = this._document.decorateFrame(frame);
     this._frozen = false;
-    return {frame, decorators};
+    return {frame, text, scrollbar};
   }
 
   _recompute() {

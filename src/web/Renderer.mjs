@@ -346,7 +346,7 @@ export class Renderer {
 
     time = this._measureTime('setup', time);
 
-    const {frame, decorators} = this._viewport.createFrame();
+    const {frame, text, scrollbar} = this._viewport.createFrame();
 
     time = this._measureTime('frame', time);
 
@@ -354,7 +354,7 @@ export class Renderer {
     ctx.beginPath();
     ctx.rect(this._gutterRect.x, this._gutterRect.y, this._gutterRect.width, this._gutterRect.height);
     ctx.clip();
-    this._drawGutter(ctx, frame, decorators);
+    this._drawGutter(ctx, frame);
     ctx.restore();
 
     time = this._measureTime('gutter', time);
@@ -367,13 +367,13 @@ export class Renderer {
     textOrigin.x += this._editorRect.x;
     textOrigin.y += this._editorRect.y;
     ctx.translate(textOrigin.x, textOrigin.y);
-    this._drawText(ctx, frame, decorators);
+    this._drawText(ctx, frame, text);
     ctx.restore();
 
     time = this._measureTime('text', time);
 
     ctx.save();
-    this._drawScrollbarMarkers(ctx, frame, decorators, this._vScrollbar.rect, this._viewport.vScrollbar);
+    this._drawScrollbarMarkers(ctx, frame, scrollbar, this._vScrollbar.rect, this._viewport.vScrollbar);
     this._drawScrollbar(ctx, this._vScrollbar, true /* isVertical */);
     this._drawScrollbar(ctx, this._hScrollbar, false /* isVertical */);
     ctx.restore();
@@ -395,7 +395,7 @@ export class Renderer {
     }
   }
 
-  _drawGutter(ctx, frame, decorators) {
+  _drawGutter(ctx, frame) {
     const {lineHeight, charWidth} = this._metrics;
     const textOffset = this._metrics.textOffset();
     ctx.fillStyle = '#eee';
@@ -418,7 +418,7 @@ export class Renderer {
     }
   }
 
-  _drawText(ctx, frame, decorators) {
+  _drawText(ctx, frame, textDecorators) {
     const {lineHeight, charWidth} = this._metrics;
     const textOffset = this._metrics.textOffset();
     const lines = frame.lines();
@@ -426,7 +426,7 @@ export class Renderer {
     const startColumn = frame.startPosition().column;
     const endColumn = frame.endPosition().column;
 
-    for (let decorator of decorators) {
+    for (let decorator of textDecorators) {
       for (let line of lines) {
         let lineContent = frame.lineContent(line);
         decorator.visitTouching(line.from, line.to, decoration => {
@@ -502,9 +502,9 @@ export class Renderer {
     ctx.fillRect(scrollbar.thumbRect.x, scrollbar.thumbRect.y, scrollbar.thumbRect.width, scrollbar.thumbRect.height);
   }
 
-  _drawScrollbarMarkers(ctx, frame, decorators, rect, scrollbar) {
-    for (let decorator of decorators) {
-      const styleName = decorator.scrollbarStyle();
+  _drawScrollbarMarkers(ctx, frame, scrollbarDecorators, rect, scrollbar) {
+    for (let decorator of scrollbarDecorators) {
+      const styleName = decorator.style();
       if (!styleName)
         continue;
       const style = this._theme[styleName];

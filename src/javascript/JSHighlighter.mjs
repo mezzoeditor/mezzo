@@ -1,4 +1,4 @@
-import { Decorator } from "../core/Decorator.mjs";
+import { TextDecorator } from "../core/Decorator.mjs";
 import { Parser, TokenTypes, KeywordTypes } from './jslexer/index.mjs';
 
 /**
@@ -6,7 +6,7 @@ import { Parser, TokenTypes, KeywordTypes } from './jslexer/index.mjs';
  */
 export class JSHighlighter {
   constructor() {
-    this._speculativeHighlight = new Decorator();
+    this._speculativeHighlight = new TextDecorator();
   }
 
   /**
@@ -23,10 +23,10 @@ export class JSHighlighter {
   /**
    * @override
    * @param {!Frame} frame
-   * @return {!Array<!Decorator>}
+   * @return {!PluginFrameResult}
    */
   onFrame(frame) {
-    let decorator = new Decorator();
+    let decorator = new TextDecorator();
     for (let range of frame.ranges()) {
       let from = range.from;
       let decoration = this._speculativeHighlight.lastTouching(from, from);
@@ -54,6 +54,6 @@ export class JSHighlighter {
         }
       }
     }
-    return [decorator];
+    return {text: [decorator]};
   }
 };

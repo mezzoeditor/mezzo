@@ -1,4 +1,3 @@
-import { Decorator } from "./Decorator.mjs";
 import { History } from "./History.mjs";
 import { Text } from "./Text.mjs";
 import { Frame } from "./Frame.mjs";
@@ -312,17 +311,21 @@ export class Document {
   /**
    * @package
    * @param {!Frame} frame
-   * @return {!Array<!Decorator>}
+   * @return {{text: !Array<!TextDecorator>, scrollbar: !Array<ScrollbarDecorator>}}
    */
   decorateFrame(frame) {
     this._frozen = true;
-    let decorators = [];
+    let text = [];
+    let scrollbar = [];
     for (let plugin of this._plugins) {
-      if (plugin.onFrame)
-        decorators.push(...plugin.onFrame(frame));
+      if (plugin.onFrame) {
+        let result = plugin.onFrame(frame);
+        text.push(...(result.text || []));
+        scrollbar.push(...(result.scrollbar || []));
+      }
     }
     this._frozen = false;
-    return decorators;
+    return {text, scrollbar};
   }
 };
 

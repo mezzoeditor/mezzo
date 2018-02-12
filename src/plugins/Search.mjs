@@ -1,4 +1,4 @@
-import { Decorator } from "../core/Decorator.mjs";
+import { TextDecorator, ScrollbarDecorator } from "../core/Decorator.mjs";
 import { RangeScheduler } from "../core/RangeScheduler.mjs";
 
 /**
@@ -27,9 +27,8 @@ export class Search {
         20000,
         () => document.invalidate());
     this._selection = selection;
-    this._decorator = new Decorator();
-    this._decorator.setScrollbarStyle('search.match');
-    this._currentMatchDecorator = new Decorator();
+    this._decorator = new ScrollbarDecorator('search.match');
+    this._currentMatchDecorator = new TextDecorator();
     this._options = null;
     this._currentMatch = null;
     this._noReveal = false;
@@ -82,7 +81,7 @@ export class Search {
   /**
    * @override
    * @param {!Frame} frame
-   * @return {!Array<!Decorator>}
+   * @return {!PluginFrameResult}
    */
   onFrame(frame) {
     this._noReveal = true;
@@ -102,7 +101,7 @@ export class Search {
         this._onUpdate(currentMatchIndex, matchesCount);
       }
     }
-    return [this._decorator, this._currentMatchDecorator];
+    return {text: [this._decorator, this._currentMatchDecorator], scrollbar: [this._decorator]};
   }
 
   /**
@@ -230,7 +229,7 @@ export class Search {
     this._decorator.clearStarting(from, to);
     let iterator = this._document.iterator(from, from, to + query.length);
     while (iterator.find(query)) {
-      this._decorator.add(iterator.offset, iterator.offset + query.length, 'search.match');
+      this._decorator.add(iterator.offset, iterator.offset + query.length);
       if (!this._currentMatch)
         this._updateCurrentMatch({from: iterator.offset, to: iterator.offset + query.length}, this._noReveal);
       iterator.advance(query.length);

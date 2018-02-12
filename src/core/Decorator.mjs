@@ -176,24 +176,6 @@ function find(node, offset) {
 export class Decorator {
   constructor() {
     this._root = undefined;
-    this._scrollbarStyle = null;
-  }
-
-  /**
-   * Decorations which should be visible on the scrollbar must have their own decorator.
-   * The |scrollbarStyle| is used for these decorations to decorate the scrollbar.
-   * Note that |data| passed with each decoration will still be used to decorate viewport.
-   * @param {?string} scrollbarStyle
-   */
-  setScrollbarStyle(scrollbarStyle) {
-    this._scrollbarStyle = scrollbarStyle;
-  }
-
-  /**
-   * @return {?string}
-   */
-  scrollbarStyle() {
-    return this._scrollbarStyle;
   }
 
   /**
@@ -610,5 +592,40 @@ export class Decorator {
       result = merge(result, node);
     });
     return result;
+  }
+};
+
+/**
+ * @extends Decorator<string>
+ */
+export class TextDecorator extends Decorator {
+};
+
+export class ScrollbarDecorator extends TextDecorator {
+  /**
+   * Decorations which should be visible on the scrollbar must have their own decorator.
+   * The |style| is used for these decorations to decorate the scrollbar.
+   * @param {string} style
+   */
+  constructor(style) {
+    super();
+    this._style = style;
+  }
+
+  /**
+   * @return {string}
+   */
+  style() {
+    return this._style;
+  }
+
+  /**
+   * @param {number} from
+   * @param {number} to
+   */
+  add(from, to, data) {
+    if (data !== undefined)
+      throw 'ScrollbarDecorator only supports a single style passed in constructor';
+    super.add(from, to, this._style);
   }
 };

@@ -1,4 +1,4 @@
-import { Decorator } from "../core/Decorator.mjs";
+import { ScrollbarDecorator } from "../core/Decorator.mjs";
 import { TextUtils } from "../utils/TextUtils.mjs";
 
 /**
@@ -20,10 +20,8 @@ export class Selection {
   constructor(viewport) {
     this._viewport = viewport;
     this._document = viewport.document();
-    this._rangeDecorator = new Decorator();
-    this._rangeDecorator.setScrollbarStyle('selection.range');
-    this._focusDecorator = new Decorator();
-    this._focusDecorator.setScrollbarStyle('selection.focus');
+    this._rangeDecorator = new ScrollbarDecorator('selection.range');
+    this._focusDecorator = new ScrollbarDecorator('selection.focus');
     this._ranges = [];
     this._muted = 0;
     this._lastId = 0;
@@ -110,7 +108,7 @@ export class Selection {
   /**
    * @override
    * @param {!Frame} frame
-   * @return {!Array<!Decorator>}
+   * @return {!PluginFrameResult}
    */
   onFrame(frame) {
     if (this._staleDecorations) {
@@ -118,12 +116,12 @@ export class Selection {
       this._rangeDecorator.clearAll();
       this._focusDecorator.clearAll();
       for (let range of this._ranges) {
-        this._focusDecorator.add(range.focus, range.focus, 'selection.focus');
+        this._focusDecorator.add(range.focus, range.focus);
         if (range.focus !== range.anchor)
-          this._rangeDecorator.add(Math.min(range.focus, range.anchor), Math.max(range.focus, range.anchor), 'selection.range');
+          this._rangeDecorator.add(Math.min(range.focus, range.anchor), Math.max(range.focus, range.anchor));
       }
     }
-    return [this._rangeDecorator, this._focusDecorator];
+    return {text: [this._rangeDecorator, this._focusDecorator], scrollbar: [this._rangeDecorator, this._focusDecorator]};
   }
 
   /**

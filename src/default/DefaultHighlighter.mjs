@@ -1,4 +1,4 @@
-import { Decorator } from "../core/Decorator.mjs";
+import { TextDecorator } from "../core/Decorator.mjs";
 
 export class DefaultHighlighter {
   constructor() {
@@ -7,12 +7,12 @@ export class DefaultHighlighter {
   /**
    * @override
    * @param {!Frame} frame
-   * @return {!Array<!Decorator>}
+   * @return {!PluginFrameResult}
    */
   onFrame(frame) {
     let {from, to} = frame.range();
-    let decorator = new Decorator();
+    let decorator = new TextDecorator();
     decorator.add(from, to, 'syntax.default');
-    return [decorator];
+    return {text: [decorator]};
   }
 };

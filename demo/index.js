@@ -1,4 +1,4 @@
-import { Decorator } from "../src/core/Decorator.mjs";
+import { TextDecorator } from "../src/core/Decorator.mjs";
 import { WebEditor } from "../src/web/WebEditor.mjs";
 import { Random } from "../src/core/Random.mjs";
 import { TextUtils } from "../src/utils/TextUtils.mjs";
@@ -123,7 +123,7 @@ class TokenHighlighter {
   onFrame(frame) {
     if (!this._token)
       return [];
-    let decorator = new Decorator();
+    let decorator = new TextDecorator();
     for (let line of frame.lines()) {
       let text = frame.lineContent(line, this._token.length, this._token.length);
       let offset = Math.max(0, line.from - this._token.length);
@@ -137,7 +137,7 @@ class TokenHighlighter {
         index = text.indexOf(this._token, index + this._token.length);
       }
     }
-    return [decorator];
+    return {text: [decorator]};
   }
 }
 

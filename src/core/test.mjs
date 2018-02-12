@@ -348,7 +348,7 @@ describe('Decorator', () => {
     } else {
       expect(got.from).toBe(expected.from);
       expect(got.to).toBe(expected.to);
-      expect(got.style).toBe(expected.style);
+      expect(got.data).toBe(expected.data);
     }
   }
 
@@ -366,15 +366,15 @@ describe('Decorator', () => {
 
   it('Decorator getters', () => {
     let dec = new Decorator();
-    let a = {from: 0, to: 1, style: 'a'};
-    let b = {from: 0, to: 0, style: 'b'};
-    let c = {from: 2, to: 3, style: 'c'};
-    let d = {from: 15, to: 33, style: 'd'};
-    let e = {from: 8, to: 12, style: 'e'};
-    let f = {from: 8, to: 8, style: 'f'};
-    let g = {from: 12, to: 12, style: 'g'};
+    let a = {from: 0, to: 1, data: 'a'};
+    let b = {from: 0, to: 0, data: 'b'};
+    let c = {from: 2, to: 3, data: 'c'};
+    let d = {from: 15, to: 33, data: 'd'};
+    let e = {from: 8, to: 12, data: 'e'};
+    let f = {from: 8, to: 8, data: 'f'};
+    let g = {from: 12, to: 12, data: 'g'};
     for (let x of [a, b, c, d, e, f, g])
-      dec.add(x.from, x.to, x.style);
+      dec.add(x.from, x.to, x.data);
 
     expect(dec.countAll()).toBe(7);
     expect(dec.countStarting(0, 4)).toBe(3);
@@ -507,14 +507,14 @@ describe('Decorator', () => {
 
   it('Decorator.editing', () => {
     let dec = new Decorator();
-    let a = {from: 0, to: 1, style: 'a'};
-    let b = {from: 2, to: 3, style: 'b'};
-    let c = {from: 3, to: 3, style: 'c'};
-    let d = {from: 10, to: 20, style: 'd'};
-    let e = {from: 21, to: 100, style: 'e'};
+    let a = {from: 0, to: 1, data: 'a'};
+    let b = {from: 2, to: 3, data: 'b'};
+    let c = {from: 3, to: 3, data: 'c'};
+    let d = {from: 10, to: 20, data: 'd'};
+    let e = {from: 21, to: 100, data: 'e'};
 
     for (let x of [c, a, d, b, e])
-      dec.add(x.from, x.to, x.style);
+      dec.add(x.from, x.to, x.data);
     checkList(dec.listAll(), [a, b, c, d, e]);
 
     dec.remove(e.from, e.to, false /* relaxed */);
@@ -526,22 +526,22 @@ describe('Decorator', () => {
     dec.clearStarting(5, 15);
     checkList(dec.listAll(), [a, b, c]);
 
-    dec.add(e.from, e.to, e.style);
+    dec.add(e.from, e.to, e.data);
     checkList(dec.listAll(), [a, b, c, e]);
 
     dec.clearEnding(0, 3);
     checkList(dec.listAll(), [e]);
 
-    dec.add(a.from, a.to, a.style);
-    dec.add(b.from, b.to, b.style);
-    dec.add(c.from, c.to, c.style);
-    dec.add(d.from, d.to, d.style);
+    dec.add(a.from, a.to, a.data);
+    dec.add(b.from, b.to, b.data);
+    dec.add(c.from, c.to, c.data);
+    dec.add(d.from, d.to, d.data);
     checkList(dec.listAll(), [a, b, c, d, e]);
 
     dec.clearTouching(3, 10);
     checkList(dec.listAll(), [a, e]);
 
-    dec.add(d.from, d.to, d.style);
+    dec.add(d.from, d.to, d.data);
     dec.remove(a.from, a.to, true /* relaxed */);
     dec.remove(42, 42, true /* relaxed */);
     checkList(dec.listAll(), [d, e]);
