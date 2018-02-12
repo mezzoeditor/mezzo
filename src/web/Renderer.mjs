@@ -431,7 +431,7 @@ export class Renderer {
         let lineContent = frame.lineContent(line);
         decorator.visitTouching(line.from, line.to, decoration => {
           this._counters.set('decorations-text', (this._counters.get('decorations-text') || 0) + 1);
-          const style = this._theme[decoration.style];
+          const style = this._theme[decoration.data];
           if (!style)
             return;
 

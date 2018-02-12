@@ -2,16 +2,18 @@ import { Random } from "./Random.mjs";
 let random = Random(25);
 
 /**
+ * @template T
  * @typdef {{
  *   from: number,
  *   to: number,
- *   style: string,
+ *   data: T,
  * }} Decoration
  */
 
 /**
+ * @template T
  * @typedef {{
- *   style: string,
+ *   data: T,
  *   from: number,
  *   to: number,
  *   h: number,
@@ -23,8 +25,9 @@ let random = Random(25);
  */
 
 /**
- * @param {!TreeNode} node
- * @return {!TreeNode}
+ * @template T
+ * @param {!TreeNode<T>} node
+ * @return {!TreeNode<T>}
  */
 function normalize(node) {
   if (!node.add)
@@ -40,10 +43,11 @@ function normalize(node) {
 };
 
 /**
- * @param {!TreeNode} node
- * @param {!TreeNode|undefined} left
- * @param {!TreeNode|undefined} right
- * @return {!TreeNode}
+ * @template T
+ * @param {!TreeNode<T>} node
+ * @param {!TreeNode<T>|undefined} left
+ * @param {!TreeNode<T>|undefined} right
+ * @return {!TreeNode<T>}
  */
 function setChildren(node, left, right) {
   if (node.add)
@@ -59,9 +63,10 @@ function setChildren(node, left, right) {
 };
 
 /**
- * @param {!TreeNode|undefined} left
- * @param {!TreeNode|undefined} right
- * @return {!TreeNode|undefined}
+ * @template T
+ * @param {!TreeNode<T>|undefined} left
+ * @param {!TreeNode<T>|undefined} right
+ * @return {!TreeNode<T>|undefined}
  */
 function merge(left, right) {
   if (!left)
@@ -81,10 +86,11 @@ const kTo = 1;
 const kBetween = 2;
 
 /**
- * @param {!TreeNode|undefined} node
+ * @template T
+ * @param {!TreeNode<T>|undefined} node
  * @param {number} offset
  * @param {number} splitBy
- * @return {{left: !TreeNode|undefined, right: !TreeNode|undefined}}
+ * @return {{left: !TreeNode<T>|undefined, right: !TreeNode<T>|undefined}}
  */
 function split(node, offset, splitBy) {
   if (!node)
@@ -102,8 +108,9 @@ function split(node, offset, splitBy) {
 };
 
 /**
- * @param {!TreeNode|undefined} node
- * @param {function(!Decoration)} visitor
+ * @template T
+ * @param {!TreeNode<T>|undefined} node
+ * @param {function(!Decoration<T>)} visitor
  */
 function visit(node, visitor) {
   if (!node)
@@ -128,26 +135,9 @@ function visit(node, visitor) {
 };
 
 /**
- * @param {!TreeNode|undefined} node
- * @param {!Map<string, !OffsetRange>} result
- */
-function visitMap(node, result) {
-  if (!node)
-    return;
-  node = normalize(node);
-  visitMap(node.left, result);
-  let bucket = result.get(node.style);
-  if (!bucket) {
-    bucket = [];
-    result.set(node.style, bucket);
-  }
-  bucket.push({from: node.from, to: node.to});
-  visitMap(node.right, result);
-};
-
-/**
- * @param {!TreeNode} node
- * @return {!TreeNode}
+ * @template T
+ * @param {!TreeNode<T>} node
+ * @return {!TreeNode<T>}
  */
 function first(node) {
   while (normalize(node).left)
@@ -156,8 +146,9 @@ function first(node) {
 };
 
 /**
- * @param {!TreeNode} node
- * @return {!TreeNode}
+ * @template T
+ * @param {!TreeNode<T>} node
+ * @return {!TreeNode<T>}
  */
 function last(node) {
   while (normalize(node).right)
@@ -166,9 +157,10 @@ function last(node) {
 };
 
 /**
- * @param {!TreeNode|undefined} node
+ * @template T
+ * @param {!TreeNode<T>|undefined} node
  * @param {number} from
- * @return {!TreeNode|undefined}
+ * @return {!TreeNode<T>|undefined}
  */
 function find(node, offset) {
   if (!node)
@@ -178,6 +170,9 @@ function find(node, offset) {
   return find(node.right, offset);
 };
 
+/**
+ * @template T
+ */
 export class Decorator {
   constructor() {
     this._root = undefined;
@@ -187,7 +182,7 @@ export class Decorator {
   /**
    * Decorations which should be visible on the scrollbar must have their own decorator.
    * The |scrollbarStyle| is used for these decorations to decorate the scrollbar.
-   * Note that |style| passed with each decoration will still be used to decorate viewport.
+   * Note that |data| passed with each decoration will still be used to decorate viewport.
    * @param {?string} scrollbarStyle
    */
   setScrollbarStyle(scrollbarStyle) {
@@ -208,9 +203,9 @@ export class Decorator {
    *   - different (no collapsed decorations are at the same point).
    * @param {number} from
    * @param {number} to
-   * @param {string} style
+   * @param {T} data
    */
-  add(from, to, style) {
+  add(from, to, data) {
     if (from > to)
       throw 'Reversed decorations are not allowed';
     let tmp = split(this._root, to, kFrom);
@@ -218,7 +213,7 @@ export class Decorator {
       throw 'Decorations must be disjoint';
     if (from === to && tmp.right && first(tmp.right).to === to)
       throw 'Two collapsed decorations at the same position are not allowed';
-    let node = {style, from, to, h: random(), size: 1};
+    let node = {data, from, to, h: random(), size: 1};
     this._root = merge(merge(tmp.left, node), tmp.right);
   }
 
@@ -228,6 +223,7 @@ export class Decorator {
    * @param {number} from
    * @param {number} to
    * @param {boolean=} relaxed
+   * @return {T|undefined}
    */
   remove(from, to, relaxed) {
     let collapsed = from === to;
@@ -239,6 +235,7 @@ export class Decorator {
     if (removed && (removed.left || removed.right))
       throw 'Inconsistent';
     this._root = merge(tmp.left, tmp2.right);
+    return removed ? removed.data : undefined;
   }
 
   /**
@@ -609,7 +606,7 @@ export class Decorator {
       if (from <= end)
         end += inserted;
 
-      let node = {style: decoration.style, from: start, to: end, h: random(), size: 1};
+      let node = {data: decoration.data, from: start, to: end, h: random(), size: 1};
       result = merge(result, node);
     });
     return result;

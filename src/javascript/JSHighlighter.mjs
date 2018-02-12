@@ -31,7 +31,7 @@ export class JSHighlighter {
       let from = range.from;
       let decoration = this._speculativeHighlight.lastTouching(from, from);
       if (decoration) {
-        decorator.add(from, Math.min(decoration.to, range.to), decoration.style);
+        decorator.add(from, Math.min(decoration.to, range.to), decoration.data);
         from = decoration.to;
       }
 
