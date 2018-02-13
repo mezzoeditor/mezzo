@@ -61,6 +61,7 @@ function addSearch(editor) {
     } else if (event.key === 'Escape') {
       editor.findCancel();
       editor.focus();
+      input.value = '';
       event.preventDefault();
       event.stopPropagation();
     }

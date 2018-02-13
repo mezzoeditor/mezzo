@@ -1,21 +1,9 @@
-import { Chunk } from "./Chunk.mjs";
 import { Random } from "./Random.mjs";
+import { Metrics } from "./Metrics.mjs";
 
-/** @type {!Position} */
-let origin = { offset: 0, line: 0, column: 0 };
 let random = Random(42);
 
 let kDefaultChunkSize = 100;
-
-/**
- * @typedef {{
- *   length: number,
- *   lines: number|undefined,
- *   first: number,
- *   last: number,
- *   longest: number
- * }} Metrics;
- */
 
 /**
  * @typedef {{
@@ -29,14 +17,6 @@ let kDefaultChunkSize = 100;
  */
 
 /**
- * @typedef {{
- *   offset: number|undefined,
- *   line: number|undefined,
- *   column: number|undefined
- * }} Position;
- */
-
-/**
  * @param {string} s
  * @return {!TreeNode}
  */
@@ -44,57 +24,8 @@ function createNode(s) {
   return {
     chunk: s,
     h: random(),
-    metrics: Chunk.metrics(s)
+    metrics: Metrics.fromChunk(s)
   };
-}
-
-/**
- * @param {!Position} position
- * @param {!Metrics} metrics
- * @return {!Position}
- */
-function advancePosition(position, metrics) {
-  return {
-    offset: position.offset + metrics.length,
-    line: position.line + (metrics.lines || 0),
-    column: metrics.last + (metrics.lines ? 0 : position.column)
-  };
-}
-
-/**
- * @param {!Position} position
- * @param {!Position} key
- */
-function greater(position, key) {
-  if (key.offset !== undefined)
-    return position.offset > key.offset;
-  return position.line > key.line || (position.line === key.line && position.column > key.column);
-}
-
-/**
- * @param {!Position} position
- * @param {!Position} key
- */
-function greaterEqual(position, key) {
-  if (key.offset !== undefined)
-    return position.offset >= key.offset;
-  return position.line > key.line || (position.line === key.line && position.column >= key.column);
-}
-
-/**
- * @param {!Metrics} metrics
- * @return {!Metrics}
- */
-function cloneMetrics(metrics) {
-  let result = {
-    length: metrics.length,
-    last: metrics.last,
-    first: metrics.first,
-    longest: metrics.longest
-  };
-  if (metrics.lines)
-    result.lines = metrics.lines;
-  return result;
 }
 
 /**
@@ -108,29 +39,17 @@ function setChildren(parent, left, right, skipClone) {
   let node = skipClone ? parent : {
     chunk: parent.chunk,
     h: parent.h,
-    metrics: cloneMetrics(parent.selfMetrics || parent.metrics)
+    metrics: Metrics.clone(parent.selfMetrics || parent.metrics)
   };
   if (left || right)
-    node.selfMetrics = cloneMetrics(node.metrics);
+    node.selfMetrics = Metrics.clone(node.metrics);
   if (left) {
     node.left = left;
-    let longest = Math.max(left.metrics.longest, left.metrics.last + node.metrics.first);
-    node.metrics.longest = Math.max(node.metrics.longest, longest);
-    node.metrics.first = left.metrics.first + (left.metrics.lines ? 0 : node.metrics.first);
-    node.metrics.last = node.metrics.last + (node.metrics.lines ? 0 : left.metrics.last);
-    node.metrics.length += left.metrics.length;
-    if (left.metrics.lines)
-      node.metrics.lines = left.metrics.lines + (node.metrics.lines || 0);
+    node.metrics = Metrics.combine(left.metrics, node.metrics);
   }
   if (right) {
     node.right = right;
-    let longest = Math.max(right.metrics.longest, node.metrics.last + right.metrics.first);
-    node.metrics.longest = Math.max(node.metrics.longest, longest);
-    node.metrics.first = node.metrics.first + (node.metrics.lines ? 0 : right.metrics.first);
-    node.metrics.last = right.metrics.last + (right.metrics.lines ? 0 : node.metrics.last);
-    node.metrics.length += right.metrics.length;
-    if (right.metrics.lines)
-      node.metrics.lines = right.metrics.lines + (node.metrics.lines || 0);
+    node.metrics = Metrics.combine(node.metrics, right.metrics);
   }
   return node;
 }
@@ -181,7 +100,7 @@ function buildTree(nodes) {
   function fill(i) {
     let left = l[i] === -1 ? undefined : fill(l[i]);
     let right = r[i] === -1 ? undefined : fill(r[i]);
-    return setChildren(nodes[i], left, right, false);
+    return setChildren(nodes[i], left, right, true);
   }
   return fill(root);
 }
@@ -191,19 +110,19 @@ function buildTree(nodes) {
  * If node contains a key position inside, it will be returned in right part,
  * unless |intersectionToLeft| is true.
  * @param {!TreeNode|undefined} root
- * @param {!Position} key
+ * @param {!PartialLocation} key
  * @param {boolean} intersectionToLeft
- * @param {!Position=} current
+ * @param {!Location=} current
  * @return {{left: !TreeNode|undefined, right: !TreeNode|undefined}}
  */
 function splitTree(root, key, intersectionToLeft, current) {
   if (!root)
     return {};
   if (!current)
-    current = origin;
-  if (greaterEqual(current, key))
+    current = Metrics.origin;
+  if (Metrics.locationIsGreaterOrEqual(current, key))
     return {right: root};
-  if (!greater(advancePosition(current, root.metrics), key))
+  if (!Metrics.locationIsGreater(Metrics.advanceLocation(current, root.metrics), key))
     return {left: root};
 
   // intersection to left:
@@ -218,11 +137,11 @@ function splitTree(root, key, intersectionToLeft, current) {
   //   a b key  ->  root to left
   //   rootToLeft = (key >= b) == (b <= key) == !(b > key)
 
-  let next = root.left ? advancePosition(current, root.left.metrics) : current;
-  let rootToLeft = !greaterEqual(next, key);
-  next = advancePosition(next, root.selfMetrics || root.metrics);
+  let next = root.left ? Metrics.advanceLocation(current, root.left.metrics) : current;
+  let rootToLeft = !Metrics.locationIsGreaterOrEqual(next, key);
+  next = Metrics.advanceLocation(next, root.selfMetrics || root.metrics);
   if (!intersectionToLeft)
-    rootToLeft = !greater(next, key);
+    rootToLeft = !Metrics.locationIsGreater(next, key);
   if (rootToLeft) {
     let tmp = splitTree(root.right, key, intersectionToLeft, next);
     return {left: setChildren(root, root.left, tmp.left), right: tmp.right};
@@ -250,23 +169,23 @@ function mergeTrees(left, right) {
 
 /**
  * @param {!TreeNode} node
- * @param {!Position} key
- * @return {{node: !TreeNode, position: !Position}|undefined}
+ * @param {!PartialLocation} key
+ * @return {{node: !TreeNode, location: !Location}|undefined}
  */
 function findNode(node, key) {
-  let current = origin;
+  let current = Metrics.origin;
   while (true) {
     if (node.left) {
-      let next = advancePosition(current, node.left.metrics);
-      if (greater(next, key)) {
+      let next = Metrics.advanceLocation(current, node.left.metrics);
+      if (Metrics.locationIsGreater(next, key)) {
         node = node.left;
         continue;
       }
       current = next;
     }
-    let next = advancePosition(current, node.selfMetrics || node.metrics);
-    if (greater(next, key))
-      return {node, position: current};
+    let next = Metrics.advanceLocation(current, node.selfMetrics || node.metrics);
+    if (Metrics.locationIsGreater(next, key))
+      return {node, location: current};
     current = next;
     if (!node.right)
       return;
@@ -298,14 +217,14 @@ class TreeIterator {
 
   /**
    * @param {!TreeNode} root
-   * @param {number} position
+   * @param {number} offset
    * @param {number} from
    * @param {number} to
    * @return {!TreeIterator}
    */
-  static create(root, position, from, to) {
+  static create(root, offset, from, to) {
     let it = new TreeIterator(root, [], from, to, 0, 0);
-    it._init(root, position);
+    it._init(root, offset);
     return it;
   }
 
@@ -318,23 +237,23 @@ class TreeIterator {
 
   /**
    * @param {!TreeNode} node
-   * @param {number} position
+   * @param {number} offset
    */
-  _init(node, position) {
+  _init(node, offset) {
     this._stack = [];
     let current = 0;
     while (true) {
       this._stack.push(node);
       if (node.left) {
         let next = current + node.left.metrics.length;
-        if (next > position) {
+        if (next > offset) {
           node = node.left;
           continue;
         }
         current = next;
       }
       let next = current + (node.selfMetrics || node.metrics).length;
-      if (next > position || !node.right) {
+      if (next > offset || !node.right) {
         this._node = node;
         this._before = current;
         this._after = next;
@@ -448,7 +367,7 @@ export class Text {
     let metrics = this._root.metrics;
     this._lineCount = (metrics.lines || 0) + 1;
     this._length = metrics.length;
-    this._lastPosition = {line: metrics.lines || 0, column: metrics.last, offset: metrics.length};
+    this._lastLocation = Metrics.toLocation(metrics);
     this._longestLine = metrics.longest;
   }
 
@@ -579,11 +498,11 @@ export class Text {
     if (offset > this._length)
       return null;
     if (offset === this._length)
-      return this._lastPosition;
+      return this._lastLocation;
     let found = findNode(this._root, {offset});
     if (!found)
       throw 'Inconsistency';
-    return Chunk.offsetToPosition(found.node.chunk, found.position, offset);
+    return Metrics.chunkOffsetToPosition(found.node.chunk, found.location, offset);
   }
 
   /**
@@ -598,7 +517,7 @@ export class Text {
       return Math.max(0, Math.min(position.offset, this._length));
     }
 
-    let compare = (position.line - this._lastPosition.line) || (position.column - this._lastPosition.column);
+    let compare = (position.line - this._lastLocation.line) || (position.column - this._lastLocation.column);
     if (compare >= 0) {
       if (clamp || compare === 0)
         return this._length;
@@ -610,7 +529,7 @@ export class Text {
         return this._length;
       throw 'Position does not belong to text';
     }
-    return Chunk.positionToOffset(found.node.chunk, found.position, position, clamp);
+    return Metrics.chunkPositionToOffset(found.node.chunk, found.location, position, clamp);
   }
 }
 

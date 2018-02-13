@@ -1,5 +1,5 @@
 import {TestRunner, Reporter, Matchers} from '../../utils/testrunner/index.mjs';
-import {Chunk} from './Chunk.mjs';
+import {Metrics} from './Metrics.mjs';
 import {Text} from './Text.mjs';
 import {Document} from './Document.mjs';
 import {Random} from './Random.mjs';
@@ -13,16 +13,16 @@ const {beforeAll, beforeEach, afterAll, afterEach} = runner;
 
 const {expect} = new Matchers();
 
-describe('Chunk', () => {
-  it('Chunk.metrics', () => {
-    expect(Chunk.metrics('one line')).toEqual({length: 8, first: 8, last: 8, longest: 8});
-    expect(Chunk.metrics('\none line')).toEqual({length: 9, first: 0, last: 8, longest: 8, lines: 1});
-    expect(Chunk.metrics('one line\n')).toEqual({length: 9, first: 8, last: 0, longest: 8, lines: 1});
-    expect(Chunk.metrics('\none line\n')).toEqual({length: 10, first: 0, last: 0, longest: 8, lines: 2});
-    expect(Chunk.metrics('short\nlongest\nlonger\ntiny')).toEqual({length: 25, first: 5, last: 4, longest: 7, lines: 3});
+describe('Metrics', () => {
+  it('Metrics.fromChunk', () => {
+    expect(Metrics.fromChunk('one line')).toEqual({length: 8, first: 8, last: 8, longest: 8});
+    expect(Metrics.fromChunk('\none line')).toEqual({length: 9, first: 0, last: 8, longest: 8, lines: 1});
+    expect(Metrics.fromChunk('one line\n')).toEqual({length: 9, first: 8, last: 0, longest: 8, lines: 1});
+    expect(Metrics.fromChunk('\none line\n')).toEqual({length: 10, first: 0, last: 0, longest: 8, lines: 2});
+    expect(Metrics.fromChunk('short\nlongest\nlonger\ntiny')).toEqual({length: 25, first: 5, last: 4, longest: 7, lines: 3});
   });
 
-  it('Chunk.offsetToPosition and positionToOffset', () => {
+  it('Metrics.chunkOffsetToPosition and chunkPositionToOffset', () => {
     let tests = [
       {chunk: 'short', before: {offset: 15, line: 3, column: 8}, position: {line: 3, column: 11, offset: 18}},
       {chunk: 'short\nlonger', before: {offset: 15, line: 3, column: 8}, position: {line: 3, column: 11, offset: 18}},
@@ -31,9 +31,9 @@ describe('Chunk', () => {
       {chunk: '1\n23\n456\n78\n9\n0', before: {offset: 15, line: 3, column: 8}, position: {line: 7, column: 1, offset: 28}},
     ];
     for (let test of tests) {
-      expect(Chunk.offsetToPosition(test.chunk, test.before, test.position.offset)).toEqual(test.position);
-      expect(Chunk.positionToOffset(test.chunk, test.before, test.position, false /* clamp */)).toEqual(test.position.offset);
-      expect(Chunk.positionToOffset(test.chunk, test.before, test.position, true /* clamp */)).toEqual(test.position.offset);
+      expect(Metrics.chunkOffsetToPosition(test.chunk, test.before, test.position.offset)).toEqual(test.position);
+      expect(Metrics.chunkPositionToOffset(test.chunk, test.before, test.position, false /* clamp */)).toEqual(test.position.offset);
+      expect(Metrics.chunkPositionToOffset(test.chunk, test.before, test.position, true /* clamp */)).toEqual(test.position.offset);
     }
 
     let clamped = [
@@ -43,7 +43,7 @@ describe('Chunk', () => {
       {chunk: '1\n23\n456\n78\n9\n0', before: {offset: 15, line: 3, column: 8}, position: {line: 7, column: 22}, offset: 28},
     ];
     for (let test of clamped)
-      expect(Chunk.positionToOffset(test.chunk, test.before, test.position, true /* clamp */)).toEqual(test.offset);
+      expect(Metrics.chunkPositionToOffset(test.chunk, test.before, test.position, true /* clamp */)).toEqual(test.offset);
   });
 });
 
