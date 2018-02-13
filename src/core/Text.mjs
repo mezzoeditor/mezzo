@@ -107,7 +107,7 @@ function buildTree(nodes) {
 
 /**
  * Left part contains all nodes up to key.
- * If node contains a key position inside, it will be returned in right part,
+ * If node contains a key location inside, it will be returned in right part,
  * unless |intersectionToLeft| is true.
  * @param {!TreeNode|undefined} root
  * @param {!PartialLocation} key
@@ -492,9 +492,9 @@ export class Text {
 
   /**
    * @param {number} offset
-   * @return {?Position}
+   * @return {?Location}
    */
-  offsetToPosition(offset) {
+  offsetToLocation(offset) {
     if (offset > this._length)
       return null;
     if (offset === this._length)
@@ -502,34 +502,28 @@ export class Text {
     let found = findNode(this._root, {offset});
     if (!found)
       throw 'Inconsistency';
-    return Metrics.chunkOffsetToPosition(found.node.chunk, found.location, offset);
+    return Metrics.chunkOffsetToLocation(found.node.chunk, found.location, offset);
   }
 
   /**
    * @param {!Position} position
-   * @param {boolean=} clamp
-   * @return {number}
+   * @param {boolean=} strict
+   * @return {!Location}
    */
-  positionToOffset(position, clamp) {
-    if (position.offset !== undefined) {
-      if ((position.offset < 0 || position.offset > this._length) && !clamp)
-        throw 'Position does not belong to text';
-      return Math.max(0, Math.min(position.offset, this._length));
-    }
-
+  positionToLocation(position, strict) {
     let compare = (position.line - this._lastLocation.line) || (position.column - this._lastLocation.column);
     if (compare >= 0) {
-      if (clamp || compare === 0)
-        return this._length;
+      if (!strict || compare === 0)
+        return this._lastLocation;
       throw 'Position does not belong to text';
     }
     let found = findNode(this._root, {line: position.line, column: position.column});
     if (!found) {
-      if (clamp)
-        return this._length;
+      if (!strict)
+        return this._lastLocation;
       throw 'Position does not belong to text';
     }
-    return Metrics.chunkPositionToOffset(found.node.chunk, found.location, position, clamp);
+    return Metrics.chunkPositionToLocation(found.node.chunk, found.location, position, strict);
   }
 }
 

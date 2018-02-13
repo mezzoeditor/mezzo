@@ -291,7 +291,7 @@ export class Selection {
             } else {
               column = 0;
             }
-            offset = this._document.positionToOffset({line, column}, true /* clamp */);
+            offset = this._document.positionToOffset({line, column});
           }
           ranges.push({id: range.id, upDownColumn, anchor: offset, focus: offset});
         }
@@ -309,7 +309,7 @@ export class Selection {
           } else {
             column = 0;
           }
-          let focus = this._document.positionToOffset({line, column}, true /* clamp */);
+          let focus = this._document.positionToOffset({line, column});
           ranges.push({id: range.id, upDownColumn, anchor: range.anchor, focus});
         }
         this._ranges = this._join(ranges);
@@ -329,7 +329,7 @@ export class Selection {
             } else {
               column = this._document.length();
             }
-            offset = this._document.positionToOffset({line, column}, true /* clamp */);
+            offset = this._document.positionToOffset({line, column});
           }
           ranges.push({id: range.id, upDownColumn, anchor: offset, focus: offset});
         }
@@ -347,7 +347,7 @@ export class Selection {
           } else {
             column = this._document.length();
           }
-          let focus = this._document.positionToOffset({line, column}, true /* clamp */);
+          let focus = this._document.positionToOffset({line, column});
           ranges.push({id: range.id, upDownColumn, anchor: range.anchor, focus});
         }
         this._ranges = this._join(ranges);

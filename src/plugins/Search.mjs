@@ -254,8 +254,8 @@ export class Search {
 
 Search.Commands = new Set([
   'search.find',     // Takes SearchOptions.
-  'search.next',     // Moves to closest match after current cursor position.
-  'search.previous', // Moves to closest match before current cursor position.
+  'search.next',     // Moves to closest match after current cursor offset.
+  'search.previous', // Moves to closest match before current cursor offset.
   'search.cancel',
 ]);
 

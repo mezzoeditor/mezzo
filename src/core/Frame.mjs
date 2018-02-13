@@ -32,7 +32,7 @@ export class Frame {
 
     let lines = [];
     for (let line = startLine; line <= endLine; line++) {
-      let start = document.positionToOffset({line, column: 0}, true /* clamp */);
+      let start = document.positionToOffset({line, column: 0});
       if (line === document.lineCount())
         start = document.length() + 1;
       if (line > startLine)
@@ -176,7 +176,7 @@ export class Frame {
 
   /**
    * @param {number} offset
-   * @return {!TextPosition}
+   * @return {?TextPosition}
    */
   offsetToPosition(offset) {
     if (this._lines.length <= 20) {
@@ -205,11 +205,11 @@ export class Frame {
 
   /**
    * @param {!TextPosition} position
-   * @param {boolean=} clamp
+   * @param {boolean=} strict
    * @return {number}
    */
-  positionToOffset(position, clamp) {
-    return this._document.positionToOffset(position, clamp);
+  positionToOffset(position, strict) {
+    return this._document.positionToOffset(position, strict);
   }
 
   cleanup() {

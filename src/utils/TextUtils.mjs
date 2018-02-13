@@ -2,10 +2,10 @@ export let TextUtils = {};
 
 /**
  * @param {string} chunk
- * @param {!Position} before
- * @param {!Position} after
- * @param {!Position} from
- * @param {!Position} to
+ * @param {!Location} before
+ * @param {!Location} after
+ * @param {!PartialLocation} from
+ * @param {!PartialLocation} to
  * @return {string}
  */
 TextUtils.chunkContent = function(chunk, before, after, from, to) {
@@ -67,8 +67,8 @@ TextUtils.clampRange = function(document, range) {
 TextUtils.lineLength = function(document, line) {
   if (line >= document.lineCount())
     return 0;
-  let start = document.positionToOffset({line, column: 0}, true /* clamp */);
-  let end = document.positionToOffset({line: line + 1, column: 0}, true /* clamp */);
+  let start = document.positionToOffset({line, column: 0});
+  let end = document.positionToOffset({line: line + 1, column: 0});
   return start === end ? 0 : end - start - 1;
 };
 
@@ -81,7 +81,7 @@ TextUtils.line = function(document, line) {
   if (line >= document.lineCount())
     return null;
   let from = document.positionToOffset({line, column: 0});
-  let to = document.positionToOffset({line: line + 1, column: 0}, true /* clamp */);
+  let to = document.positionToOffset({line: line + 1, column: 0});
   return document.content(from, to);
 };
 
@@ -95,8 +95,8 @@ TextUtils.line = function(document, line) {
 TextUtils.lineChunk = function(document, line, from, to) {
   if (line >= document.lineCount())
     return null;
-  from = document.positionToOffset({line, column: from}, true /* clamp */);
-  to = document.positionToOffset({line, column: to}, true /* clamp */);
+  from = document.positionToOffset({line, column: from});
+  to = document.positionToOffset({line, column: to});
   return document.content(from, to);
 };
 

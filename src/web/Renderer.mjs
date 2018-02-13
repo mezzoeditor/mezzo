@@ -175,7 +175,7 @@ export class Renderer {
   _canvasToTextOffset({x, y}) {
     x -= this._editorRect.x;
     y -= this._editorRect.y;
-    return this._document.positionToOffset(this._viewport.viewportPositionToTextPosition({x, y}), true /* clamp */);
+    return this._document.positionToOffset(this._viewport.viewportPositionToTextPosition({x, y}));
   }
 
   /**
@@ -539,7 +539,7 @@ export class Renderer {
 
         let line = this._viewport.contentPositionToTextPosition({x: 0, y: scrollbar.scrollbarOffsetToContentOffset(bottom)}).line;
         line = Math.max(to.line, line);
-        return Math.max(decoration.to, frame.positionToOffset({line, column: 0}, true /* clamp */));
+        return Math.max(decoration.to, frame.positionToOffset({line, column: 0}));
       });
       if (lastTop >= 0)
         ctx.fillRect(rect.x + left, rect.y + lastTop, right - left, lastBottom - lastTop);

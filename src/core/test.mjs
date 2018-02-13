@@ -22,28 +22,28 @@ describe('Metrics', () => {
     expect(Metrics.fromChunk('short\nlongest\nlonger\ntiny')).toEqual({length: 25, first: 5, last: 4, longest: 7, lines: 3});
   });
 
-  it('Metrics.chunkOffsetToPosition and chunkPositionToOffset', () => {
+  it('Metrics.chunkOffsetToLocation and chunkPositionToLocation', () => {
     let tests = [
-      {chunk: 'short', before: {offset: 15, line: 3, column: 8}, position: {line: 3, column: 11, offset: 18}},
-      {chunk: 'short\nlonger', before: {offset: 15, line: 3, column: 8}, position: {line: 3, column: 11, offset: 18}},
-      {chunk: 'short\nlonger', before: {offset: 15, line: 3, column: 8}, position: {line: 3, column: 13, offset: 20}},
-      {chunk: 'short\nlonger', before: {offset: 15, line: 3, column: 8}, position: {line: 4, column: 0, offset: 21}},
-      {chunk: '1\n23\n456\n78\n9\n0', before: {offset: 15, line: 3, column: 8}, position: {line: 7, column: 1, offset: 28}},
+      {chunk: 'short', before: {offset: 15, line: 3, column: 8}, location: {line: 3, column: 11, offset: 18}},
+      {chunk: 'short\nlonger', before: {offset: 15, line: 3, column: 8}, location: {line: 3, column: 11, offset: 18}},
+      {chunk: 'short\nlonger', before: {offset: 15, line: 3, column: 8}, location: {line: 3, column: 13, offset: 20}},
+      {chunk: 'short\nlonger', before: {offset: 15, line: 3, column: 8}, location: {line: 4, column: 0, offset: 21}},
+      {chunk: '1\n23\n456\n78\n9\n0', before: {offset: 15, line: 3, column: 8}, location: {line: 7, column: 1, offset: 28}},
     ];
     for (let test of tests) {
-      expect(Metrics.chunkOffsetToPosition(test.chunk, test.before, test.position.offset)).toEqual(test.position);
-      expect(Metrics.chunkPositionToOffset(test.chunk, test.before, test.position, false /* clamp */)).toEqual(test.position.offset);
-      expect(Metrics.chunkPositionToOffset(test.chunk, test.before, test.position, true /* clamp */)).toEqual(test.position.offset);
+      expect(Metrics.chunkOffsetToLocation(test.chunk, test.before, test.location.offset)).toEqual(test.location);
+      expect(Metrics.chunkPositionToLocation(test.chunk, test.before, test.location)).toEqual(test.location);
+      expect(Metrics.chunkPositionToLocation(test.chunk, test.before, test.location, true /* strict */)).toEqual(test.location);
     }
 
-    let clamped = [
-      {chunk: 'short', before: {offset: 15, line: 3, column: 8}, position: {line: 3, column: 22}, offset: 20},
-      {chunk: 'short\nlonger', before: {offset: 15, line: 3, column: 8}, position: {line: 3, column: 22}, offset: 20},
-      {chunk: 'short\nlonger', before: {offset: 15, line: 3, column: 8}, position: {line: 4, column: 22}, offset: 27},
-      {chunk: '1\n23\n456\n78\n9\n0', before: {offset: 15, line: 3, column: 8}, position: {line: 7, column: 22}, offset: 28},
+    let nonStrict = [
+      {chunk: 'short', before: {offset: 15, line: 3, column: 8}, location: {line: 3, column: 22}, result: {line: 3, column: 13, offset: 20}},
+      {chunk: 'short\nlonger', before: {offset: 15, line: 3, column: 8}, location: {line: 3, column: 22}, result: {line: 3, column: 13, offset: 20}},
+      {chunk: 'short\nlonger', before: {offset: 15, line: 3, column: 8}, location: {line: 4, column: 22}, result: {line: 4, column: 6, offset: 27}},
+      {chunk: '1\n23\n456\n78\n9\n0', before: {offset: 15, line: 3, column: 8}, location: {line: 7, column: 22}, result: {line: 7, column: 1, offset: 28}},
     ];
-    for (let test of clamped)
-      expect(Metrics.chunkPositionToOffset(test.chunk, test.before, test.position, true /* clamp */)).toEqual(test.offset);
+    for (let test of nonStrict)
+      expect(Metrics.chunkPositionToLocation(test.chunk, test.before, test.location)).toEqual(test.result);
   });
 });
 
@@ -66,23 +66,25 @@ describe('Text', () => {
     let lineCount = 200;
     let chunks = [];
     let longest = 0;
-    let positionQueries = [];
+    let locationQueries = [];
     let offset = 0;
     for (let i = 0; i < lineCount; i++) {
       let s = 'abcdefghijklmnopqrstuvwxyz';
       let length = 1 + (random() % (s.length - 1));
       longest = Math.max(longest, length);
       chunks.push(s.substring(0, length) + '\n');
-      positionQueries.push({line: i, column: 0, offset: offset});
-      positionQueries.push({line: i, column: 1, offset: offset + 1});
-      positionQueries.push({line: i, column: length, offset: offset + length});
-      positionQueries.push({line: i, column: length + 1, offset: offset + length, clampOnly: true});
-      positionQueries.push({line: i, column: length + 100, offset: offset + length, clampOnly: true});
+      locationQueries.push({line: i, column: 0, offset: offset});
+      locationQueries.push({line: i, column: 1, offset: offset + 1});
+      locationQueries.push({line: i, column: length, offset: offset + length});
+      locationQueries.push({line: i, column: length + 1, offset: offset + length, nonStrict: {column: length}});
+      locationQueries.push({line: i, column: length + 100, offset: offset + length, nonStrict: {column: length}});
       let column = random() % length;
-      positionQueries.push({line: i, column: column, offset: offset + column});
+      locationQueries.push({line: i, column: column, offset: offset + column});
       offset += length + 1;
     }
     let content = chunks.join('');
+    locationQueries.push({line: lineCount, column: 0, offset: content.length});
+    locationQueries.push({line: lineCount, column: 3, offset: content.length, nonStrict: {column: 0}});
 
     let contentQueries = [];
     for (let i = 0; i < 1000; i++) {
@@ -99,16 +101,16 @@ describe('Text', () => {
       expect(text.length()).toBe(content.length);
       for (let {from, to} of contentQueries)
         expect(text.content(from, to)).toBe(content.substring(from, to));
-      expect(text.offsetToPosition(0)).toEqual({line: 0, column: 0, offset: 0});
-      expect(text.offsetToPosition(content.length)).toEqual({line: lineCount, column: 0, offset: content.length});
-      expect(text.offsetToPosition(content.length + 1)).toBe(null);
-      for (let {line, column, offset, clampOnly} of positionQueries) {
-        if (clampOnly) {
-          expect(text.positionToOffset({line, column}, true)).toBe(offset);
+      expect(text.offsetToLocation(0)).toEqual({line: 0, column: 0, offset: 0});
+      expect(text.offsetToLocation(content.length)).toEqual({line: lineCount, column: 0, offset: content.length});
+      expect(text.offsetToLocation(content.length + 1)).toBe(null);
+      for (let {line, column, offset, nonStrict} of locationQueries) {
+        if (nonStrict) {
+          expect(text.positionToLocation({line, column})).toEqual({line, column: nonStrict.column, offset});
         } else {
-          expect(text.offsetToPosition(offset)).toEqual({line, column, offset});
-          expect(text.positionToOffset({line, column}, true)).toBe(offset);
-          expect(text.positionToOffset({line, column}, false)).toBe(offset);
+          expect(text.offsetToLocation(offset)).toEqual({line, column, offset});
+          expect(text.positionToLocation({line, column})).toEqual({line, column, offset});
+          expect(text.positionToLocation({line, column}, true)).toEqual({line, column, offset});
         }
       }
     }

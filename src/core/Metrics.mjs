@@ -153,11 +153,12 @@ Metrics.fromChunk = function(chunk) {
 
 /**
  * @param {string} chunk
- * @param {!Position} before
+ * @param {!Location} before
  * @param {!Position} position
- * @param {boolean=} clamp
+ * @param {boolean=} strict
+ * @return {!Location}
  */
-Metrics.chunkPositionToOffset = function(chunk, before, position, clamp) {
+Metrics.chunkPositionToLocation = function(chunk, before, position, strict) {
   let {line, column, offset} = before;
 
   if (position.line < line || (position.line === line && position.column < column))
@@ -178,20 +179,20 @@ Metrics.chunkPositionToOffset = function(chunk, before, position, clamp) {
   if (lineEnd === -1)
     lineEnd = chunk.length;
   if (lineEnd < index + (position.column - column)) {
-    if (clamp)
-      return offset + lineEnd - index;
+    if (!strict)
+      return {offset: offset + lineEnd - index, line: line, column: column + lineEnd - index};
     throw 'Position does not belong to text';
   }
-  return offset + position.column - column;
+  return {offset: offset + position.column - column, line: position.line, column: position.column};
 };
 
 /**
  * @param {string} chunk
- * @param {!Position} before
+ * @param {!Location} before
  * @param {number} offset
- * @return {!Position}
+ * @return {!Location}
  */
-Metrics.chunkOffsetToPosition = function(chunk, before, offset) {
+Metrics.chunkOffsetToLocation = function(chunk, before, offset) {
   if (chunk.length < offset - before.offset)
     throw 'Inconsistent';
   chunk = chunk.substring(0, offset - before.offset);

@@ -181,11 +181,11 @@ export class WebEditor {
         let from = this._document.positionToOffset({
           line: position.line,
           column: 0
-        }, true /* clamp */);
+        });
         let to = this._document.positionToOffset({
           line: position.line + 1,
           column: 0
-        }, true /* clamp */);
+        });
 
         this._selection.setRanges([{from, to}]);
         mouseRangeStartOffset = from;

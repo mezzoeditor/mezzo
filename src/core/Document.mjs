@@ -286,19 +286,19 @@ export class Document {
 
   /**
    * @param {number} offset
-   * @return {?{line: number, column: number, offset: number}}
+   * @return {?Position}
    */
   offsetToPosition(offset) {
-    return this._text.offsetToPosition(offset);
+    return this._text.offsetToLocation(offset);
   }
 
   /**
-   * @param {!{line: number, column: number}} position
-   * @param {boolean=} clamp
+   * @param {!Position} position
+   * @param {boolean=} strict
    * @return {number}
    */
-  positionToOffset(position, clamp) {
-    return this._text.positionToOffset(position, clamp);
+  positionToOffset(position, strict) {
+    return this._text.positionToLocation(position, strict).offset;
   }
 
   beforeFrame() {

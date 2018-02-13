@@ -162,7 +162,7 @@ async function setupEditor(editor, exampleName) {
 
   let ranges = [];
   for (let i = 0; i < 20; i++) {
-    let offset = editor.document().positionToOffset({line: 4 * i, column: 3}, true /* clamp */);
+    let offset = editor.document().positionToOffset({line: 4 * i, column: 3});
     ranges.push({from: offset, to: offset});
   }
   //let ranges = [{from: 0, to: 0}, {from: 9, to: 9}];

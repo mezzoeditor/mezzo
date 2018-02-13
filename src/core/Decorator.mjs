@@ -194,7 +194,7 @@ export class Decorator {
     if (tmp.left && last(tmp.left).to > from)
       throw 'Decorations must be disjoint';
     if (from === to && tmp.right && first(tmp.right).to === to)
-      throw 'Two collapsed decorations at the same position are not allowed';
+      throw 'Two collapsed decorations at the same offset are not allowed';
     let node = {data, from, to, h: random(), size: 1};
     this._root = merge(merge(tmp.left, node), tmp.right);
   }
@@ -408,7 +408,7 @@ export class Decorator {
   }
 
   /**
-   * Returns the first (sorted by position) decoration.
+   * Returns the first (sorted by offset) decoration.
    * @return {?Decoration}
    */
   firstAll() {
@@ -416,7 +416,7 @@ export class Decorator {
   }
 
   /**
-   * Returns the first (sorted by position) decoration which starts at [from, to].
+   * Returns the first (sorted by offset) decoration which starts at [from, to].
    * @param {number} from
    * @param {number} to
    * @return {?Decoration}
@@ -426,7 +426,7 @@ export class Decorator {
   }
 
   /**
-   * Returns the first (sorted by position) decoration which ends at [from, to].
+   * Returns the first (sorted by offset) decoration which ends at [from, to].
    * @param {number} from
    * @param {number} to
    * @return {?Decoration}
@@ -436,7 +436,7 @@ export class Decorator {
   }
 
   /**
-   * Returns the first (sorted by position) decoration which intersects or touches [from, to].
+   * Returns the first (sorted by offset) decoration which intersects or touches [from, to].
    * @param {number} from
    * @param {number} to
    * @return {?Decoration}
@@ -446,7 +446,7 @@ export class Decorator {
   }
 
   /**
-   * Returns the last (sorted by position) decoration.
+   * Returns the last (sorted by offset) decoration.
    * @return {?Decoration}
    */
   lastAll() {
@@ -454,7 +454,7 @@ export class Decorator {
   }
 
   /**
-   * Returns the last (sorted by position) decoration which starts at [from, to].
+   * Returns the last (sorted by offset) decoration which starts at [from, to].
    * @param {number} from
    * @param {number} to
    * @return {?Decoration}
@@ -464,7 +464,7 @@ export class Decorator {
   }
 
   /**
-   * Returns the last (sorted by position) decoration which ends at [from, to].
+   * Returns the last (sorted by offset) decoration which ends at [from, to].
    * @param {number} from
    * @param {number} to
    * @return {?Decoration}
@@ -474,7 +474,7 @@ export class Decorator {
   }
 
   /**
-   * Returns the last (sorted by position) decoration which intersects or touches [from, to].
+   * Returns the last (sorted by offset) decoration which intersects or touches [from, to].
    * @param {number} from
    * @param {number} to
    * @return {?Decoration}
