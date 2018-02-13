@@ -22,14 +22,13 @@ import {Frame} from './Frame.mjs';
  *          |                                      |
  *          +--------------------------------------+
  *
- * Viewport class operates "units" and should be supplied with font metrics to do
- * text <-> units conversion.
+ * Viewport class operates points and should be supplied with font metrics to do
+ * text <-> point units conversion.
  *
  * Viewport class operates 3 coordinate systems:
- * - "content" coordinate system holds all the content that is viewported: text and its padding.
- *   Measured in "units".
- * - "viewport" coordinate system is the position of the viewport, measured in "units".
- * - "text" coordinate system is the positions of text, measured in lines/columns.
+ * - viewport points, this is measured relative to viewport origin;
+ * - view points, this is measured relative to padding origin, includes padding and text;
+ * - document locations, this is measured relative to document origin.
  *
  * Viewport provides canonical scrollbars.
  */
@@ -133,10 +132,10 @@ export class Viewport {
   }
 
   /**
-   * @param {!{x: number, y: number}} position
-   * @return {!{line: number, column: number}}
+   * @param {!Point} point
+   * @return {!Position}
    */
-  contentPositionToTextPosition({x, y}) {
+  viewPointToDocumentPosition({x, y}) {
     y -= this._padding.top;
     x -= this._padding.left;
     return {
@@ -146,20 +145,10 @@ export class Viewport {
   }
 
   /**
-   * @param {!{x: number, y: number}} position
-   * @return {!{x: number, y: number}}
+   * @param {!Point} point
+   * @return {!Position}
    */
-  contentPositionToViewportPosition({x, y}) {
-    x -= this._scrollLeft;
-    y -= this._scrollTop;
-    return {x, y};
-  }
-
-  /**
-   * @param {!{x: number, y: number}} position
-   * @return {!{line: number, column: number}}
-   */
-  viewportPositionToTextPosition({x, y}) {
+  viewportPointToDocumentPosition({x, y}) {
     x += this._scrollLeft - this._padding.left;
     y += this._scrollTop - this._padding.top;
     return {
@@ -169,20 +158,10 @@ export class Viewport {
   }
 
   /**
-   * @param {!{x: number, y: number}} position
-   * @return {!{x: number, y: number}}
+   * @param {!Position} position
+   * @return {!Point}
    */
-  viewportPositionToContentPosition({x, y}) {
-    x += this._scrollLeft;
-    y += this._scrollTop;
-    return {x, y};
-  }
-
-  /**
-   * @param {!{line: number, column: number}} position
-   * @return {!{x: number, y: number}}
-   */
-  textPositionToViewportPosition({line, column}) {
+  documentPositionToViewportPoint({line, column}) {
     return {
       x: column * this._metrics.charWidth + this._padding.left - this._scrollLeft,
       y: line * this._metrics.lineHeight + this._padding.top - this._scrollTop,
@@ -190,10 +169,10 @@ export class Viewport {
   }
 
   /**
-   * @param {!{line: number, column: number}} position
-   * @return {!{x: number, y: number}}
+   * @param {!Position} position
+   * @return {!Point}
    */
-  textPositionToContentPosition({line, column}) {
+  documentPositionToViewPoint({line, column}) {
     return {
       x: column * this._metrics.charWidth + this._padding.left,
       y: line * this._metrics.lineHeight + this._padding.top,
@@ -230,8 +209,8 @@ export class Viewport {
   createFrame() {
     this._document.beforeFrame();
     this._frozen = true;
-    const start = this.viewportPositionToTextPosition({x: 0, y: 0});
-    const end = this.viewportPositionToTextPosition({x: this._width + this._metrics.charWidth, y: this._height + this._metrics.lineHeight});
+    const start = this.viewportPointToDocumentPosition({x: 0, y: 0});
+    const end = this.viewportPointToDocumentPosition({x: this._width + this._metrics.charWidth, y: this._height + this._metrics.lineHeight});
     const frame = new Frame(this._document, start, end.column - start.column, end.line - start.line);
     const {text, scrollbar} = this._document.decorateFrame(frame);
     this._frozen = false;

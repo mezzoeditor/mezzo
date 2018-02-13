@@ -21,6 +21,13 @@
 
 /**
  * @typedef {{
+ *   x: number,
+ *   y: number,
+ * }} Point;
+ */
+
+ /**
+ * @typedef {{
  *   offset: number,
  *   line: number,
  *   column: number,

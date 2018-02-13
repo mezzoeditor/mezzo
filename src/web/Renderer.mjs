@@ -175,7 +175,7 @@ export class Renderer {
   _canvasToTextOffset({x, y}) {
     x -= this._editorRect.x;
     y -= this._editorRect.y;
-    return this._document.positionToOffset(this._viewport.viewportPositionToTextPosition({x, y}));
+    return this._document.positionToOffset(this._viewport.viewportPointToDocumentPosition({x, y}));
   }
 
   /**
@@ -363,7 +363,7 @@ export class Renderer {
     ctx.beginPath();
     ctx.rect(this._editorRect.x, this._editorRect.y, this._editorRect.width, this._editorRect.height);
     ctx.clip();
-    let textOrigin = this._viewport.textPositionToViewportPosition({line: 0, column: 0});
+    let textOrigin = this._viewport.documentPositionToViewportPoint({line: 0, column: 0});
     textOrigin.x += this._editorRect.x;
     textOrigin.y += this._editorRect.y;
     ctx.translate(textOrigin.x, textOrigin.y);
@@ -407,7 +407,7 @@ export class Renderer {
     ctx.lineTo(this._gutterRect.width, this._gutterRect.height);
     ctx.stroke();
 
-    const textOrigin = this._viewport.textPositionToViewportPosition({line: 0, column: 0});
+    const textOrigin = this._viewport.documentPositionToViewportPoint({line: 0, column: 0});
     ctx.translate(0, textOrigin.y);
     ctx.textAlign = 'right';
     ctx.fillStyle = 'rgb(128, 128, 128)';
@@ -521,8 +521,8 @@ export class Renderer {
         const from = frame.offsetToPosition(decoration.from);
         const to = frame.offsetToPosition(decoration.to);
 
-        let top = scrollbar.contentOffsetToScrollbarOffset(this._viewport.textPositionToContentPosition(from).y);
-        let bottom = scrollbar.contentOffsetToScrollbarOffset(this._viewport.textPositionToContentPosition({
+        let top = scrollbar.contentOffsetToScrollbarOffset(this._viewport.documentPositionToViewPoint(from).y);
+        let bottom = scrollbar.contentOffsetToScrollbarOffset(this._viewport.documentPositionToViewPoint({
           line: to.line + 1,
           column: 0
         }).y);
@@ -537,7 +537,7 @@ export class Renderer {
           lastBottom = bottom;
         }
 
-        let line = this._viewport.contentPositionToTextPosition({x: 0, y: scrollbar.scrollbarOffsetToContentOffset(bottom)}).line;
+        let line = this._viewport.viewPointToDocumentPosition({x: 0, y: scrollbar.scrollbarOffsetToContentOffset(bottom)}).line;
         line = Math.max(to.line, line);
         return Math.max(decoration.to, frame.positionToOffset({line, column: 0}));
       });
