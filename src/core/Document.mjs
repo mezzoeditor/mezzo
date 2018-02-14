@@ -7,8 +7,9 @@ export class Document {
   constructor() {
     this._plugins = [];
     this._viewports = [];
+    this._measurer = { defaultWidth: 1, defaultHeight: 1, measureChunk: chunk => 0 };
     this._history = new History({
-      text: Text.withContent(''),
+      text: Text.withContent('', this._measurer),
       replacements: [],
       data: new Map(),
       operation: '__initial__'
@@ -35,6 +36,24 @@ export class Document {
   }
 
   /**
+   * @return {!Measurer}
+   */
+  measurer() {
+    return this._measurer;
+  }
+
+  /**
+   * @param {!Measurer} measurer
+   */
+  setMeasurer(measurer) {
+    this._measurer = measurer;
+    // TODO: this is not quite correct.
+    // Instead, we should either rebuild the whole history or mark history states
+    // with measurer and rebuild lazily.
+    this.reset(this.content());
+  }
+
+  /**
    * @param {number} fontLineHeight
    * @param {number} fontCharWidth
    * @return {!Viewport}
@@ -55,7 +74,7 @@ export class Document {
       throw 'Cannot edit while building frame';
     let to = this._text.length();
     this._history.reset({
-      text: Text.withContent(text),
+      text: Text.withContent(text, this._measurer),
       replacements: [],
       data: new Map(),
       operation: '__initial__'

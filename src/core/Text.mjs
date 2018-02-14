@@ -18,13 +18,14 @@ let kDefaultChunkSize = 100;
 
 /**
  * @param {string} s
+ * @param {!Measurer} measurer
  * @return {!TreeNode}
  */
-function createNode(s) {
+function createNode(s, measurer) {
   return {
     chunk: s,
     h: random(),
-    metrics: Metrics.fromChunk(s)
+    metrics: Metrics.fromChunk(s, measurer)
   };
 }
 
@@ -32,10 +33,11 @@ function createNode(s) {
  * @param {!TreeNode} parent
  * @param {!TreeNode|undefined} left
  * @param {!TreeNode|undefined} right
+ * @param {!Measurer} measurer
  * @param {boolean=} skipClone
  * @return {!TreeNode}
  */
-function setChildren(parent, left, right, skipClone) {
+function setChildren(parent, left, right, measurer, skipClone) {
   let node = skipClone ? parent : {
     chunk: parent.chunk,
     h: parent.h,
@@ -45,20 +47,21 @@ function setChildren(parent, left, right, skipClone) {
     node.selfMetrics = Metrics.clone(node.metrics);
   if (left) {
     node.left = left;
-    node.metrics = Metrics.combine(left.metrics, node.metrics);
+    node.metrics = Metrics.combine(left.metrics, node.metrics, measurer);
   }
   if (right) {
     node.right = right;
-    node.metrics = Metrics.combine(node.metrics, right.metrics);
+    node.metrics = Metrics.combine(node.metrics, right.metrics, measurer);
   }
   return node;
 }
 
 /**
  * @param {!Array<!TreeNode>} nodes
+ * @param {!Measurer} measurer
  * @return {!TreeNode|undefined}
  */
-function buildTree(nodes) {
+function buildTree(nodes, measurer) {
   if (!nodes.length)
     return;
   if (nodes.length === 1)
@@ -100,7 +103,7 @@ function buildTree(nodes) {
   function fill(i) {
     let left = l[i] === -1 ? undefined : fill(l[i]);
     let right = r[i] === -1 ? undefined : fill(r[i]);
-    return setChildren(nodes[i], left, right, true);
+    return setChildren(nodes[i], left, right, measurer, true);
   }
   return fill(root);
 }
@@ -112,17 +115,18 @@ function buildTree(nodes) {
  * @param {!TreeNode|undefined} root
  * @param {!PartialLocation} key
  * @param {boolean} intersectionToLeft
+ * @param {!Measurer} measurer
  * @param {!Location=} current
  * @return {{left: !TreeNode|undefined, right: !TreeNode|undefined}}
  */
-function splitTree(root, key, intersectionToLeft, current) {
+function splitTree(root, key, intersectionToLeft, measurer, current) {
   if (!root)
     return {};
   if (!current)
     current = Metrics.origin;
   if (Metrics.locationIsGreaterOrEqual(current, key))
     return {right: root};
-  if (!Metrics.locationIsGreater(Metrics.advanceLocation(current, root.metrics), key))
+  if (!Metrics.locationIsGreater(Metrics.advanceLocation(current, root.metrics, measurer), key))
     return {left: root};
 
   // intersection to left:
@@ -137,53 +141,55 @@ function splitTree(root, key, intersectionToLeft, current) {
   //   a b key  ->  root to left
   //   rootToLeft = (key >= b) == (b <= key) == !(b > key)
 
-  let next = root.left ? Metrics.advanceLocation(current, root.left.metrics) : current;
+  let next = root.left ? Metrics.advanceLocation(current, root.left.metrics, measurer) : current;
   let rootToLeft = !Metrics.locationIsGreaterOrEqual(next, key);
-  next = Metrics.advanceLocation(next, root.selfMetrics || root.metrics);
+  next = Metrics.advanceLocation(next, root.selfMetrics || root.metrics, measurer);
   if (!intersectionToLeft)
     rootToLeft = !Metrics.locationIsGreater(next, key);
   if (rootToLeft) {
-    let tmp = splitTree(root.right, key, intersectionToLeft, next);
-    return {left: setChildren(root, root.left, tmp.left), right: tmp.right};
+    let tmp = splitTree(root.right, key, intersectionToLeft, measurer, next);
+    return {left: setChildren(root, root.left, tmp.left, measurer), right: tmp.right};
   } else {
-    let tmp = splitTree(root.left, key, intersectionToLeft, current);
-    return {left: tmp.left, right: setChildren(root, tmp.right, root.right)};
+    let tmp = splitTree(root.left, key, intersectionToLeft, measurer, current);
+    return {left: tmp.left, right: setChildren(root, tmp.right, root.right, measurer)};
   }
 }
 
 /**
  * @param {!TreeNode|undefined} left
  * @param {!TreeNode|undefined} right
+ * @param {!Measurer} measurer
  * @return {!TreeNode|undefined}
  */
-function mergeTrees(left, right) {
+function mergeTrees(left, right, measurer) {
   if (!left)
     return right;
   if (!right)
     return left;
   if (left.h > right.h)
-    return setChildren(left, left.left, mergeTrees(left.right, right));
+    return setChildren(left, left.left, mergeTrees(left.right, right, measurer), measurer);
   else
-    return setChildren(right, mergeTrees(left, right.left), right.right);
+    return setChildren(right, mergeTrees(left, right.left, measurer), right.right, measurer);
 }
 
 /**
  * @param {!TreeNode} node
  * @param {!PartialLocation} key
+ * @param {!Measurer} measurer
  * @return {{node: !TreeNode, location: !Location}|undefined}
  */
-function findNode(node, key) {
+function findNode(node, key, measurer) {
   let current = Metrics.origin;
   while (true) {
     if (node.left) {
-      let next = Metrics.advanceLocation(current, node.left.metrics);
+      let next = Metrics.advanceLocation(current, node.left.metrics, measurer);
       if (Metrics.locationIsGreater(next, key)) {
         node = node.left;
         continue;
       }
       current = next;
     }
-    let next = Metrics.advanceLocation(current, node.selfMetrics || node.metrics);
+    let next = Metrics.advanceLocation(current, node.selfMetrics || node.metrics, measurer);
     if (Metrics.locationIsGreater(next, key))
       return {node, location: current};
     current = next;
@@ -361,13 +367,15 @@ class TreeIterator {
 export class Text {
   /**
    * @param {!TreeNode} root
+   * @param {!Measurer} measurer
    */
-  constructor(root) {
+  constructor(root, measurer) {
     this._root = root;
+    this._measurer = measurer;
     let metrics = this._root.metrics;
     this._lineCount = (metrics.lines || 0) + 1;
     this._length = metrics.length;
-    this._lastLocation = Metrics.toLocation(metrics);
+    this._lastLocation = Metrics.toLocation(metrics, this._measurer);
     this._longestLine = metrics.longest;
   }
 
@@ -375,26 +383,26 @@ export class Text {
    * @param {string} content
    * @return {!Text}
    */
-  static withContent(content) {
-    return new Text(Text._withContent(content));
+  static withContent(content, measurer) {
+    return new Text(Text._withContent(content, measurer), measurer);
   }
 
   /**
    * @param {string} content
    * @return {!TreeNode}
    */
-  static _withContent(content) {
+  static _withContent(content, measurer) {
     let index = 0;
     let nodes = [];
     while (index < content.length) {
       let length = Math.min(content.length - index, kDefaultChunkSize);
       let chunk = content.substring(index, index + length);
-      nodes.push(createNode(chunk));
+      nodes.push(createNode(chunk, measurer));
       index += length;
     }
     if (!nodes.length)
-      nodes.push(createNode(''));
-    return buildTree(nodes);
+      nodes.push(createNode('', measurer));
+    return buildTree(nodes, measurer);
   }
 
   resetCache() {
@@ -470,24 +478,25 @@ export class Text {
    */
   replace(fromOffset, toOffset, insertion) {
     let {from, to} = this._clamp(fromOffset, toOffset);
-    let tmp = splitTree(this._root, {offset: to}, true /* intersectionToLeft */);
+    let tmp = splitTree(this._root, {offset: to}, true /* intersectionToLeft */, this._measurer);
     let right = tmp.right;
-    tmp = splitTree(tmp.left, {offset: from}, false /* intersectionToLeft */);
+    tmp = splitTree(tmp.left, {offset: from}, false /* intersectionToLeft */, this._measurer);
     let left = tmp.left;
     let middle = tmp.right;
     if (!middle) {
-      middle = Text._withContent(insertion);
+      middle = Text._withContent(insertion, this._measurer);
     } else {
       let leftSize = left ? left.metrics.length : 0;
       let middleSize = middle.metrics.length;
-      let first = findNode(middle, {offset: 0}).node;
-      let last = findNode(middle, {offset: middleSize - 1}).node;
-      middle = Text._withContent(
-        first.chunk.substring(0, from - leftSize) +
-        insertion +
-        last.chunk.substring(last.chunk.length - (leftSize + middleSize - to)));
+      let first = findNode(middle, {offset: 0}, this._measurer).node;
+      let last = findNode(middle, {offset: middleSize - 1}, this._measurer).node;
+      let middleContent =
+          first.chunk.substring(0, from - leftSize) +
+          insertion +
+          last.chunk.substring(last.chunk.length - (leftSize + middleSize - to));
+      middle = Text._withContent(middleContent, this._measurer);
     }
-    return new Text(mergeTrees(left, mergeTrees(middle, right)));
+    return new Text(mergeTrees(left, mergeTrees(middle, right, this._measurer), this._measurer), this._measurer);
   }
 
   /**
@@ -499,10 +508,10 @@ export class Text {
       return null;
     if (offset === this._length)
       return this._lastLocation;
-    let found = findNode(this._root, {offset});
+    let found = findNode(this._root, {offset}, this._measurer);
     if (!found)
       throw 'Inconsistency';
-    return Metrics.chunkOffsetToLocation(found.node.chunk, found.location, offset);
+    return Metrics.chunkOffsetToLocation(found.node.chunk, found.location, offset, this._measurer);
   }
 
   /**
@@ -517,13 +526,13 @@ export class Text {
         return this._lastLocation;
       throw 'Position does not belong to text';
     }
-    let found = findNode(this._root, {line: position.line, column: position.column});
+    let found = findNode(this._root, {line: position.line, column: position.column}, this._measurer);
     if (!found) {
       if (!strict)
         return this._lastLocation;
       throw 'Position does not belong to text';
     }
-    return Metrics.chunkPositionToLocation(found.node.chunk, found.location, position, strict);
+    return Metrics.chunkPositionToLocation(found.node.chunk, found.location, position, this._measurer, strict);
   }
 }
 
@@ -703,11 +712,12 @@ Text.test = {};
 
 /**
  * @param {!Array<string>} chunks
+ * @param {!Measurer} measurer
  * @return {!Text}
  */
-Text.test.fromChunks = function(chunks) {
-  let nodes = chunks.map(chunk => createNode(chunk));
-  return new Text(buildTree(nodes));
+Text.test.fromChunks = function(chunks, measurer) {
+  let nodes = chunks.map(chunk => createNode(chunk, measurer));
+  return new Text(buildTree(nodes, measurer), measurer);
 };
 
 /**

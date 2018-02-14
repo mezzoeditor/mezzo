@@ -14,6 +14,17 @@ class FontMetrics {
   }
 }
 
+class MonospaceMeasurer {
+  constructor(fontMetrics) {
+    this.defaultWidth = fontMetrics.charWidth;
+    this.defaultHeight = fontMetrics.lineHeight;
+  }
+
+  measureChunk(chunk) {
+    return 0;
+  }
+};
+
 const MIN_THUMB_SIZE = 30;
 const GUTTER_PADDING_LEFT_RIGHT = 4;
 const SCROLLBAR_WIDTH = 15;
@@ -57,6 +68,7 @@ export class Renderer {
     this._cssHeight = 0;
     this._ratio = this._getRatio();
     this._metrics = this._computeFontMetrics();
+    this._document.setMeasurer(new MonospaceMeasurer(this._metrics));
     this._viewport = document.createViewport(this._metrics.lineHeight, this._metrics.charWidth);
     this._viewport.setInvalidateCallback(() => this.invalidate());
     this._viewport.setRevealCallback(() => this.invalidate());
@@ -139,6 +151,7 @@ export class Renderer {
     this._canvas.style.width = cssWidth + 'px';
     this._canvas.style.height = cssHeight + 'px';
     this._metrics = this._computeFontMetrics();
+    this._document.setMeasurer(new MonospaceMeasurer(this._metrics));
     this.invalidate();
   }
 
