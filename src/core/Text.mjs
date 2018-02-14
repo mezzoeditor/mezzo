@@ -199,10 +199,6 @@ function findNode(node, key, measurer) {
   }
 }
 
-const kLeft = 0;
-const kSelf = 1;
-const kRight = 2;
-
 class TreeIterator {
   /**
    * @param {!TreeNode} node
