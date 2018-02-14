@@ -278,29 +278,86 @@ Metrics.chunkPositionToLocation = function(chunk, before, position, measurer, st
   let lineEnd = chunk.indexOf('\n', index);
   if (lineEnd === -1)
     lineEnd = chunk.length;
-  if (lineEnd < index + (position.column - column)) {
-    if (!strict) {
-      let width = measurer.measureChunk(chunk.substring(index, lineEnd));
-      if (!width)
-        width = (lineEnd - index) * measurer.defaultWidth;
-      return {
-        offset: offset + lineEnd - index,
-        line: line,
-        column: column + lineEnd - index,
-        x: x + width,
-        y: y
-      };
-    }
-    throw 'Position does not belong to text';
+
+  let length = position.column - column;
+  if (lineEnd - index < length) {
+    if (strict)
+      throw 'Position does not belong to text';
+    length = lineEnd - index;
   }
 
-  let width = measurer.measureChunk(chunk.substring(index, index + position.column - column));
+  let width = measurer.measureChunk(chunk.substring(index, index + length));
   if (!width)
-    width = (position.column - column) * measurer.defaultWidth;
+    width = length * measurer.defaultWidth;
   return {
-    offset: offset + position.column - column,
-    line: position.line,
-    column: position.column,
+    offset: offset + length,
+    line: line,
+    column: column + length,
+    x: x + width,
+    y: y
+  };
+};
+
+/**
+ * @param {string} chunk
+ * @param {!Measurer} measurer
+ * @param {number} desired
+ * @return {!{width: number, length: number}}
+ */
+Metrics._chunkLengthForWidth = function(chunk, measurer, desired) {
+  let length = 0;
+  let width = 0;
+  while (width < desired && length < chunk.length) {
+    let next = measurer.measureChunk(chunk[length]) || measurer.defaultWidth;
+    width += next;
+    length++;
+  }
+  return {width, length};
+};
+
+/**
+ * @param {string} chunk
+ * @param {!Location} before
+ * @param {!Point} point
+ * @param {!Measurer} measurer
+ * @param {boolean=} strict
+ * @return {!Location}
+ */
+Metrics.chunkPointToLocation = function(chunk, before, point, measurer, strict) {
+  let {line, column, offset, x, y} = before;
+
+  if (point.y < y || (point.y === y && position.x < x))
+    throw 'Inconsistent';
+
+  let index = 0;
+  while (y < point.y) {
+    let nextLine = chunk.indexOf('\n', index);
+    if (nextLine === -1)
+      throw 'Inconsistent';
+    offset += (nextLine - index + 1);
+    index = nextLine + 1;
+    line++;
+    y += measurer.defaultHeight;
+    column = 0;
+    x = 0;
+  }
+
+  let lineEnd = chunk.indexOf('\n', index);
+  if (lineEnd === -1)
+    lineEnd = chunk.length;
+
+  let {length, width} = Metrics._chunkLengthForWidth(chunk.substring(index, lineEnd), measurer, point.x - x);
+  if (x + width < point.x) {
+    if (length !== lineEnd - index)
+      throw 'Inconsistent';
+    if (strict)
+      throw 'Position does not belong to text';
+  }
+
+  return {
+    offset: offset + length,
+    line: line,
+    column: column + length,
     x: x + width,
     y: y
   };

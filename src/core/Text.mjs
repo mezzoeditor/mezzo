@@ -530,6 +530,27 @@ export class Text {
     }
     return Metrics.chunkPositionToLocation(found.node.chunk, found.location, position, this._measurer, strict);
   }
+
+  /**
+   * @param {!Point} point
+   * @param {boolean=} strict
+   * @return {!Location}
+   */
+  pointToLocation(point, strict) {
+    let compare = (point.y - this._lastLocation.y) || (point.x - this._lastLocation.x);
+    if (compare >= 0) {
+      if (!strict || compare === 0)
+        return this._lastLocation;
+      throw 'Position does not belong to text';
+    }
+    let found = findNode(this._root, {x: point.x, y: point.y}, this._measurer);
+    if (!found) {
+      if (!strict)
+        return this._lastLocation;
+      throw 'Position does not belong to text';
+    }
+    return Metrics.chunkPointToLocation(found.node.chunk, found.location, point, this._measurer, strict);
+  }
 }
 
 Text.Iterator = class {
