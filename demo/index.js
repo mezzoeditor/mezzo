@@ -14,6 +14,7 @@ const examples = [
   'megaline.txt',
   'megacolumn.txt',
   'unicode.txt',
+  'unicode.js',
 ];
 
 const jsHighlighter = new JSHighlighter();
