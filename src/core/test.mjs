@@ -22,13 +22,18 @@ class TestMeasurer {
   }
 
   measureChunk(chunk) {
+    let result = this._measureChunk(chunk);
+    return result === chunk.length ? 0 : result;
+  }
+
+  _measureChunk(chunk) {
     let result = 0;
     for (let i = 0; i < chunk.length; i++) {
       if (chunk[i] === '\n')
         throw 'Cannot measure line breaks';
       result += chunk.charCodeAt(i) - 'a'.charCodeAt(0) + 1;
     }
-    return result === chunk.length ? 0 : result;
+    return result;
   }
 }
 
@@ -118,6 +123,7 @@ describe('Text', () => {
 
   it('Text.* all sizes', () => {
     let random = Random(143);
+    let testMeasurer = new TestMeasurer();
     let lineCount = 200;
     let chunks = [];
     let longest = 0;
@@ -127,19 +133,21 @@ describe('Text', () => {
       let s = 'abcdefghijklmnopqrstuvwxyz';
       let length = 1 + (random() % (s.length - 1));
       longest = Math.max(longest, length);
-      chunks.push(s.substring(0, length) + '\n');
-      locationQueries.push({line: i, column: 0, offset: offset, x: 0, y: i});
-      locationQueries.push({line: i, column: 1, offset: offset + 1, x: 1, y: i});
-      locationQueries.push({line: i, column: length, offset: offset + length, x: length, y: i});
-      locationQueries.push({line: i, column: length + 1, offset: offset + length, x: length, y: i, nonStrict: {column: length}});
-      locationQueries.push({line: i, column: length + 100, offset: offset + length, x: length, y: i, nonStrict: {column: length}});
+      let chunk = s.substring(0, length);
+      let width = testMeasurer._measureChunk(chunk);
+      chunks.push(chunk + '\n');
+      locationQueries.push({line: i, column: 0, offset: offset, x: 0, y: i * 3});
+      locationQueries.push({line: i, column: 1, offset: offset + 1, x: 1, y: i * 3});
+      locationQueries.push({line: i, column: length, offset: offset + length, x: width, y: i * 3});
+      locationQueries.push({line: i, column: length, offset: offset + length, x: width, y: i * 3, nonStrict: {column: length + 1, x: width + 3}});
+      locationQueries.push({line: i, column: length, offset: offset + length, x: width, y: i * 3, nonStrict: {column: length + 100, x: width + 100}});
       let column = random() % length;
-      locationQueries.push({line: i, column: column, offset: offset + column, x: column, y: i});
+      locationQueries.push({line: i, column: column, offset: offset + column, x: testMeasurer._measureChunk(chunk.substr(0, column)), y: i * 3});
       offset += length + 1;
     }
     let content = chunks.join('');
-    locationQueries.push({line: lineCount, column: 0, offset: content.length, x: 0, y: lineCount});
-    locationQueries.push({line: lineCount, column: 3, offset: content.length, x: 0, y: lineCount, nonStrict: {column: 0}});
+    locationQueries.push({line: lineCount, column: 0, offset: content.length, x: 0, y: lineCount * 3});
+    locationQueries.push({line: lineCount, column: 0, offset: content.length, x: 0, y: lineCount * 3, nonStrict: {column: 3, x: 15}});
 
     let contentQueries = [];
     for (let i = 0; i < 1000; i++) {
@@ -150,22 +158,25 @@ describe('Text', () => {
 
     for (let chunkSize = 1; chunkSize <= 100; chunkSize++) {
       Text.test.setDefaultChunkSize(chunkSize);
-      let text = Text.withContent(content, defaultMeasurer);
+      let text = Text.withContent(content, testMeasurer);
       expect(text.lineCount()).toBe(lineCount + 1);
       expect(text.longestLineLength()).toBe(longest);
       expect(text.length()).toBe(content.length);
       for (let {from, to} of contentQueries)
         expect(text.content(from, to)).toBe(content.substring(from, to));
       expect(text.offsetToLocation(0)).toEqual({line: 0, column: 0, offset: 0, x: 0, y: 0});
-      expect(text.offsetToLocation(content.length)).toEqual({line: lineCount, column: 0, offset: content.length, x: 0, y: lineCount});
+      expect(text.offsetToLocation(content.length)).toEqual({line: lineCount, column: 0, offset: content.length, x: 0, y: lineCount * 3});
       expect(text.offsetToLocation(content.length + 1)).toBe(null);
       for (let {line, column, offset, x, y, nonStrict} of locationQueries) {
         if (nonStrict) {
-          expect(text.positionToLocation({line, column})).toEqual({line, column: nonStrict.column, offset, x, y});
+          expect(text.positionToLocation({line, column: nonStrict.column})).toEqual({line, column, offset, x, y});
+          expect(text.pointToLocation({x: nonStrict.x, y})).toEqual({line, column, offset, x, y});
         } else {
           expect(text.offsetToLocation(offset)).toEqual({line, column, offset, x, y});
           expect(text.positionToLocation({line, column})).toEqual({line, column, offset, x, y});
           expect(text.positionToLocation({line, column}, true)).toEqual({line, column, offset, x, y});
+          expect(text.pointToLocation({x, y})).toEqual({line, column, offset, x, y});
+          expect(text.pointToLocation({x, y}, true)).toEqual({line, column, offset, x, y});
         }
       }
     }

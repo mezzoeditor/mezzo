@@ -160,16 +160,16 @@ Metrics.combine = function(left, right, measurer) {
     result.lines = (left.lines || 0) + (right.lines || 0);
   if (left.firstWidth || (!left.lines && right.firstWidth)) {
     result.firstWidth = (left.firstWidth || left.first * measurer.defaultWidth) +
-        left.lines ? 0 : (right.firstWidth || right.first * measurer.defaultWidth);
+        (left.lines ? 0 : (right.firstWidth || right.first * measurer.defaultWidth));
   }
   if (right.lastWidth || (!right.lines && left.lastWidth)) {
     result.lastWidth = (right.lastWidth || right.last * measurer.defaultWidth) +
-        right.lines ? 0 : (left.lastWidth || left.last * measurer.defaultWidth);
+        (right.lines ? 0 : (left.lastWidth || left.last * measurer.defaultWidth));
   }
   if (left.longestWidth || right.longestWidth || left.lastWidth || right.firstWidth) {
-    result.longest = Math.max(left.longestWidth || left.longest * measurer.defaultWidth,
+    result.longestWidth = Math.max(left.longestWidth || left.longest * measurer.defaultWidth,
         right.longestWidth || right.longest * measurer.defaultWidth);
-    result.longest = Math.max(result.longest,
+    result.longestWidth = Math.max(result.longestWidth,
         (left.lastWidth || left.last * measurer.defaultWidth) + (right.firstWidth || right.first * measurer.defaultWidth));
   }
   return result;
