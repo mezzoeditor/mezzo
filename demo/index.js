@@ -13,6 +13,7 @@ const examples = [
   'shakespeare.txt',
   'megaline.txt',
   'megacolumn.txt',
+  'unicode.txt',
 ];
 
 const jsHighlighter = new JSHighlighter();

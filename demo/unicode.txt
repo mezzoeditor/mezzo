@@ -1,0 +1,15 @@
+Two code points: 𐀀
+𐀀1𐀀2𐀀3𐀀4𐀀5𐀀6
+aaaaaaaaaaaaa
+
+Two code points and rtl:
+בְּרֵאשִׁית, בָּרָא אֱלֹהִים, אֵת הַשָּׁמַיִם, וְאֵת הָאָרֶץ
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+
+Wide chars: 台北ＱＲＳ
+台1北2Ｑ3Ｒ4Ｓ5
+aaaaaaaaaaaaa
+
+Narrow chars: ｱｲｳ
+ｱ1ｲ2ｳ3
+aaaaaa

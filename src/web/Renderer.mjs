@@ -1,7 +1,7 @@
 import { TextUtils } from "../utils/TextUtils.mjs";
 import { Frame } from "../core/Frame.mjs";
 
-class FontMetrics {
+class MonospaceFontMetrics {
   constructor(charWidth, lineHeight, charHeight, baseline) {
     this.charWidth = charWidth;
     this.lineHeight = lineHeight;
@@ -15,13 +15,40 @@ class FontMetrics {
 }
 
 class MonospaceMeasurer {
-  constructor(fontMetrics) {
-    this.defaultWidth = fontMetrics.charWidth;
-    this.defaultHeight = fontMetrics.lineHeight;
+  constructor(ctx) {
+    this._ctx = ctx;
+    this.defaultWidth = this._measure('M');
+    this.defaultHeight = 20;
+    this._map = {};
+    this._default = {};
+  }
+
+  _measure(chunk) {
+    this._ctx.font = '14px monospace';
+    this._ctx.textBaseline = 'top';
+    return this._ctx.measureText(chunk).width;
   }
 
   measureChunk(chunk) {
-    return 0;
+    let allDefault = true;
+    let result = 0;
+    for (let i = 0; i < chunk.length; i++) {
+      let char = chunk[i];
+      if (this._map[char] === undefined) {
+        let width = this._measure(char);
+        this._map[char] = width;
+        result += width;
+        if (width === this.defaultWidth)
+          this._default[char] = true;
+        else
+          allDefault = false;
+      } else {
+        result += this._map[char];
+        if (!this._default[char])
+          allDefault = false;
+      }
+    }
+    return allDefault ? 0 : result;
   }
 };
 
@@ -67,8 +94,8 @@ export class Renderer {
     this._cssWidth = 0;
     this._cssHeight = 0;
     this._ratio = this._getRatio();
-    this._metrics = this._computeFontMetrics();
-    this._document.setMeasurer(new MonospaceMeasurer(this._metrics));
+    this._metrics = this._computeMonospaceFontMetrics();
+    this._document.setMeasurer(new MonospaceMeasurer(this._canvas.getContext('2d')));
     this._viewport = document.createViewport(this._metrics.lineHeight, this._metrics.charWidth);
     this._viewport.setInvalidateCallback(() => this.invalidate());
     this._viewport.setRevealCallback(() => this.invalidate());
@@ -150,8 +177,8 @@ export class Renderer {
     this._canvas.height = cssHeight * this._ratio;
     this._canvas.style.width = cssWidth + 'px';
     this._canvas.style.height = cssHeight + 'px';
-    this._metrics = this._computeFontMetrics();
-    this._document.setMeasurer(new MonospaceMeasurer(this._metrics));
+    this._metrics = this._computeMonospaceFontMetrics();
+    this._document.setMeasurer(new MonospaceMeasurer(this._canvas.getContext('2d')));
     this.invalidate();
   }
 
@@ -163,9 +190,9 @@ export class Renderer {
   }
 
   /**
-   * @return {!FontMetrics}
+   * @return {!MonospaceFontMetrics}
    */
-  _computeFontMetrics() {
+  _computeMonospaceFontMetrics() {
     const ctx = this._canvas.getContext('2d');
     ctx.font = '14px monospace';
     ctx.textBaseline = 'top';
@@ -175,7 +202,7 @@ export class Renderer {
     // The following will be shipped soon.
     // const fontHeight = metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent;
 
-    return new FontMetrics(metrics.width, fontHeight, fontHeight - 5, 3);
+    return new MonospaceFontMetrics(metrics.width, fontHeight, fontHeight - 5, 3);
   }
 
   _mouseEventToCanvas(event) {
