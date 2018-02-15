@@ -211,7 +211,7 @@ Metrics.fromChunk = function(chunk, measurer) {
       metrics.first = nextLine === -1 ? chunk.length : nextLine;
       metrics.longest = metrics.first;
 
-      let firstWidth = measurer.measureChunk(chunk.substring(0, nextLine));
+      let firstWidth = measurer.measureChunk(chunk.substring(0, metrics.first));
       if (firstWidth)
         metrics.firstWidth = firstWidth;
       else
@@ -326,7 +326,7 @@ Metrics._chunkLengthForWidth = function(chunk, measurer, desired) {
 Metrics.chunkPointToLocation = function(chunk, before, point, measurer, strict) {
   let {line, column, offset, x, y} = before;
 
-  if (point.y < y || (point.y === y && position.x < x))
+  if (point.y < y || (point.y === y && point.x < x))
     throw 'Inconsistent';
 
   let index = 0;
