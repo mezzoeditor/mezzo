@@ -302,17 +302,19 @@ Metrics.chunkPositionToLocation = function(chunk, before, position, measurer, st
  * @param {string} chunk
  * @param {!Measurer} measurer
  * @param {number} desired
- * @return {!{width: number, length: number}}
+ * @return {!{width: number, length: number, overflow: boolean}}
  */
 Metrics._chunkLengthForWidth = function(chunk, measurer, desired) {
   let length = 0;
   let width = 0;
-  while (width < desired && length < chunk.length) {
+  while (length < chunk.length) {
     let next = measurer.measureChunk(chunk[length]) || measurer.defaultWidth;
+    if (width + next > desired)
+      return {width, length, overflow: false};
     width += next;
     length++;
   }
-  return {width, length};
+  return {width, length, overflow: width < desired};
 };
 
 /**
@@ -326,11 +328,11 @@ Metrics._chunkLengthForWidth = function(chunk, measurer, desired) {
 Metrics.chunkPointToLocation = function(chunk, before, point, measurer, strict) {
   let {line, column, offset, x, y} = before;
 
-  if (point.y < y || (point.y === y && point.x < x))
+  if (point.y < y || (point.y < y + measurer.defaultHeight && point.x < x))
     throw 'Inconsistent';
 
   let index = 0;
-  while (y < point.y) {
+  while (y + measurer.defaultHeight <= point.y) {
     let nextLine = chunk.indexOf('\n', index);
     if (nextLine === -1)
       throw 'Inconsistent';
@@ -346,8 +348,8 @@ Metrics.chunkPointToLocation = function(chunk, before, point, measurer, strict) 
   if (lineEnd === -1)
     lineEnd = chunk.length;
 
-  let {length, width} = Metrics._chunkLengthForWidth(chunk.substring(index, lineEnd), measurer, point.x - x);
-  if (x + width < point.x) {
+  let {length, width, overflow} = Metrics._chunkLengthForWidth(chunk.substring(index, lineEnd), measurer, point.x - x);
+  if (overflow) {
     if (length !== lineEnd - index)
       throw 'Inconsistent';
     if (strict)

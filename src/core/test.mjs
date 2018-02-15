@@ -32,7 +32,7 @@ class TestMeasurer {
   }
 }
 
-fdescribe('Metrics', () => {
+describe('Metrics', () => {
   it('Metrics.fromChunk', () => {
     expect(Metrics.fromChunk('one line', defaultMeasurer)).toEqual({length: 8, first: 8, last: 8, longest: 8});
     expect(Metrics.fromChunk('\none line', defaultMeasurer)).toEqual({length: 9, first: 0, last: 8, longest: 8, lines: 1});
@@ -74,6 +74,31 @@ fdescribe('Metrics', () => {
       expect(Metrics.chunkPositionToLocation(test.chunk, test.before, test.position, defaultMeasurer)).toEqual(test.result);
       expect(Metrics.chunkPointToLocation(test.chunk, test.before, test.point, defaultMeasurer)).toEqual(test.result);
     }
+  });
+
+  it('Metrics.pointToLocation with measurer', () => {
+    let testMeasurer = new TestMeasurer();
+    let chunk = 'a\nb\naaaa\nbac\nc';
+    let before = {offset: 15, line: 3, column: 8, x: 5, y: 10};
+    let tests = [
+      {point: {x: 5, y: 10}, location: {offset: 15, line: 3, column: 8, x: 5, y: 10}, strict: true},
+      {point: {x: 6, y: 10}, location: {offset: 16, line: 3, column: 9, x: 6, y: 10}, strict: true},
+      {point: {x: 7, y: 10}, location: {offset: 16, line: 3, column: 9, x: 6, y: 10}},
+      {point: {x: 5, y: 11}, location: {offset: 15, line: 3, column: 8, x: 5, y: 10}, strict: true},
+      {point: {x: 0, y: 13}, location: {offset: 17, line: 4, column: 0, x: 0, y: 13}, strict: true},
+      {point: {x: 1, y: 13}, location: {offset: 17, line: 4, column: 0, x: 0, y: 13}, strict: true},
+      {point: {x: 2, y: 13}, location: {offset: 18, line: 4, column: 1, x: 2, y: 13}, strict: true},
+      {point: {x: 42, y: 15}, location: {offset: 18, line: 4, column: 1, x: 2, y: 13}},
+      {point: {x: 0, y: 16}, location: {offset: 19, line: 5, column: 0, x: 0, y: 16}, strict: true},
+      {point: {x: 1, y: 16}, location: {offset: 20, line: 5, column: 1, x: 1, y: 16}, strict: true},
+      {point: {x: 2, y: 16}, location: {offset: 21, line: 5, column: 2, x: 2, y: 16}, strict: true},
+      {point: {x: 3, y: 17}, location: {offset: 22, line: 5, column: 3, x: 3, y: 16}, strict: true},
+      {point: {x: 4, y: 18}, location: {offset: 23, line: 5, column: 4, x: 4, y: 16}, strict: true},
+      {point: {x: 3, y: 19}, location: {offset: 26, line: 6, column: 2, x: 3, y: 19}, strict: true},
+      {point: {x: 42, y: 19}, location: {offset: 27, line: 6, column: 3, x: 6, y: 19}},
+    ];
+    for (let test of tests)
+      expect(Metrics.chunkPointToLocation(chunk, before, test.point, testMeasurer, !!test.strict)).toEqual(test.location);
   });
 });
 
