@@ -13,7 +13,7 @@ const {beforeAll, beforeEach, afterAll, afterEach} = runner;
 
 const {expect} = new Matchers();
 
-const defaultMeasurer = { defaultWidth: 1, defaultHeight: 1, measureChunk: chunk => 0 };
+const defaultMeasurer = { defaultWidth: 1, defaultHeight: 1, measureChunk: chunk => 0, measureChar: charCode => 1 };
 
 class TestMeasurer {
   constructor() {
@@ -24,6 +24,10 @@ class TestMeasurer {
   measureChunk(chunk) {
     let result = this._measureChunk(chunk);
     return result === chunk.length ? 0 : result;
+  }
+
+  measureChar(charCode) {
+    return charCode - 'a'.charCodeAt(0) + 1;
   }
 
   _measureChunk(chunk) {

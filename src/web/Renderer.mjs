@@ -17,40 +17,49 @@ class MonospaceFontMetrics {
 class MonospaceMeasurer {
   constructor(ctx) {
     this._ctx = ctx;
-    this.defaultWidth = this._measure('M');
+    this.defaultWidth = this._ctx.measureText('M').width;
     this.defaultHeight = 20;
-    this._map = {};
-    this._default = {};
-  }
-
-  _measure(chunk) {
-    this._ctx.font = '14px monospace';
-    this._ctx.textBaseline = 'top';
-    return this._ctx.measureText(chunk).width;
+    this._map = new Float32Array(65536);
+    this._default = new Uint8Array(65536);
+    this._default.fill(2);
   }
 
   measureChunk(chunk) {
-    let allDefault = true;
+    if (!chunk)
+      return 0;
+
+    if (MonospaceMeasurer._asciiRegex.test(chunk))
+      return 0;
+
+    let defaults = 0;
     let result = 0;
     for (let i = 0; i < chunk.length; i++) {
-      let char = chunk[i];
-      if (this._map[char] === undefined) {
-        let width = this._measure(char);
-        this._map[char] = width;
-        result += width;
-        if (width === this.defaultWidth)
-          this._default[char] = true;
-        else
-          allDefault = false;
+      let charCode = chunk.charCodeAt(i);
+      if (this._default[charCode] === 2) {
+        let width = this._ctx.measureText(chunk[i]).width;
+        this._map[charCode] = width;
+        this._default[charCode] = width === this.defaultWidth ? 1 : 0;
+      }
+      if (this._default[charCode] === 1) {
+        defaults++;
       } else {
-        result += this._map[char];
-        if (!this._default[char])
-          allDefault = false;
+        result += this._map[charCode];
       }
     }
-    return allDefault ? 0 : result;
+    return defaults === chunk.length ? 0 : result + defaults * this.defaultWidth;
+  }
+
+  measureChar(charCode) {
+    if (this._default[charCode] === 2) {
+      let width = this._ctx.measureText(chunk[i]).width;
+      this._map[charCode] = width;
+      this._default[charCode] = width === this.defaultWidth ? 1 : 0;
+    }
+    return this._map[charCode];
   }
 };
+
+MonospaceMeasurer._asciiRegex = /^[\u{0020}-\u{007e}]*$/u;
 
 const MIN_THUMB_SIZE = 30;
 const GUTTER_PADDING_LEFT_RIGHT = 4;
@@ -178,7 +187,8 @@ export class Renderer {
     this._canvas.style.width = cssWidth + 'px';
     this._canvas.style.height = cssHeight + 'px';
     this._metrics = this._computeMonospaceFontMetrics();
-    this._document.setMeasurer(new MonospaceMeasurer(this._canvas.getContext('2d')));
+    // TODO: doing this unconditionally is slow.
+    // this._document.setMeasurer(new MonospaceMeasurer(this._canvas.getContext('2d')));
     this.invalidate();
   }
 

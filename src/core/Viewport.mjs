@@ -186,18 +186,16 @@ export class Viewport {
     if (this._frozen)
       throw 'Cannot reveal while building frame';
 
-    let {line, column} = this._document.offsetToPosition(offset);
-    let scrollTop = line * this._metrics.lineHeight + this._padding.top;
-    if (scrollTop < this._scrollTop) {
-      this._scrollTop = scrollTop;
-    } else if (scrollTop + this._metrics.lineHeight > this._scrollTop + this._height) {
-      this._scrollTop = scrollTop + this._metrics.lineHeight - this._height;
+    let {x, y} = this.documentPositionToViewPoint(this._document.offsetToPosition(offset));
+    if (y < this._scrollTop) {
+      this._scrollTop = y;
+    } else if (y + this._document.measurer().defaultHeight > this._scrollTop + this._height) {
+      this._scrollTop = y + this._document.measurer().defaultHeight - this._height;
     }
-    let scrollLeft = column * this._metrics.charWidth + this._padding.left;
-    if (scrollLeft < this._scrollLeft) {
-      this._scrollLeft = scrollLeft;
-    } else if (scrollLeft + this._metrics.charWidth > this._scrollLeft + this._width) {
-      this._scrollLeft = scrollLeft + this._metrics.charWidth - this._width;
+    if (x < this._scrollLeft) {
+      this._scrollLeft = x;
+    } else if (x > this._scrollLeft + this._width) {
+      this._scrollLeft = x - this._width;
     }
     this._recompute();
     this._revealCallback.call(null);

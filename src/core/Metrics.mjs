@@ -73,6 +73,14 @@ class Measurer {
    */
   measureChunk(chunk) {
   }
+
+  /**
+   * Returns the width of a single character.
+   * @param {number} charCode
+   * @return {number}
+   */
+  measureChar(charCode) {
+  }
 };
 
 export let Metrics = {};
@@ -308,7 +316,7 @@ Metrics._chunkLengthForWidth = function(chunk, measurer, desired) {
   let length = 0;
   let width = 0;
   while (length < chunk.length) {
-    let next = measurer.measureChunk(chunk[length]) || measurer.defaultWidth;
+    let next = measurer.measureChar(chunk.charCodeAt(length));
     if (width + next > desired)
       return {width, length, overflow: false};
     width += next;

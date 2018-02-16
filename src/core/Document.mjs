@@ -7,7 +7,7 @@ export class Document {
   constructor() {
     this._plugins = [];
     this._viewports = [];
-    this._measurer = { defaultWidth: 1, defaultHeight: 1, measureChunk: chunk => 0 };
+    this._measurer = { defaultWidth: 1, defaultHeight: 1, measureChunk: chunk => 0, measureChar: charCode => 1 };
     this._history = new History({
       text: Text.withContent('', this._measurer),
       replacements: [],

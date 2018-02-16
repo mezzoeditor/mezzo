@@ -3,6 +3,8 @@ import { Metrics } from "./Metrics.mjs";
 
 let random = Random(42);
 
+// TODO: bumping this to 1000 speeds up text consturction 1.5x times.
+// Measure the slowdown on common operations.
 let kDefaultChunkSize = 100;
 
 /**
@@ -67,23 +69,26 @@ function buildTree(nodes, measurer) {
   if (nodes.length === 1)
     return nodes[0];
 
-  let stack = [];
-  let p = Array(nodes.length);
+  let stack = new Int32Array(nodes.length);
+  let stackLength = 0;
+  let p = new Int32Array(nodes.length);
   for (let i = 0; i < nodes.length; i++) {
-    while (stack.length && nodes[stack[stack.length - 1]].h <= nodes[i].h)
-      stack.pop();
-    p[i] = stack.length ? stack[stack.length - 1] : -1;
-    stack.push(i);
+    while (stackLength && nodes[stack[stackLength - 1]].h <= nodes[i].h)
+      stackLength--;
+    p[i] = stackLength ? stack[stackLength - 1] : -1;
+    stack[stackLength++] = i;
   }
-  stack = [];
+  stackLength = 0;
 
-  let l = Array(nodes.length).fill(-1);
-  let r = Array(nodes.length).fill(-1);
+  let l = new Int32Array(nodes.length);
+  l.fill(-1);
+  let r = new Int32Array(nodes.length);
+  r.fill(-1);
   let root = -1;
   for (let i = nodes.length - 1; i >= 0; i--) {
-    while (stack.length && nodes[stack[stack.length - 1]].h <= nodes[i].h)
-      stack.pop();
-    let parent = stack.length ? stack[stack.length - 1] : -1;
+    while (stackLength && nodes[stack[stackLength - 1]].h <= nodes[i].h)
+      stackLength--;
+    let parent = stackLength ? stack[stackLength - 1] : -1;
     if (parent === -1 || (p[i] !== -1 && nodes[p[i]].h < nodes[parent].h))
       parent = p[i];
     if (parent === -1)
@@ -92,9 +97,9 @@ function buildTree(nodes, measurer) {
       l[parent] = i;
     else
       r[parent] = i;
-    stack.push(i);
+    stack[stackLength++] = i;
   }
-  stack = [];
+  stackLength = 0;
 
   /**
    * @param {number} i
