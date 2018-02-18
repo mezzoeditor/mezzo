@@ -51,7 +51,7 @@ class MonospaceMeasurer {
 
   measureChar(charCode) {
     if (this._default[charCode] === 2) {
-      let width = this._ctx.measureText(chunk[i]).width;
+      let width = this._ctx.measureText(String.fromCharCode(charCode)).width;
       this._map[charCode] = width;
       this._default[charCode] = width === this.defaultWidth ? 1 : 0;
     }
@@ -587,7 +587,8 @@ export class Renderer {
           lastBottom = bottom;
         }
 
-        let line = this._viewport.viewPointToDocumentPosition({x: 0, y: scrollbar.scrollbarOffsetToContentOffset(bottom)}).line;
+        let nextY = this._viewport.viewPointToDocumentPoint({x: 0, y: scrollbar.scrollbarOffsetToContentOffset(bottom)}).y;
+        let line = frame.pointToPosition({x: 0, y: nextY}).line;
         line = Math.max(to.line, line);
         return Math.max(decoration.to, frame.positionToOffset({line, column: 0}));
       });

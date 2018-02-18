@@ -320,6 +320,15 @@ export class Document {
     return this._text.positionToLocation(position, strict).offset;
   }
 
+  /**
+   * @param {!Point} point
+   * @param {boolean=} strict
+   * @return {!Position}
+   */
+  pointToPosition(point, strict) {
+    return this._text.pointToLocation(point, strict);
+  }
+
   beforeFrame() {
     for (let plugin of this._plugins) {
       if (plugin.onBeforeFrame)

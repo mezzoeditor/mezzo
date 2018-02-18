@@ -180,6 +180,7 @@ describe('Text', () => {
           expect(text.positionToLocation({line, column})).toEqual({line, column, offset, x, y});
           expect(text.positionToLocation({line, column}, true)).toEqual({line, column, offset, x, y});
           expect(text.pointToLocation({x, y})).toEqual({line, column, offset, x, y});
+          expect(text.pointToLocation({x: x + 0.5, y: y + 0.5})).toEqual({line, column, offset, x, y});
           expect(text.pointToLocation({x, y}, true)).toEqual({line, column, offset, x, y});
         }
       }

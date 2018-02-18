@@ -212,6 +212,15 @@ export class Frame {
     return this._document.positionToOffset(position, strict);
   }
 
+  /**
+   * @param {!Point} point
+   * @param {boolean=} strict
+   * @return {!Position}
+   */
+  pointToPosition(point, strict) {
+    return this._document.pointToPosition(point, strict);
+  }
+
   cleanup() {
     delete this._range._cache;
     for (let line of this._lines)

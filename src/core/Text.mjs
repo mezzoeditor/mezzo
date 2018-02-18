@@ -131,7 +131,7 @@ function splitTree(root, key, intersectionToLeft, measurer, current) {
     current = Metrics.origin;
   if (Metrics.locationIsGreaterOrEqual(current, key))
     return {right: root};
-  if (!Metrics.locationIsGreater(Metrics.advanceLocation(current, root.metrics, measurer), key))
+  if (!Metrics.locationIsGreater(Metrics.advanceLocation(current, root.metrics, measurer), key, measurer))
     return {left: root};
 
   // intersection to left:
@@ -150,7 +150,7 @@ function splitTree(root, key, intersectionToLeft, measurer, current) {
   let rootToLeft = !Metrics.locationIsGreaterOrEqual(next, key);
   next = Metrics.advanceLocation(next, root.selfMetrics || root.metrics, measurer);
   if (!intersectionToLeft)
-    rootToLeft = !Metrics.locationIsGreater(next, key);
+    rootToLeft = !Metrics.locationIsGreater(next, key, measurer);
   if (rootToLeft) {
     let tmp = splitTree(root.right, key, intersectionToLeft, measurer, next);
     return {left: setChildren(root, root.left, tmp.left, measurer), right: tmp.right};
@@ -188,14 +188,14 @@ function findNode(node, key, measurer) {
   while (true) {
     if (node.left) {
       let next = Metrics.advanceLocation(current, node.left.metrics, measurer);
-      if (Metrics.locationIsGreater(next, key)) {
+      if (Metrics.locationIsGreater(next, key, measurer)) {
         node = node.left;
         continue;
       }
       current = next;
     }
     let next = Metrics.advanceLocation(current, node.selfMetrics || node.metrics, measurer);
-    if (Metrics.locationIsGreater(next, key))
+    if (Metrics.locationIsGreater(next, key, measurer))
       return {node, location: current};
     current = next;
     if (!node.right)

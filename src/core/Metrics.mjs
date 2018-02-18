@@ -108,25 +108,28 @@ Metrics.advanceLocation = function(location, metrics, measurer) {
 /**
  * @param {!Location} location
  * @param {!PartialLocation} key
+ * @param {!Measurer} measurer
+ * @return {boolean}
  */
-Metrics.locationIsGreater = function(location, key) {
+Metrics.locationIsGreater = function(location, key, measurer) {
   if (key.offset !== undefined)
     return location.offset > key.offset;
   if (key.line !== undefined)
     return location.line > key.line || (location.line === key.line && location.column > key.column);
-  return location.y > key.y || (location.y === key.y && location.x > key.x);
+  return location.y > key.y || (location.y + measurer.defaultHeight > key.y && location.x > key.x);
 };
 
 /**
  * @param {!Location} location
  * @param {!PartialLocation} key
+ * @return {boolean}
  */
 Metrics.locationIsGreaterOrEqual = function(location, key) {
   if (key.offset !== undefined)
     return location.offset >= key.offset;
   if (key.line !== undefined)
     return location.line > key.line || (location.line === key.line && location.column >= key.column);
-  return location.y > key.y || (location.y === key.y && location.x >= key.x);
+  throw 'locationIsGreaterOrEqual cannot be used for points';
 };
 
 /**

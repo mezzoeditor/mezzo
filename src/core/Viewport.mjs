@@ -133,6 +133,14 @@ export class Viewport {
 
   /**
    * @param {!Point} point
+   * @return {!Point}
+   */
+  viewPointToDocumentPoint(point) {
+    return {x: point.x - this._padding.left, y: point.y - this._padding.top};
+  }
+
+  /**
+   * @param {!Point} point
    * @return {!Position}
    */
   viewPointToDocumentPosition({x, y}) {
