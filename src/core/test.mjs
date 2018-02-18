@@ -70,7 +70,7 @@ describe('Metrics', () => {
       expect(Metrics.chunkOffsetToLocation(test.chunk, test.before, test.location.offset, defaultMeasurer)).toEqual(test.location);
       expect(Metrics.chunkPositionToLocation(test.chunk, test.before, test.location, defaultMeasurer)).toEqual(test.location);
       expect(Metrics.chunkPositionToLocation(test.chunk, test.before, test.location, defaultMeasurer, true /* strict */)).toEqual(test.location);
-      expect(Metrics.chunkPointToLocation(test.chunk, test.before, test.location, defaultMeasurer, true /* strict */)).toEqual(test.location);
+      expect(Metrics.chunkPointToLocation(test.chunk, test.before, test.location, defaultMeasurer, false /* rounded */, true /* strict */)).toEqual(test.location);
     }
 
     let nonStrict = [
@@ -81,11 +81,11 @@ describe('Metrics', () => {
     ];
     for (let test of nonStrict) {
       expect(Metrics.chunkPositionToLocation(test.chunk, test.before, test.position, defaultMeasurer)).toEqual(test.result);
-      expect(Metrics.chunkPointToLocation(test.chunk, test.before, test.point, defaultMeasurer)).toEqual(test.result);
+      expect(Metrics.chunkPointToLocation(test.chunk, test.before, test.point, defaultMeasurer, false /* rounded */)).toEqual(test.result);
     }
   });
 
-  it('Metrics.pointToLocation with measurer', () => {
+  it('Metrics.chunkPointToLocation with measurer', () => {
     let testMeasurer = new TestMeasurer();
     let chunk = 'a\nb\naaaa\nbac\nc';
     let before = {offset: 15, line: 3, column: 8, x: 5, y: 10};
@@ -96,6 +96,9 @@ describe('Metrics', () => {
       {point: {x: 5, y: 11}, location: {offset: 15, line: 3, column: 8, x: 5, y: 10}, strict: true},
       {point: {x: 0, y: 13}, location: {offset: 17, line: 4, column: 0, x: 0, y: 13}, strict: true},
       {point: {x: 1, y: 13}, location: {offset: 17, line: 4, column: 0, x: 0, y: 13}, strict: true},
+      {point: {x: 0.9, y: 13}, location: {offset: 17, line: 4, column: 0, x: 0, y: 13}, rounded: true, strict: true},
+      {point: {x: 1.0, y: 13}, location: {offset: 17, line: 4, column: 0, x: 0, y: 13}, rounded: true, strict: true},
+      {point: {x: 1.1, y: 13}, location: {offset: 18, line: 4, column: 1, x: 2, y: 13}, rounded: true, strict: true},
       {point: {x: 2, y: 13}, location: {offset: 18, line: 4, column: 1, x: 2, y: 13}, strict: true},
       {point: {x: 42, y: 15}, location: {offset: 18, line: 4, column: 1, x: 2, y: 13}},
       {point: {x: 0, y: 16}, location: {offset: 19, line: 5, column: 0, x: 0, y: 16}, strict: true},
@@ -107,7 +110,7 @@ describe('Metrics', () => {
       {point: {x: 42, y: 19}, location: {offset: 27, line: 6, column: 3, x: 6, y: 19}},
     ];
     for (let test of tests)
-      expect(Metrics.chunkPointToLocation(chunk, before, test.point, testMeasurer, !!test.strict)).toEqual(test.location);
+      expect(Metrics.chunkPointToLocation(chunk, before, test.point, testMeasurer, !!test.rounded, !!test.strict)).toEqual(test.location);
   });
 });
 
@@ -140,7 +143,7 @@ describe('Text', () => {
       let chunk = s.substring(0, length);
       let width = testMeasurer._measureChunk(chunk);
       chunks.push(chunk + '\n');
-      locationQueries.push({line: i, column: 0, offset: offset, x: 0, y: i * 3});
+      locationQueries.push({line: i, column: 0, offset: offset, x: 0, y: i * 3, rounded: true});
       locationQueries.push({line: i, column: 1, offset: offset + 1, x: 1, y: i * 3});
       locationQueries.push({line: i, column: length, offset: offset + length, x: width, y: i * 3});
       locationQueries.push({line: i, column: length, offset: offset + length, x: width, y: i * 3, nonStrict: {column: length + 1, x: width + 3}});
@@ -171,7 +174,7 @@ describe('Text', () => {
       expect(text.offsetToLocation(0)).toEqual({line: 0, column: 0, offset: 0, x: 0, y: 0});
       expect(text.offsetToLocation(content.length)).toEqual({line: lineCount, column: 0, offset: content.length, x: 0, y: lineCount * 3});
       expect(text.offsetToLocation(content.length + 1)).toBe(null);
-      for (let {line, column, offset, x, y, nonStrict} of locationQueries) {
+      for (let {line, column, offset, x, y, nonStrict, rounded} of locationQueries) {
         if (nonStrict) {
           expect(text.positionToLocation({line, column: nonStrict.column})).toEqual({line, column, offset, x, y});
           expect(text.pointToLocation({x: nonStrict.x, y})).toEqual({line, column, offset, x, y});
@@ -180,8 +183,13 @@ describe('Text', () => {
           expect(text.positionToLocation({line, column})).toEqual({line, column, offset, x, y});
           expect(text.positionToLocation({line, column}, true)).toEqual({line, column, offset, x, y});
           expect(text.pointToLocation({x, y})).toEqual({line, column, offset, x, y});
-          expect(text.pointToLocation({x: x + 0.5, y: y + 0.5})).toEqual({line, column, offset, x, y});
-          expect(text.pointToLocation({x, y}, true)).toEqual({line, column, offset, x, y});
+          expect(text.pointToLocation({x: x + 0.5, y: y + 0.5}, false /* rounded */, false /* strict */)).toEqual({line, column, offset, x, y});
+          expect(text.pointToLocation({x, y}, false /* rounded */, true /* strict */)).toEqual({line, column, offset, x, y});
+          if (rounded) {
+            expect(text.pointToLocation({x: x + 0.4, y}, true /* rounded */, true /* strict */)).toEqual({line, column, offset, x, y});
+            expect(text.pointToLocation({x: x + 0.5, y}, true /* rounded */, true /* strict */)).toEqual({line, column, offset, x, y});
+            expect(text.pointToLocation({x: x + 0.6, y}, true /* rounded */, true /* strict */)).toEqual({line, column: column + 1, offset: offset + 1, x: x + 1, y});
+          }
         }
       }
     }

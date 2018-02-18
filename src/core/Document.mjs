@@ -312,6 +312,14 @@ export class Document {
   }
 
   /**
+   * @param {number} offset
+   * @return {?Point}
+   */
+  offsetToPoint(offset) {
+    return this._text.offsetToLocation(offset);
+  }
+
+  /**
    * @param {!Position} position
    * @param {boolean=} strict
    * @return {number}
@@ -322,11 +330,22 @@ export class Document {
 
   /**
    * @param {!Point} point
+   * @param {boolean=} rounded
    * @param {boolean=} strict
    * @return {!Position}
    */
-  pointToPosition(point, strict) {
-    return this._text.pointToLocation(point, strict);
+  pointToPosition(point, rounded, strict) {
+    return this._text.pointToLocation(point, rounded, strict);
+  }
+
+  /**
+   * @param {!Point} point
+   * @param {boolean=} rounded
+   * @param {boolean=} strict
+   * @return {number}
+   */
+  pointToOffset(point, rounded, strict) {
+    return this._text.pointToLocation(point, rounded, strict).offset;
   }
 
   beforeFrame() {

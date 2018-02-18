@@ -225,7 +225,9 @@ export class Renderer {
   _canvasToTextOffset({x, y}) {
     x -= this._editorRect.x;
     y -= this._editorRect.y;
-    return this._document.positionToOffset(this._viewport.viewportPointToDocumentPosition({x, y}));
+    return this._document.pointToOffset(
+        this._viewport.viewportPointToDocumentPoint({x, y}),
+        true /* rounded */);
   }
 
   /**
@@ -413,7 +415,7 @@ export class Renderer {
     ctx.beginPath();
     ctx.rect(this._editorRect.x, this._editorRect.y, this._editorRect.width, this._editorRect.height);
     ctx.clip();
-    let textOrigin = this._viewport.documentPositionToViewportPoint({line: 0, column: 0});
+    let textOrigin = this._viewport.documentPointToViewportPoint({x: 0, y: 0});
     textOrigin.x += this._editorRect.x;
     textOrigin.y += this._editorRect.y;
     ctx.translate(textOrigin.x, textOrigin.y);
@@ -457,7 +459,7 @@ export class Renderer {
     ctx.lineTo(this._gutterRect.width, this._gutterRect.height);
     ctx.stroke();
 
-    const textOrigin = this._viewport.documentPositionToViewportPoint({line: 0, column: 0});
+    const textOrigin = this._viewport.documentPointToViewportPoint({x: 0, y: 0});
     ctx.translate(0, textOrigin.y);
     ctx.textAlign = 'right';
     ctx.fillStyle = 'rgb(128, 128, 128)';

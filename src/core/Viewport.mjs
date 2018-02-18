@@ -141,20 +141,38 @@ export class Viewport {
 
   /**
    * @param {!Point} point
-   * @return {!Position}
+   * @return {!Point}
    */
-  viewPointToDocumentPosition({x, y}) {
-    y -= this._padding.top;
-    x -= this._padding.left;
+  documentPointToViewPoint(point) {
+    return {x: point.x + this._padding.left, y: point.y + this._padding.top};
+  }
+
+  /**
+   * @param {!Point} point
+   * @return {!Point}
+   */
+  viewportPointToDocumentPoint(point) {
     return {
-      line: Math.max(Math.floor(y / this._metrics.lineHeight), 0),
-      column: Math.max(Math.floor(x / this._metrics.charWidth), 0)
+      x: point.x + this._scrollLeft - this._padding.left,
+      y: point.y + this._scrollTop - this._padding.top
+    };
+  }
+
+  /**
+   * @param {!Point} point
+   * @return {!Point}
+   */
+  documentPointToViewportPoint(point) {
+    return {
+      x: point.x - this._scrollLeft + this._padding.left,
+      y: point.y - this._scrollTop + this._padding.top
     };
   }
 
   /**
    * @param {!Point} point
    * @return {!Position}
+   * TODO: this method should go.
    */
   viewportPointToDocumentPosition({x, y}) {
     x += this._scrollLeft - this._padding.left;
@@ -168,17 +186,7 @@ export class Viewport {
   /**
    * @param {!Position} position
    * @return {!Point}
-   */
-  documentPositionToViewportPoint({line, column}) {
-    return {
-      x: column * this._metrics.charWidth + this._padding.left - this._scrollLeft,
-      y: line * this._metrics.lineHeight + this._padding.top - this._scrollTop,
-    };
-  }
-
-  /**
-   * @param {!Position} position
-   * @return {!Point}
+   * TODO: this method should go.
    */
   documentPositionToViewPoint({line, column}) {
     return {
@@ -194,7 +202,7 @@ export class Viewport {
     if (this._frozen)
       throw 'Cannot reveal while building frame';
 
-    let {x, y} = this.documentPositionToViewPoint(this._document.offsetToPosition(offset));
+    let {x, y} = this.documentPointToViewPoint(this._document.offsetToPoint(offset));
     if (y < this._scrollTop) {
       this._scrollTop = y;
     } else if (y + this._document.measurer().defaultHeight > this._scrollTop + this._height) {

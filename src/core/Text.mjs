@@ -538,10 +538,11 @@ export class Text {
 
   /**
    * @param {!Point} point
+   * @param {boolean=} rounded
    * @param {boolean=} strict
    * @return {!Location}
    */
-  pointToLocation(point, strict) {
+  pointToLocation(point, rounded, strict) {
     let compare = (point.y - this._lastLocation.y) || (point.x - this._lastLocation.x);
     if (compare >= 0) {
       if (!strict || compare === 0)
@@ -554,7 +555,7 @@ export class Text {
         return this._lastLocation;
       throw 'Position does not belong to text';
     }
-    return Metrics.chunkPointToLocation(found.node.chunk, found.location, point, this._measurer, strict);
+    return Metrics.chunkPointToLocation(found.node.chunk, found.location, point, this._measurer, rounded, strict);
   }
 }
 
