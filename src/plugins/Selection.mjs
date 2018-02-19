@@ -1,5 +1,5 @@
 import { ScrollbarDecorator } from "../core/Decorator.mjs";
-import { TextUtils } from "../utils/TextUtils.mjs";
+import { Tokenizer } from "../core/Tokenizer.mjs";
 
 /**
  * @typedef {{
@@ -72,8 +72,8 @@ export class Selection {
    */
   selectWordContaining(offset) {
     let range = {
-      from: TextUtils.previousWord(this._document, offset),
-      to: TextUtils.nextWord(this._document, offset),
+      from: Tokenizer.previousWord(this._document, offset),
+      to: Tokenizer.nextWord(this._document, offset),
     };
     this.setRanges([range]);
     return range;
@@ -212,7 +212,7 @@ export class Selection {
         for (let range of this._ranges) {
           let offset = Math.min(range.anchor, range.focus);
           if (range.anchor === range.focus)
-            offset = TextUtils.previousOffset(this._document, range.focus);
+            offset = Math.max(0, range.focus - 1);
           ranges.push({id: range.id, upDownColumn: -1, anchor: offset, focus: offset});
         }
         this._ranges = this._join(ranges);
@@ -221,7 +221,7 @@ export class Selection {
       case 'selection.move.word.left': {
         let ranges = [];
         for (let range of this._ranges) {
-          let offset = TextUtils.previousWord(this._document, range.focus);
+          let offset = Tokenizer.previousWord(this._document, range.focus);
           ranges.push({id: range.id, upDownColumn: -1, anchor: offset, focus: offset});
         }
         this._ranges = this._join(ranges);
@@ -230,14 +230,14 @@ export class Selection {
       case 'selection.select.left': {
         let ranges = [];
         for (let range of this._ranges)
-          ranges.push({id: range.id, upDownColumn: -1, anchor: range.anchor, focus: TextUtils.previousOffset(this._document, range.focus)});
+          ranges.push({id: range.id, upDownColumn: -1, anchor: range.anchor, focus: Math.max(0, range.focus - 1)});
         this._ranges = this._join(ranges);
         break;
       }
       case 'selection.select.word.left': {
         let ranges = [];
         for (let range of this._ranges)
-          ranges.push({id: range.id, upDownColumn: -1, anchor: range.anchor, focus: TextUtils.previousWord(this._document, range.focus)});
+          ranges.push({id: range.id, upDownColumn: -1, anchor: range.anchor, focus: Tokenizer.previousWord(this._document, range.focus)});
         this._ranges = this._join(ranges);
         break;
       }
@@ -246,7 +246,7 @@ export class Selection {
         for (let range of this._ranges) {
           let offset = Math.max(range.anchor, range.focus);
           if (range.anchor === range.focus)
-            offset = TextUtils.nextOffset(this._document, range.focus);
+            offset = Math.min(this._document.length(), range.focus + 1);
           ranges.push({id: range.id, upDownColumn: -1, anchor: offset, focus: offset});
         }
         this._ranges = this._join(ranges);
@@ -255,7 +255,7 @@ export class Selection {
       case 'selection.move.word.right': {
         let ranges = [];
         for (let range of this._ranges) {
-          let offset = TextUtils.nextWord(this._document, range.focus);
+          let offset = Tokenizer.nextWord(this._document, range.focus);
           ranges.push({id: range.id, upDownColumn: -1, anchor: offset, focus: offset});
         }
         this._ranges = this._join(ranges);
@@ -265,7 +265,7 @@ export class Selection {
         this._upDownCleared = true;
         let ranges = [];
         for (let range of this._ranges)
-          ranges.push({id: range.id, upDownColumn: -1, anchor: range.anchor, focus: TextUtils.nextOffset(this._document, range.focus)});
+          ranges.push({id: range.id, upDownColumn: -1, anchor: range.anchor, focus: Math.min(this._document.length(), range.focus + 1)});
         this._ranges = this._join(ranges);
         break;
       }
@@ -273,7 +273,7 @@ export class Selection {
         this._upDownCleared = true;
         let ranges = [];
         for (let range of this._ranges)
-          ranges.push({id: range.id, upDownColumn: -1, anchor: range.anchor, focus: TextUtils.nextWord(this._document, range.focus)});
+          ranges.push({id: range.id, upDownColumn: -1, anchor: range.anchor, focus: Tokenizer.nextWord(this._document, range.focus)});
         this._ranges = this._join(ranges);
         break;
       }
@@ -356,7 +356,7 @@ export class Selection {
       case 'selection.move.linestart': {
         let ranges = [];
         for (let range of this._ranges) {
-          let offset = TextUtils.lineStartOffset(this._document, range.focus);
+          let offset = this._lineStartOffset(range.focus);
           ranges.push({id: range.id, upDownColumn: -1, anchor: offset, focus: offset});
         }
         this._ranges = this._join(ranges);
@@ -365,7 +365,7 @@ export class Selection {
       case 'selection.select.linestart': {
         let ranges = [];
         for (let range of this._ranges) {
-          let focus = TextUtils.lineStartOffset(this._document, range.focus);
+          let focus = this._lineStartOffset(range.focus);
           ranges.push({id: range.id, upDownColumn: -1, anchor: range.anchor, focus});
         }
         this._ranges = this._join(ranges);
@@ -374,7 +374,7 @@ export class Selection {
       case 'selection.move.lineend': {
         let ranges = [];
         for (let range of this._ranges) {
-          let offset = TextUtils.lineEndOffset(this._document, range.focus);
+          let offset = this._lineEndOffset(range.focus);
           ranges.push({id: range.id, upDownColumn: -1, anchor: offset, focus: offset});
         }
         this._ranges = this._join(ranges);
@@ -383,7 +383,7 @@ export class Selection {
       case 'selection.select.lineend': {
         let ranges = [];
         for (let range of this._ranges) {
-          let focus = TextUtils.lineEndOffset(this._document, range.focus);
+          let focus = this._lineEndOffset(range.focus);
           ranges.push({id: range.id, upDownColumn: -1, anchor: range.anchor, focus});
         }
         this._ranges = this._join(ranges);
@@ -473,6 +473,25 @@ export class Selection {
     let focus = this.focus();
     if (focus !== null)
       this._viewport.reveal(focus);
+  }
+
+  /**
+   * @param {number} offset
+   * @return {number}
+   */
+  _lineStartOffset(offset) {
+    return offset - this._document.offsetToPosition(offset).column;
+  }
+
+  /**
+   * @param {number} offset
+   * @return {number}
+   */
+  _lineEndOffset(offset) {
+    let position = this._document.offsetToPosition(offset);
+    if (position.line == this._document.lineCount() - 1)
+      return this._document.length();
+    return this._document.positionToOffset({line: position.line + 1, column: 0}) - 1;
   }
 };
 

@@ -1,5 +1,3 @@
-import { TextUtils } from "../utils/TextUtils.mjs";
-
 /**
  * @implements Plugin
  */
@@ -41,7 +39,7 @@ export class Editing {
       case 'editing.delete.after': {
         this._replace('', range => {
           if (range.from === range.to)
-            return {from: range.from, to: TextUtils.nextOffset(this._document, range.to)};
+            return {from: range.from, to: Math.min(this._document.length(), range.to + 1)};
           return range;
         });
         break;
@@ -49,7 +47,7 @@ export class Editing {
       case 'editing.delete.before': {
         this._replace('', range => {
           if (range.from === range.to)
-            return {from: TextUtils.previousOffset(this._document, range.from), to: range.to};
+            return {from: Math.max(0, range.from - 1), to: range.to};
           return range;
         });
         break;
@@ -69,8 +67,9 @@ export class Editing {
     let newRanges = [];
     let delta = 0;
     for (let range of ranges) {
-      let moved = TextUtils.clampRange(this._document, {from: range.from + delta, to: range.to + delta});
-      let replaced = rangeCallback(moved);
+      let from = Math.max(0, Math.min(range.from + delta, this._document.length()));
+      let to = Math.max(0, Math.min(range.to + delta, this._document.length()));
+      let replaced = rangeCallback({from, to});
       this._document.replace(replaced.from, replaced.to, s);
       newRanges.push({from: replaced.from + s.length, to: replaced.from + s.length});
       delta += s.length - (replaced.to - replaced.from);

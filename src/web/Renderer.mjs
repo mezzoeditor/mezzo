@@ -1,4 +1,3 @@
-import { TextUtils } from "../utils/TextUtils.mjs";
 import { Frame } from "../core/Frame.mjs";
 
 class MonospaceFontMetrics {
