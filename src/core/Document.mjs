@@ -304,6 +304,13 @@ export class Document {
   }
 
   /**
+   * @return {!Location}
+   */
+  lastLocation() {
+    return this._text.lastLocation();
+  }
+
+  /**
    * @param {number} offset
    * @return {?Position}
    */
@@ -316,6 +323,14 @@ export class Document {
    * @return {?Point}
    */
   offsetToPoint(offset) {
+    return this._text.offsetToLocation(offset);
+  }
+
+  /**
+   * @param {number} offset
+   * @return {?Location}
+   */
+  offsetToLocation(offset) {
     return this._text.offsetToLocation(offset);
   }
 

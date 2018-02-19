@@ -370,7 +370,7 @@ Metrics.chunkPointToLocation = function(chunk, before, point, measurer, rounded,
     if (length !== lineEnd - index)
       throw 'Inconsistent';
     if (strict)
-      throw 'Position does not belong to text';
+      throw 'Point does not belong to text';
   }
 
   return {

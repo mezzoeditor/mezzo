@@ -1,8 +1,8 @@
 /**
  * @typedef {{
  *   line: number,
- *   start: number,
- *   end: number,
+ *   start: !Location,
+ *   end: !Location,
  *   from: number,
  *   to: number
  * }} Line;
@@ -30,20 +30,22 @@ export class Frame {
 
     let lines = [];
     for (let line = startLine; line <= endLine; line++)
-      lines.push({line, start: document.positionToOffset({line, column: 0})});
+      lines.push({line, start: document.positionToLocation({line, column: 0})});
     for (let line = startLine; line <= endLine; line++) {
-      if (line + 1 <= endLine)
-        lines[line - startLine].end = lines[line + 1 - startLine].start - 1;
-      else if (line + 1 === document.lineCount())
-        lines[line - startLine].end = document.length();
-      else
-        lines[line - startLine].end = document.positionToOffset({line: line + 1, column: 0}) - 1;
+      if (line + 1 === document.lineCount()) {
+        lines[line - startLine].end = document.lastLocation();
+      } else {
+        let nextStartOffset = line + 1 <= endLine
+            ? lines[line + 1 - startLine].start.offset
+            : document.positionToOffset({line: line + 1, column: 0});
+        lines[line - startLine].end = document.offsetToLocation(nextStartOffset - 1);
+      }
     }
 
     let sum = 0;
     for (let line of lines) {
-      line.from = Math.min(line.start + startColumn, line.end);
-      line.to = Math.min(line.start + endColumn, line.end);
+      line.from = Math.min(line.start.offset + startColumn, line.end.offset);
+      line.to = Math.min(line.start.offset + endColumn, line.end.offset);
       sum += line.to - line.from;
     }
 
@@ -184,25 +186,25 @@ export class Frame {
   offsetToPosition(offset) {
     if (this._lines.length <= 20) {
       for (let line of this._lines) {
-        if (offset >= line.start && offset <= line.end)
-          return {line: line.line, column: offset - line.start};
+        if (offset >= line.start.offset && offset <= line.end.offset)
+          return {line: line.line, column: offset - line.start.offset};
       }
       return this._document.offsetToPosition(offset);
     }
 
     let left = 0;
     let right = this._lines.length - 1;
-    if (offset < this._lines[left].start || offset > this._lines[right].end)
+    if (offset < this._lines[left].start.offset || offset > this._lines[right].end.offset)
       return this._document.offsetToPosition(offset);
     while (true) {
       let middle = (left + right) >> 1;
       let line = this._lines[middle];
-      if (offset < line.start)
+      if (offset < line.start.offset)
         right = middle - 1;
-      else if (offset > line.end)
+      else if (offset > line.end.offset)
         left = middle + 1;
       else
-        return {line: line.line, column: offset - line.start};
+        return {line: line.line, column: offset - line.start.offset};
     }
   }
 

@@ -466,7 +466,7 @@ export class Renderer {
     const textX = this._gutterRect.width - GUTTER_PADDING_LEFT_RIGHT;
     for (let line of frame.lines()) {
       const number = (line.line + 1) + '';
-      ctx.fillText(number, textX, line.line * lineHeight + textOffset);
+      ctx.fillText(number, textX, line.start.y + textOffset);
     }
   }
 
@@ -493,17 +493,17 @@ export class Renderer {
             if (from < to) {
               let text = lineContent.substring(from - line.from, to - line.from);
               let column = from - line.from + startColumn;
-              ctx.fillText(text, column * charWidth, line.line * lineHeight + textOffset);
+              ctx.fillText(text, column * charWidth, line.start.y + textOffset);
             }
           }
 
           // TODO: note that some editors only show selection up to line length. Setting?
           if (style.background && style.background.color) {
             ctx.fillStyle = style.background.color;
-            let from = decoration.from < line.start ? line.start + startColumn : Math.max(line.start + startColumn, decoration.from);
-            let to = decoration.to > line.end ? line.start + endColumn : Math.min(line.start + endColumn, decoration.to);
+            let from = decoration.from < line.start.offset ? line.start.offset + startColumn : Math.max(line.start.offset + startColumn, decoration.from);
+            let to = decoration.to > line.end.offset ? line.start.offset + endColumn : Math.min(line.start.offset + endColumn, decoration.to);
             if (from <= to)
-              ctx.fillRect((from - line.start) * charWidth, line.line * lineHeight, (to - from) * charWidth, lineHeight);
+              ctx.fillRect((from - line.start.offset) * charWidth, line.start.y, (to - from) * charWidth, lineHeight);
           }
 
           // TODO: lines of width not divisble by ratio should be snapped by 1 / ratio.
@@ -513,21 +513,21 @@ export class Renderer {
 
             // Note: border decorations spanning multiple lines are not supported,
             // and we silently crop them here.
-            let from = decoration.from < line.start ? line.start + startColumn - 1 : Math.max(line.start + startColumn - 1, decoration.from);
-            let to = decoration.to > line.end ? line.start + endColumn + 1 : Math.min(line.start + endColumn + 1, decoration.to);
+            let from = decoration.from < line.start.offset ? line.start.offset + startColumn - 1 : Math.max(line.start.offset + startColumn - 1, decoration.from);
+            let to = decoration.to > line.end.offset ? line.start.offset + endColumn + 1 : Math.min(line.start.offset + endColumn + 1, decoration.to);
 
             ctx.beginPath();
             if (from === to) {
-              ctx.moveTo((from - line.start) * charWidth, line.line * lineHeight);
-              ctx.lineTo((from - line.start) * charWidth, line.line * lineHeight + lineHeight);
+              ctx.moveTo((from - line.start.offset) * charWidth, line.start.y);
+              ctx.lineTo((from - line.start.offset) * charWidth, line.start.y + lineHeight);
             } else {
               const width = to - from;
               // TODO: border.radius should actually clip background.
               const radius = Math.min(style.border.radius || 0, Math.min(lineHeight, width * charWidth) / 2) / this._ratio;
               if (radius)
-                roundRect(ctx, (from - line.start) * charWidth, line.line * lineHeight, width * charWidth, lineHeight, radius);
+                roundRect(ctx, (from - line.start.offset) * charWidth, line.start.y, width * charWidth, lineHeight, radius);
               else
-                ctx.rect((from - line.start) * charWidth, line.line * lineHeight, width * charWidth, lineHeight);
+                ctx.rect((from - line.start.offset) * charWidth, line.start.y, width * charWidth, lineHeight);
             }
             ctx.stroke();
           }

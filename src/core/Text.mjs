@@ -472,6 +472,13 @@ export class Text {
   }
 
   /**
+   * @return {!Location}
+   */
+  lastLocation() {
+    return this._lastLocation;
+  }
+
+  /**
    * @param {number=} fromOffset
    * @param {number=} toOffset
    * @param {string} insertion
@@ -521,6 +528,16 @@ export class Text {
    * @return {!Location}
    */
   positionToLocation(position, strict) {
+    if (position.line < 0) {
+      if (strict)
+        throw 'Position does not belong to text';
+      position = {line: 0, column: 0};
+    }
+    if (position.column < 0) {
+      if (strict)
+        throw 'Position does not belong to text';
+      position = {line: position.line, column: 0};
+    }
     let compare = (position.line - this._lastLocation.line) || (position.column - this._lastLocation.column);
     if (compare >= 0) {
       if (!strict || compare === 0)
@@ -543,17 +560,27 @@ export class Text {
    * @return {!Location}
    */
   pointToLocation(point, rounded, strict) {
+    if (point.y < 0) {
+      if (strict)
+        throw 'Point does not belong to text';
+      point = {x: 0, y: 0};
+    }
+    if (point.x < 0) {
+      if (strict)
+        throw 'Point does not belong to text';
+      point = {x: 0, y: point.y};
+    }
     let compare = (point.y - this._lastLocation.y) || (point.x - this._lastLocation.x);
     if (compare >= 0) {
       if (!strict || compare === 0)
         return this._lastLocation;
-      throw 'Position does not belong to text';
+      throw 'Point does not belong to text';
     }
     let found = findNode(this._root, {x: point.x, y: point.y}, this._measurer);
     if (!found) {
       if (!strict)
         return this._lastLocation;
-      throw 'Position does not belong to text';
+      throw 'Point does not belong to text';
     }
     return Metrics.chunkPointToLocation(found.node.chunk, found.location, point, this._measurer, rounded, strict);
   }
