@@ -55,6 +55,13 @@
  */
 
 /**
+ * @typedef {{
+ *   from: number,
+ *   to: number
+ * }} Range;
+ */
+
+/**
  * @interface
  */
 class Measurer {

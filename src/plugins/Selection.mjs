@@ -31,7 +31,7 @@ export class Selection {
   // -------- Public API --------
 
   /**
-   * @return {!Array<!OffsetRange>}
+   * @return {!Array<!Range>}
    */
   ranges() {
     return this._ranges.map(range => ({from: Math.min(range.anchor, range.focus), to: Math.max(range.anchor, range.focus)}));
@@ -50,7 +50,7 @@ export class Selection {
   }
 
   /**
-   * @param {!Array<!OffsetRange>} ranges
+   * @param {!Array<!Range>} ranges
    * @param {boolean=} noReveal
    */
   setRanges(ranges, noReveal) {
@@ -80,7 +80,7 @@ export class Selection {
   }
 
   /**
-   * @param {!Array<!OffsetRange>} ranges
+   * @param {!Array<!Range>} ranges
    */
   updateRanges(ranges) {
     if (ranges.length !== this._ranges.length)

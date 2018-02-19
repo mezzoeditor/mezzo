@@ -52,8 +52,8 @@ TextUtils.clampOffset = function(document, offset) {
 
 /**
  * @param {!Document} document
- * @param {!OffsetRange} range
- * @return {!OffsetRange}
+ * @param {!Range} range
+ * @return {!Range}
  */
 TextUtils.clampRange = function(document, range) {
   return {from: TextUtils.clampOffset(document, range.from), to: TextUtils.clampOffset(document, range.to)};

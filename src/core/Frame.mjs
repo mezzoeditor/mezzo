@@ -18,7 +18,7 @@
 export class Frame {
   /**
    * @param {!Document} document
-   * @param {!TextPosition} start
+   * @param {!Position} start
    * @param {number} width
    * @param {number} height
    */
@@ -110,14 +110,14 @@ export class Frame {
   }
 
   /**
-   * @return {!TextPosition}
+   * @return {!Position}
    */
   startPosition() {
     return this._startPosition;
   }
 
   /**
-   * @return {!TextPosition}
+   * @return {!Position}
    */
   endPosition() {
     return this._endPosition;
@@ -162,7 +162,7 @@ export class Frame {
   }
 
   /**
-   * @return {!OffsetRange}
+   * @return {!Range}
    */
   range() {
     return this._range;
@@ -181,7 +181,7 @@ export class Frame {
 
   /**
    * @param {number} offset
-   * @return {?TextPosition}
+   * @return {?Position}
    */
   offsetToPosition(offset) {
     if (this._lines.length <= 20) {
@@ -209,7 +209,7 @@ export class Frame {
   }
 
   /**
-   * @param {!TextPosition} position
+   * @param {!Position} position
    * @param {boolean=} strict
    * @return {number}
    */

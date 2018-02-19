@@ -8,11 +8,11 @@ const kSyncProcessing = false;
 export class RangeScheduler {
   /**
    * @param {!Scheduler} scheduler
-   * @param {function(!OffsetRange):?OffsetRange} visibleRangeToProcessingRange
+   * @param {function(!Range):?Range} visibleRangeToProcessingRange
    *   When we determine that some visible range needs to be (re)processed, this
    *   function converts that range into internal "processing range", which is
    *   later used in chunking and |processRange|.
-   * @param {function(!OffsetRange):!OffsetRange} processRange
+   * @param {function(!Range):!Range} processRange
    *   Called to processing a passed range. Returns the actually process range,
    *   which may be smaller or larger than passed one. This function operates on
    *   internal "processing range", as opposite to visible range.
@@ -113,7 +113,7 @@ export class RangeScheduler {
   }
 
   /**
-   * @param {!OffsetRange} range
+   * @param {!Range} range
    */
   _needsProcessing(range) {
     let {from, to} = range;
@@ -126,7 +126,7 @@ export class RangeScheduler {
   }
 
   /**
-   * @param {!OffsetRange} range
+   * @param {!Range} range
    */
   _processed(range) {
     if (!this._rangeToProcess)

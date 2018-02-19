@@ -61,7 +61,7 @@ export class Editing {
 
   /**
    * @param {string} s
-   * @param {function(!OffsetRange):!OffsetRange} rangeCallback
+   * @param {function(!Range):!Range} rangeCallback
    */
   _replace(s, rangeCallback) {
     this._selection.mute();

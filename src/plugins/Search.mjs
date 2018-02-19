@@ -47,14 +47,14 @@ export class Search {
   }
 
   /**
-   * @return {!Array<!OffsetRange>}
+   * @return {!Array<!Range>}
    */
   matches() {
     return this._decorator.listAll();
   }
 
   /**
-   * @return {?OffsetRange}
+   * @return {?Range}
    */
   currentMatch() {
     return this._currentMatch;
@@ -205,7 +205,7 @@ export class Search {
   }
 
   /**
-   * @param {?OffsetRange} match
+   * @param {?Range} match
    * @param {boolean=} noReveal
    */
   _updateCurrentMatch(match, noReveal) {
@@ -220,8 +220,8 @@ export class Search {
   }
 
   /**
-   * @param {!OffsetRange} range
-   * @return {!OffsetRange}
+   * @param {!Range} range
+   * @return {!Range}
    */
   _searchRange(range) {
     let {from, to} = range;
@@ -239,8 +239,8 @@ export class Search {
   }
 
   /**
-   * @param {!OffsetRange} range
-   * @return {?OffsetRange}
+   * @param {!Range} range
+   * @return {?Range}
    */
   _visibleRangeToProcessingRange(range) {
     if (!this._options)
