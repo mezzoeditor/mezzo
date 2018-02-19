@@ -127,15 +127,15 @@ class TokenHighlighter {
     if (!this._token)
       return [];
     let decorator = new TextDecorator();
-    for (let line of frame.lines()) {
-      let text = frame.lineContent(line, this._token.length, this._token.length);
-      let offset = Math.max(0, line.from - this._token.length);
+    for (let range of frame.ranges()) {
+      let text = frame.rangeContent(range, this._token.length, this._token.length);
+      let offset = Math.max(0, range.from - this._token.length);
       let index = text.indexOf(this._token);
       while (index !== -1) {
         decorator.add(
           offset + index,
           offset + index + this._token.length,
-          ['red', 'green', 'blue'][line.line % 3]
+          ['red', 'green', 'blue'][(offset + index) % 3]
         );
         index = text.indexOf(this._token, index + this._token.length);
       }

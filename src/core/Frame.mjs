@@ -4,16 +4,14 @@
  *   start: number,
  *   end: number,
  *   from: number,
- *   to: number,
- *   _content: string|undefined
+ *   to: number
  * }} Line;
  */
 
 /**
  * @typedef {{
  *   from: number,
- *   to: number,
- *   _content: string|undefined
+ *   to: number
  * }} Range;
  */
 
