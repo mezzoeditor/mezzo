@@ -474,7 +474,6 @@ export class Renderer {
     const {lineHeight, charWidth} = this._metrics;
     const textOffset = this._metrics.textOffset();
     const lines = frame.lines();
-    const startLine = lines[0].line;
     const startColumn = frame.startPosition().column;
     const endColumn = frame.endPosition().column;
 

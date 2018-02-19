@@ -25,19 +25,21 @@ export class Frame {
   constructor(document, start, width, height) {
     let startLine = start.line;
     let startColumn = start.column;
-    let endLine = Math.min(start.line + height, document.lineCount());
+    let endLine = Math.min(start.line + height, document.lineCount() - 1);
     let endColumn = startColumn + width;
 
     let lines = [];
+    for (let line = startLine; line <= endLine; line++)
+      lines.push({line, start: document.positionToOffset({line, column: 0})});
     for (let line = startLine; line <= endLine; line++) {
-      let start = document.positionToOffset({line, column: 0});
-      if (line === document.lineCount())
-        start = document.length() + 1;
-      if (line > startLine)
-        lines[lines.length - 1].end = start - 1;
-      if (line < endLine)
-        lines.push({line, start});
+      if (line + 1 <= endLine)
+        lines[line - startLine].end = lines[line + 1 - startLine].start - 1;
+      else if (line + 1 === document.lineCount())
+        lines[line - startLine].end = document.length();
+      else
+        lines[line - startLine].end = document.positionToOffset({line: line + 1, column: 0}) - 1;
     }
+
     let sum = 0;
     for (let line of lines) {
       line.from = Math.min(line.start + startColumn, line.end);
@@ -49,7 +51,7 @@ export class Frame {
     for (let i = 0; i < lines.length - 1; i++)
       diffs[i] = {i, len: lines[i + 1].from - lines[i].to};
     diffs.sort((a, b) => a.len - b.len || a.i - b.i);
-    let join = new Array(lines.length - 1).fill(false);
+    let join = new Array(lines.length).fill(false);
     let remaining = sum * 0.5;
     for (let diff of diffs) {
       remaining -= diff.len;
@@ -70,7 +72,10 @@ export class Frame {
     this._ranges = ranges;
     this._startLine = startLine;
     this._endLine = endLine;
-    this._range = {from: ranges[0].from, to: Math.min(document.length(), ranges[ranges.length - 1].to + 1)};
+    if (!ranges.length)
+      this._range = {from: 0, to: 0};
+    else
+      this._range = {from: ranges[0].from, to: Math.min(document.length(), ranges[ranges.length - 1].to + 1)};
     this._startPosition = start;
     this._endPosition = {line: start.line + height, column: start.column + width};
   }

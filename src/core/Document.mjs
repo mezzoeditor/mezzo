@@ -329,6 +329,15 @@ export class Document {
   }
 
   /**
+   * @param {!Position} position
+   * @param {boolean=} strict
+   * @return {!Location}
+   */
+  positionToLocation(position, strict) {
+    return this._text.positionToLocation(position, strict);
+  }
+
+  /**
    * @param {!Point} point
    * @param {boolean=} rounded
    * @param {boolean=} strict
