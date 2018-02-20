@@ -55,12 +55,10 @@ export class Document {
   }
 
   /**
-   * @param {number} fontLineHeight
-   * @param {number} fontCharWidth
    * @return {!Viewport}
    */
-  createViewport(fontLineHeight, fontCharWidth) {
-    let viewport = new Viewport(this, fontLineHeight, fontCharWidth);
+  createViewport() {
+    let viewport = new Viewport(this);
     this._viewports.push(viewport);
     return viewport;
   }
@@ -309,6 +307,20 @@ export class Document {
    */
   lastLocation() {
     return this._text.lastLocation();
+  }
+
+  /**
+   * @return {number}
+   */
+  height() {
+    return this._text.lastLocation().y + this._measurer.defaultHeight;
+  }
+
+  /**
+   * @return {number}
+   */
+  longestLineWidth() {
+    return this._text.longestLineWidth();
   }
 
   /**

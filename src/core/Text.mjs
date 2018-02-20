@@ -377,7 +377,8 @@ export class Text {
     this._lineCount = (metrics.lines || 0) + 1;
     this._length = metrics.length;
     this._lastLocation = Metrics.toLocation(metrics, this._measurer);
-    this._longestLine = metrics.longest;
+    this._longestLineLength = metrics.longest;
+    this._longestLineWidth = metrics.longestWidth || (metrics.longest * this._measurer.defaultWidth);
   }
 
   /**
@@ -461,7 +462,14 @@ export class Text {
    * @return {number}
    */
   longestLineLength() {
-    return this._longestLine;
+    return this._longestLineLength;
+  }
+
+  /**
+   * @return {number}
+   */
+  longestLineWidth() {
+    return this._longestLineWidth;
   }
 
   /**

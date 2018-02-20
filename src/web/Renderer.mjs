@@ -107,7 +107,7 @@ export class Renderer {
     this._ratio = this._getRatio();
     this._metrics = this._computeMonospaceFontMetrics();
     this._document.setMeasurer(new CtxMeasurer(this._canvas.getContext('2d'), this._monospace));
-    this._viewport = document.createViewport(this._metrics.lineHeight, this._metrics.charWidth);
+    this._viewport = document.createViewport();
     this._viewport.setInvalidateCallback(() => this.invalidate());
     this._viewport.setRevealCallback(() => this.invalidate());
 

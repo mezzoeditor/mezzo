@@ -397,8 +397,10 @@ describe('Text.Iterator', () => {
 describe('Viewport', () => {
   beforeEach(state => {
     let document = new Document();
+    let measurer = { defaultWidth: 10, defaultHeight: 10, measureChunk: chunk => 0, measureChar: charCode => 10 };
+    document.setMeasurer(measurer);
     document.reset(new Array(10).fill('').join('\n'));
-    state.viewport = document.createViewport(10, 10);
+    state.viewport = document.createViewport();
     state.viewport.setSize(100, 100);
     state.viewport.vScrollbar.setSize(100);
   });

@@ -22,9 +22,6 @@ import {Frame} from './Frame.mjs';
  *          |                                      |
  *          +--------------------------------------+
  *
- * Viewport class operates points and should be supplied with font metrics to do
- * text <-> point units conversion.
- *
  * Viewport class operates 3 coordinate systems:
  * - viewport points, this is measured relative to viewport origin;
  * - view points, this is measured relative to padding origin, includes padding and text;
@@ -35,12 +32,9 @@ import {Frame} from './Frame.mjs';
 export class Viewport {
   /**
    * @param {!Documnet} document
-   * @param {number} fontLineHeight
-   * @param {number} fontCharWidth
    */
-  constructor(document, fontLineHeight, fontCharWidth) {
+  constructor(document) {
     this._document = document;
-    this._metrics = {lineHeight: fontLineHeight, charWidth: fontCharWidth};
     this._width = 0;
     this._height = 0;
     this._scrollTop = 0;
@@ -206,10 +200,8 @@ export class Viewport {
 
   _recompute() {
     // To properly handle input events, we have to update rects synchronously.
-    const lineCount = this._document.lineCount();
-
-    this._maxScrollTop = Math.max(0, lineCount * this._metrics.lineHeight - this._height + this._padding.top + this._padding.bottom);
-    this._maxScrollLeft = Math.max(0, this._document.longestLineLength() * this._metrics.charWidth - this._width + this._padding.left + this._padding.right);
+    this._maxScrollTop = Math.max(0, this._document.height() - this._height + this._padding.top + this._padding.bottom);
+    this._maxScrollLeft = Math.max(0, this._document.longestLineWidth() - this._width + this._padding.left + this._padding.right);
 
     this._scrollLeft = Math.max(this._scrollLeft, 0);
     this._scrollLeft = Math.min(this._scrollLeft, this._maxScrollLeft);
