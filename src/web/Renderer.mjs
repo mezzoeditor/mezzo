@@ -1,4 +1,5 @@
 import { Frame } from "../core/Frame.mjs";
+import { RoundMode } from "../core/Metrics.mjs";
 
 class MonospaceFontMetrics {
   constructor(charWidth, lineHeight, charHeight, baseline) {
@@ -226,7 +227,7 @@ export class Renderer {
     y -= this._editorRect.y;
     return this._document.pointToOffset(
         this._viewport.viewportPointToDocumentPoint({x, y}),
-        true /* rounded */);
+        RoundMode.Round);
   }
 
   /**
@@ -473,8 +474,7 @@ export class Renderer {
     const {lineHeight, charWidth} = this._metrics;
     const textOffset = this._metrics.textOffset();
     const lines = frame.lines();
-    const startColumn = frame.startColumn();
-    const endColumn = frame.endColumn();
+    const frameRight = frame.origin().x + frame.width();
 
     for (let decorator of textDecorators) {
       for (let line of lines) {
@@ -491,18 +491,17 @@ export class Renderer {
             let to = Math.min(line.to.offset, decoration.to);
             if (from < to) {
               let text = lineContent.substring(from - line.from.offset, to - line.from.offset);
-              let column = from - line.from.offset + startColumn;
-              ctx.fillText(text, column * charWidth, line.start.y + textOffset);
+              ctx.fillText(text, frame.offsetToPoint(from).x, line.start.y + textOffset);
             }
           }
 
           // TODO: note that some editors only show selection up to line length. Setting?
           if (style.background && style.background.color) {
             ctx.fillStyle = style.background.color;
-            let from = decoration.from < line.start.offset ? line.start.offset + startColumn : Math.max(line.start.offset + startColumn, decoration.from);
-            let to = decoration.to > line.end.offset ? line.start.offset + endColumn : Math.min(line.start.offset + endColumn, decoration.to);
+            let from = decoration.from < line.from.offset ? line.from.x : frame.offsetToPoint(decoration.from).x;
+            let to = decoration.to > line.to.offset ? frameRight : frame.offsetToPoint(decoration.to).x;
             if (from <= to)
-              ctx.fillRect((from - line.start.offset) * charWidth, line.start.y, (to - from) * charWidth, lineHeight);
+              ctx.fillRect(from, line.start.y, to - from, lineHeight);
           }
 
           // TODO: lines of width not divisble by ratio should be snapped by 1 / ratio.
@@ -512,21 +511,21 @@ export class Renderer {
 
             // Note: border decorations spanning multiple lines are not supported,
             // and we silently crop them here.
-            let from = decoration.from < line.start.offset ? line.start.offset + startColumn - 1 : Math.max(line.start.offset + startColumn - 1, decoration.from);
-            let to = decoration.to > line.end.offset ? line.start.offset + endColumn + 1 : Math.min(line.start.offset + endColumn + 1, decoration.to);
+            let from = decoration.from < line.from.offset ? line.from.x - 1 : frame.offsetToPoint(decoration.from).x;
+            let to = decoration.to > line.to.offset ? frameRight + 1 : frame.offsetToPoint(decoration.to).x;
 
             ctx.beginPath();
             if (from === to) {
-              ctx.moveTo((from - line.start.offset) * charWidth, line.start.y);
-              ctx.lineTo((from - line.start.offset) * charWidth, line.start.y + lineHeight);
+              ctx.moveTo(from, line.start.y);
+              ctx.lineTo(from, line.start.y + lineHeight);
             } else {
               const width = to - from;
               // TODO: border.radius should actually clip background.
-              const radius = Math.min(style.border.radius || 0, Math.min(lineHeight, width * charWidth) / 2) / this._ratio;
+              const radius = Math.min(style.border.radius || 0, Math.min(lineHeight, width) / 2) / this._ratio;
               if (radius)
-                roundRect(ctx, (from - line.start.offset) * charWidth, line.start.y, width * charWidth, lineHeight, radius);
+                roundRect(ctx, from, line.start.y, width, lineHeight, radius);
               else
-                ctx.rect((from - line.start.offset) * charWidth, line.start.y, width * charWidth, lineHeight);
+                ctx.rect(from, line.start.y, width, lineHeight);
             }
             ctx.stroke();
           }

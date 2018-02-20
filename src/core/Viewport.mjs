@@ -223,9 +223,8 @@ export class Viewport {
   createFrame() {
     this._document.beforeFrame();
     this._frozen = true;
-    const start = this.viewportPointToDocumentPosition({x: 0, y: 0});
-    const end = this.viewportPointToDocumentPosition({x: this._width + this._metrics.charWidth, y: this._height + this._metrics.lineHeight});
-    const frame = new Frame(this._document, start, end.column - start.column, end.line - start.line);
+    let frameOrigin = this.viewportPointToDocumentPoint({x: 0, y: 0});
+    const frame = new Frame(this._document, frameOrigin, this._width, this._height);
     const {text, scrollbar} = this._document.decorateFrame(frame);
     this._frozen = false;
     return {frame, text, scrollbar};

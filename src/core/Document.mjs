@@ -2,6 +2,7 @@ import { History } from "./History.mjs";
 import { Text } from "./Text.mjs";
 import { Frame } from "./Frame.mjs";
 import { Viewport } from "./Viewport.mjs";
+import { RoundMode } from "./Metrics.mjs";
 
 export class Document {
   constructor() {
@@ -354,22 +355,32 @@ export class Document {
 
   /**
    * @param {!Point} point
-   * @param {boolean=} rounded
+   * @param {!RoundMode=} roundMode
    * @param {boolean=} strict
    * @return {!Position}
    */
-  pointToPosition(point, rounded, strict) {
-    return this._text.pointToLocation(point, rounded, strict);
+  pointToPosition(point, roundMode = RoundMode.Floor, strict) {
+    return this._text.pointToLocation(point, roundMode, strict);
   }
 
   /**
    * @param {!Point} point
-   * @param {boolean=} rounded
+   * @param {RoundMode=} roundMode
    * @param {boolean=} strict
    * @return {number}
    */
-  pointToOffset(point, rounded, strict) {
-    return this._text.pointToLocation(point, rounded, strict).offset;
+  pointToOffset(point, roundMode = RoundMode.Floor, strict) {
+    return this._text.pointToLocation(point, roundMode, strict).offset;
+  }
+
+  /**
+   * @param {!Point} point
+   * @param {RoundMode=} roundMode
+   * @param {boolean=} strict
+   * @return {!Location}
+   */
+  pointToLocation(point, roundMode = RoundMode.Floor, strict) {
+    return this._text.pointToLocation(point, roundMode, strict);
   }
 
   beforeFrame() {

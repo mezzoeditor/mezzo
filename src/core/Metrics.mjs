@@ -90,6 +90,12 @@ class Measurer {
   }
 };
 
+export let RoundMode = {
+  Floor: 0,
+  Round: 1,
+  Ceil: 2
+};
+
 export let Metrics = {};
 
 /** @type {!Location} */
@@ -320,19 +326,20 @@ Metrics.chunkPositionToLocation = function(chunk, before, position, measurer, st
  * @param {string} chunk
  * @param {!Measurer} measurer
  * @param {number} desired
- * @param {boolean=} rounded
+ * @param {!RoundMode} roundMode
  * @return {!{width: number, length: number, overflow: boolean}}
  */
-Metrics._chunkLengthForWidth = function(chunk, measurer, desired, rounded) {
+Metrics._chunkLengthForWidth = function(chunk, measurer, desired, roundMode) {
   let length = 0;
   let width = 0;
   while (length < chunk.length) {
+    if (width === desired)
+      return {width, length, overflow: false};
     let next = measurer.measureChar(chunk.charCodeAt(length));
     if (width + next > desired) {
-      if (!rounded || desired - width <= width + next - desired)
-        return {width, length, overflow: false};
-      else
-        return {width: width + next, length: length + 1, overflow: false};
+      if (roundMode === RoundMode.Round)
+        roundMode = desired - width <= width + next - desired ? RoundMode.Floor : RoundMode.Ceil;
+      return roundMode === RoundMode.Floor ? {width, length, overflow: false} : {width: width + next, length: length + 1, overflow: false};
     }
     width += next;
     length++;
@@ -345,11 +352,11 @@ Metrics._chunkLengthForWidth = function(chunk, measurer, desired, rounded) {
  * @param {!Location} before
  * @param {!Point} point
  * @param {!Measurer} measurer
- * @param {boolean=} rounded
+ * @param {!RoundMode} roundMode
  * @param {boolean=} strict
  * @return {!Location}
  */
-Metrics.chunkPointToLocation = function(chunk, before, point, measurer, rounded, strict) {
+Metrics.chunkPointToLocation = function(chunk, before, point, measurer, roundMode, strict) {
   let {line, column, offset, x, y} = before;
 
   if (point.y < y || (point.y < y + measurer.defaultHeight && point.x < x))
@@ -372,7 +379,7 @@ Metrics.chunkPointToLocation = function(chunk, before, point, measurer, rounded,
   if (lineEnd === -1)
     lineEnd = chunk.length;
 
-  let {length, width, overflow} = Metrics._chunkLengthForWidth(chunk.substring(index, lineEnd), measurer, point.x - x, rounded);
+  let {length, width, overflow} = Metrics._chunkLengthForWidth(chunk.substring(index, lineEnd), measurer, point.x - x, roundMode);
   if (overflow) {
     if (length !== lineEnd - index)
       throw 'Inconsistent';

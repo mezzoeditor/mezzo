@@ -555,11 +555,11 @@ export class Text {
 
   /**
    * @param {!Point} point
-   * @param {boolean=} rounded
+   * @param {!RoundMode} roundMode
    * @param {boolean=} strict
    * @return {!Location}
    */
-  pointToLocation(point, rounded, strict) {
+  pointToLocation(point, roundMode, strict) {
     if (point.y < 0) {
       if (strict)
         throw 'Point does not belong to text';
@@ -582,7 +582,7 @@ export class Text {
         return this._lastLocation;
       throw 'Point does not belong to text';
     }
-    return Metrics.chunkPointToLocation(found.node.chunk, found.location, point, this._measurer, rounded, strict);
+    return Metrics.chunkPointToLocation(found.node.chunk, found.location, point, this._measurer, roundMode, strict);
   }
 }
 

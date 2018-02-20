@@ -1,3 +1,5 @@
+import { RoundMode } from "./Metrics.mjs";
+
 /**
  * @typedef {{
  *   line: number,
@@ -18,34 +20,32 @@
 export class Frame {
   /**
    * @param {!Document} document
-   * @param {!Position} start
+   * @param {!Point} origin
    * @param {number} width
    * @param {number} height
    */
-  constructor(document, start, width, height) {
-    let startLine = start.line;
-    let startColumn = start.column;
-    let endLine = Math.min(start.line + height, document.lineCount() - 1);
-    let endColumn = startColumn + width;
+  constructor(document, origin, width, height) {
+    let start = document.pointToLocation(origin);
+    let end = document.pointToLocation({x: origin.x + width, y: origin.y + height}, RoundMode.Ceil);
 
     let lines = [];
-    for (let line = startLine; line <= endLine; line++)
+    for (let line = start.line; line <= end.line; line++)
       lines.push({line, start: document.positionToLocation({line, column: 0})});
-    for (let line = startLine; line <= endLine; line++) {
+    for (let line = start.line; line <= end.line; line++) {
       if (line + 1 === document.lineCount()) {
-        lines[line - startLine].end = document.lastLocation();
+        lines[line - start.line].end = document.lastLocation();
       } else {
-        let nextStartOffset = line + 1 <= endLine
-            ? lines[line + 1 - startLine].start.offset
+        let nextStartOffset = line + 1 <= end.line
+            ? lines[line + 1 - start.line].start.offset
             : document.positionToOffset({line: line + 1, column: 0});
-        lines[line - startLine].end = document.offsetToLocation(nextStartOffset - 1);
+        lines[line - start.line].end = document.offsetToLocation(nextStartOffset - 1);
       }
     }
 
     let sum = 0;
     for (let line of lines) {
-      line.from = document.positionToLocation({line: line.line, column: startColumn});
-      line.to = document.positionToLocation({line: line.line, column: endColumn});
+      line.from = document.pointToLocation({x: origin.x, y: line.start.y});
+      line.to = document.pointToLocation({x: origin.x + width, y: line.start.y}, RoundMode.Ceil);
       sum += line.to.offset - line.from.offset;
     }
 
@@ -76,8 +76,9 @@ export class Frame {
       this._range = {from: 0, to: 0};
     else
       this._range = {from: ranges[0].from, to: Math.min(document.length(), ranges[ranges.length - 1].to + 1)};
-    this._startColumn = startColumn;
-    this._endColumn = startColumn + width;
+    this._width = width;
+    this._height = height;
+    this._origin = origin;
   }
 
   /**
@@ -108,17 +109,24 @@ export class Frame {
   }
 
   /**
-   * @return {number}
+   * @return {!Point}
    */
-  startColumn() {
-    return this._startColumn;
+  origin() {
+    return this._origin;
   }
 
   /**
    * @return {number}
    */
-  endColumn() {
-    return this._endColumn;
+  width() {
+    return this._width;
+  }
+
+  /**
+   * @return {number}
+   */
+  height() {
+    return this._height;
   }
 
   /**
@@ -207,6 +215,14 @@ export class Frame {
   }
 
   /**
+   * @param {number} offset
+   * @return {?Point}
+   */
+  offsetToPoint(offset) {
+    return this._document.offsetToPoint(offset);
+  }
+
+  /**
    * @param {!Position} position
    * @param {boolean=} strict
    * @return {number}
@@ -217,11 +233,10 @@ export class Frame {
 
   /**
    * @param {!Point} point
-   * @param {boolean=} strict
    * @return {!Position}
    */
-  pointToPosition(point, strict) {
-    return this._document.pointToPosition(point, strict);
+  pointToPosition(point) {
+    return this._document.pointToPosition(point);
   }
 
   cleanup() {

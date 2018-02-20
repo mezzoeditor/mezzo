@@ -1,5 +1,5 @@
 import {TestRunner, Reporter, Matchers} from '../../utils/testrunner/index.mjs';
-import {Metrics} from './Metrics.mjs';
+import {Metrics, RoundMode} from './Metrics.mjs';
 import {Text} from './Text.mjs';
 import {Document} from './Document.mjs';
 import {Random} from './Random.mjs';
@@ -70,7 +70,7 @@ describe('Metrics', () => {
       expect(Metrics.chunkOffsetToLocation(test.chunk, test.before, test.location.offset, defaultMeasurer)).toEqual(test.location);
       expect(Metrics.chunkPositionToLocation(test.chunk, test.before, test.location, defaultMeasurer)).toEqual(test.location);
       expect(Metrics.chunkPositionToLocation(test.chunk, test.before, test.location, defaultMeasurer, true /* strict */)).toEqual(test.location);
-      expect(Metrics.chunkPointToLocation(test.chunk, test.before, test.location, defaultMeasurer, false /* rounded */, true /* strict */)).toEqual(test.location);
+      expect(Metrics.chunkPointToLocation(test.chunk, test.before, test.location, defaultMeasurer, RoundMode.Floor, true /* strict */)).toEqual(test.location);
     }
 
     let nonStrict = [
@@ -81,7 +81,7 @@ describe('Metrics', () => {
     ];
     for (let test of nonStrict) {
       expect(Metrics.chunkPositionToLocation(test.chunk, test.before, test.position, defaultMeasurer)).toEqual(test.result);
-      expect(Metrics.chunkPointToLocation(test.chunk, test.before, test.point, defaultMeasurer, false /* rounded */)).toEqual(test.result);
+      expect(Metrics.chunkPointToLocation(test.chunk, test.before, test.point, defaultMeasurer, RoundMode.Floor)).toEqual(test.result);
     }
   });
 
@@ -96,9 +96,12 @@ describe('Metrics', () => {
       {point: {x: 5, y: 11}, location: {offset: 15, line: 3, column: 8, x: 5, y: 10}, strict: true},
       {point: {x: 0, y: 13}, location: {offset: 17, line: 4, column: 0, x: 0, y: 13}, strict: true},
       {point: {x: 1, y: 13}, location: {offset: 17, line: 4, column: 0, x: 0, y: 13}, strict: true},
-      {point: {x: 0.9, y: 13}, location: {offset: 17, line: 4, column: 0, x: 0, y: 13}, rounded: true, strict: true},
-      {point: {x: 1.0, y: 13}, location: {offset: 17, line: 4, column: 0, x: 0, y: 13}, rounded: true, strict: true},
-      {point: {x: 1.1, y: 13}, location: {offset: 18, line: 4, column: 1, x: 2, y: 13}, rounded: true, strict: true},
+      {point: {x: 0.9, y: 13}, location: {offset: 17, line: 4, column: 0, x: 0, y: 13}, roundMode: RoundMode.Round, strict: true},
+      {point: {x: 1.0, y: 13}, location: {offset: 17, line: 4, column: 0, x: 0, y: 13}, roundMode: RoundMode.Round, strict: true},
+      {point: {x: 1.1, y: 13}, location: {offset: 18, line: 4, column: 1, x: 2, y: 13}, roundMode: RoundMode.Round, strict: true},
+      {point: {x: 0, y: 13}, location: {offset: 17, line: 4, column: 0, x: 0, y: 13}, roundMode: RoundMode.Ceil, strict: true},
+      {point: {x: 1.0, y: 13}, location: {offset: 18, line: 4, column: 1, x: 2, y: 13}, roundMode: RoundMode.Ceil, strict: true},
+      {point: {x: 1.1, y: 13}, location: {offset: 18, line: 4, column: 1, x: 2, y: 13}, roundMode: RoundMode.Ceil, strict: true},
       {point: {x: 2, y: 13}, location: {offset: 18, line: 4, column: 1, x: 2, y: 13}, strict: true},
       {point: {x: 42, y: 15}, location: {offset: 18, line: 4, column: 1, x: 2, y: 13}},
       {point: {x: 0, y: 16}, location: {offset: 19, line: 5, column: 0, x: 0, y: 16}, strict: true},
@@ -110,7 +113,7 @@ describe('Metrics', () => {
       {point: {x: 42, y: 19}, location: {offset: 27, line: 6, column: 3, x: 6, y: 19}},
     ];
     for (let test of tests)
-      expect(Metrics.chunkPointToLocation(chunk, before, test.point, testMeasurer, !!test.rounded, !!test.strict)).toEqual(test.location);
+      expect(Metrics.chunkPointToLocation(chunk, before, test.point, testMeasurer, test.roundMode || RoundMode.Floor, !!test.strict)).toEqual(test.location);
   });
 });
 
@@ -177,18 +180,21 @@ describe('Text', () => {
       for (let {line, column, offset, x, y, nonStrict, rounded} of locationQueries) {
         if (nonStrict) {
           expect(text.positionToLocation({line, column: nonStrict.column})).toEqual({line, column, offset, x, y});
-          expect(text.pointToLocation({x: nonStrict.x, y})).toEqual({line, column, offset, x, y});
+          expect(text.pointToLocation({x: nonStrict.x, y}, RoundMode.Floor)).toEqual({line, column, offset, x, y});
         } else {
           expect(text.offsetToLocation(offset)).toEqual({line, column, offset, x, y});
           expect(text.positionToLocation({line, column})).toEqual({line, column, offset, x, y});
           expect(text.positionToLocation({line, column}, true)).toEqual({line, column, offset, x, y});
-          expect(text.pointToLocation({x, y})).toEqual({line, column, offset, x, y});
-          expect(text.pointToLocation({x: x + 0.5, y: y + 0.5}, false /* rounded */, false /* strict */)).toEqual({line, column, offset, x, y});
-          expect(text.pointToLocation({x, y}, false /* rounded */, true /* strict */)).toEqual({line, column, offset, x, y});
+          expect(text.pointToLocation({x, y}, RoundMode.Floor)).toEqual({line, column, offset, x, y});
+          expect(text.pointToLocation({x: x + 0.5, y: y + 0.5}, RoundMode.Floor, false /* strict */)).toEqual({line, column, offset, x, y});
+          expect(text.pointToLocation({x, y}, RoundMode.Floor, true /* strict */)).toEqual({line, column, offset, x, y});
           if (rounded) {
-            expect(text.pointToLocation({x: x + 0.4, y}, true /* rounded */, true /* strict */)).toEqual({line, column, offset, x, y});
-            expect(text.pointToLocation({x: x + 0.5, y}, true /* rounded */, true /* strict */)).toEqual({line, column, offset, x, y});
-            expect(text.pointToLocation({x: x + 0.6, y}, true /* rounded */, true /* strict */)).toEqual({line, column: column + 1, offset: offset + 1, x: x + 1, y});
+            expect(text.pointToLocation({x: x + 0.4, y}, RoundMode.Round, true /* strict */)).toEqual({line, column, offset, x, y});
+            expect(text.pointToLocation({x: x + 0.5, y}, RoundMode.Round, true /* strict */)).toEqual({line, column, offset, x, y});
+            expect(text.pointToLocation({x: x + 0.6, y}, RoundMode.Round, true /* strict */)).toEqual({line, column: column + 1, offset: offset + 1, x: x + 1, y});
+            expect(text.pointToLocation({x, y}, RoundMode.Ceil, true /* strict */)).toEqual({line, column, offset, x, y});
+            expect(text.pointToLocation({x: x + 0.5, y}, RoundMode.Ceil, true /* strict */)).toEqual({line, column: column + 1, offset: offset + 1, x: x + 1, y});
+            expect(text.pointToLocation({x: x + 1, y}, RoundMode.Ceil, true /* strict */)).toEqual({line, column: column + 1, offset: offset + 1, x: x + 1, y});
           }
         }
       }
