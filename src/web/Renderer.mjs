@@ -473,13 +473,13 @@ export class Renderer {
     const {lineHeight, charWidth} = this._metrics;
     const textOffset = this._metrics.textOffset();
     const lines = frame.lines();
-    const startColumn = frame.startPosition().column;
-    const endColumn = frame.endPosition().column;
+    const startColumn = frame.startColumn();
+    const endColumn = frame.endColumn();
 
     for (let decorator of textDecorators) {
       for (let line of lines) {
         let lineContent = frame.lineContent(line);
-        decorator.visitTouching(line.from, line.to, decoration => {
+        decorator.visitTouching(line.from.offset, line.to.offset, decoration => {
           this._counters.set('decorations-text', (this._counters.get('decorations-text') || 0) + 1);
           const style = this._theme[decoration.data];
           if (!style)
@@ -487,11 +487,11 @@ export class Renderer {
 
           if (style.text) {
             ctx.fillStyle = style.text.color || 'rgb(33, 33, 33)';
-            let from = Math.max(line.from, decoration.from);
-            let to = Math.min(line.to, decoration.to);
+            let from = Math.max(line.from.offset, decoration.from);
+            let to = Math.min(line.to.offset, decoration.to);
             if (from < to) {
-              let text = lineContent.substring(from - line.from, to - line.from);
-              let column = from - line.from + startColumn;
+              let text = lineContent.substring(from - line.from.offset, to - line.from.offset);
+              let column = from - line.from.offset + startColumn;
               ctx.fillText(text, column * charWidth, line.start.y + textOffset);
             }
           }

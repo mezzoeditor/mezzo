@@ -3,8 +3,8 @@
  *   line: number,
  *   start: !Location,
  *   end: !Location,
- *   from: number,
- *   to: number
+ *   from: !Location,
+ *   to: !Location
  * }} Line;
  */
 
@@ -44,14 +44,14 @@ export class Frame {
 
     let sum = 0;
     for (let line of lines) {
-      line.from = Math.min(line.start.offset + startColumn, line.end.offset);
-      line.to = Math.min(line.start.offset + endColumn, line.end.offset);
-      sum += line.to - line.from;
+      line.from = document.positionToLocation({line: line.line, column: startColumn});
+      line.to = document.positionToLocation({line: line.line, column: endColumn});
+      sum += line.to.offset - line.from.offset;
     }
 
     let diffs = [];
     for (let i = 0; i < lines.length - 1; i++)
-      diffs[i] = {i, len: lines[i + 1].from - lines[i].to};
+      diffs[i] = {i, len: lines[i + 1].from.offset - lines[i].to.offset};
     diffs.sort((a, b) => a.len - b.len || a.i - b.i);
     let join = new Array(lines.length).fill(false);
     let remaining = sum * 0.5;
@@ -64,22 +64,20 @@ export class Frame {
     let ranges = [];
     for (let i = 0; i < lines.length; i++) {
       if (i && join[i - 1])
-        ranges[ranges.length - 1].to = lines[i].to;
+        ranges[ranges.length - 1].to = lines[i].to.offset;
       else
-        ranges.push({from: lines[i].from, to: lines[i].to});
+        ranges.push({from: lines[i].from.offset, to: lines[i].to.offset});
     }
 
     this._document = document;
     this._lines = lines;
     this._ranges = ranges;
-    this._startLine = startLine;
-    this._endLine = endLine;
     if (!ranges.length)
       this._range = {from: 0, to: 0};
     else
       this._range = {from: ranges[0].from, to: Math.min(document.length(), ranges[ranges.length - 1].to + 1)};
-    this._startPosition = start;
-    this._endPosition = {line: start.line + height, column: start.column + width};
+    this._startColumn = startColumn;
+    this._endColumn = startColumn + width;
   }
 
   /**
@@ -110,17 +108,17 @@ export class Frame {
   }
 
   /**
-   * @return {!Position}
+   * @return {number}
    */
-  startPosition() {
-    return this._startPosition;
+  startColumn() {
+    return this._startColumn;
   }
 
   /**
-   * @return {!Position}
+   * @return {number}
    */
-  endPosition() {
-    return this._endPosition;
+  endColumn() {
+    return this._endColumn;
   }
 
   /**
@@ -139,7 +137,7 @@ export class Frame {
   lineContent(line, paddingLeft = 0, paddingRight = 0) {
     if (!line._cache)
       line._cache = {};
-    return this._content(line.from, line.to, line._cache, paddingLeft, paddingRight);
+    return this._content(line.from.offset, line.to.offset, line._cache, paddingLeft, paddingRight);
   }
 
   /**
