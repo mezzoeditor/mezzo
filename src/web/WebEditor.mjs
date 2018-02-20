@@ -107,6 +107,13 @@ export class WebEditor {
   }
 
   /**
+   * @param {boolean} monospace
+   */
+  setUseMonospaceFont(monospace) {
+    this._renderer.setUseMonospaceFont(monospace);
+  }
+
+  /**
    * @param {!Document} domDocument
    */
   _createDOM(domDocument) {

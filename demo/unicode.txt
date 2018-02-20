@@ -13,3 +13,10 @@ aaaaaaaaaaaaa
 Narrow chars: ｱｲｳ
 ｱ1ｲ2ｳ3
 aaaaaa
+
+Fun with non-monospace font:
+iiiiiiiiiiii
+MMMMMMMMMMMM
+iiiiMMMMiiii
+MMMMiiiiMMMM
+

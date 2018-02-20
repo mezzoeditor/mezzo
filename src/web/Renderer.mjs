@@ -14,10 +14,11 @@ class MonospaceFontMetrics {
   }
 }
 
-class MonospaceMeasurer {
-  constructor(ctx) {
+class CtxMeasurer {
+  constructor(ctx, monospace) {
     this._ctx = ctx;
-    this.defaultWidth = this._ctx.measureText('M').width;
+    this._monospace = monospace;
+    this.defaultWidth = monospace ? this._ctx.measureText('M').width : 0;
     this.defaultHeight = 20;
     this._map = new Float32Array(65536);
     this._default = new Uint8Array(65536);
@@ -28,7 +29,7 @@ class MonospaceMeasurer {
     if (!chunk)
       return 0;
 
-    if (MonospaceMeasurer._asciiRegex.test(chunk))
+    if (this._monospace && CtxMeasurer._asciiRegex.test(chunk))
       return 0;
 
     let defaults = 0;
@@ -59,7 +60,7 @@ class MonospaceMeasurer {
   }
 };
 
-MonospaceMeasurer._asciiRegex = /^[\u{0020}-\u{007e}]*$/u;
+CtxMeasurer._asciiRegex = /^[\u{0020}-\u{007e}]*$/u;
 
 const MIN_THUMB_SIZE = 30;
 const GUTTER_PADDING_LEFT_RIGHT = 4;
@@ -97,6 +98,7 @@ export class Renderer {
     this._canvas = domDocument.createElement('canvas');
     this._document = document;
     this._theme = theme;
+    this._monospace = true;
 
     this._animationFrameId = 0;
 
@@ -104,7 +106,7 @@ export class Renderer {
     this._cssHeight = 0;
     this._ratio = this._getRatio();
     this._metrics = this._computeMonospaceFontMetrics();
-    this._document.setMeasurer(new MonospaceMeasurer(this._canvas.getContext('2d')));
+    this._document.setMeasurer(new CtxMeasurer(this._canvas.getContext('2d'), this._monospace));
     this._viewport = document.createViewport(this._metrics.lineHeight, this._metrics.charWidth);
     this._viewport.setInvalidateCallback(() => this.invalidate());
     this._viewport.setRevealCallback(() => this.invalidate());
@@ -188,7 +190,17 @@ export class Renderer {
     this._canvas.style.height = cssHeight + 'px';
     this._metrics = this._computeMonospaceFontMetrics();
     // TODO: doing this unconditionally is slow.
-    // this._document.setMeasurer(new MonospaceMeasurer(this._canvas.getContext('2d')));
+    // this._document.setMeasurer(new CtxMeasurer(this._canvas.getContext('2d'), this._monospace));
+    this.invalidate();
+  }
+
+  /**
+   * @param {boolean} monospace
+   */
+  setUseMonospaceFont(monospace) {
+    this._monospace = monospace;
+    this._metrics = this._computeMonospaceFontMetrics();
+    this._document.setMeasurer(new CtxMeasurer(this._canvas.getContext('2d'), this._monospace));
     this.invalidate();
   }
 
@@ -204,7 +216,7 @@ export class Renderer {
    */
   _computeMonospaceFontMetrics() {
     const ctx = this._canvas.getContext('2d');
-    ctx.font = '14px monospace';
+    ctx.font = this._monospace ? '14px monospace' : '14px sans-serif';
     ctx.textBaseline = 'top';
 
     const metrics = ctx.measureText('M');

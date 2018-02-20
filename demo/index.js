@@ -98,6 +98,9 @@ document.addEventListener('DOMContentLoaded', () => {
   addExamples(editor);
   addHighlights(editor);
   addSearch(editor);
+  document.querySelector('.ismonospace').addEventListener('change', event => {
+    editor.setUseMonospaceFont(event.target.checked);
+  }, false);
 
   editor.element().classList.add('editor');
   document.body.appendChild(editor.element());
