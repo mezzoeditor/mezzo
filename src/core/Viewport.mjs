@@ -170,32 +170,6 @@ export class Viewport {
   }
 
   /**
-   * @param {!Point} point
-   * @return {!Position}
-   * TODO: this method should go.
-   */
-  viewportPointToDocumentPosition({x, y}) {
-    x += this._scrollLeft - this._padding.left;
-    y += this._scrollTop - this._padding.top;
-    return {
-      line: Math.max(Math.floor(y / this._metrics.lineHeight), 0),
-      column: Math.max(Math.floor(x / this._metrics.charWidth), 0),
-    };
-  }
-
-  /**
-   * @param {!Position} position
-   * @return {!Point}
-   * TODO: this method should go.
-   */
-  documentPositionToViewPoint({line, column}) {
-    return {
-      x: column * this._metrics.charWidth + this._padding.left,
-      y: line * this._metrics.lineHeight + this._padding.top,
-    };
-  }
-
-  /**
    * @param {number} offset
    */
   reveal(offset) {

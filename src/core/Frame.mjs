@@ -160,6 +160,14 @@ export class Frame {
   }
 
   /**
+   * @param {number} offset
+   * @return {?Location}
+   */
+  offsetToLocation(offset) {
+    return this._document.offsetToLocation(offset);
+  }
+
+  /**
    * @param {!Position} position
    * @param {boolean=} strict
    * @return {number}

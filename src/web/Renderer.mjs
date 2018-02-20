@@ -579,13 +579,13 @@ export class Renderer {
       let lastBottom = -1;
       decorator.sparseVisitAll(decoration => {
         this._counters.set('decorations-scrollbar', (this._counters.get('decorations-scrollbar') || 0) + 1);
-        const from = frame.offsetToPosition(decoration.from);
-        const to = frame.offsetToPosition(decoration.to);
+        const from = frame.offsetToLocation(decoration.from);
+        const to = frame.offsetToLocation(decoration.to);
 
-        let top = scrollbar.contentOffsetToScrollbarOffset(this._viewport.documentPositionToViewPoint(from).y);
-        let bottom = scrollbar.contentOffsetToScrollbarOffset(this._viewport.documentPositionToViewPoint({
-          line: to.line + 1,
-          column: 0
+        let top = scrollbar.contentOffsetToScrollbarOffset(this._viewport.documentPointToViewPoint(from).y);
+        let bottom = scrollbar.contentOffsetToScrollbarOffset(this._viewport.documentPointToViewPoint({
+          x: 0,
+          y: to.y + frame.document().measurer().defaultHeight
         }).y);
         bottom = Math.max(bottom, top + kMinScrollbarDecorationHeight);
 
