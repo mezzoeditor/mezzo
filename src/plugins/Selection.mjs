@@ -1,12 +1,13 @@
 import { ScrollbarDecorator } from "../core/Decorator.mjs";
 import { Tokenizer } from "../core/Tokenizer.mjs";
+import { RoundMode } from "../core/Metrics.mjs";
 
 /**
  * @typedef {{
  *   anchor: number,
  *   focus: number,
  *   id: number,
- *   upDownColumn: number
+ *   upDownX: number
  * }} SelectionRange;
  */
 
@@ -57,7 +58,7 @@ export class Selection {
     this._document.begin('selection');
     this._ranges = this._rebuild(ranges.map(range => ({
       id: ++this._lastId,
-      upDownColumn: -1,
+      upDownX: -1,
       anchor: range.from,
       focus: range.to
     })));
@@ -88,7 +89,7 @@ export class Selection {
     this._document.begin('selection');
     let newRanges = [];
     for (let i = 0; i < ranges.length; i++)
-      newRanges.push({id: this._ranges[i].id, upDownColumn: -1, anchor: ranges[i].from, focus: ranges[i].to});
+      newRanges.push({id: this._ranges[i].id, upDownX: -1, anchor: ranges[i].from, focus: ranges[i].to});
     this._ranges = this._rebuild(newRanges);
     this._document.end('selection');
     this._staleDecorations = true;
@@ -152,9 +153,9 @@ export class Selection {
         end += inserted;
 
       if (range.anchor > range.focus)
-        ranges.push({id: range.id, upDownColumn: -1, anchor: end, focus: start});
+        ranges.push({id: range.id, upDownX: -1, anchor: end, focus: start});
       else
-        ranges.push({id: range.id, upDownColumn: -1, anchor: start, focus: end});
+        ranges.push({id: range.id, upDownX: -1, anchor: start, focus: end});
     }
     this._ranges = this._rebuild(ranges);
     this._staleDecorations = true;
@@ -204,7 +205,7 @@ export class Selection {
     this._document.begin('selection');
     switch (command) {
       case 'selection.select.all': {
-        this._ranges = [{anchor: 0, focus: this._document.length(), upDownColumn: -1, id: ++this._lastId}];
+        this._ranges = [{anchor: 0, focus: this._document.length(), upDownX: -1, id: ++this._lastId}];
         break;
       }
       case 'selection.move.left': {
@@ -213,7 +214,7 @@ export class Selection {
           let offset = Math.min(range.anchor, range.focus);
           if (range.anchor === range.focus)
             offset = Math.max(0, range.focus - 1);
-          ranges.push({id: range.id, upDownColumn: -1, anchor: offset, focus: offset});
+          ranges.push({id: range.id, upDownX: -1, anchor: offset, focus: offset});
         }
         this._ranges = this._join(ranges);
         break;
@@ -222,7 +223,7 @@ export class Selection {
         let ranges = [];
         for (let range of this._ranges) {
           let offset = Tokenizer.previousWord(this._document, range.focus);
-          ranges.push({id: range.id, upDownColumn: -1, anchor: offset, focus: offset});
+          ranges.push({id: range.id, upDownX: -1, anchor: offset, focus: offset});
         }
         this._ranges = this._join(ranges);
         break;
@@ -230,14 +231,14 @@ export class Selection {
       case 'selection.select.left': {
         let ranges = [];
         for (let range of this._ranges)
-          ranges.push({id: range.id, upDownColumn: -1, anchor: range.anchor, focus: Math.max(0, range.focus - 1)});
+          ranges.push({id: range.id, upDownX: -1, anchor: range.anchor, focus: Math.max(0, range.focus - 1)});
         this._ranges = this._join(ranges);
         break;
       }
       case 'selection.select.word.left': {
         let ranges = [];
         for (let range of this._ranges)
-          ranges.push({id: range.id, upDownColumn: -1, anchor: range.anchor, focus: Tokenizer.previousWord(this._document, range.focus)});
+          ranges.push({id: range.id, upDownX: -1, anchor: range.anchor, focus: Tokenizer.previousWord(this._document, range.focus)});
         this._ranges = this._join(ranges);
         break;
       }
@@ -247,7 +248,7 @@ export class Selection {
           let offset = Math.max(range.anchor, range.focus);
           if (range.anchor === range.focus)
             offset = Math.min(this._document.length(), range.focus + 1);
-          ranges.push({id: range.id, upDownColumn: -1, anchor: offset, focus: offset});
+          ranges.push({id: range.id, upDownX: -1, anchor: offset, focus: offset});
         }
         this._ranges = this._join(ranges);
         break;
@@ -256,7 +257,7 @@ export class Selection {
         let ranges = [];
         for (let range of this._ranges) {
           let offset = Tokenizer.nextWord(this._document, range.focus);
-          ranges.push({id: range.id, upDownColumn: -1, anchor: offset, focus: offset});
+          ranges.push({id: range.id, upDownX: -1, anchor: offset, focus: offset});
         }
         this._ranges = this._join(ranges);
         break;
@@ -265,7 +266,7 @@ export class Selection {
         this._upDownCleared = true;
         let ranges = [];
         for (let range of this._ranges)
-          ranges.push({id: range.id, upDownColumn: -1, anchor: range.anchor, focus: Math.min(this._document.length(), range.focus + 1)});
+          ranges.push({id: range.id, upDownX: -1, anchor: range.anchor, focus: Math.min(this._document.length(), range.focus + 1)});
         this._ranges = this._join(ranges);
         break;
       }
@@ -273,7 +274,7 @@ export class Selection {
         this._upDownCleared = true;
         let ranges = [];
         for (let range of this._ranges)
-          ranges.push({id: range.id, upDownColumn: -1, anchor: range.anchor, focus: Tokenizer.nextWord(this._document, range.focus)});
+          ranges.push({id: range.id, upDownX: -1, anchor: range.anchor, focus: Tokenizer.nextWord(this._document, range.focus)});
         this._ranges = this._join(ranges);
         break;
       }
@@ -281,19 +282,13 @@ export class Selection {
         let ranges = [];
         for (let range of this._ranges) {
           let offset = Math.min(range.anchor, range.focus);
-          let upDownColumn = range.upDownColumn;
+          let upDownX = range.upDownX;
           if (range.anchor === range.focus) {
-            let {line, column} = this._document.offsetToPosition(range.focus);
-            let upDownColumn = range.upDownColumn === -1 ? column : range.upDownColumn;
-            if (line) {
-              line--;
-              column = upDownColumn;
-            } else {
-              column = 0;
-            }
-            offset = this._document.positionToOffset({line, column});
+            let upResult = this._lineUp(range.focus, range.upDownX);
+            offset = upResult.offset;
+            upDownX = upResult.upDownX;
           }
-          ranges.push({id: range.id, upDownColumn, anchor: offset, focus: offset});
+          ranges.push({id: range.id, upDownX, anchor: offset, focus: offset});
         }
         this._ranges = this._join(ranges);
         break;
@@ -301,16 +296,8 @@ export class Selection {
       case 'selection.select.up': {
         let ranges = [];
         for (let range of this._ranges) {
-          let {line, column} = this._document.offsetToPosition(range.focus);
-          let upDownColumn = range.upDownColumn === -1 ? column : range.upDownColumn;
-          if (line) {
-            line--;
-            column = upDownColumn;
-          } else {
-            column = 0;
-          }
-          let focus = this._document.positionToOffset({line, column});
-          ranges.push({id: range.id, upDownColumn, anchor: range.anchor, focus});
+          let {offset, upDownX} = this._lineUp(range.focus, range.upDownX);
+          ranges.push({id: range.id, upDownX, anchor: range.anchor, focus: offset});
         }
         this._ranges = this._join(ranges);
         break;
@@ -319,19 +306,13 @@ export class Selection {
         let ranges = [];
         for (let range of this._ranges) {
           let offset = Math.max(range.anchor, range.focus);
-          let upDownColumn = range.upDownColumn;
+          let upDownX = range.upDownX;
           if (range.anchor === range.focus) {
-            let {line, column} = this._document.offsetToPosition(range.focus);
-            let upDownColumn = range.upDownColumn === -1 ? column : range.upDownColumn;
-            if (line < this._document.lineCount() - 1) {
-              line++;
-              column = upDownColumn;
-            } else {
-              column = this._document.length();
-            }
-            offset = this._document.positionToOffset({line, column});
+            let upResult = this._lineDown(range.focus, range.upDownX);
+            offset = upResult.offset;
+            upDownX = upResult.upDownX;
           }
-          ranges.push({id: range.id, upDownColumn, anchor: offset, focus: offset});
+          ranges.push({id: range.id, upDownX, anchor: offset, focus: offset});
         }
         this._ranges = this._join(ranges);
         break;
@@ -339,16 +320,8 @@ export class Selection {
       case 'selection.select.down': {
         let ranges = [];
         for (let range of this._ranges) {
-          let {line, column} = this._document.offsetToPosition(range.focus);
-          let upDownColumn = range.upDownColumn === -1 ? column : range.upDownColumn;
-          if (line < this._document.lineCount() - 1) {
-            line++;
-            column = upDownColumn;
-          } else {
-            column = this._document.length();
-          }
-          let focus = this._document.positionToOffset({line, column});
-          ranges.push({id: range.id, upDownColumn, anchor: range.anchor, focus});
+          let {offset, upDownX} = this._lineDown(range.focus, range.upDownX);
+          ranges.push({id: range.id, upDownX, anchor: range.anchor, focus: offset});
         }
         this._ranges = this._join(ranges);
         break;
@@ -357,7 +330,7 @@ export class Selection {
         let ranges = [];
         for (let range of this._ranges) {
           let offset = this._lineStartOffset(range.focus);
-          ranges.push({id: range.id, upDownColumn: -1, anchor: offset, focus: offset});
+          ranges.push({id: range.id, upDownX: -1, anchor: offset, focus: offset});
         }
         this._ranges = this._join(ranges);
         break;
@@ -366,7 +339,7 @@ export class Selection {
         let ranges = [];
         for (let range of this._ranges) {
           let focus = this._lineStartOffset(range.focus);
-          ranges.push({id: range.id, upDownColumn: -1, anchor: range.anchor, focus});
+          ranges.push({id: range.id, upDownX: -1, anchor: range.anchor, focus});
         }
         this._ranges = this._join(ranges);
         break;
@@ -375,7 +348,7 @@ export class Selection {
         let ranges = [];
         for (let range of this._ranges) {
           let offset = this._lineEndOffset(range.focus);
-          ranges.push({id: range.id, upDownColumn: -1, anchor: offset, focus: offset});
+          ranges.push({id: range.id, upDownX: -1, anchor: offset, focus: offset});
         }
         this._ranges = this._join(ranges);
         break;
@@ -384,7 +357,7 @@ export class Selection {
         let ranges = [];
         for (let range of this._ranges) {
           let focus = this._lineEndOffset(range.focus);
-          ranges.push({id: range.id, upDownColumn: -1, anchor: range.anchor, focus});
+          ranges.push({id: range.id, upDownX: -1, anchor: range.anchor, focus});
         }
         this._ranges = this._join(ranges);
         break;
@@ -407,7 +380,7 @@ export class Selection {
     for (let range of this._ranges) {
       if (range.anchor !== range.focus)
         collapsed = true;
-      ranges.push({id: range.id, upDownColumn: -1, anchor: range.anchor, focus: range.anchor});
+      ranges.push({id: range.id, upDownX: -1, anchor: range.anchor, focus: range.anchor});
     }
     if (!collapsed)
       return false;
@@ -492,6 +465,32 @@ export class Selection {
     if (position.line == this._document.lineCount() - 1)
       return this._document.length();
     return this._document.positionToOffset({line: position.line + 1, column: 0}) - 1;
+  }
+
+  /**
+   * @param {number} offset
+   * @param {number} upDownX
+   * @return {!{offset: number, upDownX: number}}
+   */
+  _lineUp(offset, upDownX) {
+    let location = this._document.offsetToLocation(offset);
+    if (upDownX === -1)
+      upDownX = location.x;
+    offset = this._document.pointToOffset({x: upDownX, y: location.y - this._document.measurer().defaultHeight}, RoundMode.Round);
+    return {offset, upDownX};
+  }
+
+  /**
+   * @param {number} offset
+   * @param {number} upDownX
+   * @return {!{offset: number, upDownX: number}}
+   */
+  _lineDown(offset, upDownX) {
+    let location = this._document.offsetToLocation(offset);
+    if (upDownX === -1)
+      upDownX = location.x;
+    offset = this._document.pointToOffset({x: upDownX, y: location.y + this._document.measurer().defaultHeight}, RoundMode.Round);
+    return {offset, upDownX};
   }
 };
 
