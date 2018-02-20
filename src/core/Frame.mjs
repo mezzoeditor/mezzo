@@ -1,15 +1,5 @@
 import { RoundMode } from "./Metrics.mjs";
 
-/**
- * @typedef {{
- *   line: number,
- *   start: !Location,
- *   end: !Location,
- *   from: !Location,
- *   to: !Location
- * }} Line;
- */
-
 export class Frame {
   /**
    * @param {!Document} document
@@ -22,32 +12,29 @@ export class Frame {
     let end = document.pointToLocation({x: origin.x + width, y: origin.y + height}, RoundMode.Ceil);
 
     let lines = [];
-    for (let line = start.line; line <= end.line; line++)
-      lines.push({line, start: document.positionToLocation({line, column: 0})});
-    for (let line = start.line; line <= end.line; line++) {
-      if (line + 1 === document.lineCount()) {
-        lines[line - start.line].end = document.lastLocation();
-      } else {
-        let nextStartOffset = line + 1 <= end.line
-            ? lines[line + 1 - start.line].start.offset
+    let totalVisibleRange = 0;
+    for (let line = end.line; line >= start.line; line--) {
+      let start = document.positionToLocation({line, column: 0});
+      let end = document.lastLocation();
+      if (line + 1 < document.lineCount()) {
+        let nextStartOffset = lines.length
+            ? lines[lines.length - 1].start.offset
             : document.positionToOffset({line: line + 1, column: 0});
-        lines[line - start.line].end = document.offsetToLocation(nextStartOffset - 1);
+        end = document.offsetToLocation(nextStartOffset - 1);
       }
+      let from = document.pointToLocation({x: origin.x, y: start.y});
+      let to = document.pointToLocation({x: origin.x + width, y: start.y}, RoundMode.Ceil);
+      lines.push(new Frame.Line(document, line, start, end, from, to));
+      totalVisibleRange += to.offset - from.offset;
     }
-
-    let sum = 0;
-    for (let line of lines) {
-      line.from = document.pointToLocation({x: origin.x, y: line.start.y});
-      line.to = document.pointToLocation({x: origin.x + width, y: line.start.y}, RoundMode.Ceil);
-      sum += line.to.offset - line.from.offset;
-    }
+    lines.reverse();
 
     let diffs = [];
     for (let i = 0; i < lines.length - 1; i++)
       diffs[i] = {i, len: lines[i + 1].from.offset - lines[i].to.offset};
     diffs.sort((a, b) => a.len - b.len || a.i - b.i);
     let join = new Array(lines.length).fill(false);
-    let remaining = sum * 0.5;
+    let remaining = totalVisibleRange * 0.5;
     for (let diff of diffs) {
       remaining -= diff.len;
       if (remaining < 0)
@@ -104,22 +91,10 @@ export class Frame {
   }
 
   /**
-   * @return {!Array<!Line>}
+   * @return {!Array<!Frame.Line>}
    */
   lines() {
     return this._lines;
-  }
-
-  /**
-   * @param {!Line} line
-   * @param {number} paddingLeft
-   * @param {number} paddingRight
-   * @return {string}
-   */
-  lineContent(line, paddingLeft = 0, paddingRight = 0) {
-    if (!line._cache)
-      line._cache = {};
-    return cachedContent(this._document, line.from.offset, line.to.offset, line._cache, paddingLeft, paddingRight);
   }
 
   /**
@@ -142,9 +117,9 @@ export class Frame {
    * @return {string}
    */
   content(paddingLeft = 0, paddingRight = 0) {
-    if (!this._range._cache)
-      this._range._cache = {};
-    return cachedContent(this._document, this._range.from, this._range.to, this._range._cache, paddingLeft, paddingRight);
+    if (!this._cache)
+      this._cache = {};
+    return cachedContent(this._document, this._range.from, this._range.to, this._cache, paddingLeft, paddingRight);
   }
 
   /**
@@ -202,7 +177,7 @@ export class Frame {
   }
 
   cleanup() {
-    delete this._range._cache;
+    delete this._cache;
     for (let line of this._lines)
       delete line._cache;
     for (let range of this._ranges)
@@ -232,16 +207,35 @@ Frame.Range = class {
       this._cache = {};
     return cachedContent(this._document, this.from, this.to, this._cache, paddingLeft, paddingRight);
   }
+};
+
+Frame.Line = class {
+  /**
+   * @param {!Document} document
+   * @param {number} line
+   * @param {!Location} start
+   * @param {!Location} end
+   * @param {!Location} from
+   * @param {!Location} to
+   */
+  constructor(document, line, start, end, from, to) {
+    this._document = document;
+    this.line = line;
+    this.start = start;
+    this.end = end;
+    this.from = from;
+    this.to = to;
+  }
 
   /**
    * @param {number=} paddingLeft
    * @param {number=} paddingRight
-   * @return {!Text.Iterator}
+   * @return {string}
    */
-  iterator(paddingLeft = 0, paddingRight = 0) {
-    let from = Math.max(0, this.from - paddingLeft);
-    let to = Math.min(this._document.length(), this.to + paddingRight);
-    return this._document.iterator(from, from, to);
+  content(paddingLeft = 0, paddingRight = 0) {
+    if (!this._cache)
+      this._cache = {};
+    return cachedContent(this._document, this.from.offset, this.to.offset, this._cache, paddingLeft, paddingRight);
   }
 };
 
