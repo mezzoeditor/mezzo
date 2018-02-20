@@ -17,7 +17,7 @@
 * [x] keyboard bindings
 * [ ] auto-indent
 * [ ] instant indent block
-* [ ] inline widgets (width = multiple of character)
+* [ ] inline widgets (width = multiple of character when using monospace)
 * [ ] gutter widgets
 * [ ] multi-line widgets
 * [ ] font settings
@@ -35,7 +35,8 @@
 * [ ] syntax checking
 * [ ] folding
 * [ ] bidi
-* [ ] non-monospace font
+* [x] non-monospace font
+* [ ] code units with multiple code points
 * [ ] spell checking
 * [ ] indent guides
 * [ ] minimap
