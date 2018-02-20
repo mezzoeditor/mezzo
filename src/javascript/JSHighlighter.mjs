@@ -36,7 +36,7 @@ export class JSHighlighter {
       }
 
       this._speculativeHighlight.clearTouching(from + 1, range.to);
-      let iterator = frame.document().iterator(from, from, range.to);
+      let iterator = range.iterator();
       let tt = new Parser({allowHashBang: true}, iterator);
       for (let token of tt) {
         if (token.type.keyword || (token.type === TokenTypes.name && token.value === 'let')) {

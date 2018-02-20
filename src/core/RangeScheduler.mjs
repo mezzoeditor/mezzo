@@ -62,7 +62,7 @@ export class RangeScheduler {
 
     let didProcessSomething = false;
     for (let range of frame.ranges()) {
-      let processingRange = this._visibleRangeToProcessingRange(range);
+      let processingRange = this._visibleRangeToProcessingRange({from: range.from, to: range.to});
       if (processingRange) {
         this._processed(this._processRange(processingRange));
         didProcessSomething = true;

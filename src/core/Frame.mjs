@@ -10,13 +10,6 @@ import { RoundMode } from "./Metrics.mjs";
  * }} Line;
  */
 
-/**
- * @typedef {{
- *   from: number,
- *   to: number
- * }} Range;
- */
-
 export class Frame {
   /**
    * @param {!Document} document
@@ -61,12 +54,13 @@ export class Frame {
         break;
       join[diff.i] = true;
     }
+
     let ranges = [];
     for (let i = 0; i < lines.length; i++) {
       if (i && join[i - 1])
         ranges[ranges.length - 1].to = lines[i].to.offset;
       else
-        ranges.push({from: lines[i].from.offset, to: lines[i].to.offset});
+        ranges.push(new Frame.Range(document, lines[i].from.offset, lines[i].to.offset));
     }
 
     this._document = document;
@@ -75,30 +69,10 @@ export class Frame {
     if (!ranges.length)
       this._range = {from: 0, to: 0};
     else
-      this._range = {from: ranges[0].from, to: Math.min(document.length(), ranges[ranges.length - 1].to + 1)};
+      this._range = {from: ranges[0].from, to: Math.min(document.length(), ranges[ranges.length - 1].to)};
     this._width = width;
     this._height = height;
     this._origin = origin;
-  }
-
-  /**
-   * @param {number} from
-   * @param {number} to
-   * @param {{content: string, left: number, right: number}} cache
-   * @param {number} left
-   * @param {number} right
-   * @return {string}
-   */
-  _content(from, to, cache, left, right) {
-    left = Math.min(left, from);
-    right = Math.min(right, this._document.length() - to);
-    if (cache._content === undefined || cache._left < left || cache._right < right) {
-      cache._left = Math.max(left, cache._left || 0);
-      cache._right = Math.max(right, cache._right || 0);
-      cache._content = this._document.content(from - cache._left, to + cache._right);
-    }
-    return cache._content.substring(cache._left - left,
-                                    cache._content.length - (cache._right - right));
   }
 
   /**
@@ -145,26 +119,14 @@ export class Frame {
   lineContent(line, paddingLeft = 0, paddingRight = 0) {
     if (!line._cache)
       line._cache = {};
-    return this._content(line.from.offset, line.to.offset, line._cache, paddingLeft, paddingRight);
+    return cachedContent(this._document, line.from.offset, line.to.offset, line._cache, paddingLeft, paddingRight);
   }
 
   /**
-   * @return {!Array<!Range>}
+   * @return {!Array<!Frame.Range>}
    */
   ranges() {
     return this._ranges;
-  }
-
-  /**
-   * @param {!Range} range
-   * @param {number} paddingLeft
-   * @param {number} paddingRight
-   * @return {string}
-   */
-  rangeContent(range, paddingLeft = 0, paddingRight = 0) {
-    if (!range._cache)
-      range._cache = {};
-    return this._content(range.from, range.to, range._cache, paddingLeft, paddingRight);
   }
 
   /**
@@ -182,7 +144,7 @@ export class Frame {
   content(paddingLeft = 0, paddingRight = 0) {
     if (!this._range._cache)
       this._range._cache = {};
-    return this._content(this._range.from, this._range.to, this._range._cache, paddingLeft, paddingRight);
+    return cachedContent(this._document, this._range.from, this._range.to, this._range._cache, paddingLeft, paddingRight);
   }
 
   /**
@@ -246,4 +208,60 @@ export class Frame {
     for (let range of this._ranges)
       delete range._cache;
   }
+}
+
+Frame.Range = class {
+  /**
+   * @param {!Document} document
+   * @param {number} from
+   * @param {number} to
+   */
+  constructor(document, from, to) {
+    this._document = document;
+    this.from = from;
+    this.to = to;
+  }
+
+  /**
+   * @param {number=} paddingLeft
+   * @param {number=} paddingRight
+   * @return {string}
+   */
+  content(paddingLeft = 0, paddingRight = 0) {
+    if (!this._cache)
+      this._cache = {};
+    return cachedContent(this._document, this.from, this.to, this._cache, paddingLeft, paddingRight);
+  }
+
+  /**
+   * @param {number=} paddingLeft
+   * @param {number=} paddingRight
+   * @return {!Text.Iterator}
+   */
+  iterator(paddingLeft = 0, paddingRight = 0) {
+    let from = Math.max(0, this.from - paddingLeft);
+    let to = Math.min(this._document.length(), this.to + paddingRight);
+    return this._document.iterator(from, from, to);
+  }
+};
+
+/**
+ * @param {!Document} document
+ * @param {number} from
+ * @param {number} to
+ * @param {{content: string, left: number, right: number}} cache
+ * @param {number} left
+ * @param {number} right
+ * @return {string}
+ */
+function cachedContent(document, from, to, cache, left, right) {
+  left = Math.min(left, from);
+  right = Math.min(right, document.length() - to);
+  if (cache._content === undefined || cache._left < left || cache._right < right) {
+    cache._left = Math.max(left, cache._left || 0);
+    cache._right = Math.max(right, cache._right || 0);
+    cache._content = document.content(from - cache._left, to + cache._right);
+  }
+  return cache._content.substring(cache._left - left,
+                                  cache._content.length - (cache._right - right));
 }

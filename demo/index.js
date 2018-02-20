@@ -127,7 +127,7 @@ class TokenHighlighter {
       return [];
     let decorator = new TextDecorator();
     for (let range of frame.ranges()) {
-      let text = frame.rangeContent(range, this._token.length, this._token.length);
+      let text = range.content(this._token.length, this._token.length);
       let offset = Math.max(0, range.from - this._token.length);
       let index = text.indexOf(this._token);
       while (index !== -1) {
