@@ -474,6 +474,13 @@ export class Renderer {
     for (let decorator of textDecorators) {
       for (let line of lines) {
         let lineContent = line.content();
+        let offsetToX = new Float32Array(line.to.offset - line.from.offset + 1);
+        for (let x = line.from.x, i = 0; i <= line.to.offset - line.from.offset; i++) {
+          offsetToX[i] = x;
+          if (i < lineContent.length)
+            x += this._measurer.measureChar(lineContent.charCodeAt(i));
+        }
+
         decorator.visitTouching(line.from.offset, line.to.offset, decoration => {
           this._counters.set('decorations-text', (this._counters.get('decorations-text') || 0) + 1);
           const style = this._theme[decoration.data];
@@ -486,15 +493,15 @@ export class Renderer {
             let to = Math.min(line.to.offset, decoration.to);
             if (from < to) {
               let text = lineContent.substring(from - line.from.offset, to - line.from.offset);
-              ctx.fillText(text, frame.offsetToPoint(from).x, line.start.y + textOffset);
+              ctx.fillText(text, offsetToX[from - line.from.offset], line.start.y + textOffset);
             }
           }
 
           // TODO: note that some editors only show selection up to line length. Setting?
           if (style.background && style.background.color) {
             ctx.fillStyle = style.background.color;
-            let from = decoration.from < line.from.offset ? line.from.x : frame.offsetToPoint(decoration.from).x;
-            let to = decoration.to > line.to.offset ? frameRight : frame.offsetToPoint(decoration.to).x;
+            let from = decoration.from < line.from.offset ? line.from.x : offsetToX[decoration.from - line.from.offset];
+            let to = decoration.to > line.to.offset ? frameRight : offsetToX[decoration.to - line.from.offset];
             if (from <= to)
               ctx.fillRect(from, line.start.y, to - from, lineHeight);
           }
@@ -506,8 +513,8 @@ export class Renderer {
 
             // Note: border decorations spanning multiple lines are not supported,
             // and we silently crop them here.
-            let from = decoration.from < line.from.offset ? line.from.x - 1 : frame.offsetToPoint(decoration.from).x;
-            let to = decoration.to > line.to.offset ? frameRight + 1 : frame.offsetToPoint(decoration.to).x;
+            let from = decoration.from < line.from.offset ? line.from.x - 1 : offsetToX[decoration.from - line.from.offset];
+            let to = decoration.to > line.to.offset ? frameRight + 1 : offsetToX[decoration.to - line.from.offset];
 
             ctx.beginPath();
             if (from === to) {
