@@ -383,13 +383,14 @@ pp.readRadixNumber = function(radix) {
 // Read an integer, octal integer, or floating-point number.
 
 pp.readNumber = function(startsWithDot) {
-  let start = this.it.clone();
+  let startCharCode = this.it.charCodeAt(0);
+  let start = this.it.offset;
   if (!startsWithDot && this.readInt(10) === null)
     return this.finishToken(tt.invalid);
-  let octal = this.it.offset - start.offset >= 2 && start.charCodeAt(0) === 48
+  let octal = this.it.offset - start >= 2 && startCharCode === 48;
   if (octal && this.strict)
     return this.finishToken(tt.invalid);
-  if (octal && /[89]/.test(start.substr(this.it.offset - start.offset))) octal = false
+  if (octal && /[89]/.test(this.it.rsubstr(this.it.offset - start))) octal = false;
   let next = this.it.charCodeAt(0)
   if (next === 46 && !octal) { // '.'
     this.it.next();
