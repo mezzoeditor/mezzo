@@ -618,19 +618,56 @@ Text.Iterator = class {
    * @return {string}
    */
   substr(length) {
-    if (this.outOfBounds())
-      return '';
     length = Math.min(length, this._to - this.offset);
+    if (length <= 0)
+      return '';
+
+    if (this._pos + length <= this._chunk.length)
+      return this._chunk.substr(this._pos, length);
+
     let result = '';
-    let iterator = this._iterator.clone();
+    let iterator = length <= kDefaultChunkSize * 2 ? this._iterator : this._iterator.clone();
     let pos = this._pos;
+    let moves = -1;
     do {
+      ++moves;
       let chunk = iterator.node().chunk;
       let word = chunk.substr(pos, length);
       pos = 0;
       result += word;
       length -= word.length;
     } while (length && iterator.next());
+    while (iterator === this._iterator && moves--)
+      iterator.prev();
+    return result;
+  }
+
+  /**
+   * @param {number} length
+   * @return {string}
+   */
+  rsubstr(length) {
+    length = Math.min(length, this.offset - this._from);
+    if (length <= 0)
+      return '';
+
+    if (this._pos >= length)
+      return this._chunk.substr(this._pos - length, length);
+
+    let result = '';
+    let pos = this._pos;
+    let iterator = length <= kDefaultChunkSize * 2 ? this._iterator : this._iterator.clone();
+    let moves = -1;
+    do {
+      moves++;
+      let chunk = iterator.node().chunk;
+      let word = pos === -1 ? chunk.substr(-length) : chunk.substr(0, pos).substr(-length);
+      pos = -1;
+      result = word + result;
+      length -= word.length;
+    } while (length && iterator.prev());
+    while (iterator === this._iterator && moves--)
+      iterator.next();
     return result;
   }
 
@@ -639,9 +676,9 @@ Text.Iterator = class {
    * @return {string}
    */
   read(length) {
-    if (this.outOfBounds())
-      return '';
     length = Math.min(length, this._to - this.offset);
+    if (length <= 0)
+      return '';
 
     let result = this._chunk.substr(this._pos, length);
     this.offset += length;
@@ -650,6 +687,27 @@ Text.Iterator = class {
       this._pos -= this._chunk.length;
       this._chunk = this._iterator.node().chunk;
       result += this._chunk.substr(0, length - result.length);
+    }
+    this.current = this.outOfBounds() ? undefined : this._chunk[this._pos];
+    return result;
+  }
+
+  /**
+   * @param {number} length
+   * @return {string}
+   */
+  rread(length) {
+    length = Math.min(length, this.offset - this._from);
+    if (length <= 0)
+      return '';
+
+    let result = this._chunk.substring(Math.max(0, this._pos - length), this._pos);
+    this.offset -= length;
+    this._pos -= length;
+    while (this._pos < 0 && this._iterator.prev()) {
+      this._chunk = this._iterator.node().chunk;
+      this._pos += this._chunk.length;
+      result = this._chunk.substr(result.length - length) + result;
     }
     this.current = this.outOfBounds() ? undefined : this._chunk[this._pos];
     return result;

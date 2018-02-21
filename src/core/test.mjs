@@ -263,6 +263,15 @@ describe('Text.Iterator', () => {
     expect(it.current).toBe('r');
   });
 
+  it('Text.Iterator.read', () => {
+    let text = Text.withContent('world', defaultMeasurer);
+    let it = text.iterator(0);
+    expect(it.read(4)).toBe('worl');
+    expect(it.current).toBe('d');
+    expect(it.rread(2)).toBe('rl');
+    expect(it.current).toBe('r');
+  });
+
   it('Text.Iterator.find successful', () => {
     let text = Text.withContent('hello, world', defaultMeasurer);
     let it = text.iterator(0);
@@ -383,9 +392,22 @@ describe('Text.Iterator', () => {
           it.advance(p[i] - (i ? p[i - 1] : 0));
           expect(it.offset).toBe(from + p[i]);
           expect(it.current).toBe(s[p[i]]);
+
+          if (i === 0) {
+            expect(it.rread(p[i])).toBe(s.substring(0, p[i]));
+            expect(it.offset).toBe(from);
+            expect(it.current).toBe(s[0]);
+
+            expect(it.read(p[i])).toBe(s.substring(0, p[i]));
+            expect(it.offset).toBe(from + p[i]);
+            expect(it.current).toBe(s[p[i]]);
+          }
+
           if (i <= 1) {
             for (let len = 0; len <= length - p[i] + 1; len++)
               expect(it.substr(len)).toBe(s.substring(p[i], p[i] + len));
+            for (let len = 0; len <= p[i]; len++)
+              expect(it.rsubstr(len)).toBe(s.substring(p[i] - len, p[i]));
           }
           expect(it.outOfBounds()).toBe(false);
         }
