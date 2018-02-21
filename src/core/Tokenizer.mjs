@@ -33,6 +33,7 @@ export class Tokenizer {
  * @return {number}
  */
 Tokenizer.previousWord = function(document, offset) {
+  // TODO: this is not aware of code points.
   let it = document.iterator(offset - 1);
   let tokenizer = document.tokenizer();
   if (!tokenizer)
@@ -57,6 +58,7 @@ Tokenizer.previousWord = function(document, offset) {
  * @return {number}
  */
 Tokenizer.nextWord = function(document, offset) {
+  // TODO: this is not aware of code points.
   let it = document.iterator(offset + 1);
   let tokenizer = document.tokenizer();
   if (!tokenizer)

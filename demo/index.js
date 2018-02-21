@@ -5,7 +5,7 @@ import { JSHighlighter } from "../src/javascript/JSHighlighter.mjs";
 import { DefaultHighlighter } from "../src/default/DefaultHighlighter.mjs";
 
 import { trace } from "../src/core/Trace.mjs";
-trace.setup(1);
+trace.setup();
 
 let random = Random(17);
 

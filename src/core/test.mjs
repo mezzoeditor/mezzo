@@ -13,7 +13,13 @@ const {beforeAll, beforeEach, afterAll, afterEach} = runner;
 
 const {expect} = new Matchers();
 
-const defaultMeasurer = { defaultWidth: 1, defaultHeight: 1, measureChunk: chunk => 0, measureChar: charCode => 1 };
+const defaultMeasurer = {
+  defaultWidth: 1,
+  defaultHeight: 1,
+  measureChunk: chunk => 0,
+  measureCharCode: charCode => 1,
+  measureCodePoint: codePoint => 1
+};
 
 class TestMeasurer {
   constructor() {
@@ -26,16 +32,27 @@ class TestMeasurer {
     return result === chunk.length ? 0 : result;
   }
 
-  measureChar(charCode) {
+  measureCharCode(charCode) {
     return charCode - 'a'.charCodeAt(0) + 1;
+  }
+
+  measureCodePoint(codePoint) {
+    return 100;
   }
 
   _measureChunk(chunk) {
     let result = 0;
-    for (let i = 0; i < chunk.length; i++) {
+    for (let i = 0; i < chunk.length; ) {
       if (chunk[i] === '\n')
         throw 'Cannot measure line breaks';
-      result += chunk.charCodeAt(i) - 'a'.charCodeAt(0) + 1;
+      let charCode = chunk.charCodeAt(i);
+      if (charCode >= 0xD800 && charCode <= 0xDBFF && i + 1 < chunk.length) {
+        result += 100;
+        i += 2;
+      } else {
+        result += charCode - 'a'.charCodeAt(0) + 1;
+        i++;
+      }
     }
     return result;
   }
@@ -442,7 +459,13 @@ describe('Text.Iterator', () => {
 describe('Viewport', () => {
   beforeEach(state => {
     let document = new Document();
-    let measurer = { defaultWidth: 10, defaultHeight: 10, measureChunk: chunk => 0, measureChar: charCode => 10 };
+    let measurer = {
+      defaultWidth: 10,
+      defaultHeight: 10,
+      measureChunk: chunk => 0,
+      measureCharCode: charCode => 10,
+      measureCodePoint: codePoint => 10
+    };
     document.setMeasurer(measurer);
     document.reset(new Array(10).fill('').join('\n'));
     state.viewport = document.createViewport();

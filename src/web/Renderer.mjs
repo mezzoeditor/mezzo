@@ -22,6 +22,8 @@ class CtxMeasurer {
     this._map = new Float32Array(65536);
     this._default = new Uint8Array(65536);
     this._default.fill(2);
+
+    this._codePoints = {};
   }
 
   measureChunk(chunk) {
@@ -33,29 +35,44 @@ class CtxMeasurer {
 
     let defaults = 0;
     let result = 0;
-    for (let i = 0; i < chunk.length; i++) {
+    for (let i = 0; i < chunk.length; ) {
       let charCode = chunk.charCodeAt(i);
-      if (this._default[charCode] === 2) {
-        let width = this._ctx.measureText(chunk[i]).width;
-        this._map[charCode] = width;
-        this._default[charCode] = width === this.defaultWidth ? 1 : 0;
-      }
-      if (this._default[charCode] === 1) {
-        defaults++;
+      if (charCode >= 0xD800 && charCode <= 0xDBFF && i + 1 < chunk.length) {
+        let codePoint = chunk.codePointAt(i);
+        if (this._codePoints[codePoint] === undefined)
+          this._codePoints[codePoint] = this._ctx.measureText(String.fromCodePoint(codePoint)).width;
+        result += this._codePoints[codePoint];
+        i += 2;
       } else {
-        result += this._map[charCode];
+        if (this._default[charCode] === 2) {
+          let width = this._ctx.measureText(chunk[i]).width;
+          this._map[charCode] = width;
+          this._default[charCode] = width === this.defaultWidth ? 1 : 0;
+        }
+        if (this._default[charCode] === 1) {
+          defaults++;
+        } else {
+          result += this._map[charCode];
+        }
+        i++;
       }
     }
     return defaults === chunk.length ? 0 : result + defaults * this.defaultWidth;
   }
 
-  measureChar(charCode) {
+  measureCharCode(charCode) {
     if (this._default[charCode] === 2) {
       let width = this._ctx.measureText(String.fromCharCode(charCode)).width;
       this._map[charCode] = width;
       this._default[charCode] = width === this.defaultWidth ? 1 : 0;
     }
     return this._map[charCode];
+  }
+
+  measureCodePoint(codePoint) {
+    if (this._codePoints[codePoint] === undefined)
+      this._codePoints[codePoint] = this._ctx.measureText(String.fromCodePoint(codePoint)).width;
+    return this._codePoints[codePoint];
   }
 };
 
@@ -452,10 +469,21 @@ export class Renderer {
       for (let line of lines) {
         let lineContent = line.content();
         let offsetToX = new Float32Array(line.to.offset - line.from.offset + 1);
-        for (let x = line.from.x, i = 0; i <= line.to.offset - line.from.offset; i++) {
+        for (let x = line.from.x, i = 0; i <= line.to.offset - line.from.offset; ) {
           offsetToX[i] = x;
-          if (i < lineContent.length)
-            x += this._measurer.measureChar(lineContent.charCodeAt(i));
+          if (i < lineContent.length) {
+            let charCode = lineContent.charCodeAt(i);
+            if (charCode >= 0xD800 && charCode <= 0xDBFF && i + 1 < lineContent.length) {
+              offsetToX[i + 1] = x;
+              x += this._measurer.measureCodePoint(lineContent.codePointAt(i));
+              i += 2;
+            } else {
+              x += this._measurer.measureCharCode(charCode);
+              i++;
+            }
+          } else {
+            i++;
+          }
         }
 
         decorator.visitTouching(line.from.offset, line.to.offset, decoration => {

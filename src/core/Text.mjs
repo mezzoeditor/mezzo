@@ -399,6 +399,8 @@ export class Text {
     let nodes = [];
     while (index < content.length) {
       let length = Math.min(content.length - index, kDefaultChunkSize);
+      if (Metrics.offsetSplitsSurrogates(content, index + length))
+        length++;
       let chunk = content.substring(index, index + length);
       nodes.push(createNode(chunk, measurer));
       index += length;
@@ -770,9 +772,7 @@ Text.Iterator = class {
    * @return {!Text.Iterator}
    */
   clone() {
-    trace.begin('clone');
     let it = this._iterator.clone();
-    trace.end('clone');
     return new Text.Iterator(it, this.offset, this._from, this._to);
   }
 

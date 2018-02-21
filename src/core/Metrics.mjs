@@ -82,11 +82,22 @@ class Measurer {
   }
 
   /**
-   * Returns the width of a single character.
+   * Returns the width of a single character given a char code (code point of a character
+   * belonging to the Unicode Basic Multilingual Plane as opposite to a high/low surrogate
+   * of a character from a Supplementary Plane).
    * @param {number} charCode
    * @return {number}
    */
-  measureChar(charCode) {
+  measureCharCode(charCode) {
+  }
+
+  /**
+   * Returns the width of a single character given a code point from a Supplemetary Plane
+   * (this implies it's greater or equal to 0x10000).
+   * @param {number} codePoint
+   * @return {number}
+   */
+  measureCodePoint(codePoint) {
   }
 };
 
@@ -232,7 +243,7 @@ Metrics.fromChunk = function(chunk, measurer) {
   while (true) {
     let nextLine = chunk.indexOf('\n', index);
     if (index === 0) {
-      metrics.first = nextLine === -1 ? chunk.length : nextLine;
+      metrics.first = Metrics.codePointCount(chunk, 0, nextLine === -1 ? chunk.length : nextLine);
       metrics.longest = metrics.first;
 
       let firstWidth = measurer.measureChunk(chunk.substring(0, metrics.first));
@@ -244,7 +255,7 @@ Metrics.fromChunk = function(chunk, measurer) {
     }
 
     if (nextLine === -1) {
-      metrics.last = chunk.length - index;
+      metrics.last = Metrics.codePointCount(chunk, index, chunk.length);
       metrics.longest = Math.max(metrics.longest, metrics.last);
 
       let lastWidth = measurer.measureChunk(chunk.substring(index, chunk.length));
@@ -256,7 +267,7 @@ Metrics.fromChunk = function(chunk, measurer) {
       break;
     }
 
-    let length = nextLine - index;
+    let length = Metrics.codePointCount(chunk, index, nextLine);
     metrics.longest = Math.max(metrics.longest, length);
     let width = measurer.measureChunk(chunk.substring(index, nextLine));
     if (!width)
@@ -303,11 +314,14 @@ Metrics.chunkPositionToLocation = function(chunk, before, position, measurer, st
   if (lineEnd === -1)
     lineEnd = chunk.length;
 
-  let length = position.column - column;
-  if (lineEnd - index < length) {
+  let codePointOffset = Metrics.codePointOffset(chunk, index, lineEnd, position.column - column);
+  let length;
+  if (codePointOffset.offset === -1) {
     if (strict)
       throw 'Position does not belong to text';
     length = lineEnd - index;
+  } else {
+    length = codePointOffset.offset - index;
   }
 
   let width = measurer.measureChunk(chunk.substring(index, index + length));
@@ -316,7 +330,7 @@ Metrics.chunkPositionToLocation = function(chunk, before, position, measurer, st
   return {
     offset: offset + length,
     line: line,
-    column: column + length,
+    column: column + codePointOffset.columns,
     x: x + width,
     y: y
   };
@@ -327,24 +341,36 @@ Metrics.chunkPositionToLocation = function(chunk, before, position, measurer, st
  * @param {!Measurer} measurer
  * @param {number} desired
  * @param {!RoundMode} roundMode
- * @return {!{width: number, length: number, overflow: boolean}}
+ * @return {!{width: number, length: number, columns: number, overflow: boolean}}
  */
 Metrics._chunkLengthForWidth = function(chunk, measurer, desired, roundMode) {
   let length = 0;
   let width = 0;
+  let columns = 0;
   while (length < chunk.length) {
     if (width === desired)
-      return {width, length, overflow: false};
-    let next = measurer.measureChar(chunk.charCodeAt(length));
+      return {width, length, columns, overflow: false};
+    let nextLength = length + 1;
+    let charCode = chunk.charCodeAt(length);
+    let next;
+    if (charCode >= 0xD800 && charCode <= 0xDBFF && length + 1 < chunk.length) {
+      nextLength = length + 2;
+      next = measurer.measureCodePoint(chunk.codePointAt(length));
+    } else {
+      next = measurer.measureCharCode(charCode);
+    }
     if (width + next > desired) {
       if (roundMode === RoundMode.Round)
         roundMode = desired - width <= width + next - desired ? RoundMode.Floor : RoundMode.Ceil;
-      return roundMode === RoundMode.Floor ? {width, length, overflow: false} : {width: width + next, length: length + 1, overflow: false};
+      return roundMode === RoundMode.Floor
+          ? {width, length, columns, overflow: false}
+          : {width: width + next, length: nextLength, columns: columns + 1, overflow: false};
     }
     width += next;
-    length++;
+    length = nextLength;
+    columns++;
   }
-  return {width, length, overflow: width < desired};
+  return {width, length, columns, overflow: width < desired};
 };
 
 /**
@@ -379,7 +405,7 @@ Metrics.chunkPointToLocation = function(chunk, before, point, measurer, roundMod
   if (lineEnd === -1)
     lineEnd = chunk.length;
 
-  let {length, width, overflow} = Metrics._chunkLengthForWidth(chunk.substring(index, lineEnd), measurer, point.x - x, roundMode);
+  let {length, width, overflow, columns} = Metrics._chunkLengthForWidth(chunk.substring(index, lineEnd), measurer, point.x - x, roundMode);
   if (overflow) {
     if (length !== lineEnd - index)
       throw 'Inconsistent';
@@ -390,7 +416,7 @@ Metrics.chunkPointToLocation = function(chunk, before, point, measurer, roundMod
   return {
     offset: offset + length,
     line: line,
-    column: column + length,
+    column: column + columns,
     x: x + width,
     y: y
   };
@@ -406,6 +432,10 @@ Metrics.chunkPointToLocation = function(chunk, before, point, measurer, roundMod
 Metrics.chunkOffsetToLocation = function(chunk, before, offset, measurer) {
   if (chunk.length < offset - before.offset)
     throw 'Inconsistent';
+
+  if (Metrics.offsetSplitsSurrogates(chunk, offset - before.offset))
+    throw 'Offset belongs to a middle of surrogate pair';
+
   chunk = chunk.substring(0, offset - before.offset);
   let {line, column, x, y} = before;
   let index = 0;
@@ -418,7 +448,7 @@ Metrics.chunkOffsetToLocation = function(chunk, before, offset, measurer) {
       x = 0;
       index = nextLine + 1;
     } else {
-      column += chunk.length - index;
+      column += Metrics.codePointCount(chunk, index, chunk.length);
       let width = measurer.measureChunk(chunk.substring(index, chunk.length));
       if (!width)
         width = (chunk.length - index) * measurer.defaultWidth;
@@ -428,3 +458,70 @@ Metrics.chunkOffsetToLocation = function(chunk, before, offset, measurer) {
   }
   return {line, column, offset, x, y};
 };
+
+/**
+ * @param {string} s
+ * @param {number} i
+ * @return {boolean}
+ */
+Metrics.offsetSplitsSurrogates = function(s, i) {
+  if (i <= 0 || i >= s.length)
+    return false;
+  let charCode = s.charCodeAt(i - 1);
+  if (charCode < 0xD800 || charCode > 0xDBFF)
+    return false;
+  return true;
+};
+
+/**
+ * @param {string} s
+ * @param {number} from
+ * @param {number} to
+ * @return {number}
+ */
+Metrics.codePointCount = function(s, from, to) {
+  if (Metrics._bmpRegex.test(s))
+    return to - from;
+  let result = 0;
+  for (let i = from; i < to; ) {
+    let charCode = s.charCodeAt(i);
+    if (charCode >= 0xD800 && charCode <= 0xDBFF && i + 1 < to) {
+      result++;
+      i += 2;
+    } else {
+      result++;
+      i++;
+    }
+  }
+  return result;
+};
+
+/**
+ * @param {string} s
+ * @param {number} from
+ * @param {number} to
+ * @param {number} index
+ * @return {{offset: number, overflow: number|undefined}}
+ */
+Metrics.codePointOffset = function(s, from, to, index) {
+  if (!index)
+    return {offset: from, columns: index};
+  if (Metrics._bmpRegex.test(s))
+    return {offset: from + index, columns: index};
+  let total = 0;
+  for (let i = from; i < to; ) {
+    let charCode = s.charCodeAt(i);
+    if (charCode >= 0xD800 && charCode <= 0xDBFF && i + 1 < to) {
+      total++;
+      i += 2;
+    } else {
+      total++;
+      i++;
+    }
+    if (total === index)
+      return {offset: i, columns: index};
+  }
+  return {offset: -1, columns: total};
+};
+
+Metrics._bmpRegex = /^[\u{0000}-\u{d7ff}]*$/u;
