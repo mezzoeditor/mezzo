@@ -1,7 +1,7 @@
 import {isIdentifierStart, isIdentifierChar} from "./identifier.mjs"
 import {types as tt, keywords as keywordTypes} from "./tokentype.mjs"
 import {Parser} from "./state.mjs"
-import {lineBreak, lineBreakG, isNewLine, nonASCIIwhitespace} from "./whitespace.mjs"
+import {lineBreak, lineBreakG, isLineBreak, isNewLine, nonASCIIwhitespace} from "./whitespace.mjs"
 
 // Object type used to represent tokens. Note that normally, tokens
 // simply exist as properties on the parser object. This is only
@@ -23,7 +23,7 @@ const pp = Parser.prototype
 // Move to the next token
 
 pp.getToken = function() {
-  this.lastTokEnd = this.end.clone();
+  this.lastTokEnd = this.end.offset;
   this.nextToken()
   return new Token(this)
 }
@@ -57,6 +57,7 @@ pp.nextToken = function() {
   if (!curContext || !curContext.preserveSpace) this.skipSpace()
 
   this.startOffset = this.it.offset;
+  this.lineBreakSinceLastTokEnd = isLineBreak(this.it, this.lastTokEnd);
   if (this.it.outOfBounds()) return this.finishToken(tt.eof)
 
   if (curContext.override) return curContext.override(this)
@@ -201,7 +202,7 @@ pp.readToken_plus_min = function(code) { // '+-'
   let next = this.it.charCodeAt(1)
   if (next === code) {
     if (next == 45 && !this.inModule && this.it.charCodeAt(2) == 62 &&
-        (this.lastTokEnd.offset === 0 || lineBreak.test(this.lastTokEnd.substr(this.it.offset - this.lastTokEnd.offset)))) {
+        (this.lastTokEnd === 0 || isLineBreak(this.it, this.lastTokEnd))) {
       // A `-->` line comment
       return this.readLineComment(3)
     }

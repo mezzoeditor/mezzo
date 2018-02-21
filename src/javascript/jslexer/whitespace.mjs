@@ -4,6 +4,11 @@
 export const lineBreak = /\r\n?|\n|\u2028|\u2029/
 export const lineBreakG = new RegExp(lineBreak.source, "g")
 
+export function isLineBreak(it, from) {
+  from = it.offset - from;
+  return from <= 2 ? lineBreak.test(it.rsubstr(from)) : false;
+}
+
 export function isNewLine(code) {
   return code === 10 || code === 13 || code === 0x2028 || code === 0x2029
 }

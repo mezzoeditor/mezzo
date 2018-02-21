@@ -1,6 +1,5 @@
 import {reservedWords, keywords} from "./identifier.mjs"
 import {types as tt} from "./tokentype.mjs"
-import {lineBreak} from "./whitespace.mjs"
 import {getOptions} from "./options.mjs"
 
 function keywordRegexp(words) {
@@ -41,7 +40,8 @@ export class Parser {
     this.end = this.it.clone();
 
     // Position information for the previous token
-    this.lastTokEnd = this.it.clone();
+    this.lastTokEnd = this.it.offset;
+    this.lineBreakSinceLastTokEnd = false;
 
     // The context stack is used to superficially track syntactic
     // context to predict whether a regular expression is allowed in a
