@@ -272,6 +272,29 @@ describe('Text.Iterator', () => {
     expect(it.current).toBe('r');
   });
 
+  it('Text.Iterator.charAt', () => {
+    let text = Text.withContent('world', defaultMeasurer);
+    let it = text.iterator(2);
+    expect(it.charAt(0)).toBe('r');
+    expect(it.offset).toBe(2);
+    expect(it.charAt(1)).toBe('l');
+    expect(it.offset).toBe(2);
+    expect(it.charAt(2)).toBe('d');
+    expect(it.offset).toBe(2);
+    expect(it.charAt(3)).toBe(undefined);
+    expect(it.offset).toBe(2);
+    expect(it.charAt(4)).toBe(undefined);
+    expect(it.offset).toBe(2);
+    expect(it.charAt(-1)).toBe('o');
+    expect(it.offset).toBe(2);
+    expect(it.charAt(-2)).toBe('w');
+    expect(it.offset).toBe(2);
+    expect(it.charAt(-3)).toBe(undefined);
+    expect(it.offset).toBe(2);
+    expect(it.charAt(-4)).toBe(undefined);
+    expect(it.offset).toBe(2);
+  });
+
   it('Text.Iterator.find successful', () => {
     let text = Text.withContent('hello, world', defaultMeasurer);
     let it = text.iterator(0);
