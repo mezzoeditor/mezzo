@@ -37,7 +37,7 @@ export class Parser {
     this.value = null
     // Its start and end offset
     this.startOffset = this.it.offset;
-    this.end = this.it.clone();
+    this.end = this.it.offset;
 
     // Position information for the previous token
     this.lastTokEnd = this.it.offset;
