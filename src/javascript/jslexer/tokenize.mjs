@@ -580,7 +580,7 @@ pp.readHexChar = function(len) {
 
 pp.readWord1 = function() {
   this.containsEsc = false
-  let word = "", first = true, chunkStart = this.it.clone();
+  let word = "", first = true, chunkStart = this.it.offset, chunkLength;
   let astral = this.options.ecmaVersion >= 6
   while (!this.it.outOfBounds()) {
     let ch = this.fullCharCodeAtPos()
@@ -588,7 +588,9 @@ pp.readWord1 = function() {
       this.it.advance(ch <= 0xffff ? 1 : 2);
     } else if (ch === 92) { // "\"
       this.containsEsc = true
-      word += chunkStart.substr(this.it.offset - chunkStart.offset);
+      chunkLength = this.it.offset - chunkStart;
+      this.it.advance(-chunkLength);
+      word += this.it.read(chunkLength);
       this.it.next();
       if (this.it.charCodeAt(0) != 117) // "u"
         return "";
@@ -599,13 +601,15 @@ pp.readWord1 = function() {
       if (!(first ? isIdentifierStart : isIdentifierChar)(esc, astral))
         return "";
       word += codePointToString(esc)
-      chunkStart = this.it.clone();
+      chunkStart = this.it.offset;
     } else {
       break
     }
     first = false
   }
-  return word + chunkStart.substr(this.it.offset - chunkStart.offset);
+  chunkLength = this.it.offset - chunkStart;
+  this.it.advance(-chunkLength);
+  return word + this.it.read(chunkLength);
 }
 
 // Read an identifier or keyword token. Will check for reserved

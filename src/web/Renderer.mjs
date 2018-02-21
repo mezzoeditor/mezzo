@@ -1,8 +1,6 @@
 import { Frame } from "../core/Frame.mjs";
 import { RoundMode } from "../core/Metrics.mjs";
-
-import { ensureTrace } from "../core/Trace.mjs";
-ensureTrace();
+import { trace } from "../core/Trace.mjs";
 
 class CtxMeasurer {
   constructor(ctx, monospace) {
@@ -375,7 +373,7 @@ export class Renderer {
   }
 
   _render() {
-    self.trace.beginGroup('render');
+    trace.beginGroup('render');
     this._animationFrameId = 0;
 
     const ctx = this._canvas.getContext('2d');
@@ -383,20 +381,20 @@ export class Renderer {
     ctx.clearRect(0, 0, this._cssWidth, this._cssHeight);
     ctx.lineWidth = 1 / this._ratio;
 
-    self.trace.begin('frame');
+    trace.begin('frame');
     const {frame, text, scrollbar} = this._viewport.createFrame();
-    self.trace.end('frame');
+    trace.end('frame');
 
-    self.trace.begin('gutter');
+    trace.begin('gutter');
     ctx.save();
     ctx.beginPath();
     ctx.rect(this._gutterRect.x, this._gutterRect.y, this._gutterRect.width, this._gutterRect.height);
     ctx.clip();
     this._drawGutter(ctx, frame);
     ctx.restore();
-    self.trace.end('gutter');
+    trace.end('gutter');
 
-    self.trace.beginGroup('text');
+    trace.beginGroup('text');
     ctx.save();
     ctx.beginPath();
     ctx.rect(this._editorRect.x, this._editorRect.y, this._editorRect.width, this._editorRect.height);
@@ -407,19 +405,19 @@ export class Renderer {
     ctx.translate(textOrigin.x, textOrigin.y);
     this._drawText(ctx, frame, text);
     ctx.restore();
-    self.trace.endGroup('text');
+    trace.endGroup('text');
 
-    self.trace.beginGroup('scrollbar');
+    trace.beginGroup('scrollbar');
     ctx.save();
     this._drawScrollbarMarkers(ctx, frame, scrollbar, this._vScrollbar.rect, this._viewport.vScrollbar);
     this._drawScrollbar(ctx, this._vScrollbar, true /* isVertical */);
     this._drawScrollbar(ctx, this._hScrollbar, false /* isVertical */);
     ctx.restore();
-    self.trace.endGroup('scrollbar');
+    trace.endGroup('scrollbar');
 
     frame.cleanup();
 
-    self.trace.endGroup('render', 50);
+    trace.endGroup('render', 50);
   }
 
   _drawGutter(ctx, frame) {
@@ -461,7 +459,7 @@ export class Renderer {
         }
 
         decorator.visitTouching(line.from.offset, line.to.offset, decoration => {
-          self.trace.count('decorations');
+          trace.count('decorations');
           const style = this._theme[decoration.data];
           if (!style)
             return;
@@ -547,7 +545,7 @@ export class Renderer {
       let lastTop = -1;
       let lastBottom = -1;
       decorator.sparseVisitAll(decoration => {
-        self.trace.count('decorations');
+        trace.count('decorations');
         const from = frame.offsetToLocation(decoration.from);
         const to = frame.offsetToLocation(decoration.to);
 

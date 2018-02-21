@@ -1,8 +1,6 @@
 import { Random } from "./Random.mjs";
 import { Metrics } from "./Metrics.mjs";
-
-import { ensureTrace } from "../core/Trace.mjs";
-ensureTrace();
+import { trace } from "../core/Trace.mjs";
 
 let random = Random(42);
 
@@ -616,7 +614,7 @@ Text.Iterator = class {
   }
 
   /**
-   * @param {number} to
+   * @param {number} length
    * @return {string}
    */
   substr(length) {
@@ -633,6 +631,27 @@ Text.Iterator = class {
       result += word;
       length -= word.length;
     } while (length && iterator.next());
+    return result;
+  }
+
+  /**
+   * @param {number} length
+   * @return {string}
+   */
+  read(length) {
+    if (this.outOfBounds())
+      return '';
+    length = Math.min(length, this._to - this.offset);
+
+    let result = this._chunk.substr(this._pos, length);
+    this.offset += length;
+    this._pos += length;
+    while (this._pos >= this._chunk.length && this._iterator.next()) {
+      this._pos -= this._chunk.length;
+      this._chunk = this._iterator.node().chunk;
+      result += this._chunk.substr(0, length - result.length);
+    }
+    this.current = this.outOfBounds() ? undefined : this._chunk[this._pos];
     return result;
   }
 
@@ -693,9 +712,9 @@ Text.Iterator = class {
    * @return {!Text.Iterator}
    */
   clone() {
-    self.trace.begin('clone');
+    trace.begin('clone');
     let it = this._iterator.clone();
-    self.trace.end('clone');
+    trace.end('clone');
     return new Text.Iterator(it, this.offset, this._from, this._to);
   }
 

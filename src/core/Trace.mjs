@@ -1,4 +1,13 @@
-export function setupTrace(maxDepth) {
+export let trace = {};
+trace.beginGroup = () => {};
+trace.begin = () => {};
+trace.end = () => {};
+trace.count = () => {};
+trace.print = () => {};
+trace.reset = () => {};
+trace.endGroup = () => {};
+
+trace.setup = function(maxDepth) {
   let stack = [];
   let current;
   let depth = maxDepth === undefined ? Number.NEGATIVE_INFINITY : -maxDepth;
@@ -35,9 +44,7 @@ export function setupTrace(maxDepth) {
     }
   };
 
-  self.trace = {};
-
-  self.trace.beginGroup = name => {
+  trace.beginGroup = name => {
     if (++depth > 0)
       return;
     if (current)
@@ -49,12 +56,12 @@ export function setupTrace(maxDepth) {
     };
   };
 
-  self.trace.begin = timing => {
+  trace.begin = timing => {
     if (depth < 0 && current)
       startTimes[current.prefix + timing] = window.performance.now();
   };
 
-  self.trace.end = timing => {
+  trace.end = timing => {
     if (!(depth < 0) || !current)
       return;
     timing = current.prefix + timing;
@@ -65,16 +72,16 @@ export function setupTrace(maxDepth) {
     timings[timing] = (timings[timing] || 0) + window.performance.now() - start;
   };
 
-  self.trace.count = counter => {
+  trace.count = counter => {
     if (depth < 0 && current) {
       counter = current.prefix + counter;
       counters[counter] = (counters[counter] || 0) + 1;
     }
   };
 
-  self.trace.print = () => current && _print(current.prefix);
+  trace.print = () => current && _print(current.prefix);
 
-  self.trace.reset = prefix => {
+  trace.reset = prefix => {
     prefix = prefix || '';
     _reset(timings, prefix);
     _reset(counters, prefix);
@@ -82,7 +89,7 @@ export function setupTrace(maxDepth) {
     _reset(groupCounters, prefix);
   };
 
-  self.trace.endGroup = (name, reportCount) => {
+  trace.endGroup = (name, reportCount) => {
     if (--depth >= 0)
       return;
 
@@ -107,20 +114,6 @@ export function setupTrace(maxDepth) {
 
     reports[name] = 0;
     _print(name);
-    self.trace.reset(name);
+    trace.reset(name);
   };
-};
-
-export function ensureTrace() {
-  if (self.trace)
-    return;
-
-  self.trace = {};
-  self.trace.beginGroup = () => {};
-  self.trace.begin = () => {};
-  self.trace.end = () => {};
-  self.trace.count = () => {};
-  self.trace.print = () => {};
-  self.trace.reset = () => {};
-  self.trace.endGroup = () => {};
 };
