@@ -1,6 +1,9 @@
 import { TextDecorator } from "../core/Decorator.mjs";
 import { Parser, TokenTypes, KeywordTypes } from './jslexer/index.mjs';
 
+import { ensureTrace } from "../core/Trace.mjs";
+ensureTrace();
+
 /**
  * @implements Plugin
  */
@@ -26,6 +29,7 @@ export class JSHighlighter {
    * @return {!PluginFrameResult}
    */
   onFrame(frame) {
+    self.trace.beginGroup('js');
     let decorator = new TextDecorator();
     for (let range of frame.ranges()) {
       let from = range.from;
@@ -54,6 +58,7 @@ export class JSHighlighter {
         }
       }
     }
+    self.trace.endGroup('js');
     return {text: [decorator]};
   }
 };

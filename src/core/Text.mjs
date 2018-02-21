@@ -1,6 +1,9 @@
 import { Random } from "./Random.mjs";
 import { Metrics } from "./Metrics.mjs";
 
+import { ensureTrace } from "../core/Trace.mjs";
+ensureTrace();
+
 let random = Random(42);
 
 // TODO: bumping this to 1000 speeds up text consturction 1.5x times.
@@ -690,7 +693,9 @@ Text.Iterator = class {
    * @return {!Text.Iterator}
    */
   clone() {
+    self.trace.begin('clone');
     let it = this._iterator.clone();
+    self.trace.end('clone');
     return new Text.Iterator(it, this.offset, this._from, this._to);
   }
 

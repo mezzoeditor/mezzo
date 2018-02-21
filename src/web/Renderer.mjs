@@ -1,6 +1,9 @@
 import { Frame } from "../core/Frame.mjs";
 import { RoundMode } from "../core/Metrics.mjs";
 
+import { ensureTrace } from "../core/Trace.mjs";
+ensureTrace();
+
 class CtxMeasurer {
   constructor(ctx, monospace) {
     // The following will be shipped soon.
@@ -144,9 +147,6 @@ export class Renderer {
     this._mouseDownState = {
       name: null,
     };
-
-    this._counters = new Map();
-    this._renderCount = 0;
   }
 
   /**
@@ -374,39 +374,29 @@ export class Renderer {
       this._animationFrameId = requestAnimationFrame(this._render);
   }
 
-  _measureTime(name, time) {
-    let now = window.performance.now();
-    this._counters.set(name, (this._counters.get(name) || 0) + (now - time));
-    return now;
-  }
-
   _render() {
-    let time = window.performance.now();
-    let startTime = time;
-
+    self.trace.beginGroup('render');
     this._animationFrameId = 0;
 
     const ctx = this._canvas.getContext('2d');
-
     ctx.setTransform(this._ratio, 0, 0, this._ratio, 0, 0);
     ctx.clearRect(0, 0, this._cssWidth, this._cssHeight);
     ctx.lineWidth = 1 / this._ratio;
 
-    time = this._measureTime('setup', time);
-
+    self.trace.begin('frame');
     const {frame, text, scrollbar} = this._viewport.createFrame();
+    self.trace.end('frame');
 
-    time = this._measureTime('frame', time);
-
+    self.trace.begin('gutter');
     ctx.save();
     ctx.beginPath();
     ctx.rect(this._gutterRect.x, this._gutterRect.y, this._gutterRect.width, this._gutterRect.height);
     ctx.clip();
     this._drawGutter(ctx, frame);
     ctx.restore();
+    self.trace.end('gutter');
 
-    time = this._measureTime('gutter', time);
-
+    self.trace.beginGroup('text');
     ctx.save();
     ctx.beginPath();
     ctx.rect(this._editorRect.x, this._editorRect.y, this._editorRect.width, this._editorRect.height);
@@ -417,30 +407,19 @@ export class Renderer {
     ctx.translate(textOrigin.x, textOrigin.y);
     this._drawText(ctx, frame, text);
     ctx.restore();
+    self.trace.endGroup('text');
 
-    time = this._measureTime('text', time);
-
+    self.trace.beginGroup('scrollbar');
     ctx.save();
     this._drawScrollbarMarkers(ctx, frame, scrollbar, this._vScrollbar.rect, this._viewport.vScrollbar);
     this._drawScrollbar(ctx, this._vScrollbar, true /* isVertical */);
     this._drawScrollbar(ctx, this._hScrollbar, false /* isVertical */);
     ctx.restore();
-
-    time = this._measureTime('scrollbar', time);
+    self.trace.endGroup('scrollbar');
 
     frame.cleanup();
 
-    time = this._measureTime('cleanup', time);
-    this._measureTime('render', startTime);
-
-    if (++this._renderCount === 100) {
-      console.groupCollapsed(`Avg render time: ${this._counters.get('render') / 100}`);
-      for (let key of this._counters.keys())
-        console.log(`${key}: ${this._counters.get(key) / 100}`);
-      console.groupEnd();
-      this._counters.clear();
-      this._renderCount = 0;
-    }
+    self.trace.endGroup('render', 50);
   }
 
   _drawGutter(ctx, frame) {
@@ -482,7 +461,7 @@ export class Renderer {
         }
 
         decorator.visitTouching(line.from.offset, line.to.offset, decoration => {
-          this._counters.set('decorations-text', (this._counters.get('decorations-text') || 0) + 1);
+          self.trace.count('decorations');
           const style = this._theme[decoration.data];
           if (!style)
             return;
@@ -568,7 +547,7 @@ export class Renderer {
       let lastTop = -1;
       let lastBottom = -1;
       decorator.sparseVisitAll(decoration => {
-        this._counters.set('decorations-scrollbar', (this._counters.get('decorations-scrollbar') || 0) + 1);
+        self.trace.count('decorations');
         const from = frame.offsetToLocation(decoration.from);
         const to = frame.offsetToLocation(decoration.to);
 

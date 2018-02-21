@@ -4,6 +4,9 @@ import { Random } from "../src/core/Random.mjs";
 import { JSHighlighter } from "../src/javascript/JSHighlighter.mjs";
 import { DefaultHighlighter } from "../src/default/DefaultHighlighter.mjs";
 
+import { setupTrace } from "../src/core/Trace.mjs";
+setupTrace();
+
 let random = Random(17);
 
 const examples = [
