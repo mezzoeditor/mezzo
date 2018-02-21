@@ -1,5 +1,5 @@
-Two code points: 𐀀
-𐀀1𐀀2𐀀3𐀀4𐀀5𐀀6
+Two code points: 𐀀😀
+𐀀1𐀀2𐀀3𐀀4𐀀5𐀀6😀7😀8
 aaaaaaaaaaaaa
 
 Two code points and rtl:
