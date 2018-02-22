@@ -114,18 +114,23 @@ Metrics.combine = function(left, right, measurer) {
   if (left.lineBreaks || right.lineBreaks)
     result.lineBreaks = (left.lineBreaks || 0) + (right.lineBreaks || 0);
   if (left.firstWidth || (!left.lineBreaks && right.firstWidth)) {
-    result.firstWidth = (left.firstWidth || left.firstColumns * measurer.defaultWidth) +
+    result.firstWidth =
+        (left.firstWidth || left.firstColumns * measurer.defaultWidth) +
         (left.lineBreaks ? 0 : (right.firstWidth || right.firstColumns * measurer.defaultWidth));
   }
   if (right.lastWidth || (!right.lineBreaks && left.lastWidth)) {
-    result.lastWidth = (right.lastWidth || right.lastColumns * measurer.defaultWidth) +
+    result.lastWidth =
+        (right.lastWidth || right.lastColumns * measurer.defaultWidth) +
         (right.lineBreaks ? 0 : (left.lastWidth || left.lastColumns * measurer.defaultWidth));
   }
   if (left.longestWidth || right.longestWidth || left.lastWidth || right.firstWidth) {
-    result.longestWidth = Math.max(left.longestWidth || left.longestColumns * measurer.defaultWidth,
+    result.longestWidth = Math.max(
+        left.longestWidth || left.longestColumns * measurer.defaultWidth,
         right.longestWidth || right.longestColumns * measurer.defaultWidth);
-    result.longestWidth = Math.max(result.longestWidth,
-        (left.lastWidth || left.lastColumns * measurer.defaultWidth) + (right.firstWidth || right.firstColumns * measurer.defaultWidth));
+    result.longestWidth = Math.max(
+        result.longestWidth,
+        (left.lastWidth || left.lastColumns * measurer.defaultWidth)
+            + (right.firstWidth || right.firstColumns * measurer.defaultWidth));
   }
   return result;
 };
@@ -157,45 +162,39 @@ Metrics.fromString = function(s, measurer) {
     lastColumns: 0,
     longestColumns: 0
   };
+
   let lineBreaks = 0;
-  let index = 0;
+  let offset = 0;
   let longestWidth = 0;
+
   while (true) {
-    let nextLine = s.indexOf('\n', index);
-    if (index === 0) {
-      metrics.firstColumns = Unicode.columnCount(s, 0, nextLine === -1 ? s.length : nextLine);
-      metrics.longestColumns = metrics.firstColumns;
+    let lineBreakOffset = s.indexOf('\n', offset);
+    let lineEndOffset = lineBreakOffset === -1 ? s.length : lineBreakOffset;
+    let columns = Unicode.columnCount(s, offset, lineEndOffset);
+    let width = measurer.measureString(s, offset, lineEndOffset);
+    let fullWidth = width || (columns * measurer.defaultWidth);
 
-      let firstWidth = measurer.measureString(s, 0, metrics.firstColumns);
-      if (firstWidth)
-        metrics.firstWidth = firstWidth;
-      else
-        firstWidth = metrics.firstColumns * measurer.defaultWidth;
-      longestWidth = Math.max(longestWidth, firstWidth);
+    if (offset === 0) {
+      metrics.firstColumns = columns;
+      if (width)
+        metrics.firstWidth = width;
     }
 
-    if (nextLine === -1) {
-      metrics.lastColumns = Unicode.columnCount(s, index, s.length);
-      metrics.longestColumns = Math.max(metrics.longestColumns, metrics.lastColumns);
+    if (lineBreakOffset === -1) {
+      metrics.lastColumns = columns;
+      if (width)
+        metrics.lastWidth = width;
+    }
 
-      let lastWidth = measurer.measureString(s, index, s.length);
-      if (lastWidth)
-        metrics.lastWidth = lastWidth;
-      else
-        lastWidth = metrics.lastColumns * measurer.defaultWidth;
-      longestWidth = Math.max(longestWidth, lastWidth);
+    metrics.longestColumns = Math.max(metrics.longestColumns, columns);
+    longestWidth = Math.max(longestWidth, fullWidth);
+    if (lineBreakOffset === -1)
       break;
-    }
 
-    let length = Unicode.columnCount(s, index, nextLine);
-    metrics.longestColumns = Math.max(metrics.longestColumns, length);
-    let width = measurer.measureString(s, index, nextLine);
-    if (!width)
-      width = length * measurer.defaultWidth;
-    longestWidth = Math.max(longestWidth, width);
     lineBreaks++;
-    index = nextLine + 1;
+    offset = lineEndOffset + 1;
   }
+
   if (lineBreaks)
     metrics.lineBreaks = lineBreaks;
   if (longestWidth !== metrics.longestColumns * measurer.defaultWidth)

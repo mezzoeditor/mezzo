@@ -74,6 +74,7 @@ describe('Metrics', () => {
     expect(Metrics.fromString('bac', testMeasurer)).toEqual({length: 3, firstColumns: 3, lastColumns: 3, longestColumns: 3, firstWidth: 6, lastWidth: 6, longestWidth: 6});
     expect(Metrics.fromString('b\na\nc', testMeasurer)).toEqual({length: 5, firstColumns: 1, lastColumns: 1, longestColumns: 1, lineBreaks: 2, firstWidth: 2, lastWidth: 3, longestWidth: 3});
     expect(Metrics.fromString('b\naaaa\nc', testMeasurer)).toEqual({length: 8, firstColumns: 1, lastColumns: 1, longestColumns: 4, lineBreaks: 2, firstWidth: 2, lastWidth: 3});
+    expect(Metrics.fromString('b😀😀', testMeasurer)).toEqual({length: 5, firstColumns: 3, lastColumns: 3, longestColumns: 3, firstWidth: 202, lastWidth: 202, longestWidth: 202});
   });
 
   it('Metrics.string*ToLocation', () => {
