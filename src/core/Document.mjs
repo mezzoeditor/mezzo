@@ -11,9 +11,9 @@ export class Document {
     this._measurer = {
       defaultWidth: 1,
       defaultHeight: 1,
-      measureChunk: chunk => 0,
-      measureCharCode: charCode => 1,
-      measureCodePoint: codePoint => 1
+      measureString: (s, from, to) => 0,
+      measureBMPCodePoint: codePoint => 1,
+      measureSupplementaryCodePoint: codePoint => 1
     };
     this._history = new History({
       text: Text.withContent('', this._measurer),

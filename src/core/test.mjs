@@ -17,9 +17,9 @@ const {expect} = new Matchers();
 const defaultMeasurer = {
   defaultWidth: 1,
   defaultHeight: 1,
-  measureChunk: chunk => 0,
-  measureCharCode: charCode => 1,
-  measureCodePoint: codePoint => 1
+  measureString: (s, from, to) => 0,
+  measureBMPCodePoint: codePoint => 1,
+  measureSupplementaryCodePoint: codePoint => 1
 };
 
 class TestMeasurer {
@@ -28,26 +28,26 @@ class TestMeasurer {
     this.defaultWidth = 1;
   }
 
-  measureChunk(chunk) {
-    let result = this._measureChunk(chunk);
-    return result === chunk.length ? 0 : result;
+  measureString(s, from, to) {
+    let result = this._measureString(s, from, to);
+    return result === to - from ? 0 : result;
   }
 
-  measureCharCode(charCode) {
-    return charCode - 'a'.charCodeAt(0) + 1;
+  measureBMPCodePoint(codePoint) {
+    return codePoint - 'a'.charCodeAt(0) + 1;
   }
 
-  measureCodePoint(codePoint) {
+  measureSupplementaryCodePoint(codePoint) {
     return 100;
   }
 
-  _measureChunk(chunk) {
+  _measureString(s, from, to) {
     let result = 0;
-    for (let i = 0; i < chunk.length; ) {
-      if (chunk[i] === '\n')
+    for (let i = from; i < to; ) {
+      if (s[i] === '\n')
         throw 'Cannot measure line breaks';
-      let charCode = chunk.charCodeAt(i);
-      if (charCode >= 0xD800 && charCode <= 0xDBFF && i + 1 < chunk.length) {
+      let charCode = s.charCodeAt(i);
+      if (charCode >= 0xD800 && charCode <= 0xDBFF && i + 1 < to) {
         result += 100;
         i += 2;
       } else {
@@ -162,7 +162,7 @@ describe('Text', () => {
       let length = 1 + (random() % (s.length - 1));
       longest = Math.max(longest, length);
       let chunk = s.substring(0, length);
-      let width = testMeasurer._measureChunk(chunk);
+      let width = testMeasurer._measureString(chunk, 0, length);
       chunks.push(chunk + '\n');
       locationQueries.push({line: i, column: 0, offset: offset, x: 0, y: i * 3, rounded: true});
       locationQueries.push({line: i, column: 1, offset: offset + 1, x: 1, y: i * 3});
@@ -170,7 +170,7 @@ describe('Text', () => {
       locationQueries.push({line: i, column: length, offset: offset + length, x: width, y: i * 3, nonStrict: {column: length + 1, x: width + 3}});
       locationQueries.push({line: i, column: length, offset: offset + length, x: width, y: i * 3, nonStrict: {column: length + 100, x: width + 100}});
       let column = random() % length;
-      locationQueries.push({line: i, column: column, offset: offset + column, x: testMeasurer._measureChunk(chunk.substr(0, column)), y: i * 3});
+      locationQueries.push({line: i, column: column, offset: offset + column, x: testMeasurer._measureString(chunk, 0, column), y: i * 3});
       offset += length + 1;
     }
     let content = chunks.join('');
@@ -463,9 +463,9 @@ describe('Viewport', () => {
     let measurer = {
       defaultWidth: 10,
       defaultHeight: 10,
-      measureChunk: chunk => 0,
-      measureCharCode: charCode => 10,
-      measureCodePoint: codePoint => 10
+      measureString: (s, from, to) => 0,
+      measureBMPCodePoint: codePoint => 10,
+      measureSupplementaryCodePoint: codePoint => 10
     };
     document.setMeasurer(measurer);
     document.reset(new Array(10).fill('').join('\n'));

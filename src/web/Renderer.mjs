@@ -3,6 +3,9 @@ import { RoundMode } from "../core/Metrics.mjs";
 import { Unicode } from "../core/Unicode.mjs";
 import { trace } from "../core/Trace.mjs";
 
+/**
+ * @implements Unicode.Measurer
+ */
 class CtxMeasurer {
   constructor(ctx, monospace) {
     // The following will be shipped soon.
@@ -27,50 +30,49 @@ class CtxMeasurer {
     this._codePoints = {};
   }
 
-  measureChunk(chunk) {
-    if (!chunk)
+  measureString(s, from, to) {
+    if (from === to)
       return 0;
 
-    if (this._monospace && Unicode.asciiRegex.test(chunk))
+    if (this._monospace && Unicode.asciiRegex.test(s))
       return 0;
 
     let defaults = 0;
     let result = 0;
-    for (let i = 0; i < chunk.length; ) {
-      let charCode = chunk.charCodeAt(i);
-      if (charCode >= 0xD800 && charCode <= 0xDBFF && i + 1 < chunk.length) {
-        let codePoint = chunk.codePointAt(i);
+    for (let i = from; i < to; ) {
+      let charCode = s.charCodeAt(i);
+      if (charCode >= 0xD800 && charCode <= 0xDBFF && i + 1 < to) {
+        let codePoint = s.codePointAt(i);
         if (this._codePoints[codePoint] === undefined)
-          this._codePoints[codePoint] = this._ctx.measureText(String.fromCodePoint(codePoint)).width;
+          this._codePoints[codePoint] = this._ctx.measureText(s.substring(i, i + 2)).width;
         result += this._codePoints[codePoint];
         i += 2;
       } else {
         if (this._default[charCode] === 2) {
-          let width = this._ctx.measureText(chunk[i]).width;
+          let width = this._ctx.measureText(s[i]).width;
           this._map[charCode] = width;
           this._default[charCode] = width === this.defaultWidth ? 1 : 0;
         }
-        if (this._default[charCode] === 1) {
+        if (this._default[charCode] === 1)
           defaults++;
-        } else {
+        else
           result += this._map[charCode];
-        }
         i++;
       }
     }
-    return defaults === chunk.length ? 0 : result + defaults * this.defaultWidth;
+    return defaults === to - from ? 0 : result + defaults * this.defaultWidth;
   }
 
-  measureCharCode(charCode) {
-    if (this._default[charCode] === 2) {
-      let width = this._ctx.measureText(String.fromCharCode(charCode)).width;
-      this._map[charCode] = width;
-      this._default[charCode] = width === this.defaultWidth ? 1 : 0;
+  measureBMPCodePoint(codePoint) {
+    if (this._default[codePoint] === 2) {
+      let width = this._ctx.measureText(String.fromCharCode(codePoint)).width;
+      this._map[codePoint] = width;
+      this._default[codePoint] = width === this.defaultWidth ? 1 : 0;
     }
-    return this._map[charCode];
+    return this._map[codePoint];
   }
 
-  measureCodePoint(codePoint) {
+  measureSupplementaryCodePoint(codePoint) {
     if (this._codePoints[codePoint] === undefined)
       this._codePoints[codePoint] = this._ctx.measureText(String.fromCodePoint(codePoint)).width;
     return this._codePoints[codePoint];
@@ -334,7 +336,7 @@ export class Renderer {
       return;
     // To properly handle input events, we have to update rects synchronously.
     const gutterLength = (Math.max(this._document.lineCount(), 100) + '').length;
-    const gutterWidth = (this._measurer.measureChunk('9') || this._measurer.defaultWidth) * gutterLength;
+    const gutterWidth = (this._measurer.measureString('9', 0, 1) || this._measurer.defaultWidth) * gutterLength;
     this._gutterRect.width = gutterWidth + 2 * GUTTER_PADDING_LEFT_RIGHT;
     this._gutterRect.height = this._cssHeight;
 
@@ -347,7 +349,7 @@ export class Renderer {
     this._viewport.hScrollbar.setSize(this._cssWidth - this._gutterRect.width - SCROLLBAR_WIDTH);
     this._viewport.setPadding({
       left: 4,
-      right: this._measurer.measureChunk('MMM') || this._measurer.defaultWidth * 3,
+      right: this._measurer.measureString('MMM', 0, 3) || this._measurer.defaultWidth * 3,
       top: 4,
       bottom: this._editorRect.height - this._measurer.lineHeight - 4
     });
@@ -474,10 +476,10 @@ export class Renderer {
             let charCode = lineContent.charCodeAt(i);
             if (charCode >= 0xD800 && charCode <= 0xDBFF && i + 1 < lineContent.length) {
               offsetToX[i + 1] = x;
-              x += this._measurer.measureCodePoint(lineContent.codePointAt(i));
+              x += this._measurer.measureSupplementaryCodePoint(lineContent.codePointAt(i));
               i += 2;
             } else {
-              x += this._measurer.measureCharCode(charCode);
+              x += this._measurer.measureBMPCodePoint(charCode);
               i++;
             }
           } else {

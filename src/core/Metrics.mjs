@@ -53,46 +53,6 @@ import { Unicode } from "./Unicode.mjs";
  * }} Range;
  */
 
-/**
- * @interface
- */
-class Measurer {
-  constructor() {
-    this.defaultWidth = 1;
-    this.defaultHeight = 1;
-  }
-
-  /**
-   * Returns the total width of a chunk.
-   * It is guaranteed that chunk does not contain line breaks.
-   * Return 0 when measured width is equal to |defaultWidth * chunk.length|
-   * to save some memory and computation.
-   * @param {string} chunk
-   * @return {number}
-   */
-  measureChunk(chunk) {
-  }
-
-  /**
-   * Returns the width of a single character given a char code (code point of a character
-   * belonging to the Unicode Basic Multilingual Plane as opposite to a high/low surrogate
-   * of a character from a Supplementary Plane).
-   * @param {number} charCode
-   * @return {number}
-   */
-  measureCharCode(charCode) {
-  }
-
-  /**
-   * Returns the width of a single character given a code point from a Supplemetary Plane
-   * (this implies it's greater or equal to 0x10000).
-   * @param {number} codePoint
-   * @return {number}
-   */
-  measureCodePoint(codePoint) {
-  }
-};
-
 export let RoundMode = {
   Floor: 0,
   Round: 1,
@@ -211,7 +171,7 @@ Metrics.fromChunk = function(chunk, measurer) {
       metrics.first = Unicode.columnCount(chunk, 0, nextLine === -1 ? chunk.length : nextLine);
       metrics.longest = metrics.first;
 
-      let firstWidth = measurer.measureChunk(chunk.substring(0, metrics.first));
+      let firstWidth = measurer.measureString(chunk, 0, metrics.first);
       if (firstWidth)
         metrics.firstWidth = firstWidth;
       else
@@ -223,7 +183,7 @@ Metrics.fromChunk = function(chunk, measurer) {
       metrics.last = Unicode.columnCount(chunk, index, chunk.length);
       metrics.longest = Math.max(metrics.longest, metrics.last);
 
-      let lastWidth = measurer.measureChunk(chunk.substring(index, chunk.length));
+      let lastWidth = measurer.measureString(chunk, index, chunk.length);
       if (lastWidth)
         metrics.lastWidth = lastWidth;
       else
@@ -234,7 +194,7 @@ Metrics.fromChunk = function(chunk, measurer) {
 
     let length = Unicode.columnCount(chunk, index, nextLine);
     metrics.longest = Math.max(metrics.longest, length);
-    let width = measurer.measureChunk(chunk.substring(index, nextLine));
+    let width = measurer.measureString(chunk, index, nextLine);
     if (!width)
       width = length * measurer.defaultWidth;
     longestWidth = Math.max(longestWidth, width);
@@ -289,7 +249,7 @@ Metrics.chunkPositionToLocation = function(chunk, before, position, measurer, st
     length = offsetColumn.offset - index;
   }
 
-  let width = measurer.measureChunk(chunk.substring(index, index + length));
+  let width = measurer.measureString(chunk, index, index + length);
   if (!width)
     width = length * measurer.defaultWidth;
   return {
@@ -320,9 +280,9 @@ Metrics._chunkLengthForWidth = function(chunk, measurer, desired, roundMode) {
     let next;
     if (charCode >= 0xD800 && charCode <= 0xDBFF && length + 1 < chunk.length) {
       nextLength = length + 2;
-      next = measurer.measureCodePoint(chunk.codePointAt(length));
+      next = measurer.measureSupplementaryCodePoint(chunk.codePointAt(length));
     } else {
-      next = measurer.measureCharCode(charCode);
+      next = measurer.measureBMPCodePoint(charCode);
     }
     if (width + next > desired) {
       if (roundMode === RoundMode.Round)
@@ -414,7 +374,7 @@ Metrics.chunkOffsetToLocation = function(chunk, before, offset, measurer) {
       index = nextLine + 1;
     } else {
       column += Unicode.columnCount(chunk, index, chunk.length);
-      let width = measurer.measureChunk(chunk.substring(index, chunk.length));
+      let width = measurer.measureString(chunk, index, chunk.length);
       if (!width)
         width = (chunk.length - index) * measurer.defaultWidth;
       x += width;
