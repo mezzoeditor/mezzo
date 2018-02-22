@@ -161,6 +161,8 @@ async function setupEditor(editor, exampleName) {
     editor.document().reset(new Array(1000).fill(text).join(''));
   else if (exampleName.indexOf('megacolumn') !== -1)
     editor.document().reset(new Array(10000).fill(text).join(''));
+  else if (exampleName.indexOf('unicodeperf') !== -1)
+    editor.document().reset(new Array(100).fill(text).join(''));
   else
     editor.document().reset(text);
   //editor.document().reset('abc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\n');
