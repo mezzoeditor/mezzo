@@ -414,11 +414,10 @@ export class Text {
     this._root = root;
     this._measurer = measurer;
     let metrics = this._root.metrics;
-    this._lineCount = (metrics.lines || 0) + 1;
+    this._lineCount = (metrics.lineBreaks || 0) + 1;
     this._length = metrics.length;
     this._lastLocation = Metrics.toLocation(metrics, this._measurer);
-    this._longestLineLength = metrics.longest;
-    this._longestLineWidth = metrics.longestWidth || (metrics.longest * this._measurer.defaultWidth);
+    this._longestLineWidth = metrics.longestWidth || (metrics.longestColumns * this._measurer.defaultWidth);
   }
 
   /**
@@ -498,13 +497,6 @@ export class Text {
    */
   lineCount() {
     return this._lineCount;
-  }
-
-  /**
-   * @return {number}
-   */
-  longestLineLength() {
-    return this._longestLineLength;
   }
 
   /**

@@ -61,19 +61,19 @@ class TestMeasurer {
 
 describe('Metrics', () => {
   it('Metrics.fromString', () => {
-    expect(Metrics.fromString('one line', defaultMeasurer)).toEqual({length: 8, first: 8, last: 8, longest: 8});
-    expect(Metrics.fromString('\none line', defaultMeasurer)).toEqual({length: 9, first: 0, last: 8, longest: 8, lines: 1});
-    expect(Metrics.fromString('one line\n', defaultMeasurer)).toEqual({length: 9, first: 8, last: 0, longest: 8, lines: 1});
-    expect(Metrics.fromString('\none line\n', defaultMeasurer)).toEqual({length: 10, first: 0, last: 0, longest: 8, lines: 2});
-    expect(Metrics.fromString('short\nlongest\nlonger\ntiny', defaultMeasurer)).toEqual({length: 25, first: 5, last: 4, longest: 7, lines: 3});
+    expect(Metrics.fromString('one line', defaultMeasurer)).toEqual({length: 8, firstColumns: 8, lastColumns: 8, longestColumns: 8});
+    expect(Metrics.fromString('\none line', defaultMeasurer)).toEqual({length: 9, firstColumns: 0, lastColumns: 8, longestColumns: 8, lineBreaks: 1});
+    expect(Metrics.fromString('one line\n', defaultMeasurer)).toEqual({length: 9, firstColumns: 8, lastColumns: 0, longestColumns: 8, lineBreaks: 1});
+    expect(Metrics.fromString('\none line\n', defaultMeasurer)).toEqual({length: 10, firstColumns: 0, lastColumns: 0, longestColumns: 8, lineBreaks: 2});
+    expect(Metrics.fromString('short\nlongest\nlonger\ntiny', defaultMeasurer)).toEqual({length: 25, firstColumns: 5, lastColumns: 4, longestColumns: 7, lineBreaks: 3});
 
     let testMeasurer = new TestMeasurer();
-    expect(Metrics.fromString('a', testMeasurer)).toEqual({length: 1, first: 1, last: 1, longest: 1});
-    expect(Metrics.fromString('a\nb', testMeasurer)).toEqual({length: 3, first: 1, last: 1, longest: 1, lines: 1, lastWidth: 2, longestWidth: 2});
-    expect(Metrics.fromString('b\na', testMeasurer)).toEqual({length: 3, first: 1, last: 1, longest: 1, lines: 1, firstWidth: 2, longestWidth: 2});
-    expect(Metrics.fromString('bac', testMeasurer)).toEqual({length: 3, first: 3, last: 3, longest: 3, firstWidth: 6, lastWidth: 6, longestWidth: 6});
-    expect(Metrics.fromString('b\na\nc', testMeasurer)).toEqual({length: 5, first: 1, last: 1, longest: 1, lines: 2, firstWidth: 2, lastWidth: 3, longestWidth: 3});
-    expect(Metrics.fromString('b\naaaa\nc', testMeasurer)).toEqual({length: 8, first: 1, last: 1, longest: 4, lines: 2, firstWidth: 2, lastWidth: 3});
+    expect(Metrics.fromString('a', testMeasurer)).toEqual({length: 1, firstColumns: 1, lastColumns: 1, longestColumns: 1});
+    expect(Metrics.fromString('a\nb', testMeasurer)).toEqual({length: 3, firstColumns: 1, lastColumns: 1, longestColumns: 1, lineBreaks: 1, lastWidth: 2, longestWidth: 2});
+    expect(Metrics.fromString('b\na', testMeasurer)).toEqual({length: 3, firstColumns: 1, lastColumns: 1, longestColumns: 1, lineBreaks: 1, firstWidth: 2, longestWidth: 2});
+    expect(Metrics.fromString('bac', testMeasurer)).toEqual({length: 3, firstColumns: 3, lastColumns: 3, longestColumns: 3, firstWidth: 6, lastWidth: 6, longestWidth: 6});
+    expect(Metrics.fromString('b\na\nc', testMeasurer)).toEqual({length: 5, firstColumns: 1, lastColumns: 1, longestColumns: 1, lineBreaks: 2, firstWidth: 2, lastWidth: 3, longestWidth: 3});
+    expect(Metrics.fromString('b\naaaa\nc', testMeasurer)).toEqual({length: 8, firstColumns: 1, lastColumns: 1, longestColumns: 4, lineBreaks: 2, firstWidth: 2, lastWidth: 3});
   });
 
   it('Metrics.string*ToLocation', () => {
@@ -141,7 +141,7 @@ describe('Text', () => {
     let content = chunks.join('');
     let text = Text.test.fromChunks(chunks, defaultMeasurer);
     expect(text.lineCount()).toBe(8);
-    expect(text.longestLineLength()).toBe(8);
+    expect(text.longestLineWidth()).toBe(8);
     expect(text.length()).toBe(content.length);
     for (let from = 0; from <= content.length; from++) {
       for (let to = from; to <= content.length; to++)
@@ -160,9 +160,9 @@ describe('Text', () => {
     for (let i = 0; i < lineCount; i++) {
       let s = 'abcdefghijklmnopqrstuvwxyz';
       let length = 1 + (random() % (s.length - 1));
-      longest = Math.max(longest, length);
       let chunk = s.substring(0, length);
       let width = testMeasurer._measureString(chunk, 0, length);
+      longest = Math.max(longest, width);
       chunks.push(chunk + '\n');
       locationQueries.push({line: i, column: 0, offset: offset, x: 0, y: i * 3, rounded: true});
       locationQueries.push({line: i, column: 1, offset: offset + 1, x: 1, y: i * 3});
@@ -188,7 +188,7 @@ describe('Text', () => {
       Text.test.setDefaultChunkSize(chunkSize);
       let text = Text.withContent(content, testMeasurer);
       expect(text.lineCount()).toBe(lineCount + 1);
-      expect(text.longestLineLength()).toBe(longest);
+      expect(text.longestLineWidth()).toBe(longest);
       expect(text.length()).toBe(content.length);
       for (let {from, to} of contentQueries)
         expect(text.content(from, to)).toBe(content.substring(from, to));

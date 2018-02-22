@@ -3,12 +3,12 @@ import { Unicode } from "./Unicode.mjs";
 /**
  * @typedef {{
  *   length: number,
- *   lines: number|undefined,
- *   first: number,
+ *   lineBreaks: number|undefined,
+ *   firstColumns: number,
  *   firstWidth: number|undefined,
- *   last: number,
+ *   lastColumns: number,
  *   lastWidth: number|undefined,
- *   longest: number,
+ *   longestColumns: number,
  *   longestWidth: number|undefined,
  * }} Metrics;
  */
@@ -68,9 +68,9 @@ Metrics.origin = { offset: 0, line: 0, column: 0, x: 0, y: 0 };
 Metrics.advanceLocation = function(location, metrics, measurer) {
   let result = {
     offset: location.offset + metrics.length,
-    line: location.line + (metrics.lines || 0),
-    column: metrics.last + (metrics.lines ? 0 : location.column),
-    x: (metrics.lastWidth || metrics.last * measurer.defaultWidth) + (metrics.lines ? 0 : location.x)
+    line: location.line + (metrics.lineBreaks || 0),
+    column: metrics.lastColumns + (metrics.lineBreaks ? 0 : location.column),
+    x: (metrics.lastWidth || metrics.lastColumns * measurer.defaultWidth) + (metrics.lineBreaks ? 0 : location.x)
   };
   result.y = result.line * measurer.defaultHeight;
   return result;
@@ -83,12 +83,12 @@ Metrics.advanceLocation = function(location, metrics, measurer) {
 Metrics.clone = function(metrics) {
   let result = {
     length: metrics.length,
-    last: metrics.last,
-    first: metrics.first,
-    longest: metrics.longest
+    lastColumns: metrics.lastColumns,
+    firstColumns: metrics.firstColumns,
+    longestColumns: metrics.longestColumns
   };
-  if (metrics.lines)
-    result.lines = metrics.lines;
+  if (metrics.lineBreaks)
+    result.lineBreaks = metrics.lineBreaks;
   if (metrics.firstWidth)
     result.firstWidth = metrics.firstWidth;
   if (metrics.lastWidth)
@@ -106,26 +106,26 @@ Metrics.clone = function(metrics) {
  */
 Metrics.combine = function(left, right, measurer) {
   let result = {
-    longest: Math.max(Math.max(left.longest, left.last + right.first), right.longest),
-    first: left.first + (left.lines ? 0 : right.first),
-    last: right.last + (right.lines ? 0 : left.last),
+    longestColumns: Math.max(Math.max(left.longestColumns, left.lastColumns + right.firstColumns), right.longestColumns),
+    firstColumns: left.firstColumns + (left.lineBreaks ? 0 : right.firstColumns),
+    lastColumns: right.lastColumns + (right.lineBreaks ? 0 : left.lastColumns),
     length: left.length + right.length
   }
-  if (left.lines || right.lines)
-    result.lines = (left.lines || 0) + (right.lines || 0);
-  if (left.firstWidth || (!left.lines && right.firstWidth)) {
-    result.firstWidth = (left.firstWidth || left.first * measurer.defaultWidth) +
-        (left.lines ? 0 : (right.firstWidth || right.first * measurer.defaultWidth));
+  if (left.lineBreaks || right.lineBreaks)
+    result.lineBreaks = (left.lineBreaks || 0) + (right.lineBreaks || 0);
+  if (left.firstWidth || (!left.lineBreaks && right.firstWidth)) {
+    result.firstWidth = (left.firstWidth || left.firstColumns * measurer.defaultWidth) +
+        (left.lineBreaks ? 0 : (right.firstWidth || right.firstColumns * measurer.defaultWidth));
   }
-  if (right.lastWidth || (!right.lines && left.lastWidth)) {
-    result.lastWidth = (right.lastWidth || right.last * measurer.defaultWidth) +
-        (right.lines ? 0 : (left.lastWidth || left.last * measurer.defaultWidth));
+  if (right.lastWidth || (!right.lineBreaks && left.lastWidth)) {
+    result.lastWidth = (right.lastWidth || right.lastColumns * measurer.defaultWidth) +
+        (right.lineBreaks ? 0 : (left.lastWidth || left.lastColumns * measurer.defaultWidth));
   }
   if (left.longestWidth || right.longestWidth || left.lastWidth || right.firstWidth) {
-    result.longestWidth = Math.max(left.longestWidth || left.longest * measurer.defaultWidth,
-        right.longestWidth || right.longest * measurer.defaultWidth);
+    result.longestWidth = Math.max(left.longestWidth || left.longestColumns * measurer.defaultWidth,
+        right.longestWidth || right.longestColumns * measurer.defaultWidth);
     result.longestWidth = Math.max(result.longestWidth,
-        (left.lastWidth || left.last * measurer.defaultWidth) + (right.firstWidth || right.first * measurer.defaultWidth));
+        (left.lastWidth || left.lastColumns * measurer.defaultWidth) + (right.firstWidth || right.firstColumns * measurer.defaultWidth));
   }
   return result;
 };
@@ -137,11 +137,11 @@ Metrics.combine = function(left, right, measurer) {
  */
 Metrics.toLocation = function(metrics, measurer) {
   return {
-    line: metrics.lines || 0,
-    column: metrics.last,
+    line: metrics.lineBreaks || 0,
+    column: metrics.lastColumns,
     offset: metrics.length,
-    x: metrics.lastWidth || metrics.last * measurer.defaultWidth,
-    y: (metrics.lines || 0) * measurer.defaultHeight
+    x: metrics.lastWidth || metrics.lastColumns * measurer.defaultWidth,
+    y: (metrics.lineBreaks || 0) * measurer.defaultHeight
   };
 };
 
@@ -153,52 +153,52 @@ Metrics.toLocation = function(metrics, measurer) {
 Metrics.fromString = function(s, measurer) {
   let metrics = {
     length: s.length,
-    first: 0,
-    last: 0,
-    longest: 0
+    firstColumns: 0,
+    lastColumns: 0,
+    longestColumns: 0
   };
-  let lines = 0;
+  let lineBreaks = 0;
   let index = 0;
   let longestWidth = 0;
   while (true) {
     let nextLine = s.indexOf('\n', index);
     if (index === 0) {
-      metrics.first = Unicode.columnCount(s, 0, nextLine === -1 ? s.length : nextLine);
-      metrics.longest = metrics.first;
+      metrics.firstColumns = Unicode.columnCount(s, 0, nextLine === -1 ? s.length : nextLine);
+      metrics.longestColumns = metrics.firstColumns;
 
-      let firstWidth = measurer.measureString(s, 0, metrics.first);
+      let firstWidth = measurer.measureString(s, 0, metrics.firstColumns);
       if (firstWidth)
         metrics.firstWidth = firstWidth;
       else
-        firstWidth = metrics.first * measurer.defaultWidth;
+        firstWidth = metrics.firstColumns * measurer.defaultWidth;
       longestWidth = Math.max(longestWidth, firstWidth);
     }
 
     if (nextLine === -1) {
-      metrics.last = Unicode.columnCount(s, index, s.length);
-      metrics.longest = Math.max(metrics.longest, metrics.last);
+      metrics.lastColumns = Unicode.columnCount(s, index, s.length);
+      metrics.longestColumns = Math.max(metrics.longestColumns, metrics.lastColumns);
 
       let lastWidth = measurer.measureString(s, index, s.length);
       if (lastWidth)
         metrics.lastWidth = lastWidth;
       else
-        lastWidth = metrics.last * measurer.defaultWidth;
+        lastWidth = metrics.lastColumns * measurer.defaultWidth;
       longestWidth = Math.max(longestWidth, lastWidth);
       break;
     }
 
     let length = Unicode.columnCount(s, index, nextLine);
-    metrics.longest = Math.max(metrics.longest, length);
+    metrics.longestColumns = Math.max(metrics.longestColumns, length);
     let width = measurer.measureString(s, index, nextLine);
     if (!width)
       width = length * measurer.defaultWidth;
     longestWidth = Math.max(longestWidth, width);
-    lines++;
+    lineBreaks++;
     index = nextLine + 1;
   }
-  if (lines)
-    metrics.lines = lines;
-  if (longestWidth !== metrics.longest * measurer.defaultWidth)
+  if (lineBreaks)
+    metrics.lineBreaks = lineBreaks;
+  if (longestWidth !== metrics.longestColumns * measurer.defaultWidth)
     metrics.longestWidth = longestWidth;
   return metrics;
 };

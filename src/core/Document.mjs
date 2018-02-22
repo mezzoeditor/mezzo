@@ -297,13 +297,6 @@ export class Document {
   /**
    * @return {number}
    */
-  longestLineLength() {
-    return this._text.longestLineLength();
-  }
-
-  /**
-   * @return {number}
-   */
   length() {
     return this._text.length();
   }
