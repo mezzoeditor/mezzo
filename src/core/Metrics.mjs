@@ -211,45 +211,43 @@ Metrics.fromString = function(s, measurer) {
  * @return {!Location}
  */
 Metrics.stringPositionToLocation = function(s, before, position, measurer, strict) {
-  let {line, column, offset, x, y} = before;
+  let {line, column, x, y} = before;
 
   if (position.line < line || (position.line === line && position.column < column))
     throw 'Inconsistent';
 
-  let index = 0;
+  let lineStartOffset = 0;
   while (line < position.line) {
-    let nextLine = s.indexOf('\n', index);
-    if (nextLine === -1)
+    let lineBreakOffset = s.indexOf('\n', lineStartOffset);
+    if (lineBreakOffset === -1)
       throw 'Inconsistent';
-    offset += (nextLine - index + 1);
-    index = nextLine + 1;
+    lineStartOffset = lineBreakOffset + 1;
     line++;
     y += measurer.defaultHeight;
     column = 0;
     x = 0;
   }
 
-  let lineEnd = s.indexOf('\n', index);
-  if (lineEnd === -1)
-    lineEnd = s.length;
+  let lineEndOffset = s.indexOf('\n', lineStartOffset);
+  if (lineEndOffset === -1)
+    lineEndOffset = s.length;
 
-  let offsetColumn = Unicode.columnToOffset(s, index, lineEnd, position.column - column);
-  let length;
-  if (offsetColumn.offset === -1) {
+  let columnToOffsetResult = Unicode.columnToOffset(s, lineStartOffset, lineEndOffset, position.column - column);
+  column += columnToOffsetResult.column;
+  let offset = columnToOffsetResult.offset;
+  if (offset === -1) {
     if (strict)
       throw 'Position does not belong to text';
-    length = lineEnd - index;
-  } else {
-    length = offsetColumn.offset - index;
+    offset = lineEndOffset;
   }
 
-  let width = measurer.measureString(s, index, index + length);
+  let width = measurer.measureString(s, lineStartOffset, offset);
   if (!width)
-    width = length * measurer.defaultWidth;
+    width = (offset - lineStartOffset) * measurer.defaultWidth;
   return {
-    offset: offset + length,
+    offset: before.offset + offset,
     line: line,
-    column: column + offsetColumn.column,
+    column: column,
     x: x + width,
     y: y
   };
