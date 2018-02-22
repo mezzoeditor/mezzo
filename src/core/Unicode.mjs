@@ -28,12 +28,15 @@ Unicode.Measurer = class {
   }
 
   /**
-   * Returns the total width of a substring. It is guaranteed that string does not
-   * contain line breaks.
-   * Return zero when measured width is equal to |defaultWidth * (to - from)|
+   * Returns the total width of a substring and the number of columns (code points) inside.
+   * It is guaranteed that string does not contain line breaks.
+   *
+   * Return zero instead of width when it is equal to |defaultWidth * columns|
    * to save some memory and computation.
+   * Do not return zero if the substring contains any code points from Supplementary Planes.
+   *
    * @param {string} chunk
-   * @return {number}
+   * @return {!{columns: number, width: number}}
    */
   measureString(s, from, to) {
   }
@@ -42,6 +45,7 @@ Unicode.Measurer = class {
    * Returns the width of a single code point from the Unicode Basic Multilingual Plane.
    * This method should not return zero even for default width.
    * Note that |codePoint| is always less than 0x10000.
+   *
    * @param {number} codePoint
    * @return {number}
    */
@@ -52,6 +56,7 @@ Unicode.Measurer = class {
    * Returns the width of a single code point from a Supplemetary Plane.
    * This method should not return zero even for default width.
    * Note that |codePoint| is always greater or equal than 0x10000.
+   *
    * @param {number} codePoint
    * @return {number}
    */

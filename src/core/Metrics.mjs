@@ -170,8 +170,7 @@ Metrics.fromString = function(s, measurer) {
   while (true) {
     let lineBreakOffset = s.indexOf('\n', offset);
     let lineEndOffset = lineBreakOffset === -1 ? s.length : lineBreakOffset;
-    let columns = Unicode.columnCount(s, offset, lineEndOffset);
-    let width = measurer.measureString(s, offset, lineEndOffset);
+    let {width, columns} = measurer.measureString(s, offset, lineEndOffset);
     let fullWidth = width || (columns * measurer.defaultWidth);
 
     if (offset === 0) {
@@ -241,9 +240,9 @@ Metrics.stringPositionToLocation = function(s, before, position, measurer, stric
     offset = lineEndOffset;
   }
 
-  let width = measurer.measureString(s, lineStartOffset, offset);
+  let {width, columns} = measurer.measureString(s, lineStartOffset, offset);
   if (!width)
-    width = (offset - lineStartOffset) * measurer.defaultWidth;
+    width = columns * measurer.defaultWidth;
   return {
     offset: before.offset + offset,
     line: line,
@@ -365,10 +364,10 @@ Metrics.stringOffsetToLocation = function(s, before, offset, measurer) {
       x = 0;
       index = nextLine + 1;
     } else {
-      column += Unicode.columnCount(s, index, s.length);
-      let width = measurer.measureString(s, index, s.length);
+      let {width, columns} = measurer.measureString(s, index, s.length);
       if (!width)
-        width = (s.length - index) * measurer.defaultWidth;
+        width = columns * measurer.defaultWidth;
+      column += columns;
       x += width;
       break;
     }

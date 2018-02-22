@@ -11,7 +11,7 @@ export class Document {
     this._measurer = {
       defaultWidth: 1,
       defaultHeight: 1,
-      measureString: (s, from, to) => 0,
+      measureString: (s, from, to) => ({width: 0, columns: to - from}),
       measureBMPCodePoint: codePoint => 1,
       measureSupplementaryCodePoint: codePoint => 1
     };

@@ -32,13 +32,14 @@ class CtxMeasurer {
 
   measureString(s, from, to) {
     if (from === to)
-      return 0;
+      return {width: 0, columns: 0};
 
     if (this._monospace && Unicode.asciiRegex.test(s))
-      return 0;
+      return {width: 0, columns: to - from};
 
     let defaults = 0;
     let result = 0;
+    let columns = 0;
     for (let i = from; i < to; ) {
       let charCode = s.charCodeAt(i);
       if (charCode >= 0xD800 && charCode <= 0xDBFF && i + 1 < to) {
@@ -47,6 +48,7 @@ class CtxMeasurer {
           this._codePoints[codePoint] = this._ctx.measureText(s.substring(i, i + 2)).width;
         result += this._codePoints[codePoint];
         i += 2;
+        columns++;
       } else {
         if (this._default[charCode] === 2) {
           let width = this._ctx.measureText(s[i]).width;
@@ -58,9 +60,11 @@ class CtxMeasurer {
         else
           result += this._map[charCode];
         i++;
+        columns++;
       }
     }
-    return defaults === to - from ? 0 : result + defaults * this.defaultWidth;
+    let width = defaults === to - from ? 0 : result + defaults * this.defaultWidth;
+    return {width, columns};
   }
 
   measureBMPCodePoint(codePoint) {
@@ -336,7 +340,7 @@ export class Renderer {
       return;
     // To properly handle input events, we have to update rects synchronously.
     const gutterLength = (Math.max(this._document.lineCount(), 100) + '').length;
-    const gutterWidth = (this._measurer.measureString('9', 0, 1) || this._measurer.defaultWidth) * gutterLength;
+    const gutterWidth = (this._measurer.measureString('9', 0, 1).width || this._measurer.defaultWidth) * gutterLength;
     this._gutterRect.width = gutterWidth + 2 * GUTTER_PADDING_LEFT_RIGHT;
     this._gutterRect.height = this._cssHeight;
 
@@ -349,7 +353,7 @@ export class Renderer {
     this._viewport.hScrollbar.setSize(this._cssWidth - this._gutterRect.width - SCROLLBAR_WIDTH);
     this._viewport.setPadding({
       left: 4,
-      right: this._measurer.measureString('MMM', 0, 3) || this._measurer.defaultWidth * 3,
+      right: this._measurer.measureString('MMM', 0, 3).width || this._measurer.defaultWidth * 3,
       top: 4,
       bottom: this._editorRect.height - this._measurer.lineHeight - 4
     });
