@@ -1,5 +1,6 @@
 import { Frame } from "../core/Frame.mjs";
 import { RoundMode } from "../core/Metrics.mjs";
+import { Unicode } from "../core/Unicode.mjs";
 import { trace } from "../core/Trace.mjs";
 
 class CtxMeasurer {
@@ -30,7 +31,7 @@ class CtxMeasurer {
     if (!chunk)
       return 0;
 
-    if (this._monospace && CtxMeasurer._asciiRegex.test(chunk))
+    if (this._monospace && Unicode.asciiRegex.test(chunk))
       return 0;
 
     let defaults = 0;
@@ -75,8 +76,6 @@ class CtxMeasurer {
     return this._codePoints[codePoint];
   }
 };
-
-CtxMeasurer._asciiRegex = /^[\u{0020}-\u{007e}]*$/u;
 
 const MIN_THUMB_SIZE = 30;
 const GUTTER_PADDING_LEFT_RIGHT = 4;

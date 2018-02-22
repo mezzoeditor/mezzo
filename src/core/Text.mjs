@@ -1,5 +1,6 @@
 import { Random } from "./Random.mjs";
 import { Metrics } from "./Metrics.mjs";
+import { Unicode } from "./Unicode.mjs";
 import { trace } from "../core/Trace.mjs";
 
 let random = Random(42);
@@ -18,6 +19,44 @@ let kDefaultChunkSize = 100;
  *   h: number
  * }} TreeNode;
  */
+
+/**
+ * @typedef {{
+ *   offset: number|undefined,
+ *   line: number|undefined,
+ *   column: number|undefined,
+ *   x: number|undefined,
+ *   y: number|undefined,
+ * }} FindKey;
+ */
+
+ /**
+ * @param {!Location} location
+ * @param {!FindKey} key
+ * @param {!Measurer} measurer
+ * @return {boolean}
+ */
+function locationIsGreater(location, key, measurer) {
+  if (key.offset !== undefined)
+    return location.offset > key.offset;
+  if (key.line !== undefined)
+    return location.line > key.line || (location.line === key.line && location.column > key.column);
+  return location.y > key.y || (location.y + measurer.defaultHeight > key.y && location.x > key.x);
+};
+
+/**
+ * @param {!Location} location
+ * @param {!FindKey} key
+ * @return {boolean}
+ */
+function locationIsGreaterOrEqual(location, key) {
+  if (key.offset !== undefined)
+    return location.offset >= key.offset;
+  if (key.line !== undefined)
+    return location.line > key.line || (location.line === key.line && location.column >= key.column);
+  throw 'locationIsGreaterOrEqual cannot be used for points';
+};
+
 
 /**
  * @param {string} s
@@ -130,9 +169,9 @@ function splitTree(root, key, intersectionToLeft, measurer, current) {
     return {};
   if (!current)
     current = Metrics.origin;
-  if (Metrics.locationIsGreaterOrEqual(current, key))
+  if (locationIsGreaterOrEqual(current, key))
     return {right: root};
-  if (!Metrics.locationIsGreater(Metrics.advanceLocation(current, root.metrics, measurer), key, measurer))
+  if (!locationIsGreater(Metrics.advanceLocation(current, root.metrics, measurer), key, measurer))
     return {left: root};
 
   // intersection to left:
@@ -148,10 +187,10 @@ function splitTree(root, key, intersectionToLeft, measurer, current) {
   //   rootToLeft = (key >= b) == (b <= key) == !(b > key)
 
   let next = root.left ? Metrics.advanceLocation(current, root.left.metrics, measurer) : current;
-  let rootToLeft = !Metrics.locationIsGreaterOrEqual(next, key);
+  let rootToLeft = !locationIsGreaterOrEqual(next, key);
   next = Metrics.advanceLocation(next, root.selfMetrics || root.metrics, measurer);
   if (!intersectionToLeft)
-    rootToLeft = !Metrics.locationIsGreater(next, key, measurer);
+    rootToLeft = !locationIsGreater(next, key, measurer);
   if (rootToLeft) {
     let tmp = splitTree(root.right, key, intersectionToLeft, measurer, next);
     return {left: setChildren(root, root.left, tmp.left, measurer), right: tmp.right};
@@ -189,14 +228,14 @@ function findNode(node, key, measurer) {
   while (true) {
     if (node.left) {
       let next = Metrics.advanceLocation(current, node.left.metrics, measurer);
-      if (Metrics.locationIsGreater(next, key, measurer)) {
+      if (locationIsGreater(next, key, measurer)) {
         node = node.left;
         continue;
       }
       current = next;
     }
     let next = Metrics.advanceLocation(current, node.selfMetrics || node.metrics, measurer);
-    if (Metrics.locationIsGreater(next, key, measurer))
+    if (locationIsGreater(next, key, measurer))
       return {node, location: current};
     current = next;
     if (!node.right)
@@ -399,7 +438,7 @@ export class Text {
     let nodes = [];
     while (index < content.length) {
       let length = Math.min(content.length - index, kDefaultChunkSize);
-      if (Metrics.offsetSplitsSurrogates(content, index + length))
+      if (!Unicode.isValidOffset(content, index + length))
         length++;
       let chunk = content.substring(index, index + length);
       nodes.push(createNode(chunk, measurer));

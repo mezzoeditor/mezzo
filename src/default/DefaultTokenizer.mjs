@@ -1,3 +1,5 @@
+import { Unicode } from "../core/Unicode.mjs";
+
 export class DefaultTokenizer {
   /**
    * @param {!Text.Iterator} it
@@ -14,7 +16,7 @@ export class DefaultTokenizer {
    * Return weather the char belongs to the word
    */
   isSpaceChar(it) {
-    return /\s/.test(it.current);
+    return Unicode.whitespaceRegex.test(it.current);
   }
 
   /**

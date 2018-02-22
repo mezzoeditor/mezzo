@@ -1,3 +1,5 @@
+import { Unicode } from "./Unicode.mjs";
+
 // Default width optimization saves:
 // - 100MB in (system) memory on jquery.min.js (87MB total text size);
 // - 300KB in total memory on index.js (5,5KB total text size).
@@ -42,16 +44,6 @@
  *   x: number,
  *   y: number,
  * }} Location;
- */
-
-/**
- * @typedef {{
- *   offset: number|undefined,
- *   line: number|undefined,
- *   column: number|undefined,
- *   x: number|undefined,
- *   y: number|undefined,
- * }} PartialLocation;
  */
 
 /**
@@ -127,33 +119,6 @@ Metrics.advanceLocation = function(location, metrics, measurer) {
   };
   result.y = result.line * measurer.defaultHeight;
   return result;
-};
-
-/**
- * @param {!Location} location
- * @param {!PartialLocation} key
- * @param {!Measurer} measurer
- * @return {boolean}
- */
-Metrics.locationIsGreater = function(location, key, measurer) {
-  if (key.offset !== undefined)
-    return location.offset > key.offset;
-  if (key.line !== undefined)
-    return location.line > key.line || (location.line === key.line && location.column > key.column);
-  return location.y > key.y || (location.y + measurer.defaultHeight > key.y && location.x > key.x);
-};
-
-/**
- * @param {!Location} location
- * @param {!PartialLocation} key
- * @return {boolean}
- */
-Metrics.locationIsGreaterOrEqual = function(location, key) {
-  if (key.offset !== undefined)
-    return location.offset >= key.offset;
-  if (key.line !== undefined)
-    return location.line > key.line || (location.line === key.line && location.column >= key.column);
-  throw 'locationIsGreaterOrEqual cannot be used for points';
 };
 
 /**
@@ -243,7 +208,7 @@ Metrics.fromChunk = function(chunk, measurer) {
   while (true) {
     let nextLine = chunk.indexOf('\n', index);
     if (index === 0) {
-      metrics.first = Metrics.codePointCount(chunk, 0, nextLine === -1 ? chunk.length : nextLine);
+      metrics.first = Unicode.columnCount(chunk, 0, nextLine === -1 ? chunk.length : nextLine);
       metrics.longest = metrics.first;
 
       let firstWidth = measurer.measureChunk(chunk.substring(0, metrics.first));
@@ -255,7 +220,7 @@ Metrics.fromChunk = function(chunk, measurer) {
     }
 
     if (nextLine === -1) {
-      metrics.last = Metrics.codePointCount(chunk, index, chunk.length);
+      metrics.last = Unicode.columnCount(chunk, index, chunk.length);
       metrics.longest = Math.max(metrics.longest, metrics.last);
 
       let lastWidth = measurer.measureChunk(chunk.substring(index, chunk.length));
@@ -267,7 +232,7 @@ Metrics.fromChunk = function(chunk, measurer) {
       break;
     }
 
-    let length = Metrics.codePointCount(chunk, index, nextLine);
+    let length = Unicode.columnCount(chunk, index, nextLine);
     metrics.longest = Math.max(metrics.longest, length);
     let width = measurer.measureChunk(chunk.substring(index, nextLine));
     if (!width)
@@ -314,14 +279,14 @@ Metrics.chunkPositionToLocation = function(chunk, before, position, measurer, st
   if (lineEnd === -1)
     lineEnd = chunk.length;
 
-  let codePointOffset = Metrics.codePointOffset(chunk, index, lineEnd, position.column - column);
+  let offsetColumn = Unicode.columnToOffset(chunk, index, lineEnd, position.column - column);
   let length;
-  if (codePointOffset.offset === -1) {
+  if (offsetColumn.offset === -1) {
     if (strict)
       throw 'Position does not belong to text';
     length = lineEnd - index;
   } else {
-    length = codePointOffset.offset - index;
+    length = offsetColumn.offset - index;
   }
 
   let width = measurer.measureChunk(chunk.substring(index, index + length));
@@ -330,7 +295,7 @@ Metrics.chunkPositionToLocation = function(chunk, before, position, measurer, st
   return {
     offset: offset + length,
     line: line,
-    column: column + codePointOffset.columns,
+    column: column + offsetColumn.column,
     x: x + width,
     y: y
   };
@@ -433,7 +398,7 @@ Metrics.chunkOffsetToLocation = function(chunk, before, offset, measurer) {
   if (chunk.length < offset - before.offset)
     throw 'Inconsistent';
 
-  if (Metrics.offsetSplitsSurrogates(chunk, offset - before.offset))
+  if (!Unicode.isValidOffset(chunk, offset - before.offset))
     throw 'Offset belongs to a middle of surrogate pair';
 
   chunk = chunk.substring(0, offset - before.offset);
@@ -448,7 +413,7 @@ Metrics.chunkOffsetToLocation = function(chunk, before, offset, measurer) {
       x = 0;
       index = nextLine + 1;
     } else {
-      column += Metrics.codePointCount(chunk, index, chunk.length);
+      column += Unicode.columnCount(chunk, index, chunk.length);
       let width = measurer.measureChunk(chunk.substring(index, chunk.length));
       if (!width)
         width = (chunk.length - index) * measurer.defaultWidth;
@@ -458,70 +423,3 @@ Metrics.chunkOffsetToLocation = function(chunk, before, offset, measurer) {
   }
   return {line, column, offset, x, y};
 };
-
-/**
- * @param {string} s
- * @param {number} i
- * @return {boolean}
- */
-Metrics.offsetSplitsSurrogates = function(s, i) {
-  if (i <= 0 || i >= s.length)
-    return false;
-  let charCode = s.charCodeAt(i - 1);
-  if (charCode < 0xD800 || charCode > 0xDBFF)
-    return false;
-  return true;
-};
-
-/**
- * @param {string} s
- * @param {number} from
- * @param {number} to
- * @return {number}
- */
-Metrics.codePointCount = function(s, from, to) {
-  if (Metrics._bmpRegex.test(s))
-    return to - from;
-  let result = 0;
-  for (let i = from; i < to; ) {
-    let charCode = s.charCodeAt(i);
-    if (charCode >= 0xD800 && charCode <= 0xDBFF && i + 1 < to) {
-      result++;
-      i += 2;
-    } else {
-      result++;
-      i++;
-    }
-  }
-  return result;
-};
-
-/**
- * @param {string} s
- * @param {number} from
- * @param {number} to
- * @param {number} index
- * @return {{offset: number, overflow: number|undefined}}
- */
-Metrics.codePointOffset = function(s, from, to, index) {
-  if (!index)
-    return {offset: from, columns: index};
-  if (Metrics._bmpRegex.test(s))
-    return {offset: from + index, columns: index};
-  let total = 0;
-  for (let i = from; i < to; ) {
-    let charCode = s.charCodeAt(i);
-    if (charCode >= 0xD800 && charCode <= 0xDBFF && i + 1 < to) {
-      total++;
-      i += 2;
-    } else {
-      total++;
-      i++;
-    }
-    if (total === index)
-      return {offset: i, columns: index};
-  }
-  return {offset: -1, columns: total};
-};
-
-Metrics._bmpRegex = /^[\u{0000}-\u{d7ff}]*$/u;
