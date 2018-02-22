@@ -733,6 +733,34 @@ describe('Decorator', () => {
       expect(Unicode.isValidOffset('𐀀𐀀', 4)).toBe(true);
       expect(Unicode.isValidOffset('𐀀𐀀', 5)).toBe(true);
     });
+
+    it('Unicode.columnCount', () => {
+      expect(Unicode.columnCount('abc', 1, 2)).toBe(1);
+      expect(Unicode.columnCount('abc', 0, 3)).toBe(3);
+      expect(Unicode.columnCount('abc', 2, 2)).toBe(0);
+      expect(Unicode.columnCount('abc𐀀𐀀', 2, 5)).toBe(2);
+      expect(Unicode.columnCount('abc𐀀𐀀', 5, 7)).toBe(1);
+      expect(Unicode.columnCount('abc𐀀𐀀', 0, 7)).toBe(5);
+      expect(Unicode.columnCount('a😀b𐀀c', 1, 5)).toBe(3);
+      expect(Unicode.columnCount('😀', 0, 2)).toBe(1);
+      expect(Unicode.columnCount('😀', 1, 1)).toBe(0);
+      expect(Unicode.columnCount('😀', 0, 0)).toBe(0);
+    });
+
+    it('Unicode.columnToOffset', () => {
+      expect(Unicode.columnToOffset('abc', 0, 3, 2)).toEqual({offset: 2, column: 2});
+      expect(Unicode.columnToOffset('abc', 0, 1, 3)).toEqual({offset: -1, column: 1});
+      expect(Unicode.columnToOffset('abc', 0, 2, 1)).toEqual({offset: 1, column: 1});
+      expect(Unicode.columnToOffset('abc', 1, 3, 0)).toEqual({offset: 1, column: 0});
+      expect(Unicode.columnToOffset('abc𐀀𐀀', 2, 7, 2)).toEqual({offset: 5, column: 2});
+      expect(Unicode.columnToOffset('abc𐀀𐀀', 2, 7, 3)).toEqual({offset: 7, column: 3});
+      expect(Unicode.columnToOffset('abc𐀀𐀀', 2, 7, 4)).toEqual({offset: -1, column: 3});
+      expect(Unicode.columnToOffset('a😀b𐀀c', 0, 6, 2)).toEqual({offset: 3, column: 2});
+      expect(Unicode.columnToOffset('a😀b𐀀c', 0, 6, 4)).toEqual({offset: 6, column: 4});
+      expect(Unicode.columnToOffset('a😀b𐀀c', 0, 6, 5)).toEqual({offset: -1, column: 4});
+      expect(Unicode.columnToOffset('', 0, 0, 0)).toEqual({offset: 0, column: 0});
+      expect(Unicode.columnToOffset('', 0, 0, 5)).toEqual({offset: -1, column: 0});
+    });
   });
 });
 
