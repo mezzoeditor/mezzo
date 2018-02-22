@@ -17,6 +17,7 @@ const examples = [
   'megacolumn.txt',
   'unicode.txt',
   'unicode.js',
+  'unicodeperf.txt',
 ];
 
 const jsHighlighter = new JSHighlighter();
