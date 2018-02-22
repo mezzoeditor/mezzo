@@ -1,5 +1,6 @@
 import {TestRunner, Reporter, Matchers} from '../../utils/testrunner/index.mjs';
 import {Metrics, RoundMode} from './Metrics.mjs';
+import {Unicode} from './Unicode.mjs';
 import {Text} from './Text.mjs';
 import {Document} from './Document.mjs';
 import {Random} from './Random.mjs';
@@ -713,6 +714,25 @@ describe('Decorator', () => {
 
     dec.clearAll();
     checkList(dec.listAll(), []);
+  });
+
+  describe('Unicode', () => {
+    it('Unicode.isValidOffset', () => {
+      expect(Unicode.isValidOffset('abc', -1)).toBe(true);
+      expect(Unicode.isValidOffset('abc', 0)).toBe(true);
+      expect(Unicode.isValidOffset('abc', 1)).toBe(true);
+      expect(Unicode.isValidOffset('abc', 2)).toBe(true);
+      expect(Unicode.isValidOffset('abc', 3)).toBe(true);
+      expect(Unicode.isValidOffset('abc', 4)).toBe(true);
+
+      expect(Unicode.isValidOffset('𐀀𐀀', -1)).toBe(true);
+      expect(Unicode.isValidOffset('𐀀𐀀', 0)).toBe(true);
+      expect(Unicode.isValidOffset('𐀀𐀀', 1)).toBe(false);
+      expect(Unicode.isValidOffset('𐀀𐀀', 2)).toBe(true);
+      expect(Unicode.isValidOffset('𐀀𐀀', 3)).toBe(false);
+      expect(Unicode.isValidOffset('𐀀𐀀', 4)).toBe(true);
+      expect(Unicode.isValidOffset('𐀀𐀀', 5)).toBe(true);
+    });
   });
 });
 

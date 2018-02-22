@@ -49,8 +49,11 @@ Unicode.columnCount = function(s, from, to) {
 Unicode.columnToOffset = function(s, from, to, column) {
   if (!column)
     return {offset: from, column};
-  if (Unicode.bmpRegex.test(s))
+  if (Unicode.bmpRegex.test(s)) {
+    if (column > to - from)
+      return {offset: -1, column: to - from};
     return {offset: from + column, column};
+  }
   let totalColumns = 0;
   for (let offset = from; offset < to; ) {
     let charCode = s.charCodeAt(offset);
