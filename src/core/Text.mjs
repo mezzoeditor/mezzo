@@ -67,7 +67,7 @@ function createNode(s, measurer) {
   return {
     chunk: s,
     h: random(),
-    metrics: Metrics.fromChunk(s, measurer)
+    metrics: Metrics.fromString(s, measurer)
   };
 }
 
@@ -569,7 +569,7 @@ export class Text {
     let found = findNode(this._root, {offset}, this._measurer);
     if (!found)
       throw 'Inconsistency';
-    return Metrics.chunkOffsetToLocation(found.node.chunk, found.location, offset, this._measurer);
+    return Metrics.stringOffsetToLocation(found.node.chunk, found.location, offset, this._measurer);
   }
 
   /**
@@ -600,7 +600,7 @@ export class Text {
         return this._lastLocation;
       throw 'Position does not belong to text';
     }
-    return Metrics.chunkPositionToLocation(found.node.chunk, found.location, position, this._measurer, strict);
+    return Metrics.stringPositionToLocation(found.node.chunk, found.location, position, this._measurer, strict);
   }
 
   /**
@@ -632,7 +632,7 @@ export class Text {
         return this._lastLocation;
       throw 'Point does not belong to text';
     }
-    return Metrics.chunkPointToLocation(found.node.chunk, found.location, point, this._measurer, roundMode, strict);
+    return Metrics.stringPointToLocation(found.node.chunk, found.location, point, this._measurer, roundMode, strict);
   }
 }
 

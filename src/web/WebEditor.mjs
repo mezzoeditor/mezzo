@@ -47,7 +47,7 @@ export class WebEditor {
       'Cmd-Right': 'selection.move.lineend',
       'Shift-Cmd-Left': 'selection.select.linestart',
       'Shift-Cmd-Right': 'selection.select.lineend',
-      'Esc': 'selection.collapse',
+      'Escape': 'selection.collapse',
     });
   }
 

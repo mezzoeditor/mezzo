@@ -60,23 +60,23 @@ class TestMeasurer {
 }
 
 describe('Metrics', () => {
-  it('Metrics.fromChunk', () => {
-    expect(Metrics.fromChunk('one line', defaultMeasurer)).toEqual({length: 8, first: 8, last: 8, longest: 8});
-    expect(Metrics.fromChunk('\none line', defaultMeasurer)).toEqual({length: 9, first: 0, last: 8, longest: 8, lines: 1});
-    expect(Metrics.fromChunk('one line\n', defaultMeasurer)).toEqual({length: 9, first: 8, last: 0, longest: 8, lines: 1});
-    expect(Metrics.fromChunk('\none line\n', defaultMeasurer)).toEqual({length: 10, first: 0, last: 0, longest: 8, lines: 2});
-    expect(Metrics.fromChunk('short\nlongest\nlonger\ntiny', defaultMeasurer)).toEqual({length: 25, first: 5, last: 4, longest: 7, lines: 3});
+  it('Metrics.fromString', () => {
+    expect(Metrics.fromString('one line', defaultMeasurer)).toEqual({length: 8, first: 8, last: 8, longest: 8});
+    expect(Metrics.fromString('\none line', defaultMeasurer)).toEqual({length: 9, first: 0, last: 8, longest: 8, lines: 1});
+    expect(Metrics.fromString('one line\n', defaultMeasurer)).toEqual({length: 9, first: 8, last: 0, longest: 8, lines: 1});
+    expect(Metrics.fromString('\none line\n', defaultMeasurer)).toEqual({length: 10, first: 0, last: 0, longest: 8, lines: 2});
+    expect(Metrics.fromString('short\nlongest\nlonger\ntiny', defaultMeasurer)).toEqual({length: 25, first: 5, last: 4, longest: 7, lines: 3});
 
     let testMeasurer = new TestMeasurer();
-    expect(Metrics.fromChunk('a', testMeasurer)).toEqual({length: 1, first: 1, last: 1, longest: 1});
-    expect(Metrics.fromChunk('a\nb', testMeasurer)).toEqual({length: 3, first: 1, last: 1, longest: 1, lines: 1, lastWidth: 2, longestWidth: 2});
-    expect(Metrics.fromChunk('b\na', testMeasurer)).toEqual({length: 3, first: 1, last: 1, longest: 1, lines: 1, firstWidth: 2, longestWidth: 2});
-    expect(Metrics.fromChunk('bac', testMeasurer)).toEqual({length: 3, first: 3, last: 3, longest: 3, firstWidth: 6, lastWidth: 6, longestWidth: 6});
-    expect(Metrics.fromChunk('b\na\nc', testMeasurer)).toEqual({length: 5, first: 1, last: 1, longest: 1, lines: 2, firstWidth: 2, lastWidth: 3, longestWidth: 3});
-    expect(Metrics.fromChunk('b\naaaa\nc', testMeasurer)).toEqual({length: 8, first: 1, last: 1, longest: 4, lines: 2, firstWidth: 2, lastWidth: 3});
+    expect(Metrics.fromString('a', testMeasurer)).toEqual({length: 1, first: 1, last: 1, longest: 1});
+    expect(Metrics.fromString('a\nb', testMeasurer)).toEqual({length: 3, first: 1, last: 1, longest: 1, lines: 1, lastWidth: 2, longestWidth: 2});
+    expect(Metrics.fromString('b\na', testMeasurer)).toEqual({length: 3, first: 1, last: 1, longest: 1, lines: 1, firstWidth: 2, longestWidth: 2});
+    expect(Metrics.fromString('bac', testMeasurer)).toEqual({length: 3, first: 3, last: 3, longest: 3, firstWidth: 6, lastWidth: 6, longestWidth: 6});
+    expect(Metrics.fromString('b\na\nc', testMeasurer)).toEqual({length: 5, first: 1, last: 1, longest: 1, lines: 2, firstWidth: 2, lastWidth: 3, longestWidth: 3});
+    expect(Metrics.fromString('b\naaaa\nc', testMeasurer)).toEqual({length: 8, first: 1, last: 1, longest: 4, lines: 2, firstWidth: 2, lastWidth: 3});
   });
 
-  it('Metrics.chunk*ToLocation', () => {
+  it('Metrics.string*ToLocation', () => {
     let tests = [
       {chunk: 'short', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 3, column: 11, offset: 18, x: 8, y: 10}},
       {chunk: 'short\nlonger', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 3, column: 11, offset: 18, x: 8, y: 10}},
@@ -85,10 +85,10 @@ describe('Metrics', () => {
       {chunk: '1\n23\n456\n78\n9\n0', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 7, column: 1, offset: 28, x: 1, y: 14}},
     ];
     for (let test of tests) {
-      expect(Metrics.chunkOffsetToLocation(test.chunk, test.before, test.location.offset, defaultMeasurer)).toEqual(test.location);
-      expect(Metrics.chunkPositionToLocation(test.chunk, test.before, test.location, defaultMeasurer)).toEqual(test.location);
-      expect(Metrics.chunkPositionToLocation(test.chunk, test.before, test.location, defaultMeasurer, true /* strict */)).toEqual(test.location);
-      expect(Metrics.chunkPointToLocation(test.chunk, test.before, test.location, defaultMeasurer, RoundMode.Floor, true /* strict */)).toEqual(test.location);
+      expect(Metrics.stringOffsetToLocation(test.chunk, test.before, test.location.offset, defaultMeasurer)).toEqual(test.location);
+      expect(Metrics.stringPositionToLocation(test.chunk, test.before, test.location, defaultMeasurer)).toEqual(test.location);
+      expect(Metrics.stringPositionToLocation(test.chunk, test.before, test.location, defaultMeasurer, true /* strict */)).toEqual(test.location);
+      expect(Metrics.stringPointToLocation(test.chunk, test.before, test.location, defaultMeasurer, RoundMode.Floor, true /* strict */)).toEqual(test.location);
     }
 
     let nonStrict = [
@@ -98,12 +98,12 @@ describe('Metrics', () => {
       {chunk: '1\n23\n456\n78\n9\n0', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, position: {line: 7, column: 22}, point: {x: 42, y: 14}, result: {line: 7, column: 1, offset: 28, x: 1, y: 14}},
     ];
     for (let test of nonStrict) {
-      expect(Metrics.chunkPositionToLocation(test.chunk, test.before, test.position, defaultMeasurer)).toEqual(test.result);
-      expect(Metrics.chunkPointToLocation(test.chunk, test.before, test.point, defaultMeasurer, RoundMode.Floor)).toEqual(test.result);
+      expect(Metrics.stringPositionToLocation(test.chunk, test.before, test.position, defaultMeasurer)).toEqual(test.result);
+      expect(Metrics.stringPointToLocation(test.chunk, test.before, test.point, defaultMeasurer, RoundMode.Floor)).toEqual(test.result);
     }
   });
 
-  it('Metrics.chunkPointToLocation with measurer', () => {
+  it('Metrics.stringPointToLocation with measurer', () => {
     let testMeasurer = new TestMeasurer();
     let chunk = 'a\nb\naaaa\nbac\nc';
     let before = {offset: 15, line: 3, column: 8, x: 5, y: 10};
@@ -131,7 +131,7 @@ describe('Metrics', () => {
       {point: {x: 42, y: 19}, location: {offset: 27, line: 6, column: 3, x: 6, y: 19}},
     ];
     for (let test of tests)
-      expect(Metrics.chunkPointToLocation(chunk, before, test.point, testMeasurer, test.roundMode || RoundMode.Floor, !!test.strict)).toEqual(test.location);
+      expect(Metrics.stringPointToLocation(chunk, before, test.point, testMeasurer, test.roundMode || RoundMode.Floor, !!test.strict)).toEqual(test.location);
   });
 });
 

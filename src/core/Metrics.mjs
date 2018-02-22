@@ -1,10 +1,5 @@
 import { Unicode } from "./Unicode.mjs";
 
-// Default width optimization saves:
-// - 100MB in (system) memory on jquery.min.js (87MB total text size);
-// - 300KB in total memory on index.js (5,5KB total text size).
-// Is it worth it?
-
 /**
  * @typedef {{
  *   length: number,
@@ -151,13 +146,13 @@ Metrics.toLocation = function(metrics, measurer) {
 };
 
 /**
- * @param {string} chunk
+ * @param {string} s
  * @param {!Measurer} measurer
  * @return {!Metrics}
  */
-Metrics.fromChunk = function(chunk, measurer) {
+Metrics.fromString = function(s, measurer) {
   let metrics = {
-    length: chunk.length,
+    length: s.length,
     first: 0,
     last: 0,
     longest: 0
@@ -166,12 +161,12 @@ Metrics.fromChunk = function(chunk, measurer) {
   let index = 0;
   let longestWidth = 0;
   while (true) {
-    let nextLine = chunk.indexOf('\n', index);
+    let nextLine = s.indexOf('\n', index);
     if (index === 0) {
-      metrics.first = Unicode.columnCount(chunk, 0, nextLine === -1 ? chunk.length : nextLine);
+      metrics.first = Unicode.columnCount(s, 0, nextLine === -1 ? s.length : nextLine);
       metrics.longest = metrics.first;
 
-      let firstWidth = measurer.measureString(chunk, 0, metrics.first);
+      let firstWidth = measurer.measureString(s, 0, metrics.first);
       if (firstWidth)
         metrics.firstWidth = firstWidth;
       else
@@ -180,10 +175,10 @@ Metrics.fromChunk = function(chunk, measurer) {
     }
 
     if (nextLine === -1) {
-      metrics.last = Unicode.columnCount(chunk, index, chunk.length);
+      metrics.last = Unicode.columnCount(s, index, s.length);
       metrics.longest = Math.max(metrics.longest, metrics.last);
 
-      let lastWidth = measurer.measureString(chunk, index, chunk.length);
+      let lastWidth = measurer.measureString(s, index, s.length);
       if (lastWidth)
         metrics.lastWidth = lastWidth;
       else
@@ -192,9 +187,9 @@ Metrics.fromChunk = function(chunk, measurer) {
       break;
     }
 
-    let length = Unicode.columnCount(chunk, index, nextLine);
+    let length = Unicode.columnCount(s, index, nextLine);
     metrics.longest = Math.max(metrics.longest, length);
-    let width = measurer.measureString(chunk, index, nextLine);
+    let width = measurer.measureString(s, index, nextLine);
     if (!width)
       width = length * measurer.defaultWidth;
     longestWidth = Math.max(longestWidth, width);
@@ -209,14 +204,14 @@ Metrics.fromChunk = function(chunk, measurer) {
 };
 
 /**
- * @param {string} chunk
+ * @param {string} s
  * @param {!Location} before
  * @param {!Position} position
  * @param {!Measurer} measurer
  * @param {boolean=} strict
  * @return {!Location}
  */
-Metrics.chunkPositionToLocation = function(chunk, before, position, measurer, strict) {
+Metrics.stringPositionToLocation = function(s, before, position, measurer, strict) {
   let {line, column, offset, x, y} = before;
 
   if (position.line < line || (position.line === line && position.column < column))
@@ -224,7 +219,7 @@ Metrics.chunkPositionToLocation = function(chunk, before, position, measurer, st
 
   let index = 0;
   while (line < position.line) {
-    let nextLine = chunk.indexOf('\n', index);
+    let nextLine = s.indexOf('\n', index);
     if (nextLine === -1)
       throw 'Inconsistent';
     offset += (nextLine - index + 1);
@@ -235,11 +230,11 @@ Metrics.chunkPositionToLocation = function(chunk, before, position, measurer, st
     x = 0;
   }
 
-  let lineEnd = chunk.indexOf('\n', index);
+  let lineEnd = s.indexOf('\n', index);
   if (lineEnd === -1)
-    lineEnd = chunk.length;
+    lineEnd = s.length;
 
-  let offsetColumn = Unicode.columnToOffset(chunk, index, lineEnd, position.column - column);
+  let offsetColumn = Unicode.columnToOffset(s, index, lineEnd, position.column - column);
   let length;
   if (offsetColumn.offset === -1) {
     if (strict)
@@ -249,7 +244,7 @@ Metrics.chunkPositionToLocation = function(chunk, before, position, measurer, st
     length = offsetColumn.offset - index;
   }
 
-  let width = measurer.measureString(chunk, index, index + length);
+  let width = measurer.measureString(s, index, index + length);
   if (!width)
     width = length * measurer.defaultWidth;
   return {
@@ -299,7 +294,7 @@ Metrics._chunkLengthForWidth = function(chunk, measurer, desired, roundMode) {
 };
 
 /**
- * @param {string} chunk
+ * @param {string} s
  * @param {!Location} before
  * @param {!Point} point
  * @param {!Measurer} measurer
@@ -307,7 +302,7 @@ Metrics._chunkLengthForWidth = function(chunk, measurer, desired, roundMode) {
  * @param {boolean=} strict
  * @return {!Location}
  */
-Metrics.chunkPointToLocation = function(chunk, before, point, measurer, roundMode, strict) {
+Metrics.stringPointToLocation = function(s, before, point, measurer, roundMode, strict) {
   let {line, column, offset, x, y} = before;
 
   if (point.y < y || (point.y < y + measurer.defaultHeight && point.x < x))
@@ -315,7 +310,7 @@ Metrics.chunkPointToLocation = function(chunk, before, point, measurer, roundMod
 
   let index = 0;
   while (y + measurer.defaultHeight <= point.y) {
-    let nextLine = chunk.indexOf('\n', index);
+    let nextLine = s.indexOf('\n', index);
     if (nextLine === -1)
       throw 'Inconsistent';
     offset += (nextLine - index + 1);
@@ -326,11 +321,11 @@ Metrics.chunkPointToLocation = function(chunk, before, point, measurer, roundMod
     x = 0;
   }
 
-  let lineEnd = chunk.indexOf('\n', index);
+  let lineEnd = s.indexOf('\n', index);
   if (lineEnd === -1)
-    lineEnd = chunk.length;
+    lineEnd = s.length;
 
-  let {length, width, overflow, columns} = Metrics._chunkLengthForWidth(chunk.substring(index, lineEnd), measurer, point.x - x, roundMode);
+  let {length, width, overflow, columns} = Metrics._chunkLengthForWidth(s.substring(index, lineEnd), measurer, point.x - x, roundMode);
   if (overflow) {
     if (length !== lineEnd - index)
       throw 'Inconsistent';
@@ -348,24 +343,24 @@ Metrics.chunkPointToLocation = function(chunk, before, point, measurer, roundMod
 };
 
 /**
- * @param {string} chunk
+ * @param {string} s
  * @param {!Location} before
  * @param {number} offset
  * @param {!Measurer} measurer
  * @return {!Location}
  */
-Metrics.chunkOffsetToLocation = function(chunk, before, offset, measurer) {
-  if (chunk.length < offset - before.offset)
+Metrics.stringOffsetToLocation = function(s, before, offset, measurer) {
+  if (s.length < offset - before.offset)
     throw 'Inconsistent';
 
-  if (!Unicode.isValidOffset(chunk, offset - before.offset))
+  if (!Unicode.isValidOffset(s, offset - before.offset))
     throw 'Offset belongs to a middle of surrogate pair';
 
-  chunk = chunk.substring(0, offset - before.offset);
+  s = s.substring(0, offset - before.offset);
   let {line, column, x, y} = before;
   let index = 0;
   while (true) {
-    let nextLine = chunk.indexOf('\n', index);
+    let nextLine = s.indexOf('\n', index);
     if (nextLine !== -1) {
       line++;
       y += measurer.defaultHeight;
@@ -373,10 +368,10 @@ Metrics.chunkOffsetToLocation = function(chunk, before, offset, measurer) {
       x = 0;
       index = nextLine + 1;
     } else {
-      column += Unicode.columnCount(chunk, index, chunk.length);
-      let width = measurer.measureString(chunk, index, chunk.length);
+      column += Unicode.columnCount(s, index, s.length);
+      let width = measurer.measureString(s, index, s.length);
       if (!width)
-        width = (chunk.length - index) * measurer.defaultWidth;
+        width = (s.length - index) * measurer.defaultWidth;
       x += width;
       break;
     }
