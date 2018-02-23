@@ -29,17 +29,20 @@ function createTestMeasurer() {
   return measurer;
 }
 
-const defaultMeasurer = new Unicode.CachingMeasurer(1, 1, Unicode.anythingRegex, s => 1, s => 1);
-const testMeasurer = createTestMeasurer();
+function createDefaultMeasurer() {
+  return new Unicode.CachingMeasurer(1, 1, Unicode.anythingRegex, s => 1, s => 1);
+}
 
 describe('Metrics', () => {
   it('Metrics.fromString', () => {
+    let defaultMeasurer = createDefaultMeasurer();
     expect(Metrics.fromString('one line', defaultMeasurer)).toEqual({length: 8, firstColumns: 8, lastColumns: 8, longestColumns: 8});
     expect(Metrics.fromString('\none line', defaultMeasurer)).toEqual({length: 9, firstColumns: 0, lastColumns: 8, longestColumns: 8, lineBreaks: 1});
     expect(Metrics.fromString('one line\n', defaultMeasurer)).toEqual({length: 9, firstColumns: 8, lastColumns: 0, longestColumns: 8, lineBreaks: 1});
     expect(Metrics.fromString('\none line\n', defaultMeasurer)).toEqual({length: 10, firstColumns: 0, lastColumns: 0, longestColumns: 8, lineBreaks: 2});
     expect(Metrics.fromString('short\nlongest\nlonger\ntiny', defaultMeasurer)).toEqual({length: 25, firstColumns: 5, lastColumns: 4, longestColumns: 7, lineBreaks: 3});
 
+    let testMeasurer = createTestMeasurer();
     expect(Metrics.fromString('a', testMeasurer)).toEqual({length: 1, firstColumns: 1, lastColumns: 1, longestColumns: 1});
     expect(Metrics.fromString('a\nb', testMeasurer)).toEqual({length: 3, firstColumns: 1, lastColumns: 1, longestColumns: 1, lineBreaks: 1, lastWidth: 2, longestWidth: 2});
     expect(Metrics.fromString('b\na', testMeasurer)).toEqual({length: 3, firstColumns: 1, lastColumns: 1, longestColumns: 1, lineBreaks: 1, firstWidth: 2, longestWidth: 2});
@@ -52,6 +55,8 @@ describe('Metrics', () => {
   });
 
   it('Metrics.string*ToLocation', () => {
+    let defaultMeasurer = createDefaultMeasurer();
+
     let tests = [
       {chunk: 'short', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 3, column: 11, offset: 18, x: 8, y: 10}},
       {chunk: 'short\nlonger', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 3, column: 11, offset: 18, x: 8, y: 10}},
@@ -79,6 +84,7 @@ describe('Metrics', () => {
   });
 
   it('Metrics.stringPointToLocation with measurer', () => {
+    let testMeasurer = createTestMeasurer();
     let chunk = 'a\nb\naaaa\nbac\nc';
     let before = {offset: 15, line: 3, column: 8, x: 5, y: 10};
     let tests = [
@@ -111,6 +117,7 @@ describe('Metrics', () => {
 
 describe('Text', () => {
   it('Text.* manual', () => {
+    let defaultMeasurer = createDefaultMeasurer();
     let chunks = ['ab\ncd', 'def', '\n', '', 'a\n\n\nbbbc', 'xy', 'za\nh', 'pp', '\n', ''];
     let content = chunks.join('');
     let text = Text.test.fromChunks(chunks, defaultMeasurer);
@@ -124,6 +131,7 @@ describe('Text', () => {
   });
 
   it('Text.* all sizes', () => {
+    let testMeasurer = createTestMeasurer();
     let random = Random(143);
     let lineCount = 200;
     let chunks = [];
@@ -193,6 +201,7 @@ describe('Text', () => {
   });
 
   it('Text.replace all sizes', () => {
+    let defaultMeasurer = createDefaultMeasurer();
     let random = Random(142);
     let lineCount = 10;
     let chunks = [];
@@ -233,6 +242,7 @@ describe('Text', () => {
 
 describe('Text.Iterator', () => {
   it('Text.Iterator basics', () => {
+    let defaultMeasurer = createDefaultMeasurer();
     let text = Text.withContent('world', defaultMeasurer);
     let it = text.iterator(0);
     expect(it.current).toBe('w');
@@ -246,6 +256,7 @@ describe('Text.Iterator', () => {
   });
 
   it('Text.Iterator.advance', () => {
+    let defaultMeasurer = createDefaultMeasurer();
     let text = Text.withContent('world', defaultMeasurer);
     let it = text.iterator(0);
     it.advance(4);
@@ -255,6 +266,7 @@ describe('Text.Iterator', () => {
   });
 
   it('Text.Iterator.read', () => {
+    let defaultMeasurer = createDefaultMeasurer();
     let text = Text.withContent('world', defaultMeasurer);
     let it = text.iterator(0);
     expect(it.read(4)).toBe('worl');
@@ -264,6 +276,7 @@ describe('Text.Iterator', () => {
   });
 
   it('Text.Iterator.charAt', () => {
+    let defaultMeasurer = createDefaultMeasurer();
     let text = Text.withContent('world', defaultMeasurer);
     let it = text.iterator(2);
     expect(it.charAt(0)).toBe('r');
@@ -287,6 +300,7 @@ describe('Text.Iterator', () => {
   });
 
   it('Text.Iterator.find successful', () => {
+    let defaultMeasurer = createDefaultMeasurer();
     let text = Text.withContent('hello, world', defaultMeasurer);
     let it = text.iterator(0);
     expect(it.find('world')).toBe(true);
@@ -295,6 +309,7 @@ describe('Text.Iterator', () => {
   });
 
   it('Text.Iterator.find manual chunks 1', () => {
+    let defaultMeasurer = createDefaultMeasurer();
     let text = Text.test.fromChunks(['hello, w', 'o', 'r', 'ld!!!'], defaultMeasurer);
     let it = text.iterator(0);
     expect(it.find('world')).toBe(true);
@@ -303,6 +318,7 @@ describe('Text.Iterator', () => {
   });
 
   it('Text.Iterator.find manual chunks 2', () => {
+    let defaultMeasurer = createDefaultMeasurer();
     let text = Text.test.fromChunks(['hello', ',', ' ', 'w', 'orl', 'd!!!'], defaultMeasurer);
     let it = text.iterator(0);
     expect(it.find('world')).toBe(true);
@@ -311,6 +327,7 @@ describe('Text.Iterator', () => {
   });
 
   it('Text.Iterator.find manual chunks 3', () => {
+    let defaultMeasurer = createDefaultMeasurer();
     let text = Text.test.fromChunks(['hello, w', 'or', 'ld', '!!!'], defaultMeasurer);
     let it = text.iterator(0);
     expect(it.find('world')).toBe(true);
@@ -319,6 +336,7 @@ describe('Text.Iterator', () => {
   });
 
   it('Text.Iterator.find unsuccessful', () => {
+    let defaultMeasurer = createDefaultMeasurer();
     let text = Text.withContent('hello, world', defaultMeasurer);
     let it = text.iterator(0);
     expect(it.find('eee')).toBe(false);
@@ -332,6 +350,7 @@ describe('Text.Iterator', () => {
   });
 
   it('Text.Iterator constraints', () => {
+    let defaultMeasurer = createDefaultMeasurer();
     let text = Text.withContent('hello', defaultMeasurer);
     let it = text.iterator(0, 0, 2);
     expect(it.offset).toBe(0);
@@ -367,6 +386,7 @@ describe('Text.Iterator', () => {
   });
 
   it('Text.Iterator out-of-bounds API', () => {
+    let defaultMeasurer = createDefaultMeasurer();
     let text = Text.withContent('abcdefg', defaultMeasurer);
     let it = text.iterator(4, 2, 4);
     expect(it.offset).toBe(4);
@@ -377,6 +397,7 @@ describe('Text.Iterator', () => {
   });
 
   it('Text.Iterator all sizes', () => {
+    let defaultMeasurer = createDefaultMeasurer();
     let random = Random(144);
     let lineCount = 20;
     let chunks = [];
