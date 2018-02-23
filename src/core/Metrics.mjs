@@ -346,25 +346,28 @@ Metrics.stringOffsetToLocation = function(s, before, offset, measurer) {
   if (!Unicode.isValidOffset(s, offset - before.offset))
     throw 'Offset belongs to a middle of surrogate pair';
 
-  s = s.substring(0, offset - before.offset);
   let {line, column, x, y} = before;
-  let index = 0;
-  while (true) {
-    let nextLine = s.indexOf('\n', index);
-    if (nextLine !== -1) {
-      line++;
-      y += measurer.defaultHeight;
-      column = 0;
-      x = 0;
-      index = nextLine + 1;
-    } else {
-      let {width, columns} = measurer.measureString(s, index, s.length);
-      if (!width)
-        width = columns * measurer.defaultWidth;
-      column += columns;
-      x += width;
-      break;
-    }
+  offset -= before.offset;
+
+  let lineStartOffset = 0;
+  let lineBreakOffset = s.indexOf('\n', lineStartOffset);
+  while (lineBreakOffset !== -1 && lineBreakOffset < offset) {
+    line++;
+    y += measurer.defaultHeight;
+    column = 0;
+    x = 0;
+    lineStartOffset = lineBreakOffset + 1;
+    lineBreakOffset = s.indexOf('\n', lineStartOffset);
   }
-  return {line, column, offset, x, y};
+
+  let {width, columns} = measurer.measureString(s, lineStartOffset, offset);
+  if (!width)
+    width = columns * measurer.defaultWidth;
+  return {
+    offset: offset + before.offset,
+    line: line,
+    column: column + columns,
+    x: x + width,
+    y: y
+  };
 };
