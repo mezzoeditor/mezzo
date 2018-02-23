@@ -105,6 +105,7 @@ Metrics.clone = function(metrics) {
  * @return {!Metrics}
  */
 Metrics.combine = function(left, right, measurer) {
+  let defaultWidth = measurer.defaultWidth;
   let result = {
     longestColumns: Math.max(Math.max(left.longestColumns, left.lastColumns + right.firstColumns), right.longestColumns),
     firstColumns: left.firstColumns + (left.lineBreaks ? 0 : right.firstColumns),
@@ -115,22 +116,21 @@ Metrics.combine = function(left, right, measurer) {
     result.lineBreaks = (left.lineBreaks || 0) + (right.lineBreaks || 0);
   if (left.firstWidth || (!left.lineBreaks && right.firstWidth)) {
     result.firstWidth =
-        (left.firstWidth || left.firstColumns * measurer.defaultWidth) +
-        (left.lineBreaks ? 0 : (right.firstWidth || right.firstColumns * measurer.defaultWidth));
+        (left.firstWidth || left.firstColumns * defaultWidth) +
+        (left.lineBreaks ? 0 : (right.firstWidth || right.firstColumns * defaultWidth));
   }
   if (right.lastWidth || (!right.lineBreaks && left.lastWidth)) {
     result.lastWidth =
-        (right.lastWidth || right.lastColumns * measurer.defaultWidth) +
-        (right.lineBreaks ? 0 : (left.lastWidth || left.lastColumns * measurer.defaultWidth));
+        (right.lastWidth || right.lastColumns * defaultWidth) +
+        (right.lineBreaks ? 0 : (left.lastWidth || left.lastColumns * defaultWidth));
   }
   if (left.longestWidth || right.longestWidth || left.lastWidth || right.firstWidth) {
     result.longestWidth = Math.max(
-        left.longestWidth || left.longestColumns * measurer.defaultWidth,
-        right.longestWidth || right.longestColumns * measurer.defaultWidth);
+        left.longestWidth || left.longestColumns * defaultWidth,
+        right.longestWidth || right.longestColumns * defaultWidth);
     result.longestWidth = Math.max(
         result.longestWidth,
-        (left.lastWidth || left.lastColumns * measurer.defaultWidth)
-            + (right.firstWidth || right.firstColumns * measurer.defaultWidth));
+        (left.lastWidth || left.lastColumns * defaultWidth) + (right.firstWidth || right.firstColumns * defaultWidth));
   }
   return result;
 };
