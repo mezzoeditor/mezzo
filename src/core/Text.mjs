@@ -5,9 +5,10 @@ import { trace } from "../core/Trace.mjs";
 
 let random = Random(42);
 
-// TODO: bumping this to 1000 speeds up text consturction 1.5x times.
-// Measure the slowdown on common operations.
-let kDefaultChunkSize = 100;
+// This is very efficient for loading large files and memory consumption.
+// It might slow down common operations though. We should measure that and
+// consider different chunk sizes based on total document length.
+let kDefaultChunkSize = 1000;
 
 /**
  * @typedef {{
@@ -83,10 +84,10 @@ function setChildren(parent, left, right, measurer, skipClone) {
   let node = skipClone ? parent : {
     chunk: parent.chunk,
     h: parent.h,
-    metrics: Metrics.clone(parent.selfMetrics || parent.metrics)
+    metrics: parent.selfMetrics || parent.metrics
   };
   if (!node.selfMetrics && (left || right))
-    node.selfMetrics = Metrics.clone(node.metrics);
+    node.selfMetrics = node.metrics;
   if (left) {
     node.left = left;
     node.metrics = Metrics.combine(left.metrics, node.metrics, measurer);
