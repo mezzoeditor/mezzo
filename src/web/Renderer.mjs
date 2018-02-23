@@ -3,83 +3,29 @@ import { RoundMode } from "../core/Metrics.mjs";
 import { Unicode } from "../core/Unicode.mjs";
 import { trace } from "../core/Trace.mjs";
 
-/**
- * @implements Unicode.Measurer
- */
-class CtxMeasurer {
+class ContextBasedMetrics {
   constructor(ctx, monospace) {
     // The following will be shipped soon.
     // const fontHeight = metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent;
     const fontHeight = 20;
     const charHeight = fontHeight - 5;
 
-    this._ctx = ctx;
-    this._monospace = monospace;
     ctx.font = monospace ? '14px monospace' : '14px sans-serif';
     ctx.textBaseline = 'top';
 
-    this.defaultWidth = monospace ? ctx.measureText('M').width : 0;
-    this.defaultHeight = fontHeight;
     this.textOffset = fontHeight - (3 + charHeight);
     this.lineHeight = fontHeight;
 
-    this._map = new Float32Array(65536);
-    this._default = new Uint8Array(65536);
-    this._default.fill(2);
+    this.width9 = ctx.measureText('9').width;
+    this.widthM = ctx.measureText('M').width;
 
-    this._codePoints = {};
-  }
-
-  measureString(s, from, to) {
-    if (from === to)
-      return {width: 0, columns: 0};
-
-    if (this._monospace && Unicode.asciiRegex.test(s))
-      return {width: 0, columns: to - from};
-
-    let defaults = 0;
-    let result = 0;
-    let columns = 0;
-    for (let i = from; i < to; ) {
-      let charCode = s.charCodeAt(i);
-      if (charCode >= 0xD800 && charCode <= 0xDBFF && i + 1 < to) {
-        let codePoint = s.codePointAt(i);
-        if (this._codePoints[codePoint] === undefined)
-          this._codePoints[codePoint] = this._ctx.measureText(s.substring(i, i + 2)).width;
-        result += this._codePoints[codePoint];
-        i += 2;
-        columns++;
-      } else {
-        if (this._default[charCode] === 2) {
-          let width = this._ctx.measureText(s[i]).width;
-          this._map[charCode] = width;
-          this._default[charCode] = width === this.defaultWidth ? 1 : 0;
-        }
-        if (this._default[charCode] === 1)
-          defaults++;
-        else
-          result += this._map[charCode];
-        i++;
-        columns++;
-      }
-    }
-    let width = defaults === to - from ? 0 : result + defaults * this.defaultWidth;
-    return {width, columns};
-  }
-
-  measureBMPCodePoint(codePoint) {
-    if (this._default[codePoint] === 2) {
-      let width = this._ctx.measureText(String.fromCharCode(codePoint)).width;
-      this._map[codePoint] = width;
-      this._default[codePoint] = width === this.defaultWidth ? 1 : 0;
-    }
-    return this._map[codePoint];
-  }
-
-  measureSupplementaryCodePoint(codePoint) {
-    if (this._codePoints[codePoint] === undefined)
-      this._codePoints[codePoint] = this._ctx.measureText(String.fromCodePoint(codePoint)).width;
-    return this._codePoints[codePoint];
+    this.measurer = new Unicode.CachingMeasurer(
+      monospace ? ctx.measureText('M').width : 0,
+      fontHeight,
+      monospace ? Unicode.asciiRegex : null,
+      s => ctx.measureText(s).width,
+      s => ctx.measureText(s).width
+    );
   }
 };
 
@@ -126,7 +72,7 @@ export class Renderer {
     this._cssWidth = 0;
     this._cssHeight = 0;
     this._ratio = this._getRatio();
-    this._updateMeasurer();
+    this._updateMetrics();
     this._viewport = document.createViewport();
     this._viewport.setInvalidateCallback(() => this.invalidate());
     this._viewport.setRevealCallback(() => this.invalidate());
@@ -205,7 +151,7 @@ export class Renderer {
     this._canvas.height = cssHeight * this._ratio;
     this._canvas.style.width = cssWidth + 'px';
     this._canvas.style.height = cssHeight + 'px';
-    this._updateMeasurer(true);
+    this._updateMetrics(true);
     this.invalidate();
   }
 
@@ -214,7 +160,7 @@ export class Renderer {
    */
   setUseMonospaceFont(monospace) {
     this._monospace = monospace;
-    this._updateMeasurer();
+    this._updateMetrics();
     this.invalidate();
   }
 
@@ -225,11 +171,11 @@ export class Renderer {
     return this._canvas;
   }
 
-  _updateMeasurer(fromResizeBuggy) {
-    this._measurer = new CtxMeasurer(this._canvas.getContext('2d'), this._monospace);
+  _updateMetrics(fromResizeBuggy) {
+    this._metrics = new ContextBasedMetrics(this._canvas.getContext('2d'), this._monospace);
     // Updating in document every time is slow, but not doing it is a bug.
     if (!fromResizeBuggy)
-      this._document.setMeasurer(this._measurer);
+      this._document.setMeasurer(this._metrics.measurer);
   }
 
   _mouseEventToCanvas(event) {
@@ -340,7 +286,7 @@ export class Renderer {
       return;
     // To properly handle input events, we have to update rects synchronously.
     const gutterLength = (Math.max(this._document.lineCount(), 100) + '').length;
-    const gutterWidth = (this._measurer.measureString('9', 0, 1).width || this._measurer.defaultWidth) * gutterLength;
+    const gutterWidth = this._metrics.width9 * gutterLength;
     this._gutterRect.width = gutterWidth + 2 * GUTTER_PADDING_LEFT_RIGHT;
     this._gutterRect.height = this._cssHeight;
 
@@ -353,9 +299,9 @@ export class Renderer {
     this._viewport.hScrollbar.setSize(this._cssWidth - this._gutterRect.width - SCROLLBAR_WIDTH);
     this._viewport.setPadding({
       left: 4,
-      right: this._measurer.measureString('MMM', 0, 3).width || this._measurer.defaultWidth * 3,
+      right: this._metrics.widthM * 3,
       top: 4,
-      bottom: this._editorRect.height - this._measurer.lineHeight - 4
+      bottom: this._editorRect.height - this._metrics.lineHeight - 4
     });
 
     this._vScrollbar.rect.x = this._cssWidth - SCROLLBAR_WIDTH;
@@ -443,7 +389,7 @@ export class Renderer {
   }
 
   _drawGutter(ctx, frame) {
-    const textOffset = this._measurer.textOffset;
+    const textOffset = this._metrics.textOffset;
     ctx.fillStyle = '#eee';
     ctx.fillRect(0, 0, this._gutterRect.width, this._gutterRect.height);
     ctx.strokeStyle = 'rgb(187, 187, 187)';
@@ -465,8 +411,8 @@ export class Renderer {
   }
 
   _drawText(ctx, frame, textDecorators) {
-    const lineHeight = this._measurer.lineHeight;
-    const textOffset = this._measurer.textOffset;
+    const lineHeight = this._metrics.lineHeight;
+    const textOffset = this._metrics.textOffset;
     const lines = frame.lines();
     const frameRight = frame.origin().x + frame.width();
 
@@ -480,10 +426,10 @@ export class Renderer {
             let charCode = lineContent.charCodeAt(i);
             if (charCode >= 0xD800 && charCode <= 0xDBFF && i + 1 < lineContent.length) {
               offsetToX[i + 1] = x;
-              x += this._measurer.measureSupplementaryCodePoint(lineContent.codePointAt(i));
+              x += this._metrics.measurer.measureSupplementaryCodePoint(lineContent.codePointAt(i));
               i += 2;
             } else {
-              x += this._measurer.measureBMPCodePoint(charCode);
+              x += this._metrics.measurer.measureBMPCodePoint(charCode);
               i++;
             }
           } else {
@@ -585,7 +531,7 @@ export class Renderer {
         let top = scrollbar.contentOffsetToScrollbarOffset(this._viewport.documentPointToViewPoint(from).y);
         let bottom = scrollbar.contentOffsetToScrollbarOffset(this._viewport.documentPointToViewPoint({
           x: 0,
-          y: to.y + frame.document().measurer().defaultHeight
+          y: to.y + this._metrics.lineHeight
         }).y);
         bottom = Math.max(bottom, top + kMinScrollbarDecorationHeight);
 

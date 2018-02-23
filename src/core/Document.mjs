@@ -3,18 +3,13 @@ import { Text } from "./Text.mjs";
 import { Frame } from "./Frame.mjs";
 import { Viewport } from "./Viewport.mjs";
 import { RoundMode } from "./Metrics.mjs";
+import { Unicode } from "./Unicode.mjs";
 
 export class Document {
   constructor() {
     this._plugins = [];
     this._viewports = [];
-    this._measurer = {
-      defaultWidth: 1,
-      defaultHeight: 1,
-      measureString: (s, from, to) => ({width: 0, columns: to - from}),
-      measureBMPCodePoint: codePoint => 1,
-      measureSupplementaryCodePoint: codePoint => 1
-    };
+    this._measurer = new Unicode.CachingMeasurer(1, 1, Unicode.anythingRegex, s => 1, s => 1);
     this._history = new History({
       text: Text.withContent('', this._measurer),
       replacements: [],

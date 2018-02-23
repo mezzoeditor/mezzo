@@ -231,22 +231,16 @@ Metrics.stringPositionToLocation = function(s, before, position, measurer, stric
   if (lineEndOffset === -1)
     lineEndOffset = s.length;
 
-  let columnToOffsetResult = Unicode.columnToOffset(s, lineStartOffset, lineEndOffset, position.column - column);
-  column += columnToOffsetResult.column;
-  let offset = columnToOffsetResult.offset;
+  let {offset, columns, width} = measurer.locateInString(s, lineStartOffset, lineEndOffset, position.column - column);
   if (offset === -1) {
     if (strict)
       throw 'Position does not belong to text';
     offset = lineEndOffset;
   }
-
-  let {width, columns} = measurer.measureString(s, lineStartOffset, offset);
-  if (!width)
-    width = columns * measurer.defaultWidth;
   return {
     offset: before.offset + offset,
     line: line,
-    column: column,
+    column: column + columns,
     x: x + width,
     y: y
   };

@@ -3,6 +3,9 @@ export let Unicode = {};
 Unicode.bmpRegex = /^[\u{0000}-\u{d7ff}]*$/u;
 Unicode.asciiRegex = /^[\u{0020}-\u{007e}]*$/u;
 Unicode.whitespaceRegex = /\s/u;
+Unicode.anythingRegex = /.*/u;
+
+Unicode._lineBreakCharCode = '\n'.charCodeAt(0);
 
 /**
  * Measurer converts code points to widths (and default height).
@@ -17,12 +20,16 @@ Unicode.Measurer = class {
      * cannot be given default width.
      * Total width of a |string| with all default width code points will be
      * |string.length * measurer.defaultWidth|.
+     *
+     * @type {number}
      */
     this.defaultWidth = 1;
 
     /**
      * The default height of a code point. Note that we only support fixed height,
      * so any code point height equals to default.
+     *
+     * @type {number}
      */
     this.defaultHeight = 1;
   }
@@ -35,7 +42,9 @@ Unicode.Measurer = class {
    * to save some memory and computation.
    * Do not return zero if the substring contains any code points from Supplementary Planes.
    *
-   * @param {string} chunk
+   * @param {string} s
+   * @param {number} from
+   * @param {number} to
    * @return {!{columns: number, width: number}}
    */
   measureString(s, from, to) {
@@ -61,6 +70,166 @@ Unicode.Measurer = class {
    * @return {number}
    */
   measureSupplementaryCodePoint(codePoint) {
+  }
+
+  /**
+   * Returns measurements for a particular column (code point) in a given substring.
+   *
+   * Returned |offset| should belong to [from, to], and |column| and |width| should
+   * measure the [from, offset] substring.
+   * If there is not enough columns in the substring, return |offset === -1| instead,
+   * and measure [from, to] into |column| and |width|.
+   *
+   * Do not return zero for a width even if it is default.
+   *
+   * @param {string} s
+   * @param {number} from
+   * @param {number} to
+   * @param {number} column
+   * @return {!{offset: number, columns: number, width: number}}
+   */
+  locateInString(s, from, to, column) {
+  }
+};
+
+/**
+ * This is a default implementation which always measures a single code point
+ * and caches the results internally.
+ *
+ * @implements Unicode.Measurer
+ */
+Unicode.CachingMeasurer = class {
+  /**
+   * |measureBMP| and |measureSupplementary| take a string consisting of a single
+   * code point (string has length 1 and 2 respectively).
+   *
+   * @param {number} defaultWidth
+   * @param {number} defaultHeight
+   * @param {?RegExp} defaultRegex
+   * @param {function(string):number} measureBMP
+   * @param {function(string):number} measureSupplementary
+   */
+  constructor(defaultWidth, defaultHeight, defaultRegex, measureBMP, measureSupplementary) {
+    this.defaultWidth = defaultWidth;
+    this.defaultHeight = defaultHeight;
+    this._defaultRegex = defaultRegex;
+    this._measureBMP = measureBMP;
+    this._measureSupplementary = measureSupplementary;
+
+    this._bmp = new Float32Array(65536);
+    this._bmpDefault = new Uint8Array(65536);
+    this._bmpDefault.fill(2);
+    this._supplementary = {};
+  }
+
+  /**
+   * @param {string} s
+   * @param {number} from
+   * @param {number} to
+   * @return {!{columns: number, width: number}}
+   */
+  measureString(s, from, to) {
+    if (from === to)
+      return {width: 0, columns: 0};
+
+    if (this._defaultRegex && this._defaultRegex.test(s))
+      return {width: 0, columns: to - from};
+
+    let defaults = 0;
+    let result = 0;
+    let columns = 0;
+    for (let i = from; i < to; ) {
+      let charCode = s.charCodeAt(i);
+      if (charCode === Unicode._lineBreakCharCode)
+        throw 'Cannot measure line breaks';
+      if (charCode >= 0xD800 && charCode <= 0xDBFF && i + 1 < to) {
+        let codePoint = s.codePointAt(i);
+        if (this._supplementary[codePoint] === undefined)
+          this._supplementary[codePoint] = this._measureSupplementary(s.substring(i, i + 2));
+        result += this._supplementary[codePoint];
+        i += 2;
+        columns++;
+      } else {
+        if (this._bmpDefault[charCode] === 2) {
+          let width = this._measureBMP(s[i]);
+          this._bmp[charCode] = width;
+          this._bmpDefault[charCode] = width === this.defaultWidth ? 1 : 0;
+        }
+        if (this._bmpDefault[charCode] === 1)
+          defaults++;
+        else
+          result += this._bmp[charCode];
+        i++;
+        columns++;
+      }
+    }
+    let width = defaults === to - from ? 0 : result + defaults * this.defaultWidth;
+    return {width, columns};
+  }
+
+  /**
+   * @param {number} codePoint
+   * @return {number}
+   */
+  measureBMPCodePoint(codePoint) {
+    if (this._bmpDefault[codePoint] === 2) {
+      let width = this._measureBMP(String.fromCharCode(codePoint));
+      this._bmp[codePoint] = width;
+      this._bmpDefault[codePoint] = width === this.defaultWidth ? 1 : 0;
+    }
+    return this._bmp[codePoint];
+  }
+
+  /**
+   * @param {number} codePoint
+   * @return {number}
+   */
+  measureSupplementaryCodePoint(codePoint) {
+    if (this._supplementary[codePoint] === undefined)
+      this._supplementary[codePoint] = this._measureSupplementary(String.fromCodePoint(codePoint));
+    return this._supplementary[codePoint];
+  }
+
+  /**
+   * @param {string} s
+   * @param {number} from
+   * @param {number} to
+   * @param {number} column
+   * @return {!{offset: number, columns: number, width: number}}
+   */
+  locateInString(s, from, to, column) {
+    if (!column)
+      return {offset: from, columns: column, width: 0};
+    if (this._defaultRegex && this._defaultRegex.test(s)) {
+      if (column > to - from)
+        return {offset: -1, columns: to - from, width: (to - from) * this.defaultWidth};
+      return {offset: from + column, columns: column, width: column * this.defaultWidth};
+    }
+    let columns = 0;
+    let width = 0;
+    for (let offset = from; offset < to; ) {
+      let charCode = s.charCodeAt(offset);
+      if (charCode >= 0xD800 && charCode <= 0xDBFF && offset + 1 < to) {
+        let codePoint = s.codePointAt(offset);
+        if (this._supplementary[codePoint] === undefined)
+          this._supplementary[codePoint] = this._measureSupplementary(s.substring(offset, offset + 2));
+        width += this._supplementary[codePoint];
+        columns++;
+        offset += 2;
+      } else {
+        if (this._bmpDefault[charCode] === 2) {
+          let charCodeWidth = this._measureBMP(s[offset]);
+          this._bmp[charCode] = charCodeWidth;
+          this._bmpDefault[charCode] = charCodeWidth === this.defaultWidth ? 1 : 0;
+        }
+        width += this._bmp[charCode];
+        columns++;
+        offset++;
+      }
+      if (columns === column)
+        return {offset, columns, width};
+    }
+    return {offset: -1, columns, width};
   }
 };
 

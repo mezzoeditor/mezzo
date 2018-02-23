@@ -14,54 +14,18 @@ const {beforeAll, beforeEach, afterAll, afterEach} = runner;
 
 const {expect} = new Matchers();
 
-const defaultMeasurer = {
-  defaultWidth: 1,
-  defaultHeight: 1,
-  measureString: (s, from, to) => ({width: 0, columns: to - from}),
-  measureBMPCodePoint: codePoint => 1,
-  measureSupplementaryCodePoint: codePoint => 1
+const defaultMeasurer = new Unicode.CachingMeasurer(1, 1, Unicode.anythingRegex, s => 1, s => 1);
+const testMeasurer = new Unicode.CachingMeasurer(
+  1,
+  3,
+  null,
+  s => s.charCodeAt(0) - 'a'.charCodeAt(0) + 1,
+  s => 100
+);
+testMeasurer._measureString = (s, from, to) => {
+  let result = testMeasurer.measureString(s, from, to);
+  return result.width || result.columns * testMeasurer.defaultWidth;
 };
-
-class TestMeasurer {
-  constructor() {
-    this.defaultHeight = 3;
-    this.defaultWidth = 1;
-  }
-
-  measureString(s, from, to) {
-    let result = this._measureString(s, from, to);
-    result.width = result.width === result.columns ? 0 : result.width;
-    return result;
-  }
-
-  measureBMPCodePoint(codePoint) {
-    return codePoint - 'a'.charCodeAt(0) + 1;
-  }
-
-  measureSupplementaryCodePoint(codePoint) {
-    return 100;
-  }
-
-  _measureString(s, from, to) {
-    let width = 0;
-    let columns = 0;
-    for (let i = from; i < to; ) {
-      if (s[i] === '\n')
-        throw 'Cannot measure line breaks';
-      let charCode = s.charCodeAt(i);
-      if (charCode >= 0xD800 && charCode <= 0xDBFF && i + 1 < to) {
-        width += 100;
-        i += 2;
-        columns++;
-      } else {
-        width += charCode - 'a'.charCodeAt(0) + 1;
-        i++;
-        columns++;
-      }
-    }
-    return {width, columns};
-  }
-}
 
 describe('Metrics', () => {
   it('Metrics.fromString', () => {
@@ -71,7 +35,6 @@ describe('Metrics', () => {
     expect(Metrics.fromString('\none line\n', defaultMeasurer)).toEqual({length: 10, firstColumns: 0, lastColumns: 0, longestColumns: 8, lineBreaks: 2});
     expect(Metrics.fromString('short\nlongest\nlonger\ntiny', defaultMeasurer)).toEqual({length: 25, firstColumns: 5, lastColumns: 4, longestColumns: 7, lineBreaks: 3});
 
-    let testMeasurer = new TestMeasurer();
     expect(Metrics.fromString('a', testMeasurer)).toEqual({length: 1, firstColumns: 1, lastColumns: 1, longestColumns: 1});
     expect(Metrics.fromString('a\nb', testMeasurer)).toEqual({length: 3, firstColumns: 1, lastColumns: 1, longestColumns: 1, lineBreaks: 1, lastWidth: 2, longestWidth: 2});
     expect(Metrics.fromString('b\na', testMeasurer)).toEqual({length: 3, firstColumns: 1, lastColumns: 1, longestColumns: 1, lineBreaks: 1, firstWidth: 2, longestWidth: 2});
@@ -111,7 +74,6 @@ describe('Metrics', () => {
   });
 
   it('Metrics.stringPointToLocation with measurer', () => {
-    let testMeasurer = new TestMeasurer();
     let chunk = 'a\nb\naaaa\nbac\nc';
     let before = {offset: 15, line: 3, column: 8, x: 5, y: 10};
     let tests = [
@@ -158,7 +120,6 @@ describe('Text', () => {
 
   it('Text.* all sizes', () => {
     let random = Random(143);
-    let testMeasurer = new TestMeasurer();
     let lineCount = 200;
     let chunks = [];
     let longest = 0;
@@ -168,7 +129,7 @@ describe('Text', () => {
       let s = 'abcdefghijklmnopqrstuvwxyz';
       let length = 1 + (random() % (s.length - 1));
       let chunk = s.substring(0, length);
-      let width = testMeasurer._measureString(chunk, 0, length).width;
+      let width = testMeasurer._measureString(chunk, 0, length);
       longest = Math.max(longest, width);
       chunks.push(chunk + '\n');
       locationQueries.push({line: i, column: 0, offset: offset, x: 0, y: i * 3, rounded: true});
@@ -177,7 +138,7 @@ describe('Text', () => {
       locationQueries.push({line: i, column: length, offset: offset + length, x: width, y: i * 3, nonStrict: {column: length + 1, x: width + 3}});
       locationQueries.push({line: i, column: length, offset: offset + length, x: width, y: i * 3, nonStrict: {column: length + 100, x: width + 100}});
       let column = random() % length;
-      locationQueries.push({line: i, column: column, offset: offset + column, x: testMeasurer._measureString(chunk, 0, column).width, y: i * 3});
+      locationQueries.push({line: i, column: column, offset: offset + column, x: testMeasurer._measureString(chunk, 0, column), y: i * 3});
       offset += length + 1;
     }
     let content = chunks.join('');
@@ -467,13 +428,7 @@ describe('Text.Iterator', () => {
 describe('Viewport', () => {
   beforeEach(state => {
     let document = new Document();
-    let measurer = {
-      defaultWidth: 10,
-      defaultHeight: 10,
-      measureString: (s, from, to) => ({width: 0, columns: to - from}),
-      measureBMPCodePoint: codePoint => 10,
-      measureSupplementaryCodePoint: codePoint => 10
-    };
+    let measurer = new Unicode.CachingMeasurer(10, 10, null, s => 10, s => 10);
     document.setMeasurer(measurer);
     document.reset(new Array(10).fill('').join('\n'));
     state.viewport = document.createViewport();
