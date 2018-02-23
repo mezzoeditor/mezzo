@@ -85,7 +85,7 @@ function setChildren(parent, left, right, measurer, skipClone) {
     h: parent.h,
     metrics: Metrics.clone(parent.selfMetrics || parent.metrics)
   };
-  if (left || right)
+  if (!node.selfMetrics && (left || right))
     node.selfMetrics = Metrics.clone(node.metrics);
   if (left) {
     node.left = left;
