@@ -1,3 +1,9 @@
+export let RoundMode = {
+  Floor: 0,
+  Round: 1,
+  Ceil: 2
+};
+
 export let Unicode = {};
 
 Unicode.bmpRegex = /^[\u{0000}-\u{d7ff}]*$/u;
@@ -88,7 +94,34 @@ Unicode.Measurer = class {
    * @param {number} column
    * @return {!{offset: number, columns: number, width: number}}
    */
-  locateInString(s, from, to, column) {
+  locateByColumn(s, from, to, column) {
+  }
+
+  /**
+   * Returns measurements for a particular code point at given width in a given substring.
+   *
+   * Returned |offset| should belong to [from, to], and |column| and |width| should
+   * measure the [from, offset] substring.
+   * If the substrig is not wid enough, return |offset === -1| instead,
+   * and measure [from, to] into |column| and |width|.
+   *
+   * Do not return zero for a width even if it is default.
+   *
+   * When the width does not point exaclty between two code points, |roundMode| controls
+   * which code point to snap to:
+   *   - RoundMode.Floor snaps to the first code point;
+   *   - RoundMode.Ceil snaps to the second code point;
+   *   - RoundMode.Round snaps to the first or second code point depending on
+   *     whether width is further from the left or right border of the second code point.
+   *
+   * @param {string} s
+   * @param {number} from
+   * @param {number} to
+   * @param {number} width
+   * @param {!RoundMode} roundMode
+   * @return {!{offset: number, columns: number, width: number}}
+   */
+  locateByWidth(s, from, to, width, roundMode) {
   }
 };
 
@@ -197,14 +230,16 @@ Unicode.CachingMeasurer = class {
    * @param {number} column
    * @return {!{offset: number, columns: number, width: number}}
    */
-  locateInString(s, from, to, column) {
+  locateByColumn(s, from, to, column) {
     if (!column)
       return {offset: from, columns: column, width: 0};
+
     if (this._defaultRegex && this._defaultRegex.test(s)) {
       if (column > to - from)
         return {offset: -1, columns: to - from, width: (to - from) * this.defaultWidth};
       return {offset: from + column, columns: column, width: column * this.defaultWidth};
     }
+
     let columns = 0;
     let width = 0;
     for (let offset = from; offset < to; ) {
@@ -230,6 +265,70 @@ Unicode.CachingMeasurer = class {
         return {offset, columns, width};
     }
     return {offset: -1, columns, width};
+  }
+
+  /**
+   * @param {string} s
+   * @param {number} from
+   * @param {number} to
+   * @param {number} width
+   * @param {!RoundMode} roundMode
+   * @return {!{offset: number, columns: number, width: number}}
+   */
+  locateByWidth(s, from, to, width, roundMode) {
+    if (!width)
+      return {offset: from, columns: 0, width: 0};
+
+    if (this._defaultRegex && this._defaultRegex.test(s)) {
+      if (width > (to - from) * this.defaultWidth)
+        return {offset: -1, columns: to - from, width: (to - from) * this.defaultWidth};
+      let offset = Math.floor(width / this.defaultWidth);
+      let left = offset * this.defaultWidth;
+      if (left === width || roundMode === RoundMode.Floor)
+        return {offset: from + offset, columns: offset, width: left};
+      if (roundMode === RoundMode.Ceil || width - left > right - width)
+        return {offset: from + offset + 1, columns: offset + 1, width: right};
+      return {offset: from + offset, columns: offset, width: left};
+    }
+
+    let columns = 0;
+    let w = 0;
+    for (let offset = from; offset < to; ) {
+      let charCode = s.charCodeAt(offset);
+      let nextW;
+      let nextOffset;
+      if (charCode >= 0xD800 && charCode <= 0xDBFF && offset + 1 < to) {
+        let codePoint = s.codePointAt(offset);
+        if (this._supplementary[codePoint] === undefined)
+          this._supplementary[codePoint] = this._measureSupplementary(s.substring(offset, offset + 2));
+        nextW = w + this._supplementary[codePoint];
+        nextOffset = offset + 2;
+      } else {
+        if (this._bmpDefault[charCode] === 2) {
+          let charCodeWidth = this._measureBMP(s[offset]);
+          this._bmp[charCode] = charCodeWidth;
+          this._bmpDefault[charCode] = charCodeWidth === this.defaultWidth ? 1 : 0;
+        }
+        nextW = w + this._bmp[charCode];
+        nextOffset = offset + 1;
+      }
+
+      if (nextW > width) {
+        if (w === width || roundMode === RoundMode.Floor)
+          return {offset: offset, columns: columns, width: w};
+        if (roundMode === RoundMode.Ceil || width - w > nextW - width)
+          return {offset: nextOffset, columns: columns + 1, width: nextW};
+        return {offset: offset, columns: columns, width: w};
+      }
+
+      columns++;
+      offset = nextOffset;
+      w = nextW;
+    }
+
+    if (w < width)
+      return {offset: -1, columns: columns, width: w};
+    return {offset: to, columns: columns, width: w};
   }
 };
 

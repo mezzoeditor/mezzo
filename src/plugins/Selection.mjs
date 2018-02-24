@@ -1,6 +1,6 @@
 import { ScrollbarDecorator } from "../core/Decorator.mjs";
 import { Tokenizer } from "../core/Tokenizer.mjs";
-import { RoundMode } from "../core/Metrics.mjs";
+import { RoundMode } from "../core/Unicode.mjs";
 
 /**
  * @typedef {{

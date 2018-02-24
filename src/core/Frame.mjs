@@ -1,4 +1,4 @@
-import { RoundMode } from "./Metrics.mjs";
+import { RoundMode } from "./Unicode.mjs";
 
 export class Frame {
   /**

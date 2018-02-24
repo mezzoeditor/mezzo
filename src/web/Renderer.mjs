@@ -1,6 +1,5 @@
 import { Frame } from "../core/Frame.mjs";
-import { RoundMode } from "../core/Metrics.mjs";
-import { Unicode } from "../core/Unicode.mjs";
+import { RoundMode, Unicode } from "../core/Unicode.mjs";
 import { trace } from "../core/Trace.mjs";
 
 class ContextBasedMetrics {

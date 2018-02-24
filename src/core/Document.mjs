@@ -2,8 +2,7 @@ import { History } from "./History.mjs";
 import { Text } from "./Text.mjs";
 import { Frame } from "./Frame.mjs";
 import { Viewport } from "./Viewport.mjs";
-import { RoundMode } from "./Metrics.mjs";
-import { Unicode } from "./Unicode.mjs";
+import { RoundMode, Unicode } from "./Unicode.mjs";
 
 export class Document {
   constructor() {

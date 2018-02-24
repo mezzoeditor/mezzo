@@ -1,6 +1,6 @@
 import { Random } from "./Random.mjs";
 import { Metrics } from "./Metrics.mjs";
-import { Unicode } from "./Unicode.mjs";
+import { RoundMode, Unicode } from "./Unicode.mjs";
 import { trace } from "../core/Trace.mjs";
 
 let random = Random(42);

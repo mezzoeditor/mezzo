@@ -1,4 +1,4 @@
-import { Unicode } from "./Unicode.mjs";
+import { RoundMode, Unicode } from "./Unicode.mjs";
 
 /**
  * @typedef {{
@@ -47,12 +47,6 @@ import { Unicode } from "./Unicode.mjs";
  *   to: number
  * }} Range;
  */
-
-export let RoundMode = {
-  Floor: 0,
-  Round: 1,
-  Ceil: 2
-};
 
 export let Metrics = {};
 
@@ -231,7 +225,7 @@ Metrics.stringPositionToLocation = function(s, before, position, measurer, stric
   if (lineEndOffset === -1)
     lineEndOffset = s.length;
 
-  let {offset, columns, width} = measurer.locateInString(s, lineStartOffset, lineEndOffset, position.column - column);
+  let {offset, columns, width} = measurer.locateByColumn(s, lineStartOffset, lineEndOffset, position.column - column);
   if (offset === -1) {
     if (strict)
       throw 'Position does not belong to text';
@@ -247,43 +241,6 @@ Metrics.stringPositionToLocation = function(s, before, position, measurer, stric
 };
 
 /**
- * @param {string} chunk
- * @param {!Measurer} measurer
- * @param {number} desired
- * @param {!RoundMode} roundMode
- * @return {!{width: number, length: number, columns: number, overflow: boolean}}
- */
-Metrics._chunkLengthForWidth = function(chunk, measurer, desired, roundMode) {
-  let length = 0;
-  let width = 0;
-  let columns = 0;
-  while (length < chunk.length) {
-    if (width === desired)
-      return {width, length, columns, overflow: false};
-    let nextLength = length + 1;
-    let charCode = chunk.charCodeAt(length);
-    let next;
-    if (charCode >= 0xD800 && charCode <= 0xDBFF && length + 1 < chunk.length) {
-      nextLength = length + 2;
-      next = measurer.measureSupplementaryCodePoint(chunk.codePointAt(length));
-    } else {
-      next = measurer.measureBMPCodePoint(charCode);
-    }
-    if (width + next > desired) {
-      if (roundMode === RoundMode.Round)
-        roundMode = desired - width <= width + next - desired ? RoundMode.Floor : RoundMode.Ceil;
-      return roundMode === RoundMode.Floor
-          ? {width, length, columns, overflow: false}
-          : {width: width + next, length: nextLength, columns: columns + 1, overflow: false};
-    }
-    width += next;
-    length = nextLength;
-    columns++;
-  }
-  return {width, length, columns, overflow: width < desired};
-};
-
-/**
  * @param {string} s
  * @param {!Location} before
  * @param {!Point} point
@@ -293,38 +250,35 @@ Metrics._chunkLengthForWidth = function(chunk, measurer, desired, roundMode) {
  * @return {!Location}
  */
 Metrics.stringPointToLocation = function(s, before, point, measurer, roundMode, strict) {
-  let {line, column, offset, x, y} = before;
+  let {line, column, x, y} = before;
 
   if (point.y < y || (point.y < y + measurer.defaultHeight && point.x < x))
     throw 'Inconsistent';
 
-  let index = 0;
+  let lineStartOffset = 0;
   while (y + measurer.defaultHeight <= point.y) {
-    let nextLine = s.indexOf('\n', index);
-    if (nextLine === -1)
+    let lineBreakOffset = s.indexOf('\n', lineStartOffset);
+    if (lineBreakOffset === -1)
       throw 'Inconsistent';
-    offset += (nextLine - index + 1);
-    index = nextLine + 1;
     line++;
     y += measurer.defaultHeight;
     column = 0;
     x = 0;
+    lineStartOffset = lineBreakOffset + 1;
   }
 
-  let lineEnd = s.indexOf('\n', index);
-  if (lineEnd === -1)
-    lineEnd = s.length;
+  let lineEndOffset = s.indexOf('\n', lineStartOffset);
+  if (lineEndOffset === -1)
+    lineEndOffset = s.length;
 
-  let {length, width, overflow, columns} = Metrics._chunkLengthForWidth(s.substring(index, lineEnd), measurer, point.x - x, roundMode);
-  if (overflow) {
-    if (length !== lineEnd - index)
-      throw 'Inconsistent';
+  let {offset, columns, width} = measurer.locateByWidth(s, lineStartOffset, lineEndOffset, point.x - x, roundMode);
+  if (offset === -1) {
     if (strict)
-      throw 'Point does not belong to text';
+      throw 'Position does not belong to text';
+    offset = lineEndOffset;
   }
-
   return {
-    offset: offset + length,
+    offset: before.offset + offset,
     line: line,
     column: column + columns,
     x: x + width,
