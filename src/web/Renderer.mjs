@@ -1,5 +1,6 @@
 import { Frame } from "../core/Frame.mjs";
 import { RoundMode, Unicode } from "../core/Unicode.mjs";
+import { Viewport } from "../core/Viewport.mjs";
 import { trace } from "../core/Trace.mjs";
 
 class ContextBasedMetrics {
@@ -72,8 +73,7 @@ export class Renderer {
     this._cssHeight = 0;
     this._ratio = this._getRatio();
     this._updateMetrics();
-    this._viewport = document.createViewport();
-    this._viewport.setInvalidateCallback(() => this.invalidate());
+    this._viewport = new Viewport(document);
     this._viewport.setRevealCallback(() => this.invalidate());
 
     this._render = this._render.bind(this);

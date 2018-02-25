@@ -5,6 +5,7 @@ import {Text} from './Text.mjs';
 import {Document} from './Document.mjs';
 import {Random} from './Random.mjs';
 import {Decorator} from './Decorator.mjs';
+import {Viewport} from './Viewport.mjs';
 
 const runner = new TestRunner();
 
@@ -482,11 +483,11 @@ describe('Text.Iterator', () => {
 
 describe('Viewport', () => {
   beforeEach(state => {
-    let document = new Document();
+    let document = new Document(() => {});
     let measurer = new Unicode.CachingMeasurer(10, 10, null, s => 10, s => 10);
     document.setMeasurer(measurer);
     document.reset(new Array(10).fill('').join('\n'));
-    state.viewport = document.createViewport();
+    state.viewport = new Viewport(document);
     state.viewport.setSize(100, 100);
     state.viewport.vScrollbar.setSize(100);
   });

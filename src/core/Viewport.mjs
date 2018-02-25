@@ -47,7 +47,6 @@ export class Viewport {
     this.hScrollbar = new Scrollbar(offset => this.setScrollLeft(offset));
     this.vScrollbar = new Scrollbar(offset => this.setScrollTop(offset));
 
-    this._invalidateCallback = () => {};
     this._revealCallback = () => {};
   }
 
@@ -59,21 +58,10 @@ export class Viewport {
   }
 
   /**
-   * @param {function()} invalidateCallback
-   */
-  setInvalidateCallback(invalidateCallback) {
-    this._invalidateCallback = invalidateCallback;
-  }
-
-  /**
    * @param {function()} revealCallback
    */
   setRevealCallback(revealCallback) {
     this._revealCallback = revealCallback;
-  }
-
-  invalidate() {
-    this._invalidateCallback.call(null);
   }
 
   /**

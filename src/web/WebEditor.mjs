@@ -17,7 +17,7 @@ export class WebEditor {
    */
   constructor(domDocument) {
     this._createDOM(domDocument);
-    this._document = new Document();
+    this._document = new Document(this.invalidate.bind(this));
     this._document.setTokenizer(new DefaultTokenizer());
     this._createRenderer(domDocument);
     this._setupSelection();
@@ -67,7 +67,8 @@ export class WebEditor {
   }
 
   invalidate() {
-    this._renderer.invalidate();
+    if (this._renderer)
+      this._renderer.invalidate();
   }
 
   /**

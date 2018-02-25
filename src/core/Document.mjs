@@ -1,13 +1,15 @@
 import { History } from "./History.mjs";
 import { Text } from "./Text.mjs";
 import { Frame } from "./Frame.mjs";
-import { Viewport } from "./Viewport.mjs";
 import { RoundMode, Unicode } from "./Unicode.mjs";
 
 export class Document {
-  constructor() {
+  /**
+   * @param {function()} invalidateCallback
+   */
+  constructor(invalidateCallback) {
     this._plugins = [];
-    this._viewports = [];
+    this._invalidateCallback = invalidateCallback;
     this._measurer = new Unicode.CachingMeasurer(1, 1, Unicode.anythingRegex, s => 1, s => 1);
     this._history = new History({
       text: Text.withContent('', this._measurer),
@@ -55,15 +57,6 @@ export class Document {
   }
 
   /**
-   * @return {!Viewport}
-   */
-  createViewport() {
-    let viewport = new Viewport(this);
-    this._viewports.push(viewport);
-    return viewport;
-  }
-
-  /**
    * @param {string} text
    */
   reset(text) {
@@ -87,8 +80,7 @@ export class Document {
   }
 
   invalidate() {
-    for (let viewport of this._viewports)
-      viewport.invalidate();
+    this._invalidateCallback.call(null);
   }
 
   /**

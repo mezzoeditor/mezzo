@@ -43,7 +43,7 @@ for (let fileName of files) {
     continue;
   runner.it(fileName, async () => {
     let text = await readFile(path.join(TESTDIR, fileName));
-    let document = new Document();
+    let document = new Document(() => {});
     document.reset(text);
     let tt = new Parser({allowHashBang: true}, document.iterator(0));
     const tokens = [];
