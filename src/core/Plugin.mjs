@@ -40,15 +40,6 @@ class Plugin {
   }
 
   /**
-   * Called when command should be executed. Return undefined if command is unhandled.
-   * @param {string} command
-   * @param {*} data
-   * @return {*|undefined}
-   */
-  onCommand(command, data) {
-  }
-
-  /**
    * Called when history is about to save the state.
    * Returned data is stored in the history state.
    * @return {*}

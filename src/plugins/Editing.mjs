@@ -12,58 +12,63 @@ export class Editing {
   }
 
   /**
-   * @param {string} command
-   * @param {*} data
-   * @return {*|undefined}
+   * @param {string} text
+   * @return {boolean}
    */
-  onCommand(command, data) {
-    if (!Editing.Commands.has(command))
-      return;
+  paste(text) {
+    return this._replace(text, range => range);
+  }
 
-    this._document.begin('editing');
-    switch (command) {
-      case 'editing.type': {
-        let s = /** @type {string} */ (data);
-        this._replace(s, range => range);
-        break;
-      }
-      case 'editing.paste': {
-        let s = /** @type {string} */ (data);
-        this._replace(s, range => range);
-        break;
-      }
-      case 'editing.newline': {
-        this._replace('\n', range => range);
-        break;
-      }
-      case 'editing.delete.after': {
-        this._replace('', range => {
-          if (range.from === range.to)
-            return {from: range.from, to: Math.min(this._document.length(), range.to + 1)};
-          return range;
-        });
-        break;
-      }
-      case 'editing.delete.before': {
-        this._replace('', range => {
-          if (range.from === range.to)
-            return {from: Math.max(0, range.from - 1), to: range.to};
-          return range;
-        });
-        break;
-      }
-    }
-    this._document.end('editing');
-    return true;
+  /**
+   * @return {boolean}
+   */
+  deleteBefore() {
+    return this._replace('', range => {
+      // TODO: this does not work with unicode.
+      if (range.from === range.to)
+        return {from: Math.max(0, range.from - 1), to: range.to};
+      return range;
+    });
+  }
+
+  /**
+   * @return {boolean}
+   */
+  deleteAfter() {
+    return this._replace('', range => {
+      // TODO: this does not work with unicode.
+      if (range.from === range.to)
+        return {from: range.from, to: Math.min(this._document.length(), range.to + 1)};
+      return range;
+    });
+  }
+
+  /**
+   * @param {string} text
+   * @return {boolean}
+   */
+  type(text) {
+    return this._replace(text, range => range);
+  }
+
+  /**
+   * @return {boolean}
+   */
+  insertNewLine() {
+    return this._replace('\n', range => range);
   }
 
   /**
    * @param {string} s
    * @param {function(!Range):!Range} rangeCallback
+   * @return {boolean}
    */
   _replace(s, rangeCallback) {
-    this._selection.mute();
     let ranges = this._selection.ranges();
+    if (!ranges.length)
+      return false;
+    this._document.begin('editing');
+    this._selection.mute();
     let newRanges = [];
     let delta = 0;
     for (let range of ranges) {
@@ -76,13 +81,7 @@ export class Editing {
     }
     this._selection.unmute();
     this._selection.updateRanges(newRanges);
+    this._document.end('editing');
+    return true;
   }
 };
-
-Editing.Commands = new Set([
-  'editing.type',
-  'editing.paste',
-  'editing.newline',
-  'editing.delete.before',
-  'editing.delete.after',
-]);

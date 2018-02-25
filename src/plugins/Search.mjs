@@ -69,6 +69,65 @@ export class Search {
     return this._decorator.countStarting(0, this._currentMatch.from) - 1;
   }
 
+  /**
+   * @param {!SearchOptions} options
+   */
+  find(options) {
+    this._cancel();
+    this._options = options;
+    this._scheduler.start(this._document);
+    this._updated = true;
+    this._document.invalidate();
+  }
+
+  cancel() {
+    this._cancel();
+    this._updated = true;
+    this._document.invalidate();
+  }
+
+  /**
+   * Moves to closest match after current cursor offset.
+   * @return {boolean}
+   */
+  nextMatch() {
+    let offset = this._selection.focus();
+    if (offset === null && this._currentMatch)
+      offset = this._currentMatch.from;
+    if (offset === null)
+      return false;
+    let match = this._decorator.firstStarting(offset + 1, this._document.length());
+    if (!match)
+      match = this._decorator.firstStarting(0, this._document.length());
+    if (!match)
+      return false;
+    this._updateCurrentMatch(match);
+    this._updated = true;
+    this._document.invalidate();
+    return true;
+  }
+
+  /**
+   * Moves to closest match before current cursor offset.
+   * @return {boolean}
+   */
+  previousMatch() {
+    let offset = this._selection.focus();
+    if (offset === null && this._currentMatch)
+      offset = this._currentMatch.from;
+    if (offset === null)
+      return false;
+    let match = this._decorator.lastEnding(0, offset - 1);
+    if (!match)
+      match = this._decorator.lastEnding(0, this._document.length());
+    if (!match)
+      return false;
+    this._updateCurrentMatch(match);
+    this._updated = true;
+    this._document.invalidate();
+    return true;
+  }
+
   // ------- Plugin -------
 
   /**
@@ -135,65 +194,6 @@ export class Search {
       this.onReplace(replacement.from, replacement.to, replacement.inserted);
   }
 
-  /**
-   * @param {string} command
-   * @param {*} data
-   * @return {*|undefined}
-   */
-  onCommand(command, data) {
-    if (!Search.Commands.has(command))
-      return;
-
-    switch (command) {
-      case 'search.find': {
-        this._cancel();
-        this._options = data;
-        this._scheduler.start(this._document);
-        this._updated = true;
-        this._document.invalidate();
-        return true;
-      }
-      case 'search.next': {
-        let offset = this._selection.focus();
-        if (offset === null && this._currentMatch)
-          offset = this._currentMatch.from;
-        if (offset === null)
-          return false;
-        let match = this._decorator.firstStarting(offset + 1, this._document.length());
-        if (!match)
-          match = this._decorator.firstStarting(0, this._document.length());
-        if (!match)
-          return false;
-        this._updateCurrentMatch(match);
-        this._updated = true;
-        this._document.invalidate();
-        return true;
-      }
-      case 'search.previous': {
-        let offset = this._selection.focus();
-        if (offset === null && this._currentMatch)
-          offset = this._currentMatch.from;
-        if (offset === null)
-          return false;
-        let match = this._decorator.lastEnding(0, offset - 1);
-        if (!match)
-          match = this._decorator.lastEnding(0, this._document.length());
-        if (!match)
-          return false;
-        this._updateCurrentMatch(match);
-        this._updated = true;
-        this._document.invalidate();
-        return true;
-      }
-      case 'search.cancel': {
-        this._cancel();
-        this._updated = true;
-        this._document.invalidate();
-        return true;
-      }
-    }
-  }
-
   // ------ Internals -------
 
   _cancel() {
@@ -251,12 +251,5 @@ export class Search {
     return {from, to};
   }
 };
-
-Search.Commands = new Set([
-  'search.find',     // Takes SearchOptions.
-  'search.next',     // Moves to closest match after current cursor offset.
-  'search.previous', // Moves to closest match before current cursor offset.
-  'search.cancel',
-]);
 
 Search.Decorations = new Set(['search.match', 'search.match.current']);

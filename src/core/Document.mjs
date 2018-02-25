@@ -244,25 +244,6 @@ export class Document {
   }
 
   /**
-   * @param {string} command
-   * @param {*} data
-   * @return {*}
-   */
-  perform(command, data) {
-    if (command === 'history.undo')
-      return this.undo(data);
-    if (command === 'history.redo')
-      return this.redo(data);
-    for (let plugin of this._plugins) {
-      if (plugin.onCommand) {
-        let result = plugin.onCommand(command, data);
-        if (result !== undefined)
-          return result;
-      }
-    }
-  }
-
-  /**
    * @param {number=} from
    * @param {number=} to
    * @return {string}
@@ -415,5 +396,3 @@ export class Document {
     return {text, scrollbar};
   }
 };
-
-Document.Commands = new Set(['history.undo', 'history.redo']);

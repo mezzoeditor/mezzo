@@ -7,6 +7,7 @@ import { IdleScheduler } from "./IdleScheduler.mjs";
 import { DefaultTheme } from "../default/DefaultTheme.mjs";
 import { DefaultHighlighter } from "../default/DefaultHighlighter.mjs";
 import { DefaultTokenizer } from "../default/DefaultTokenizer.mjs";
+import { Tokenizer } from "../core/Tokenizer.mjs";
 
 const isMac = navigator.platform.toUpperCase().indexOf('MAC') !== -1;
 
@@ -159,7 +160,7 @@ export class WebEditor {
       let handled = false;
       let command = this._keymap.get(eventToHash(event));
       if (command)
-        handled = this._document.perform(command);
+        handled = this._performCommand(command);
       if (handled) {
         this._revealCursors();
         event.preventDefault();
@@ -174,16 +175,14 @@ export class WebEditor {
       lastMouseEvent = event;
       let offset = this._renderer.mouseEventToTextOffset(event);
       if (event.detail === 2) {
-        let offset = this._renderer.mouseEventToTextOffset(event);
-        let range = this._selection.selectWordContaining(offset);
-        mouseRangeStartOffset = range.from;
-        mouseRangeEndOffset = range.to;
+        mouseRangeStartOffset = Tokenizer.previousWord(this._document, offset);
+        mouseRangeEndOffset = Tokenizer.nextWord(this._document, offset);
+        this._selection.setRanges([{from: mouseRangeStartOffset, to: mouseRangeEndOffset}]);
         event.preventDefault();
         event.stopPropagation();
         return;
       }
       if (event.detail > 2) {
-        let offset = this._renderer.mouseEventToTextOffset(event);
         let position = this._document.offsetToPosition(offset);
         let from = this._document.positionToOffset({
           line: position.line,
@@ -237,7 +236,7 @@ export class WebEditor {
       mouseRangeEndOffset = null;
     });
     this._element.addEventListener('copy', event => {
-      let text = this._document.perform('selection.copy');
+      let text = this._selection.selectedText();
       if (text) {
         event.clipboardData.setData('text/plain', text);
         event.preventDefault();
@@ -288,17 +287,17 @@ export class WebEditor {
       let data = event.clipboardData;
       if (data.types.indexOf('text/plain') === -1)
         return;
-      this._document.perform('editing.paste', data.getData('text/plain'));
+      this._editing.paste(data.getData('text/plain'));
       this._revealCursors();
       event.preventDefault();
       event.stopPropagation();
     });
     this._element.addEventListener('cut', event => {
-      const text = this._document.perform('selection.copy');
+      const text = this._selection.selectedText();
       if (!text)
         return;
       event.clipboardData.setData('text/plain', text);
-      this._document.perform('editing.delete.before');
+      this._editing.deleteBefore();
       this._revealCursors();
       event.preventDefault();
       event.stopPropagation();
@@ -306,7 +305,7 @@ export class WebEditor {
     this._input.addEventListener('input', event => {
       if (!this._input.value)
         return;
-      this._document.perform('editing.type', this._input.value);
+      this._editing.type(this._input.value);
       this._revealCursors();
       this._input.value = '';
     });
@@ -314,21 +313,21 @@ export class WebEditor {
       let handled = false;
       switch (event.key) {
         case 'Enter':
-          handled = this._document.perform('editing.newline');
+          handled = this._editing.insertNewLine();
           break;
         case 'z':
         case 'Z':
           // TODO: handle shortcuts properly.
           if (event.metaKey || event.ctrlKey)
-            handled = this._document.perform(event.shiftKey ? 'history.redo' : 'history.undo', '!selection');
+            handled = event.shiftKey ? this._document.redo('!selection') : this._document.undo('!selection');
           break;
       }
       switch (event.keyCode) {
         case 8: /* backspace */
-          handled = this._document.perform('editing.delete.before');
+          handled = this._editing.deleteBefore();
           break;
         case 46: /* delete */
-          handled = this._document.perform('editing.delete.after');
+          handled = this._editing.deleteAfter();
           break;
       }
       if (handled) {
@@ -350,19 +349,62 @@ export class WebEditor {
     this._search = new Search(this._document, new IdleScheduler(), this._selection, onUpdate);
 
     this.find = query => {
-      this._document.perform('search.find', {query});
+      this._search.find({query});
     };
     this.findCancel = () => {
-      this._document.perform('search.cancel');
+      this._search.cancel();
     };
     this.findNext = () => {
-      this._document.perform('search.next');
+      this._search.nextMatch();
     };
     this.findPrevious = () => {
-      this._document.perform('search.previous');
+      this._search.previousMatch();
     };
 
     this._document.addPlugin(this._search);
+  }
+
+  _performCommand(command) {
+    switch (command) {
+      case 'selection.move.up':
+        return this._selection.moveUp();
+      case 'selection.move.down':
+        return this._selection.moveDown();
+      case 'selection.move.left':
+        return this._selection.moveLeft();
+      case 'selection.move.right':
+        return this._selection.moveRight();
+      case 'selection.move.word.left':
+        return this._selection.moveWordLeft();
+      case 'selection.move.word.right':
+        return this._selection.moveWordRight();
+      case 'selection.move.linestart':
+        return this._selection.moveLineStart();
+      case 'selection.move.lineend':
+        return this._selection.moveLineEnd();
+      case 'selection.select.up':
+        return this._selection.selectUp();
+      case 'selection.select.down':
+        return this._selection.selectDown();
+      case 'selection.select.left':
+        return this._selection.selectLeft();
+      case 'selection.select.right':
+        return this._selection.selectRight();
+      case 'selection.select.word.left':
+        return this._selection.selectWordLeft();
+      case 'selection.select.word.right':
+        return this._selection.selectWordRight();
+      case 'selection.select.linestart':
+        return this._selection.selectLineStart();
+      case 'selection.select.lineend':
+        return this._selection.selectLineEnd();
+      case 'selection.select.all':
+        this._selection.selectAll();
+        return true;
+      case 'selection.collapse':
+        return this._selection.collapse();
+    }
+    return false;
   }
 }
 

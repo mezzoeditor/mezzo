@@ -55,6 +55,8 @@ export class Selection {
    * @param {boolean=} noReveal
    */
   setRanges(ranges, noReveal) {
+    if (this._muted)
+      throw 'Cannot change selection while muted';
     this._document.begin('selection');
     this._ranges = this._rebuild(ranges.map(range => ({
       id: ++this._lastId,
@@ -69,21 +71,11 @@ export class Selection {
   }
 
   /**
-   * @param {number} offset
-   */
-  selectWordContaining(offset) {
-    let range = {
-      from: Tokenizer.previousWord(this._document, offset),
-      to: Tokenizer.nextWord(this._document, offset),
-    };
-    this.setRanges([range]);
-    return range;
-  }
-
-  /**
    * @param {!Array<!Range>} ranges
    */
   updateRanges(ranges) {
+    if (this._muted)
+      throw 'Cannot change selection while muted';
     if (ranges.length !== this._ranges.length)
       throw 'Wrong number of ranges to update';
     this._document.begin('selection');
@@ -102,6 +94,219 @@ export class Selection {
 
   unmute() {
     this._muted--;
+  }
+
+  /**
+   * @return {string}
+   */
+  selectedText() {
+    let lines = [];
+    for (let range of this._ranges)
+      lines.push(this._document.content(Math.min(range.anchor, range.focus), Math.max(range.anchor, range.focus)));
+    return lines.join('\n');
+  }
+
+  /**
+   * @return {boolean}
+   */
+  collapse() {
+    if (this._muted)
+      throw 'Cannot change selection while muted';
+    let collapsed = false;
+    let ranges = [];
+    for (let range of this._ranges) {
+      if (range.anchor !== range.focus)
+        collapsed = true;
+      ranges.push({id: range.id, upDownX: -1, anchor: range.anchor, focus: range.anchor});
+    }
+    if (!collapsed)
+      return false;
+    this._document.begin('selection');
+    this._ranges = ranges;
+    this._document.end('selection');
+    this._staleDecorations = true;
+    this._reveal();
+    return true;
+  }
+
+  /**
+   * @return {boolean}
+   */
+  moveUp() {
+    return this._operation(range => {
+      let offset = Math.min(range.anchor, range.focus);
+      let upDownX = range.upDownX;
+      if (range.anchor === range.focus) {
+        let upResult = this._lineUp(range.focus, range.upDownX);
+        offset = upResult.offset;
+        upDownX = upResult.upDownX;
+      }
+      return {id: range.id, upDownX, anchor: offset, focus: offset};
+    });
+  }
+
+  /**
+   * @return {boolean}
+   */
+  moveDown() {
+    return this._operation(range => {
+      let offset = Math.max(range.anchor, range.focus);
+      let upDownX = range.upDownX;
+      if (range.anchor === range.focus) {
+        let upResult = this._lineDown(range.focus, range.upDownX);
+        offset = upResult.offset;
+        upDownX = upResult.upDownX;
+      }
+      return {id: range.id, upDownX, anchor: offset, focus: offset};
+    });
+  }
+
+  /**
+   * @return {boolean}
+   */
+  moveLeft() {
+    return this._operation(range => {
+      let offset = Math.min(range.anchor, range.focus);
+      if (range.anchor === range.focus)
+        offset = this._left(range.focus);
+      return {id: range.id, upDownX: -1, anchor: offset, focus: offset};
+    });
+  }
+
+  /**
+   * @return {boolean}
+   */
+  moveRight() {
+    return this._operation(range => {
+      let offset = Math.max(range.anchor, range.focus);
+      if (range.anchor === range.focus)
+        offset = this._right(range.focus);
+      return {id: range.id, upDownX: -1, anchor: offset, focus: offset};
+    });
+  }
+
+  /**
+   * @return {boolean}
+   */
+  moveWordLeft() {
+    return this._operation(range => {
+      let offset = Tokenizer.previousWord(this._document, range.focus);
+      return {id: range.id, upDownX: -1, anchor: offset, focus: offset};
+    });
+  }
+
+  /**
+   * @return {boolean}
+   */
+  moveWordRight() {
+    return this._operation(range => {
+      let offset = Tokenizer.nextWord(this._document, range.focus);
+      return {id: range.id, upDownX: -1, anchor: offset, focus: offset};
+    });
+  }
+
+  /**
+   * @return {boolean}
+   */
+  moveLineStart() {
+    return this._operation(range => {
+      let offset = this._lineStart(range.focus);
+      return {id: range.id, upDownX: -1, anchor: offset, focus: offset};
+    });
+  }
+
+  /**
+   * @return {boolean}
+   */
+  moveLineEnd() {
+    return this._operation(range => {
+      let offset = this._lineEnd(range.focus);
+      return {id: range.id, upDownX: -1, anchor: offset, focus: offset};
+    });
+  }
+
+  /**
+   * @return {boolean}
+   */
+  selectUp() {
+    return this._operation(range => {
+      let {offset, upDownX} = this._lineUp(range.focus, range.upDownX);
+      return {id: range.id, upDownX, anchor: range.anchor, focus: offset};
+    });
+  }
+
+  /**
+   * @return {boolean}
+   */
+  selectDown() {
+    return this._operation(range => {
+      let {offset, upDownX} = this._lineDown(range.focus, range.upDownX);
+      return {id: range.id, upDownX, anchor: range.anchor, focus: offset};
+    });
+  }
+
+  /**
+   * @return {boolean}
+   */
+  selectLeft() {
+    return this._operation(range => {
+      return {id: range.id, upDownX: -1, anchor: range.anchor, focus: this._left(range.focus)};
+    });
+  }
+
+  /**
+   * @return {boolean}
+   */
+  selectRight() {
+    return this._operation(range => {
+      return {id: range.id, upDownX: -1, anchor: range.anchor, focus: this._right(range.focus)};
+    });
+  }
+
+  /**
+   * @return {boolean}
+   */
+  selectWordLeft() {
+    return this._operation(range => {
+      return {id: range.id, upDownX: -1, anchor: range.anchor, focus: Tokenizer.previousWord(this._document, range.focus)};
+    });
+  }
+
+  /**
+   * @return {boolean}
+   */
+  selectWordRight() {
+    return this._operation(range => {
+      return {id: range.id, upDownX: -1, anchor: range.anchor, focus: Tokenizer.nextWord(this._document, range.focus)};
+    });
+  }
+
+  /**
+   * @return {boolean}
+   */
+  selectLineStart() {
+    return this._operation(range => {
+      return {id: range.id, upDownX: -1, anchor: range.anchor, focus: this._lineStart(range.focus)};
+    });
+  }
+
+  /**
+   * @return {boolean}
+   */
+  selectLineEnd() {
+    return this._operation(range => {
+      return {id: range.id, upDownX: -1, anchor: range.anchor, focus: this._lineEnd(range.focus)};
+    });
+  }
+
+  selectAll() {
+    if (this._muted)
+      throw 'Cannot change selection while muted';
+    this._document.begin('selection');
+    this._ranges = [{anchor: 0, focus: this._document.length(), upDownX: -1, id: ++this._lastId}];
+    this._document.end('selection');
+    this._staleDecorations = true;
+    this._reveal();
   }
 
   // -------- Plugin --------
@@ -179,209 +384,25 @@ export class Selection {
     this._staleDecorations = true;
   }
 
-  /**
-   * @override
-   * @param {string} command
-   * @param {*} data
-   * @return {*}
-   */
-  onCommand(command, data) {
-    if (!Selection.Commands.has(command))
-      return;
-
-    if (this._muted)
-      throw 'Cannot perform selection command while muted';
-
-    if (command === 'selection.collapse')
-      return this._collapse();
-
-    if (command ===  'selection.copy') {
-      let lines = [];
-      for (let range of this._ranges)
-        lines.push(this._document.content(Math.min(range.anchor, range.focus), Math.max(range.anchor, range.focus)));
-      return lines.join('\n');
-    }
-
-    this._document.begin('selection');
-    switch (command) {
-      case 'selection.select.all': {
-        this._ranges = [{anchor: 0, focus: this._document.length(), upDownX: -1, id: ++this._lastId}];
-        break;
-      }
-      case 'selection.move.left': {
-        let ranges = [];
-        for (let range of this._ranges) {
-          let offset = Math.min(range.anchor, range.focus);
-          if (range.anchor === range.focus)
-            offset = this._left(range.focus);
-          ranges.push({id: range.id, upDownX: -1, anchor: offset, focus: offset});
-        }
-        this._ranges = this._join(ranges);
-        break;
-      }
-      case 'selection.move.word.left': {
-        let ranges = [];
-        for (let range of this._ranges) {
-          let offset = Tokenizer.previousWord(this._document, range.focus);
-          ranges.push({id: range.id, upDownX: -1, anchor: offset, focus: offset});
-        }
-        this._ranges = this._join(ranges);
-        break;
-      }
-      case 'selection.select.left': {
-        let ranges = [];
-        for (let range of this._ranges)
-          ranges.push({id: range.id, upDownX: -1, anchor: range.anchor, focus: this._left(range.focus)});
-        this._ranges = this._join(ranges);
-        break;
-      }
-      case 'selection.select.word.left': {
-        let ranges = [];
-        for (let range of this._ranges)
-          ranges.push({id: range.id, upDownX: -1, anchor: range.anchor, focus: Tokenizer.previousWord(this._document, range.focus)});
-        this._ranges = this._join(ranges);
-        break;
-      }
-      case 'selection.move.right': {
-        let ranges = [];
-        for (let range of this._ranges) {
-          let offset = Math.max(range.anchor, range.focus);
-          if (range.anchor === range.focus)
-            offset = this._right(range.focus);
-          ranges.push({id: range.id, upDownX: -1, anchor: offset, focus: offset});
-        }
-        this._ranges = this._join(ranges);
-        break;
-      }
-      case 'selection.move.word.right': {
-        let ranges = [];
-        for (let range of this._ranges) {
-          let offset = Tokenizer.nextWord(this._document, range.focus);
-          ranges.push({id: range.id, upDownX: -1, anchor: offset, focus: offset});
-        }
-        this._ranges = this._join(ranges);
-        break;
-      }
-      case 'selection.select.right': {
-        this._upDownCleared = true;
-        let ranges = [];
-        for (let range of this._ranges)
-          ranges.push({id: range.id, upDownX: -1, anchor: range.anchor, focus: this._right(range.focus)});
-        this._ranges = this._join(ranges);
-        break;
-      }
-      case 'selection.select.word.right': {
-        this._upDownCleared = true;
-        let ranges = [];
-        for (let range of this._ranges)
-          ranges.push({id: range.id, upDownX: -1, anchor: range.anchor, focus: Tokenizer.nextWord(this._document, range.focus)});
-        this._ranges = this._join(ranges);
-        break;
-      }
-      case 'selection.move.up': {
-        let ranges = [];
-        for (let range of this._ranges) {
-          let offset = Math.min(range.anchor, range.focus);
-          let upDownX = range.upDownX;
-          if (range.anchor === range.focus) {
-            let upResult = this._lineUp(range.focus, range.upDownX);
-            offset = upResult.offset;
-            upDownX = upResult.upDownX;
-          }
-          ranges.push({id: range.id, upDownX, anchor: offset, focus: offset});
-        }
-        this._ranges = this._join(ranges);
-        break;
-      }
-      case 'selection.select.up': {
-        let ranges = [];
-        for (let range of this._ranges) {
-          let {offset, upDownX} = this._lineUp(range.focus, range.upDownX);
-          ranges.push({id: range.id, upDownX, anchor: range.anchor, focus: offset});
-        }
-        this._ranges = this._join(ranges);
-        break;
-      }
-      case 'selection.move.down': {
-        let ranges = [];
-        for (let range of this._ranges) {
-          let offset = Math.max(range.anchor, range.focus);
-          let upDownX = range.upDownX;
-          if (range.anchor === range.focus) {
-            let upResult = this._lineDown(range.focus, range.upDownX);
-            offset = upResult.offset;
-            upDownX = upResult.upDownX;
-          }
-          ranges.push({id: range.id, upDownX, anchor: offset, focus: offset});
-        }
-        this._ranges = this._join(ranges);
-        break;
-      }
-      case 'selection.select.down': {
-        let ranges = [];
-        for (let range of this._ranges) {
-          let {offset, upDownX} = this._lineDown(range.focus, range.upDownX);
-          ranges.push({id: range.id, upDownX, anchor: range.anchor, focus: offset});
-        }
-        this._ranges = this._join(ranges);
-        break;
-      }
-      case 'selection.move.linestart': {
-        let ranges = [];
-        for (let range of this._ranges) {
-          let offset = this._lineStart(range.focus);
-          ranges.push({id: range.id, upDownX: -1, anchor: offset, focus: offset});
-        }
-        this._ranges = this._join(ranges);
-        break;
-      }
-      case 'selection.select.linestart': {
-        let ranges = [];
-        for (let range of this._ranges)
-          ranges.push({id: range.id, upDownX: -1, anchor: range.anchor, focus: this._lineStart(range.focus)});
-        this._ranges = this._join(ranges);
-        break;
-      }
-      case 'selection.move.lineend': {
-        let ranges = [];
-        for (let range of this._ranges) {
-          let offset = this._lineEnd(range.focus);
-          ranges.push({id: range.id, upDownX: -1, anchor: offset, focus: offset});
-        }
-        this._ranges = this._join(ranges);
-        break;
-      }
-      case 'selection.select.lineend': {
-        let ranges = [];
-        for (let range of this._ranges)
-          ranges.push({id: range.id, upDownX: -1, anchor: range.anchor, focus: this._lineEnd(range.focus)});
-        this._ranges = this._join(ranges);
-        break;
-      }
-    }
-    this._document.end('selection');
-    this._staleDecorations = true;
-    this._reveal();
-    return true;
-  }
-
   // -------- Internal --------
 
   /**
-   * @return {boolean|undefined}
+   * @param {function(!SelectionRange):?SelectionRange} rangeCallback
+   * @return {boolean}
    */
-  _collapse() {
-    let collapsed = false;
-    let ranges = [];
-    for (let range of this._ranges) {
-      if (range.anchor !== range.focus)
-        collapsed = true;
-      ranges.push({id: range.id, upDownX: -1, anchor: range.anchor, focus: range.anchor});
-    }
-    if (!collapsed)
+  _operation(rangeCallback) {
+    if (this._muted)
+      throw 'Cannot change selection while muted';
+    if (!this._ranges.length)
       return false;
     this._document.begin('selection');
-    this._ranges = ranges;
+    let ranges = [];
+    for (let range of this._ranges) {
+      let updated = rangeCallback(range);
+      if (updated)
+        ranges.push(updated);
+    }
+    this._ranges = this._join(ranges);
     this._document.end('selection');
     this._staleDecorations = true;
     this._reveal();
@@ -513,27 +534,5 @@ export class Selection {
     return {offset, upDownX};
   }
 };
-
-Selection.Commands = new Set([
-  'selection.copy',
-  'selection.collapse',
-  'selection.select.all',
-  'selection.select.left',
-  'selection.select.right',
-  'selection.select.word.left',
-  'selection.select.word.right',
-  'selection.select.up',
-  'selection.select.down',
-  'selection.select.lineend',
-  'selection.select.linestart',
-  'selection.move.left',
-  'selection.move.right',
-  'selection.move.word.left',
-  'selection.move.word.right',
-  'selection.move.up',
-  'selection.move.down',
-  'selection.move.lineend',
-  'selection.move.linestart',
-]);
 
 Selection.Decorations = new Set(['selection.range', 'selection.focus']);
