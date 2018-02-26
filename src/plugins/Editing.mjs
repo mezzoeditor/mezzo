@@ -5,10 +5,12 @@ export class Editing {
   /**
    * @param {!Document} document
    * @param {!Selection} selection
+   * @param {!History} history
    */
-  constructor(document, selection) {
+  constructor(document, selection, history) {
     this._document = document;
     this._selection = selection;
+    this._history = history;
   }
 
   /**
@@ -67,8 +69,8 @@ export class Editing {
     let ranges = this._selection.ranges();
     if (!ranges.length)
       return false;
-    this._document.begin('editing');
-    this._selection.mute();
+    this._history.beginOperation();
+    let savedSelection = this._selection.freeze();
     let newRanges = [];
     let delta = 0;
     for (let range of ranges) {
@@ -79,9 +81,8 @@ export class Editing {
       newRanges.push({from: replaced.from + s.length, to: replaced.from + s.length});
       delta += s.length - (replaced.to - replaced.from);
     }
-    this._selection.unmute();
-    this._selection.updateRanges(newRanges);
-    this._document.end('editing');
+    this._selection.unfreeze(savedSelection, newRanges);
+    this._history.endOperation();
     return true;
   }
 };

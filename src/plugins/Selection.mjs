@@ -24,9 +24,10 @@ export class Selection {
     this._rangeDecorator = new ScrollbarDecorator('selection.range');
     this._focusDecorator = new ScrollbarDecorator('selection.focus');
     this._ranges = [];
-    this._muted = 0;
+    this._frozen = 0;
     this._lastId = 0;
     this._staleDecorations = true;
+    this._changeCallbacks = [];
   }
 
   // -------- Public API --------
@@ -55,9 +56,8 @@ export class Selection {
    * @param {boolean=} noReveal
    */
   setRanges(ranges, noReveal) {
-    if (this._muted)
-      throw 'Cannot change selection while muted';
-    this._document.begin('selection');
+    if (this._frozen)
+      throw 'Cannot change selection while frozen';
     this._ranges = this._rebuild(ranges.map(range => ({
       id: ++this._lastId,
       upDownX: -1,
@@ -65,35 +65,44 @@ export class Selection {
       focus: range.to
     })));
     this._staleDecorations = true;
-    this._document.end('selection');
+    for (let callback of this._changeCallbacks)
+      callback();
     if (!noReveal)
       this._reveal();
   }
 
   /**
-   * @param {!Array<!Range>} ranges
+   * @return {*}
    */
-  updateRanges(ranges) {
-    if (this._muted)
-      throw 'Cannot change selection while muted';
-    if (ranges.length !== this._ranges.length)
-      throw 'Wrong number of ranges to update';
-    this._document.begin('selection');
-    let newRanges = [];
-    for (let i = 0; i < ranges.length; i++)
-      newRanges.push({id: this._ranges[i].id, upDownX: -1, anchor: ranges[i].from, focus: ranges[i].to});
-    this._ranges = this._rebuild(newRanges);
-    this._document.end('selection');
-    this._staleDecorations = true;
-    this._reveal();
+  freeze() {
+    this._frozen++;
+    return this.save();
   }
 
-  mute() {
-    this._muted++;
+  /**
+   * @param {*} data
+   * @param {!Array<!Range>=} ranges
+   */
+  unfreeze(data, ranges) {
+    this._frozen--;
+    if (!this._frozen)
+      this.restore(data, ranges);
   }
 
-  unmute() {
-    this._muted--;
+  /**
+   * @param {function()} callback
+   */
+  addChangeCallback(callback) {
+    this._changeCallbacks.push(callback);
+  }
+
+  /**
+   * @param {function()} callback
+   */
+  removeChangeCallback(callback) {
+    let index = this._changeCallbacks.indexOf(callback);
+    if (index !== -1)
+      this._changeCallbacks.splice(index);
   }
 
   /**
@@ -110,8 +119,8 @@ export class Selection {
    * @return {boolean}
    */
   collapse() {
-    if (this._muted)
-      throw 'Cannot change selection while muted';
+    if (this._frozen)
+      throw 'Cannot change selection while frozen';
     let collapsed = false;
     let ranges = [];
     for (let range of this._ranges) {
@@ -121,10 +130,10 @@ export class Selection {
     }
     if (!collapsed)
       return false;
-    this._document.begin('selection');
     this._ranges = ranges;
-    this._document.end('selection');
     this._staleDecorations = true;
+    for (let callback of this._changeCallbacks)
+      callback();
     this._reveal();
     return true;
   }
@@ -300,12 +309,41 @@ export class Selection {
   }
 
   selectAll() {
-    if (this._muted)
-      throw 'Cannot change selection while muted';
-    this._document.begin('selection');
+    if (this._frozen)
+      throw 'Cannot change selection while frozen';
     this._ranges = [{anchor: 0, focus: this._document.length(), upDownX: -1, id: ++this._lastId}];
-    this._document.end('selection');
     this._staleDecorations = true;
+    for (let callback of this._changeCallbacks)
+      callback();
+    this._reveal();
+  }
+
+  /**
+   * @return {*}
+   */
+  save() {
+    return this._ranges;
+  }
+
+  /**
+   * @param {*} data
+   * @param {!Array<!Range>=} ranges
+   */
+  restore(data, ranges) {
+    if (this._frozen)
+      throw 'Cannot change selection while frozen';
+    this._ranges = data || [];
+    if (ranges) {
+      if (ranges.length !== this._ranges.length)
+        throw 'Wrong number of ranges to update';
+      let newRanges = [];
+      for (let i = 0; i < ranges.length; i++)
+        newRanges.push({id: this._ranges[i].id, upDownX: -1, anchor: ranges[i].from, focus: ranges[i].to});
+      this._ranges = this._rebuild(newRanges);
+    }
+    this._staleDecorations = true;
+    for (let callback of this._changeCallbacks)
+      callback();
     this._reveal();
   }
 
@@ -337,7 +375,7 @@ export class Selection {
    * @param {number} inserted
    */
   onReplace(from, to, inserted) {
-    if (this._muted)
+    if (this._frozen)
       return;
 
     let ranges = [];
@@ -364,24 +402,8 @@ export class Selection {
     }
     this._ranges = this._rebuild(ranges);
     this._staleDecorations = true;
-  }
-
-  /**
-   * @override
-   * @return {*}
-   */
-  onSave() {
-    return this._ranges;
-  }
-
-  /**
-   * @override
-   * @param {!Array<{from: number, to: number, inserted: number}>} replacements
-   * @param {*|undefined} data
-   */
-  onRestore(replacements, data) {
-    this._ranges = data || [];
-    this._staleDecorations = true;
+    for (let callback of this._changeCallbacks)
+      callback();
   }
 
   // -------- Internal --------
@@ -391,11 +413,10 @@ export class Selection {
    * @return {boolean}
    */
   _operation(rangeCallback) {
-    if (this._muted)
-      throw 'Cannot change selection while muted';
+    if (this._frozen)
+      throw 'Cannot change selection while frozen';
     if (!this._ranges.length)
       return false;
-    this._document.begin('selection');
     let ranges = [];
     for (let range of this._ranges) {
       let updated = rangeCallback(range);
@@ -403,8 +424,9 @@ export class Selection {
         ranges.push(updated);
     }
     this._ranges = this._join(ranges);
-    this._document.end('selection');
     this._staleDecorations = true;
+    for (let callback of this._changeCallbacks)
+      callback();
     this._reveal();
     return true;
   }

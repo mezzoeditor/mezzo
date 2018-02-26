@@ -258,7 +258,8 @@ describe('Text', () => {
       content = chunks.join('');
       let text = Text.withContent(content, defaultMeasurer);
       for (let {from, to, insertion} of editQueries) {
-        text = text.replace(from, to, insertion);
+        let {removed, text} = text.replace(from, to, insertion);
+        expect(removed).toBe(content.substring(from, to));
         content = content.substring(0, from) + insertion + content.substring(to, content.length);
         expect(text.length()).toBe(content.length);
         for (let from = 0; from <= content.length; from++) {

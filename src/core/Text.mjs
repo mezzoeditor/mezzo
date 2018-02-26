@@ -525,7 +525,7 @@ export class Text {
    * @param {number=} fromOffset
    * @param {number=} toOffset
    * @param {string} insertion
-   * @return {!Text}
+   * @return {!{text: !Text, removed: string}}
    */
   replace(fromOffset, toOffset, insertion) {
     let {from, to} = this._clamp(fromOffset, toOffset);
@@ -534,20 +534,43 @@ export class Text {
     tmp = splitTree(tmp.left, {offset: from}, false /* intersectionToLeft */, this._measurer);
     let left = tmp.left;
     let middle = tmp.right;
+    let removed = '';
     if (!middle) {
       middle = Text._withContent(insertion, this._measurer);
     } else {
-      let leftSize = left ? left.metrics.length : 0;
-      let middleSize = middle.metrics.length;
-      let first = findNode(middle, {offset: 0}, this._measurer).node;
-      let last = findNode(middle, {offset: middleSize - 1}, this._measurer).node;
-      let middleContent =
-          first.chunk.substring(0, from - leftSize) +
-          insertion +
-          last.chunk.substring(last.chunk.length - (leftSize + middleSize - to));
-      middle = Text._withContent(middleContent, this._measurer);
+      let leftLength = left ? left.metrics.length : 0;
+      let middleLength = middle.metrics.length;
+      let first;
+      let last;
+
+      /**
+       * @param {!TreeNode} node
+       * @param {boolean} isLast
+       */
+      function visit(node, isLast) {
+        if (node.left)
+          visit(node.left, false);
+        let fromOffset = 0;
+        let toOffset = node.chunk.length;
+        if (first === undefined) {
+          fromOffset = from - leftLength;
+          first = node.chunk.substring(0, fromOffset);
+        }
+        if (isLast && !node.right) {
+          toOffset = node.chunk.length - (leftLength + middleLength - to);
+          last = node.chunk.substring(toOffset);
+        }
+        removed += node.chunk.substring(fromOffset, toOffset);
+        if (node.right)
+          visit(node.right, isLast);
+      }
+      visit(middle, true);
+
+      middle = Text._withContent(first + insertion + last, this._measurer);
     }
-    return new Text(mergeTrees(left, mergeTrees(middle, right, this._measurer), this._measurer), this._measurer);
+
+    let text = new Text(mergeTrees(left, mergeTrees(middle, right, this._measurer), this._measurer), this._measurer);
+    return {text, removed};
   }
 
   /**

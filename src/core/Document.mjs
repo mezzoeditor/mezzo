@@ -1,4 +1,3 @@
-import { History } from "./History.mjs";
 import { Text } from "./Text.mjs";
 import { Frame } from "./Frame.mjs";
 import { RoundMode, Unicode } from "./Unicode.mjs";
@@ -11,16 +10,8 @@ export class Document {
     this._plugins = [];
     this._invalidateCallback = invalidateCallback;
     this._measurer = new Unicode.CachingMeasurer(1, 1, Unicode.anythingRegex, s => 1, s => 1);
-    this._history = new History({
-      text: Text.withContent('', this._measurer),
-      replacements: [],
-      data: new Map(),
-      operation: '__initial__'
-    });
-    this._text = this._history.current().text;
-    this._operations = [];
-    this._replacements = [];
-    this._frozen = false;
+    this._text = Text.withContent('', this._measurer);
+    this._frozenSymbols = [];
     this._tokenizer = null;
   }
 
@@ -57,24 +48,32 @@ export class Document {
   }
 
   /**
+   * @param {symbol} symbol
+   */
+  freeze(symbol) {
+    this._frozenSymbols.push(symbol);
+  }
+
+  /**
+   * @param {symbol} symbol
+   */
+  unfreeze(symbol) {
+    if (this._frozenSymbols.pop() !== symbol)
+      throw 'Unbalanced unfreeze';
+  }
+
+  /**
    * @param {string} text
    */
   reset(text) {
-    if (this._operations.length)
-      throw 'Cannot reset during operation';
-    if (this._frozen)
-      throw 'Cannot edit while building frame';
+    if (this._frozenSymbols.length)
+      throw 'Cannot edit while frozen';
     let to = this._text.length();
-    this._history.reset({
-      text: Text.withContent(text, this._measurer),
-      replacements: [],
-      data: new Map(),
-      operation: '__initial__'
-    });
-    this._text = this._history.current().text;
+    let removed = this._text.content();
+    this._text = Text.withContent(text, this._measurer);
     for (let plugin of this._plugins) {
       if (plugin.onReplace)
-        plugin.onReplace(0, to, text.length);
+        plugin.onReplace(0, to, text.length, removed);
     }
     this.invalidate();
   }
@@ -87,129 +86,22 @@ export class Document {
    * @param {number} from
    * @param {number} to
    * @param {string} insertion
+   * @param {symbol=} symbol
+   * @return {string}
    */
-  replace(from, to, insertion) {
-    if (!this._operations.length)
-      throw 'Cannot edit outside of operation';
-    if (this._frozen)
-      throw 'Cannot edit while building frame';
-    this._replacements.push({from, to, inserted: insertion.length});
-    let text = this._text.replace(from, to, insertion);
+  replace(from, to, insertion, symbol) {
+    if (this._frozenSymbols.length && this._frozenSymbols[this._frozenSymbols.length - 1] !== symbol)
+      throw 'Cannot edit while frozen';
+    this.freeze(Document._replaceFreeze);
+    let {text, removed} = this._text.replace(from, to, insertion);
     this._text.resetCache();
     this._text = text;
     for (let plugin of this._plugins) {
       if (plugin.onReplace)
-        plugin.onReplace(from, to, insertion.length);
+        plugin.onReplace(from, to, insertion.length, removed);
     }
-  }
-
-  /**
-   * @param {string} name
-   */
-  begin(name) {
-    this._operations.push(name);
-  }
-
-  /**
-   * @param {string} name
-   */
-  end(name) {
-    if (this._operations[this._operations.length - 1] !== name)
-      throw 'Trying to end wrong operation';
-    this._operations.pop();
-    if (this._operations.length)
-      return;
-
-    let state = {
-      text: this._text,
-      data: new Map(),
-      replacements: this._replacements,
-      operation: name
-    };
-    this._replacements = [];
-    for (let plugin of this._plugins) {
-      // TODO: investigate not saving state every time if we can collapse states.
-      //       Or maybe presistent data structures will save us?
-      if (plugin.onSave) {
-        let data = plugin.onSave();
-        if (data !== undefined)
-          state.data.set(plugin, data);
-      }
-    }
-    this._history.push(state);
-    this.invalidate();
-  }
-
-  /**
-   * @param {string=} name
-   * @return {boolean}
-   */
-  undo(name) {
-    if (this._operations.length)
-      throw 'Cannot undo during operation';
-
-    let undone = this._history.undo(state => this._filterHistory(state, name));
-    if (!undone)
-      return false;
-
-    let replacements = [];
-    for (let state of undone) {
-      for (let i = state.replacements.length - 1; i >= 0; i--) {
-        let {from, to, inserted} = state.replacements[i];
-        replacements.push({from, to: from + inserted, inserted: to - from});
-      }
-    }
-
-    let current = this._history.current();
-    this._text = current.text;
-    for (let plugin of this._plugins) {
-      if (plugin.onRestore) {
-        let data = current.data.get(plugin);
-        plugin.onRestore(replacements, data);
-      }
-    }
-    this.invalidate();
-    return true;
-  }
-
-  /**
-   * @param {string=} name
-   * @return {boolean}
-   */
-  redo(name) {
-    if (this._operations.length)
-      throw 'Cannot redo during operation';
-
-    let redone = this._history.redo(state => this._filterHistory(state, name));
-    if (!redone)
-      return false;
-
-    let replacements = [];
-    for (let state of redone)
-      replacements.push(...state.replacements);
-
-    let current = this._history.current();
-    this._text = current.text;
-    for (let plugin of this._plugins) {
-      if (plugin.onRestore) {
-        let data = current.data.get(plugin);
-        plugin.onRestore(replacements, data);
-      }
-    }
-    this.invalidate();
-    return true;
-  }
-
-  /**
-   * @param {*} state
-   * @param {string|undefined} name
-   */
-  _filterHistory(state, name) {
-    if (!name)
-      return true;
-    if (name[0] === '!')
-      return state.operation !== name.substring(1);
-    return state.operation === name;
+    this.unfreeze(Document._replaceFreeze);
+    return removed;
   }
 
   /**
@@ -374,7 +266,7 @@ export class Document {
    * @return {{text: !Array<!TextDecorator>, scrollbar: !Array<ScrollbarDecorator>}}
    */
   decorateFrame(frame) {
-    this._frozen = true;
+    this.freeze(Document._decorateFreeze);
     let text = [];
     let scrollbar = [];
     for (let plugin of this._plugins) {
@@ -384,7 +276,10 @@ export class Document {
         scrollbar.push(...(result.scrollbar || []));
       }
     }
-    this._frozen = false;
+    this.unfreeze(Document._decorateFreeze);
     return {text, scrollbar};
   }
 };
+
+Document._replaceFreeze = Symbol('Document.replace');
+Document._decorateFreeze = Symbol('Document.replace');

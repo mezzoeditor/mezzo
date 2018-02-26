@@ -1,6 +1,7 @@
 import { Document } from "../core/Document.mjs";
 import { Renderer } from "./Renderer.mjs";
 import { Selection } from "../plugins/Selection.mjs";
+import { History } from "../plugins/History.mjs";
 import { Editing } from "../plugins/Editing.mjs";
 import { Search } from "../plugins/Search.mjs";
 import { IdleScheduler } from "./IdleScheduler.mjs";
@@ -21,6 +22,7 @@ export class WebEditor {
     this._document.setTokenizer(new DefaultTokenizer());
     this._createRenderer(domDocument);
     this._setupSelection();
+    this._setupHistory();
     this._setupEditing();
     this._setupSearch();
     this._syntaxHighlighter = new DefaultHighlighter();
@@ -69,6 +71,11 @@ export class WebEditor {
   invalidate() {
     if (this._renderer)
       this._renderer.invalidate();
+  }
+
+  reset(text) {
+    this._document.reset(text);
+    this._history.reset();
   }
 
   /**
@@ -282,8 +289,13 @@ export class WebEditor {
     this._document.addPlugin(this._selection);
   }
 
+  _setupHistory() {
+    this._history = new History(this._document, this._selection);
+    this._document.addPlugin(this._history);
+  }
+
   _setupEditing() {
-    this._editing = new Editing(this._document, this._selection);
+    this._editing = new Editing(this._document, this._selection, this._history);
     this._element.addEventListener('paste', event => {
       let data = event.clipboardData;
       if (data.types.indexOf('text/plain') === -1)
@@ -320,7 +332,7 @@ export class WebEditor {
         case 'Z':
           // TODO: handle shortcuts properly.
           if (event.metaKey || event.ctrlKey)
-            handled = event.shiftKey ? this._document.redo('!selection') : this._document.undo('!selection');
+            handled = event.shiftKey ? this._history.redo() : this._history.undo();
           break;
       }
       switch (event.keyCode) {

@@ -185,15 +185,6 @@ export class Search {
       this._scheduler.onReplace(from, to, inserted);
   }
 
-  /**
-   * @param {!Array<{from: number, to: number, inserted: number}>} replacements
-   * @param {*|undefined} data
-   */
-  onRestore(replacements, data) {
-    for (let replacement of replacements)
-      this.onReplace(replacement.from, replacement.to, replacement.inserted);
-  }
-
   // ------ Internals -------
 
   _cancel() {

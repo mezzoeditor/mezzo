@@ -35,27 +35,8 @@ class Plugin {
    * @param {number} from
    * @param {number} to
    * @param {number} inserted
+   * @param {string} removed
    */
-  onReplace(from, to, inserted) {
-  }
-
-  /**
-   * Called when history is about to save the state.
-   * Returned data is stored in the history state.
-   * @return {*}
-   */
-  onSave() {
-  }
-
-  /**
-   * Called when history state is about to be restored,
-   * with the data returned from onSaveState (if any).
-   * Applying |replacements| in the passed order (similarly to |onReplace|)
-   * to the Document's content before |onRestore| will produce it's current
-   * content.
-   * @param {!Array<{from: number, to: number, inserted: number}>} replacements
-   * @param {*|undefined} data
-   */
-  onRestore(replacements, data) {
+  onReplace(from, to, inserted, removed) {
   }
 };
