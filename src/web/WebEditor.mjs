@@ -4,7 +4,6 @@ import { Selection } from "../plugins/Selection.mjs";
 import { History } from "../plugins/History.mjs";
 import { Editing } from "../plugins/Editing.mjs";
 import { Search } from "../plugins/Search.mjs";
-import { IdleScheduler } from "./IdleScheduler.mjs";
 import { DefaultTheme } from "../default/DefaultTheme.mjs";
 import { DefaultHighlighter } from "../default/DefaultHighlighter.mjs";
 import { DefaultTokenizer } from "../default/DefaultTokenizer.mjs";
@@ -21,6 +20,7 @@ export class WebEditor {
     this._document = new Document(this.invalidate.bind(this));
     this._document.setTokenizer(new DefaultTokenizer());
     this._createRenderer(domDocument);
+    this._setupScheduler();
     this._setupSelection();
     this._setupHistory();
     this._setupEditing();
@@ -120,6 +120,18 @@ export class WebEditor {
    */
   setUseMonospaceFont(monospace) {
     this._renderer.setUseMonospaceFont(monospace);
+  }
+
+  addIdleCallback(callback) {
+    this._idleCallbacks.push(callback);
+    this._renderer.addBeforeFrameCallback(callback);
+  }
+
+  removeIdleCallback(callback) {
+    let index = this._idleCallbacks.indexOf(callback);
+    if (index !== -1)
+      this._idleCallbacks.splice(index, 1);
+    this._renderer.removeBeforeFrameCallback(callback);
   }
 
   /**
@@ -359,10 +371,10 @@ export class WebEditor {
       if (updateCallback)
       updateCallback.call(null, currentMatchIndex, totalMatchesCount);
     };
-    this._search = new Search(this._document, new IdleScheduler(), this._selection, onUpdate);
+    this._search = new Search(this._document, this._selection, onUpdate);
 
     this.find = query => {
-      this._search.find({query});
+      this._search.search({query});
     };
     this.findCancel = () => {
       this._search.cancel();
@@ -375,6 +387,31 @@ export class WebEditor {
     };
 
     this._document.addPlugin(this._search);
+    this.addIdleCallback(this._search.searchChunk.bind(this._search));
+  }
+
+  _setupScheduler() {
+    this._idleCallbacks = [];
+    let scheduleId = null;
+
+    let runCallbacks = (deadline) => {
+      scheduleId = null;
+      while (true) {
+        let hasMore = false;
+        for (let idleCallback of this._idleCallbacks)
+          hasMore |= idleCallback();
+        if (!hasMore || deadline.didTimeout || deadline.timeRemaining() <= 0)
+          break;
+      }
+      schedule();
+    };
+
+    let schedule = () => {
+      if (!scheduleId)
+        scheduleId = self.requestIdleCallback(runCallbacks, {timeout: 1000});
+    };
+
+    schedule();
   }
 
   _performCommand(command) {

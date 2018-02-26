@@ -177,7 +177,6 @@ export class Viewport {
    * @return {!{frame: !Frame, text: !Array<!TextDecorator>, scrollbar: !Array<!ScrollbarDecorator>}}
    */
   createFrame() {
-    this._document.beforeFrame();
     this._frozen = true;
     let frameOrigin = this.viewportPointToDocumentPoint({x: 0, y: 0});
     const frame = new Frame(this._document, frameOrigin, this._width, this._height);

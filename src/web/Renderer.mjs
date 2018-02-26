@@ -68,6 +68,8 @@ export class Renderer {
     this._monospace = true;
 
     this._animationFrameId = 0;
+    this._beforeFrameCallbacks = [];
+    this._rendering = false;
 
     this._cssWidth = 0;
     this._cssHeight = 0;
@@ -161,6 +163,16 @@ export class Renderer {
     this._monospace = monospace;
     this._updateMetrics();
     this.invalidate();
+  }
+
+  addBeforeFrameCallback(callback) {
+    this._beforeFrameCallbacks.push(callback);
+  }
+
+  removeBeforeFrameCallback(callback) {
+    let index = this._beforeFrameCallbacks.indexOf(callback);
+    if (index !== -1)
+      this._beforeFrameCallbacks.splice(index, 1);
   }
 
   /**
@@ -281,7 +293,7 @@ export class Renderer {
   }
 
   invalidate() {
-    if (!this._cssWidth || !this._cssHeight)
+    if (!this._cssWidth || !this._cssHeight || this._rendering)
       return;
     // To properly handle input events, we have to update rects synchronously.
     const gutterLength = (Math.max(this._document.lineCount(), 100) + '').length;
@@ -341,6 +353,13 @@ export class Renderer {
 
   _render() {
     trace.beginGroup('render');
+    this._rendering = true;
+
+    trace.begin('beforeframe');
+    for (let callback of this._beforeFrameCallbacks)
+      callback();
+    trace.end('beforeframe');
+
     this._animationFrameId = 0;
 
     const ctx = this._canvas.getContext('2d');
@@ -384,6 +403,7 @@ export class Renderer {
 
     frame.cleanup();
 
+    this._rendering = false;
     trace.endGroup('render', 50);
   }
 

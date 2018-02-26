@@ -10,15 +10,6 @@
  */
 class Plugin {
   /**
-   * Called before building a frame. Plugin is expected to do any
-   * postponed work which should synchronously affect the frame.
-   * This is a last chance to affect viewport somehow before it is rendered.
-   * Example: perform search on the small document based on last search parameters.
-   */
-  onBeforeFrame() {
-  }
-
-  /**
    * Called on every frame creation. Returns decorators which should be
    * used to decorate the frame.
    * Mutating the state which can affect viewport is prohibited,

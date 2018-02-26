@@ -253,13 +253,6 @@ export class Document {
     return this._text.pointToLocation(point, roundMode, strict);
   }
 
-  beforeFrame() {
-    for (let plugin of this._plugins) {
-      if (plugin.onBeforeFrame)
-        plugin.onBeforeFrame();
-    }
-  }
-
   /**
    * @package
    * @param {!Frame} frame

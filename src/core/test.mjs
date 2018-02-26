@@ -258,9 +258,10 @@ describe('Text', () => {
       content = chunks.join('');
       let text = Text.withContent(content, defaultMeasurer);
       for (let {from, to, insertion} of editQueries) {
-        let {removed, text} = text.replace(from, to, insertion);
+        let {removed, text: newText} = text.replace(from, to, insertion);
         expect(removed).toBe(content.substring(from, to));
         content = content.substring(0, from) + insertion + content.substring(to, content.length);
+        text = newText;
         expect(text.length()).toBe(content.length);
         for (let from = 0; from <= content.length; from++) {
           for (let to = from; to <= content.length; to++)
@@ -275,156 +276,156 @@ describe('Text.Iterator', () => {
   it('Text.Iterator basics', () => {
     let defaultMeasurer = createDefaultMeasurer();
     let text = Text.withContent('world', defaultMeasurer);
-    let it = text.iterator(0);
-    expect(it.current).toBe('w');
-    expect(it.offset).toBe(0);
-    it.next();
-    expect(it.current).toBe('o');
-    expect(it.offset).toBe(1);
-    it.prev();
-    expect(it.current).toBe('w');
-    expect(it.offset).toBe(0);
+    let iterator = text.iterator(0);
+    expect(iterator.current).toBe('w');
+    expect(iterator.offset).toBe(0);
+    iterator.next();
+    expect(iterator.current).toBe('o');
+    expect(iterator.offset).toBe(1);
+    iterator.prev();
+    expect(iterator.current).toBe('w');
+    expect(iterator.offset).toBe(0);
   });
 
   it('Text.Iterator.advance', () => {
     let defaultMeasurer = createDefaultMeasurer();
     let text = Text.withContent('world', defaultMeasurer);
-    let it = text.iterator(0);
-    it.advance(4);
-    expect(it.current).toBe('d');
-    it.advance(-2);
-    expect(it.current).toBe('r');
+    let iterator = text.iterator(0);
+    iterator.advance(4);
+    expect(iterator.current).toBe('d');
+    iterator.advance(-2);
+    expect(iterator.current).toBe('r');
   });
 
   it('Text.Iterator.read', () => {
     let defaultMeasurer = createDefaultMeasurer();
     let text = Text.withContent('world', defaultMeasurer);
-    let it = text.iterator(0);
-    expect(it.read(4)).toBe('worl');
-    expect(it.current).toBe('d');
-    expect(it.rread(2)).toBe('rl');
-    expect(it.current).toBe('r');
+    let iterator = text.iterator(0);
+    expect(iterator.read(4)).toBe('worl');
+    expect(iterator.current).toBe('d');
+    expect(iterator.rread(2)).toBe('rl');
+    expect(iterator.current).toBe('r');
   });
 
   it('Text.Iterator.charAt', () => {
     let defaultMeasurer = createDefaultMeasurer();
     let text = Text.withContent('world', defaultMeasurer);
-    let it = text.iterator(2);
-    expect(it.charAt(0)).toBe('r');
-    expect(it.offset).toBe(2);
-    expect(it.charAt(1)).toBe('l');
-    expect(it.offset).toBe(2);
-    expect(it.charAt(2)).toBe('d');
-    expect(it.offset).toBe(2);
-    expect(it.charAt(3)).toBe(undefined);
-    expect(it.offset).toBe(2);
-    expect(it.charAt(4)).toBe(undefined);
-    expect(it.offset).toBe(2);
-    expect(it.charAt(-1)).toBe('o');
-    expect(it.offset).toBe(2);
-    expect(it.charAt(-2)).toBe('w');
-    expect(it.offset).toBe(2);
-    expect(it.charAt(-3)).toBe(undefined);
-    expect(it.offset).toBe(2);
-    expect(it.charAt(-4)).toBe(undefined);
-    expect(it.offset).toBe(2);
+    let iterator = text.iterator(2);
+    expect(iterator.charAt(0)).toBe('r');
+    expect(iterator.offset).toBe(2);
+    expect(iterator.charAt(1)).toBe('l');
+    expect(iterator.offset).toBe(2);
+    expect(iterator.charAt(2)).toBe('d');
+    expect(iterator.offset).toBe(2);
+    expect(iterator.charAt(3)).toBe(undefined);
+    expect(iterator.offset).toBe(2);
+    expect(iterator.charAt(4)).toBe(undefined);
+    expect(iterator.offset).toBe(2);
+    expect(iterator.charAt(-1)).toBe('o');
+    expect(iterator.offset).toBe(2);
+    expect(iterator.charAt(-2)).toBe('w');
+    expect(iterator.offset).toBe(2);
+    expect(iterator.charAt(-3)).toBe(undefined);
+    expect(iterator.offset).toBe(2);
+    expect(iterator.charAt(-4)).toBe(undefined);
+    expect(iterator.offset).toBe(2);
   });
 
   it('Text.Iterator.find successful', () => {
     let defaultMeasurer = createDefaultMeasurer();
     let text = Text.withContent('hello, world', defaultMeasurer);
-    let it = text.iterator(0);
-    expect(it.find('world')).toBe(true);
-    expect(it.offset).toBe(7);
-    expect(it.current).toBe('w');
+    let iterator = text.iterator(0);
+    expect(iterator.find('world')).toBe(true);
+    expect(iterator.offset).toBe(7);
+    expect(iterator.current).toBe('w');
   });
 
   it('Text.Iterator.find manual chunks 1', () => {
     let defaultMeasurer = createDefaultMeasurer();
     let text = Text.test.fromChunks(['hello, w', 'o', 'r', 'ld!!!'], defaultMeasurer);
-    let it = text.iterator(0);
-    expect(it.find('world')).toBe(true);
-    expect(it.offset).toBe(7);
-    expect(it.current).toBe('w');
+    let iterator = text.iterator(0);
+    expect(iterator.find('world')).toBe(true);
+    expect(iterator.offset).toBe(7);
+    expect(iterator.current).toBe('w');
   });
 
   it('Text.Iterator.find manual chunks 2', () => {
     let defaultMeasurer = createDefaultMeasurer();
     let text = Text.test.fromChunks(['hello', ',', ' ', 'w', 'orl', 'd!!!'], defaultMeasurer);
-    let it = text.iterator(0);
-    expect(it.find('world')).toBe(true);
-    expect(it.offset).toBe(7);
-    expect(it.current).toBe('w');
+    let iterator = text.iterator(0);
+    expect(iterator.find('world')).toBe(true);
+    expect(iterator.offset).toBe(7);
+    expect(iterator.current).toBe('w');
   });
 
   it('Text.Iterator.find manual chunks 3', () => {
     let defaultMeasurer = createDefaultMeasurer();
     let text = Text.test.fromChunks(['hello, w', 'or', 'ld', '!!!'], defaultMeasurer);
-    let it = text.iterator(0);
-    expect(it.find('world')).toBe(true);
-    expect(it.offset).toBe(7);
-    expect(it.current).toBe('w');
+    let iterator = text.iterator(0);
+    expect(iterator.find('world')).toBe(true);
+    expect(iterator.offset).toBe(7);
+    expect(iterator.current).toBe('w');
   });
 
   it('Text.Iterator.find unsuccessful', () => {
     let defaultMeasurer = createDefaultMeasurer();
     let text = Text.withContent('hello, world', defaultMeasurer);
-    let it = text.iterator(0);
-    expect(it.find('eee')).toBe(false);
-    expect(it.offset).toBe(12);
-    expect(it.current).toBe(undefined);
+    let iterator = text.iterator(0);
+    expect(iterator.find('eee')).toBe(false);
+    expect(iterator.offset).toBe(12);
+    expect(iterator.current).toBe(undefined);
 
-    it = text.iterator(0, 0, 3);
-    expect(it.find('hello')).toBe(false);
-    expect(it.offset).toBe(3);
-    expect(it.current).toBe(undefined);
+    iterator = text.iterator(0, 0, 3);
+    expect(iterator.find('hello')).toBe(false);
+    expect(iterator.offset).toBe(3);
+    expect(iterator.current).toBe(undefined);
   });
 
   it('Text.Iterator constraints', () => {
     let defaultMeasurer = createDefaultMeasurer();
     let text = Text.withContent('hello', defaultMeasurer);
-    let it = text.iterator(0, 0, 2);
-    expect(it.offset).toBe(0);
-    expect(it.current).toBe('h');
+    let iterator = text.iterator(0, 0, 2);
+    expect(iterator.offset).toBe(0);
+    expect(iterator.current).toBe('h');
 
-    it.prev();
-    expect(it.offset).toBe(-1);
-    expect(it.current).toBe(undefined);
+    iterator.prev();
+    expect(iterator.offset).toBe(-1);
+    expect(iterator.current).toBe(undefined);
 
-    it.prev();
-    expect(it.offset).toBe(-1);
-    expect(it.current).toBe(undefined);
+    iterator.prev();
+    expect(iterator.offset).toBe(-1);
+    expect(iterator.current).toBe(undefined);
 
-    it.next();
-    expect(it.offset).toBe(0);
-    expect(it.current).toBe('h');
+    iterator.next();
+    expect(iterator.offset).toBe(0);
+    expect(iterator.current).toBe('h');
 
-    it.next();
-    expect(it.offset).toBe(1);
-    expect(it.current).toBe('e');
+    iterator.next();
+    expect(iterator.offset).toBe(1);
+    expect(iterator.current).toBe('e');
 
-    it.next();
-    expect(it.offset).toBe(2);
-    expect(it.current).toBe(undefined);
+    iterator.next();
+    expect(iterator.offset).toBe(2);
+    expect(iterator.current).toBe(undefined);
 
-    it.next();
-    expect(it.offset).toBe(2);
-    expect(it.current).toBe(undefined);
+    iterator.next();
+    expect(iterator.offset).toBe(2);
+    expect(iterator.current).toBe(undefined);
 
-    it.advance(-2);
-    expect(it.offset).toBe(0);
-    expect(it.current).toBe('h');
+    iterator.advance(-2);
+    expect(iterator.offset).toBe(0);
+    expect(iterator.current).toBe('h');
   });
 
   it('Text.Iterator out-of-bounds API', () => {
     let defaultMeasurer = createDefaultMeasurer();
     let text = Text.withContent('abcdefg', defaultMeasurer);
-    let it = text.iterator(4, 2, 4);
-    expect(it.offset).toBe(4);
-    expect(it.current).toBe(undefined);
-    expect(it.charCodeAt(0)).toBe(NaN);
-    expect(it.charAt(0)).toBe(undefined);
-    expect(it.substr(2)).toBe('');
+    let iterator = text.iterator(4, 2, 4);
+    expect(iterator.offset).toBe(4);
+    expect(iterator.current).toBe(undefined);
+    expect(iterator.charCodeAt(0)).toBe(NaN);
+    expect(iterator.charAt(0)).toBe(undefined);
+    expect(iterator.substr(2)).toBe('');
   });
 
   it('Text.Iterator all sizes', () => {
@@ -443,9 +444,9 @@ describe('Text.Iterator', () => {
       Text.test.setDefaultChunkSize(chunkSize);
       let text = Text.withContent(content, defaultMeasurer);
       for (let from = 0; from <= content.length; from++) {
-        let it = text.iterator(from, from, content.length);
+        let iterator = text.iterator(from, from, content.length);
         let length = content.length - from;
-        expect(it.length()).toBe(length);
+        expect(iterator.length()).toBe(length);
         let s = content.substring(from, content.length);
         let p = new Array(length).fill(0);
         for (let i = 1; i < length; i++) {
@@ -455,27 +456,27 @@ describe('Text.Iterator', () => {
         }
 
         for (let i = 0; i < length; i++) {
-          it.advance(p[i] - (i ? p[i - 1] : 0));
-          expect(it.offset).toBe(from + p[i]);
-          expect(it.current).toBe(s[p[i]]);
+          iterator.advance(p[i] - (i ? p[i - 1] : 0));
+          expect(iterator.offset).toBe(from + p[i]);
+          expect(iterator.current).toBe(s[p[i]]);
 
           if (i === 0) {
-            expect(it.rread(p[i])).toBe(s.substring(0, p[i]));
-            expect(it.offset).toBe(from);
-            expect(it.current).toBe(s[0]);
+            expect(iterator.rread(p[i])).toBe(s.substring(0, p[i]));
+            expect(iterator.offset).toBe(from);
+            expect(iterator.current).toBe(s[0]);
 
-            expect(it.read(p[i])).toBe(s.substring(0, p[i]));
-            expect(it.offset).toBe(from + p[i]);
-            expect(it.current).toBe(s[p[i]]);
+            expect(iterator.read(p[i])).toBe(s.substring(0, p[i]));
+            expect(iterator.offset).toBe(from + p[i]);
+            expect(iterator.current).toBe(s[p[i]]);
           }
 
           if (i <= 1) {
             for (let len = 0; len <= length - p[i] + 1; len++)
-              expect(it.substr(len)).toBe(s.substring(p[i], p[i] + len));
+              expect(iterator.substr(len)).toBe(s.substring(p[i], p[i] + len));
             for (let len = 0; len <= p[i]; len++)
-              expect(it.rsubstr(len)).toBe(s.substring(p[i] - len, p[i]));
+              expect(iterator.rsubstr(len)).toBe(s.substring(p[i] - len, p[i]));
           }
-          expect(it.outOfBounds()).toBe(false);
+          expect(iterator.outOfBounds()).toBe(false);
         }
       }
     }
