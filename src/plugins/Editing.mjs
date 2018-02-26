@@ -26,9 +26,13 @@ export class Editing {
    */
   deleteBefore() {
     return this._replace('', range => {
-      // TODO: this does not work with unicode.
-      if (range.from === range.to)
-        return {from: Math.max(0, range.from - 1), to: range.to};
+      if (range.from === range.to) {
+        let {line, column} = this._document.offsetToPosition(range.from);
+        if (!column)
+          return {from: Math.max(0, range.from - 1), to: range.to};
+        return {from: this._document.positionToOffset({line, column: column - 1}), to: range.to};
+      }
+        return ;
       return range;
     });
   }
@@ -38,9 +42,13 @@ export class Editing {
    */
   deleteAfter() {
     return this._replace('', range => {
-      // TODO: this does not work with unicode.
-      if (range.from === range.to)
-        return {from: range.from, to: Math.min(this._document.length(), range.to + 1)};
+      if (range.from === range.to) {
+        let {line, column} = this._document.offsetToPosition(range.to);
+        let next = this._document.positionToOffset({line, column: column + 1});
+        if (next === range.to)
+          return {from: range.from, to: Math.min(this._document.length(), range.to + 1)};
+        return {from: range.from, to: next};
+      }
       return range;
     });
   }
