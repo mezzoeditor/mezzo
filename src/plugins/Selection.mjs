@@ -22,15 +22,13 @@ import { RoundMode } from "../core/Unicode.mjs";
    };
  }
 
-/**
- * @implements {Plugin}
- */
 export class Selection {
   /**
-   * @param {!Document} document
+   * @param {!Viewport} viewport
    */
-  constructor(document) {
-    this._document = document;
+  constructor(viewport) {
+    viewport.addFrameDecorationCallback(this._onFrame.bind(this));
+    this._document = viewport.document();
     this._document.addReplaceCallback(this._onReplace.bind(this));
     this._rangeDecorator = new ScrollbarDecorator('selection.range');
     this._focusDecorator = new ScrollbarDecorator('selection.focus');
@@ -356,14 +354,13 @@ export class Selection {
       callback();
   }
 
-  // -------- Plugin --------
+  // -------- Internals --------
 
   /**
-   * @override
    * @param {!Frame} frame
-   * @return {!PluginFrameResult}
+   * @return {!FrameDecorationCallback}
    */
-  onFrame(frame) {
+  _onFrame(frame) {
     if (this._staleDecorations) {
       this._staleDecorations = false;
       this._rangeDecorator.clearAll();
@@ -412,8 +409,6 @@ export class Selection {
     for (let callback of this._changeCallbacks)
       callback();
   }
-
-  // -------- Internal --------
 
   /**
    * @param {function(!SelectionRange):?SelectionRange} rangeCallback

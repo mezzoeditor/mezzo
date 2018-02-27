@@ -6,9 +6,6 @@ import { TextDecorator, ScrollbarDecorator } from "../core/Decorator.mjs";
  * }} SearchOptions
  */
 
-/**
- * @implements Plugin
- */
 export class Search {
   /**
    * @param {!Viewport} viewport
@@ -18,6 +15,7 @@ export class Search {
    */
   constructor(viewport, selection, onUpdate) {
     this._viewport = viewport;
+    this._viewport.addFrameDecorationCallback(this._onFrame.bind(this));
     this._document = viewport.document();
     this._document.addReplaceCallback(this._onReplace.bind(this));
     this._chunkSize = 20000;
@@ -138,14 +136,13 @@ export class Search {
     return !!this._rangeToProcess;
   }
 
-  // ------- Plugin -------
+  // ------ Internals -------
 
   /**
-   * @override
    * @param {!Frame} frame
-   * @return {!PluginFrameResult}
+   * @return {!FrameDecorationResult}
    */
-  onFrame(frame) {
+  _onFrame(frame) {
     if (this._rangeToProcess &&
         this._rangeToProcess.from <= frame.range().to &&
         this._rangeToProcess.to >= frame.range().from - this._options.query.length) {
@@ -158,7 +155,7 @@ export class Search {
         this._processed({from, to});
       }
       if (!hadCurrentMatch && this._currentMatch)
-        this._selection.onFrame(frame);
+        this._selection._onFrame(frame);
     }
 
     if (this._updated) {
@@ -195,8 +192,6 @@ export class Search {
       this._needsProcessing({from, to: Math.min(from + inserted, this._document.length() - this._options.query.length)});
     }
   }
-
-  // ------ Internals -------
 
   _cancel() {
     this._rangeToProcess = null;

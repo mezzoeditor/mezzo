@@ -1,5 +1,4 @@
 import { Text } from "./Text.mjs";
-import { Frame } from "./Frame.mjs";
 import { RoundMode, Unicode } from "./Unicode.mjs";
 
 /**
@@ -16,7 +15,6 @@ export class Document {
    * @param {function()} invalidateCallback
    */
   constructor(invalidateCallback) {
-    this._plugins = [];
     this._invalidateCallback = invalidateCallback;
     this._measurer = new Unicode.CachingMeasurer(1, 1, Unicode.anythingRegex, s => 1, s => 1);
     this._text = Text.withContent('', this._measurer);
@@ -127,29 +125,6 @@ export class Document {
     this.unfreeze(Document._replaceFreeze);
     this.invalidate();
     return removed;
-  }
-
-  /**
-   * @param {!Plugin} plugin
-   */
-  addPlugin(plugin) {
-    if (this._plugins.indexOf(plugin) !== -1)
-      throw 'Duplicate plugin';
-    this._plugins.push(plugin);
-    if (plugin.onFrame)
-      this.invalidate();
-  }
-
-  /**
-   * @param {!Plugin} plugin
-   */
-  removePlugin(plugin) {
-    let index = this._plugins.indexOf(plugin);
-    if (index === -1)
-      throw 'No such plugin';
-    this._plugins.splice(index, 1);
-    if (plugin.onFrame)
-      this.invalidate();
   }
 
   /**
@@ -277,27 +252,6 @@ export class Document {
   pointToLocation(point, roundMode = RoundMode.Floor, strict) {
     return this._text.pointToLocation(point, roundMode, strict);
   }
-
-  /**
-   * @package
-   * @param {!Frame} frame
-   * @return {{text: !Array<!TextDecorator>, scrollbar: !Array<ScrollbarDecorator>}}
-   */
-  decorateFrame(frame) {
-    this.freeze(Document._decorateFreeze);
-    let text = [];
-    let scrollbar = [];
-    for (let plugin of this._plugins) {
-      if (plugin.onFrame) {
-        let result = plugin.onFrame(frame);
-        text.push(...(result.text || []));
-        scrollbar.push(...(result.scrollbar || []));
-      }
-    }
-    this.unfreeze(Document._decorateFreeze);
-    return {text, scrollbar};
-  }
 };
 
 Document._replaceFreeze = Symbol('Document.replace');
-Document._decorateFreeze = Symbol('Document.replace');

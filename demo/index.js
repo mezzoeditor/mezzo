@@ -22,7 +22,6 @@ const examples = [
 
 const jsHighlighter = new JSHighlighter();
 const defaultHighlighter = new DefaultHighlighter();
-let currentHighlighter;
 
 function addExamples(editor) {
   const select = document.querySelector('.examples');
@@ -120,7 +119,7 @@ class TokenHighlighter {
   constructor(editor) {
     this._editor = editor;
     this._token = '';
-    this._editor.document().addPlugin(this);
+    this._editor.addFrameDecorationCallback(this._onFrame.bind(this));
   }
 
   setToken(token) {
@@ -130,7 +129,7 @@ class TokenHighlighter {
     this._editor.invalidate();
   }
 
-  onFrame(frame) {
+  _onFrame(frame) {
     if (!this._token)
       return [];
     let decorator = new TextDecorator();
@@ -155,13 +154,8 @@ async function setupEditor(editor, exampleName) {
   const response = await fetch(exampleName);
   const text = await response.text();
 
-  let highlighter = exampleName.endsWith('.js') ? jsHighlighter : defaultHighlighter;
-  if (highlighter !== currentHighlighter) {
-    if (currentHighlighter)
-      currentHighlighter.uninstall(editor.document());
-    highlighter.install(editor.document());
-    currentHighlighter = highlighter;
-  }
+  const highlighter = exampleName.endsWith('.js') ? jsHighlighter : defaultHighlighter;
+  editor.setHighlighter(highlighter);
 
   if (exampleName.indexOf('jquery') !== -1)
     editor.reset(new Array(1000).fill(text).join(''));

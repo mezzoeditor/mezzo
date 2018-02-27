@@ -2,29 +2,27 @@ import { TextDecorator } from "../core/Decorator.mjs";
 import { Parser, TokenTypes, KeywordTypes } from './jslexer/index.mjs';
 import { trace } from "../core/Trace.mjs";
 
-/**
- * @implements Plugin
- */
 export class JSHighlighter {
   constructor() {
     this._speculativeHighlight = new TextDecorator();
     this._onReplaceCallback = this._onReplace.bind(this);
+    this._onFrameCallback = this._onFrame.bind(this);
   }
 
   /**
-   * @param {!Document} document
+   * @param {!Viewport} viewport
    */
-  install(document) {
-    document.addPlugin(this);
-    document.addReplaceCallback(this._onReplaceCallback);
+  install(viewport) {
+    viewport.addFrameDecorationCallback(this._onFrameCallback);
+    viewport.document().addReplaceCallback(this._onReplaceCallback);
   }
 
   /**
-   * @param {!Document} document
+   * @param {!Viewport} viewport
    */
-  uninstall(document) {
-    document.removePlugin(this);
-    document.removeReplaceCallback(this._onReplaceCallback);
+  uninstall(viewport) {
+    viewport.removeFrameDecorationCallback(this._onFrameCallback);
+    viewport.document().removeReplaceCallback(this._onReplaceCallback);
   }
 
   /**
@@ -36,11 +34,10 @@ export class JSHighlighter {
   }
 
   /**
-   * @override
    * @param {!Frame} frame
-   * @return {!PluginFrameResult}
+   * @return {!FrameDecorationResult}
    */
-  onFrame(frame) {
+  _onFrame(frame) {
     trace.beginGroup('js');
     let decorator = new TextDecorator();
     for (let range of frame.ranges()) {

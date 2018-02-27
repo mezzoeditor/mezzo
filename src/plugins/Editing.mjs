@@ -1,6 +1,3 @@
-/**
- * @implements Plugin
- */
 export class Editing {
   /**
    * @param {!Document} document

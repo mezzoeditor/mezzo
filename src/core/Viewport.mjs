@@ -1,6 +1,13 @@
 import {Frame} from './Frame.mjs';
 
 /**
+ * @typdef {{
+ *   text: !Array<!TextDecorator>|undefined,
+ *   scrollbar: !Array<!ScrollbarDecorator>|undefined
+ * }} FrameDecorationResult
+ */
+
+ /**
  * Viewport class abstracts the window that peeks onto a part of the
  * document. Viewport supports padding around text to implement overscrolling.
  *
@@ -43,6 +50,7 @@ export class Viewport {
     this._maxScrollLeft = 0;
     this._padding = { left: 0, right: 0, top: 0, bottom: 0};
     this._frozen = false;
+    this._decorateCallbacks = [];
 
     this.hScrollbar = new Scrollbar(offset => this.setScrollLeft(offset));
     this.vScrollbar = new Scrollbar(offset => this.setScrollTop(offset));
@@ -62,6 +70,22 @@ export class Viewport {
    */
   setRevealCallback(revealCallback) {
     this._revealCallback = revealCallback;
+  }
+
+  /**
+   * @param {function(!Frame):!FrameDecorationResult} callback
+   */
+  addFrameDecorationCallback(callback) {
+    this._decorateCallbacks.push(callback);
+  }
+
+  /**
+   * @param {function(!Frame):!FrameDecorationResult} callback
+   */
+  removeFrameDecorationCallback(callback) {
+    let index = this._decorateCallbacks.indexOf(callback);
+    if (index !== -1)
+      this._decorateCallbacks.splice(index, 1);
   }
 
   /**
@@ -181,9 +205,17 @@ export class Viewport {
    */
   createFrame() {
     this._frozen = true;
+    this._document.freeze(Viewport._frameFreeze);
     let frameOrigin = this.viewportPointToDocumentPoint({x: 0, y: 0});
     const frame = new Frame(this._document, frameOrigin, this._width, this._height);
-    const {text, scrollbar} = this._document.decorateFrame(frame);
+    const text = [];
+    const scrollbar = [];
+    for (let decorateCallback of this._decorateCallbacks) {
+      let result = decorateCallback(frame);
+      text.push(...(result.text || []));
+      scrollbar.push(...(result.scrollbar || []));
+    }
+    this._document.unfreeze(Viewport._frameFreeze);
     this._frozen = false;
     return {frame, text, scrollbar};
   }
@@ -305,3 +337,5 @@ class Scrollbar {
     this._thumbOffset = this.contentOffsetToScrollbarOffset(this._viewportScroll);
   }
 }
+
+Viewport._frameFreeze = Symbol('Viewport.frame');

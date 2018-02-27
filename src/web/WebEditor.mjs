@@ -25,8 +25,8 @@ export class WebEditor {
     this._setupHistory();
     this._setupEditing();
     this._setupSearch();
-    let defaultHighlighter = new DefaultHighlighter();
-    defaultHighlighter.install(this._document);
+    this._highlighter = null;
+    this.setHighlighter(new DefaultHighlighter());
     this._keymap = new Map();
     this._installKeyMap({
       'Up': 'selection.move.up',
@@ -128,6 +128,27 @@ export class WebEditor {
     this._renderer.removeBeforeFrameCallback(callback);
   }
 
+  addFrameDecorationCallback(callback) {
+    this._renderer.viewport().addFrameDecorationCallback(callback);
+    this.invalidate();
+  }
+
+  removeFrameDecorationCallback(callback) {
+    this._renderer.viewport().removeFrameDecorationCallback(callback);
+    this.invalidate();
+  }
+
+  setHighlighter(highlighter) {
+    if (highlighter === this._highlighter)
+      return;
+    if (this._highlighter)
+      this._highlighter.uninstall(this._renderer.viewport());
+    this._highlighter = highlighter;
+    if (this._highlighter)
+      this._highlighter.install(this._renderer.viewport());
+    this.invalidate();
+  }
+
   /**
    * @param {!Document} domDocument
    */
@@ -169,7 +190,7 @@ export class WebEditor {
   }
 
   _setupSelection() {
-    this._selection = new Selection(this._document);
+    this._selection = new Selection(this._renderer.viewport());
     this._input.addEventListener('keydown', event => {
       let handled = false;
       let command = this._keymap.get(eventToHash(event));
@@ -291,13 +312,10 @@ export class WebEditor {
       cursorsTimeout = window.setInterval(toggleCursors, 500);
     };
     this._revealCursors();
-
-    this._document.addPlugin(this._selection);
   }
 
   _setupHistory() {
     this._history = new History(this._document, this._selection);
-    this._document.addPlugin(this._history);
   }
 
   _setupEditing() {
@@ -361,7 +379,6 @@ export class WebEditor {
         event.stopPropagation();
       }
     });
-    this._document.addPlugin(this._editing);
   }
 
   _setupSearch() {
@@ -386,7 +403,6 @@ export class WebEditor {
       this._search.previousMatch();
     };
 
-    this._document.addPlugin(this._search);
     this.addIdleCallback(this._search.searchChunk.bind(this._search));
   }
 
