@@ -4,9 +4,9 @@
 * [x] 60fps rendering
 * [x] million lines editing
 * [x] million columns editing
-* [x] instant undo/redo
+* [x] performant undo/redo
 * [x] performant multiple cursors
-* [x] unicode (same-width chars)
+* [x] full unicode support for monospace fonts
 * [x] rich decorations
 * [x] rich scrollbar markers
 * [x] easy plugins system
@@ -35,8 +35,7 @@
 * [ ] syntax checking
 * [ ] folding
 * [ ] bidi
-* [x] non-monospace font
-* [ ] code units with multiple code points
+* [ ] non-monospace font
 * [ ] spell checking
 * [ ] indent guides
 * [ ] minimap
@@ -104,3 +103,15 @@ ensures that user never sees a broken code point.
   This includes not only the viewport, but also (possibly) gutters, paddings, headers, footers, etc.
   These may be different for different views, and what's included is context-dependent.
  
+---
+
+### Extensibility
+
+Typical plugin can be integrated at multiple points:
+* Edit document with `Document.replace`.
+* Reveal text ranges with `Viewport.reveal`.
+* Listen to document changes with `replaceCallback`.
+* Decorate viewport frames with `frameDecorationCallback`.
+* Do asynchronous work with `idleCallback`.
+* Provide content-dependent data with `setHighlighter` or `setTokenizer`.
+* Use public APIs of other plugins, e.g. `selection.setRanges`.
