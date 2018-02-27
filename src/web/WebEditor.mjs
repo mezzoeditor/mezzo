@@ -169,7 +169,7 @@ export class WebEditor {
   }
 
   _setupSelection() {
-    this._selection = new Selection(this._renderer.viewport());
+    this._selection = new Selection(this._document);
     this._input.addEventListener('keydown', event => {
       let handled = false;
       let command = this._keymap.get(eventToHash(event));
@@ -307,6 +307,7 @@ export class WebEditor {
       if (data.types.indexOf('text/plain') === -1)
         return;
       this._editing.paste(data.getData('text/plain'));
+      this._revealSelection(true);
       this._revealCursors();
       event.preventDefault();
       event.stopPropagation();
@@ -317,6 +318,7 @@ export class WebEditor {
         return;
       event.clipboardData.setData('text/plain', text);
       this._editing.deleteBefore();
+      this._revealSelection(true);
       this._revealCursors();
       event.preventDefault();
       event.stopPropagation();
@@ -325,6 +327,7 @@ export class WebEditor {
       if (!this._input.value)
         return;
       this._editing.type(this._input.value);
+      this._revealSelection(true);
       this._revealCursors();
       this._input.value = '';
     });
@@ -333,6 +336,7 @@ export class WebEditor {
       switch (event.key) {
         case 'Enter':
           handled = this._editing.insertNewLine();
+          this._revealSelection(handled);
           break;
         case 'z':
         case 'Z':
@@ -344,9 +348,11 @@ export class WebEditor {
       switch (event.keyCode) {
         case 8: /* backspace */
           handled = this._editing.deleteBefore();
+          this._revealSelection(handled);
           break;
         case 46: /* delete */
           handled = this._editing.deleteAfter();
+          this._revealSelection(handled);
           break;
       }
       if (handled) {
@@ -365,7 +371,7 @@ export class WebEditor {
       if (updateCallback)
       updateCallback.call(null, currentMatchIndex, totalMatchesCount);
     };
-    this._search = new Search(this._document, this._selection, onUpdate);
+    this._search = new Search(this._renderer.viewport(), this._selection, onUpdate);
 
     this.find = query => {
       this._search.search({query});
@@ -411,44 +417,51 @@ export class WebEditor {
   _performCommand(command) {
     switch (command) {
       case 'selection.move.up':
-        return this._selection.moveUp();
+        return this._revealSelection(this._selection.moveUp());
       case 'selection.move.down':
-        return this._selection.moveDown();
+        return this._revealSelection(this._selection.moveDown());
       case 'selection.move.left':
-        return this._selection.moveLeft();
+        return this._revealSelection(this._selection.moveLeft());
       case 'selection.move.right':
-        return this._selection.moveRight();
+        return this._revealSelection(this._selection.moveRight());
       case 'selection.move.word.left':
-        return this._selection.moveWordLeft();
+        return this._revealSelection(this._selection.moveWordLeft());
       case 'selection.move.word.right':
-        return this._selection.moveWordRight();
+        return this._revealSelection(this._selection.moveWordRight());
       case 'selection.move.linestart':
-        return this._selection.moveLineStart();
+        return this._revealSelection(this._selection.moveLineStart());
       case 'selection.move.lineend':
-        return this._selection.moveLineEnd();
+        return this._revealSelection(this._selection.moveLineEnd());
       case 'selection.select.up':
-        return this._selection.selectUp();
+        return this._revealSelection(this._selection.selectUp());
       case 'selection.select.down':
-        return this._selection.selectDown();
+        return this._revealSelection(this._selection.selectDown());
       case 'selection.select.left':
-        return this._selection.selectLeft();
+        return this._revealSelection(this._selection.selectLeft());
       case 'selection.select.right':
-        return this._selection.selectRight();
+        return this._revealSelection(this._selection.selectRight());
       case 'selection.select.word.left':
-        return this._selection.selectWordLeft();
+        return this._revealSelection(this._selection.selectWordLeft());
       case 'selection.select.word.right':
-        return this._selection.selectWordRight();
+        return this._revealSelection(this._selection.selectWordRight());
       case 'selection.select.linestart':
-        return this._selection.selectLineStart();
+        return this._revealSelection(this._selection.selectLineStart());
       case 'selection.select.lineend':
-        return this._selection.selectLineEnd();
+        return this._revealSelection(this._selection.selectLineEnd());
       case 'selection.select.all':
         this._selection.selectAll();
-        return true;
+        return this._revealSelection(true);
       case 'selection.collapse':
-        return this._selection.collapse();
+        return this._revealSelection(this._selection.collapse());
     }
     return false;
+  }
+
+  _revealSelection(success) {
+    let focus = this._selection.focus();
+    if (success && focus !== null)
+      this._renderer.viewport().reveal({from: focus, to: focus});
+    return success;
   }
 }
 

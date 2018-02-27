@@ -152,22 +152,25 @@ export class Viewport {
   }
 
   /**
-   * @param {number} offset
+   * @param {!Range} range
    */
-  reveal(offset) {
+  reveal(range) {
     if (this._frozen)
       throw 'Cannot reveal while building frame';
 
-    let {x, y} = this.documentPointToViewPoint(this._document.offsetToPoint(offset));
-    if (y < this._scrollTop) {
-      this._scrollTop = y;
-    } else if (y + this._document.measurer().defaultHeight > this._scrollTop + this._height) {
-      this._scrollTop = y + this._document.measurer().defaultHeight - this._height;
+    let from = this.documentPointToViewPoint(this._document.offsetToPoint(range.from));
+    let to = this.documentPointToViewPoint(this._document.offsetToPoint(range.to));
+    to.y += this._document.measurer().defaultHeight;
+
+    if (this._scrollTop > from.y) {
+      this._scrollTop = from.y;
+    } else if (this._scrollTop + this._height < to.y) {
+      this._scrollTop = to.y - this._height;
     }
-    if (x < this._scrollLeft) {
-      this._scrollLeft = x;
-    } else if (x > this._scrollLeft + this._width) {
-      this._scrollLeft = x - this._width;
+    if (this._scrollLeft > from.x) {
+      this._scrollLeft = from.x;
+    } else if (this._scrollLeft + this._width < to.x) {
+      this._scrollLeft = to.x - this._width;
     }
     this._recompute();
     this._revealCallback.call(null);

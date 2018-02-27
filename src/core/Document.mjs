@@ -125,6 +125,7 @@ export class Document {
     for (let callback of this._replaceCallbacks)
       callback(replacement);
     this.unfreeze(Document._replaceFreeze);
+    this.invalidate();
     return removed;
   }
 

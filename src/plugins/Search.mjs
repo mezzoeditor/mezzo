@@ -11,13 +11,14 @@ import { TextDecorator, ScrollbarDecorator } from "../core/Decorator.mjs";
  */
 export class Search {
   /**
-   * @param {!Document} document
+   * @param {!Viewport} viewport
    * @param {!Selection} selection
    * @param {function(number, number)=} onUpdate
    *   Takes currentMatchIndex and totalMatchesCount.
    */
-  constructor(document, selection, onUpdate) {
-    this._document = document;
+  constructor(viewport, selection, onUpdate) {
+    this._viewport = viewport;
+    this._document = viewport.document();
     this._document.addReplaceCallback(this._onReplace.bind(this));
     this._chunkSize = 20000;
     this._rangeToProcess = null;  // [from, to] inclusive.
@@ -26,7 +27,6 @@ export class Search {
     this._currentMatchDecorator = new TextDecorator();
     this._options = null;
     this._currentMatch = null;
-    this._noReveal = false;
 
     this._onUpdate = (onUpdate || function() {}).bind(null);
     this._updated = false;
@@ -96,7 +96,7 @@ export class Search {
       match = this._decorator.firstStarting(0, this._document.length());
     if (!match)
       return false;
-    this._updateCurrentMatch(match);
+    this._updateCurrentMatch(match, true);
     this._updated = true;
     this._document.invalidate();
     return true;
@@ -117,7 +117,7 @@ export class Search {
       match = this._decorator.lastEnding(0, this._document.length());
     if (!match)
       return false;
-    this._updateCurrentMatch(match);
+    this._updateCurrentMatch(match, true);
     this._updated = true;
     this._document.invalidate();
     return true;
@@ -132,7 +132,7 @@ export class Search {
 
     let from = this._rangeToProcess.from;
     let to = Math.min(this._rangeToProcess.to, from + this._chunkSize);
-    this._searchRange({from, to});
+    this._searchRange({from, to}, true);
     this._processed({from, to});
     this._document.invalidate();
     return !!this._rangeToProcess;
@@ -149,16 +149,14 @@ export class Search {
     if (this._rangeToProcess &&
         this._rangeToProcess.from <= frame.range().to &&
         this._rangeToProcess.to >= frame.range().from - this._options.query.length) {
-      this._noReveal = true;
       let hadCurrentMatch = !!this._currentMatch;
       for (let range of frame.ranges()) {
         let from = Math.max(0, range.from - this._options.query.length);
         let to = Math.min(range.to, this._document.length() - this._options.query.length);
         to = Math.max(from, to);
-        this._searchRange({from, to});
+        this._searchRange({from, to}, false);
         this._processed({from, to});
       }
-      this._noReveal = false;
       if (!hadCurrentMatch && this._currentMatch)
         this._selection.onFrame(frame);
     }
@@ -185,14 +183,12 @@ export class Search {
     let {from, to, inserted} = replacement;
     this._decorator.replace(from, to, inserted);
     this._currentMatchDecorator.replace(from, to, inserted);
-    this._noReveal = true;
     if (this._currentMatch && this._currentMatch.from >= to) {
       let delta = inserted - (to - from);
-      this._updateCurrentMatch({from: this._currentMatch.from + delta, to: this._currentMatch.to + delta});
+      this._updateCurrentMatch({from: this._currentMatch.from + delta, to: this._currentMatch.to + delta}, false);
     } else if (this._currentMatch && this._currentMatch.to > from) {
-      this._updateCurrentMatch(null);
+      this._updateCurrentMatch(null, false);
     }
-    this._noReveal = false;
     this._updated = true;
     if (this._options) {
       this._processed({from: from - this._options.query.length, to});
@@ -212,16 +208,18 @@ export class Search {
 
   /**
    * @param {?Range} match
-   * @param {boolean=} noReveal
+   * @param {boolean} reveal
    */
-  _updateCurrentMatch(match, noReveal) {
+  _updateCurrentMatch(match, reveal) {
     if (this._currentMatch)
       this._currentMatchDecorator.clearAll();
     this._currentMatch = match;
     if (this._currentMatch) {
       this._currentMatchDecorator.add(this._currentMatch.from, this._currentMatch.to, 'search.match.current');
       // TODO: this probably should not go into history, or it messes up with undo.
-      this._selection.setRanges([this._currentMatch], noReveal);
+      this._selection.setRanges([this._currentMatch]);
+      if (reveal)
+        this._viewport.reveal(this._currentMatch);
     }
   }
 
@@ -256,9 +254,10 @@ export class Search {
 
   /**
    * @param {!Range} range
+   * @param {boolean} revealCurrentMatch
    * @return {!Range}
    */
-  _searchRange(range) {
+  _searchRange(range, revealCurrentMatch) {
     let {from, to} = range;
     let query = this._options.query;
     this._decorator.clearStarting(from, to);
@@ -266,7 +265,7 @@ export class Search {
     while (iterator.find(query)) {
       this._decorator.add(iterator.offset, iterator.offset + query.length);
       if (!this._currentMatch)
-        this._updateCurrentMatch({from: iterator.offset, to: iterator.offset + query.length}, this._noReveal);
+        this._updateCurrentMatch({from: iterator.offset, to: iterator.offset + query.length}, revealCurrentMatch);
       iterator.advance(query.length);
     }
     this._updated = true;

@@ -11,16 +11,26 @@ import { RoundMode } from "../core/Unicode.mjs";
  * }} SelectionRange;
  */
 
+ /**
+  * @param {!SelectionRange} range
+  * @return {!Range}
+  */
+ function toRange(range) {
+   return {
+     from: Math.min(range.focus, range.anchor),
+     to: Math.max(range.focus, range.anchor)
+   };
+ }
+
 /**
  * @implements {Plugin}
  */
 export class Selection {
   /**
-   * @param {!Viewport} viewport
+   * @param {!Document} document
    */
-  constructor(viewport) {
-    this._viewport = viewport;
-    this._document = viewport.document();
+  constructor(document) {
+    this._document = document;
     this._document.addReplaceCallback(this._onReplace.bind(this));
     this._rangeDecorator = new ScrollbarDecorator('selection.range');
     this._focusDecorator = new ScrollbarDecorator('selection.focus');
@@ -37,26 +47,29 @@ export class Selection {
    * @return {!Array<!Range>}
    */
   ranges() {
-    return this._ranges.map(range => ({from: Math.min(range.anchor, range.focus), to: Math.max(range.anchor, range.focus)}));
+    return this._ranges.map(toRange);
   }
 
   /**
    * @return {?number}
    */
   focus() {
-    let max = null;
-    for (let range of this._ranges) {
-      if (max === null || max.id < range.id)
-        max = range;
-    }
-    return max ? max.focus : null;
+    let range = this._maxRange();
+    return range ? range.focus : null;
+  }
+
+  /**
+   * @return {?Range}
+   */
+  range() {
+    let range = this._maxRange();
+    return range ? toRange(range) : null;
   }
 
   /**
    * @param {!Array<!Range>} ranges
-   * @param {boolean=} noReveal
    */
-  setRanges(ranges, noReveal) {
+  setRanges(ranges) {
     if (this._frozen)
       throw 'Cannot change selection while frozen';
     this._ranges = this._rebuild(ranges.map(range => ({
@@ -68,8 +81,6 @@ export class Selection {
     this._staleDecorations = true;
     for (let callback of this._changeCallbacks)
       callback();
-    if (!noReveal)
-      this._reveal();
   }
 
   /**
@@ -135,7 +146,6 @@ export class Selection {
     this._staleDecorations = true;
     for (let callback of this._changeCallbacks)
       callback();
-    this._reveal();
     return true;
   }
 
@@ -316,7 +326,6 @@ export class Selection {
     this._staleDecorations = true;
     for (let callback of this._changeCallbacks)
       callback();
-    this._reveal();
   }
 
   /**
@@ -345,7 +354,6 @@ export class Selection {
     this._staleDecorations = true;
     for (let callback of this._changeCallbacks)
       callback();
-    this._reveal();
   }
 
   // -------- Plugin --------
@@ -426,7 +434,6 @@ export class Selection {
     this._staleDecorations = true;
     for (let callback of this._changeCallbacks)
       callback();
-    this._reveal();
     return true;
   }
 
@@ -478,12 +485,6 @@ export class Selection {
       return (aFrom - bFrom) || (aTo - bTo);
     });
     return this._join(ranges);
-  }
-
-  _reveal() {
-    let focus = this.focus();
-    if (focus !== null)
-      this._viewport.reveal(focus);
   }
 
   /**
@@ -553,6 +554,18 @@ export class Selection {
       upDownX = location.x;
     offset = this._document.pointToOffset({x: upDownX, y: location.y + this._document.measurer().defaultHeight}, RoundMode.Round);
     return {offset, upDownX};
+  }
+
+  /**
+   * @return {?SelectionRange}
+   */
+  _maxRange() {
+    let max = null;
+    for (let range of this._ranges) {
+      if (max === null || max.id < range.id)
+        max = range;
+    }
+    return max;
   }
 };
 
