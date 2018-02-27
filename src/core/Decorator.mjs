@@ -232,7 +232,7 @@ export class Decorator {
    * @param {number} to
    * @param {number} inserted
    */
-  onReplace(from, to, inserted) {
+  replace(from, to, inserted) {
     let delta = inserted - (to - from);
     let tmp = split(this._root, from - 1, kTo);
     let left = tmp.left;

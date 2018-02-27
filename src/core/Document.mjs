@@ -2,6 +2,15 @@ import { Text } from "./Text.mjs";
 import { Frame } from "./Frame.mjs";
 import { RoundMode, Unicode } from "./Unicode.mjs";
 
+/**
+ * @typedef {{
+ *   from: number,
+ *   to: number,
+ *   inserted: number,
+ *   removed: string
+ * }} Replacement;
+ */
+
 export class Document {
   /**
    * @param {function()} invalidateCallback
@@ -13,6 +22,7 @@ export class Document {
     this._text = Text.withContent('', this._measurer);
     this._frozenSymbols = [];
     this._tokenizer = null;
+    this._replaceCallbacks = [];
   }
 
   /**
@@ -71,15 +81,30 @@ export class Document {
     let to = this._text.length();
     let removed = this._text.content();
     this._text = Text.withContent(text, this._measurer);
-    for (let plugin of this._plugins) {
-      if (plugin.onReplace)
-        plugin.onReplace(0, to, text.length, removed);
-    }
+    let replacement = {from: 0, to, inserted: text.length, removed};
+    for (let callback of this._replaceCallbacks)
+      callback(replacement);
     this.invalidate();
   }
 
   invalidate() {
     this._invalidateCallback.call(null);
+  }
+
+  /**
+   * @param {function(!Replacement)} callback
+   */
+  addReplaceCallback(callback) {
+    this._replaceCallbacks.push(callback);
+  }
+
+  /**
+   * @param {function(!Replacement)} callback
+   */
+  removeReplaceCallback(callback) {
+    let index = this._replaceCallbacks.indexOf(callback);
+    if (index !== -1)
+      this._replaceCallbacks.splice(index, 1);
   }
 
   /**
@@ -96,10 +121,9 @@ export class Document {
     let {text, removed} = this._text.replace(from, to, insertion);
     this._text.resetCache();
     this._text = text;
-    for (let plugin of this._plugins) {
-      if (plugin.onReplace)
-        plugin.onReplace(from, to, insertion.length, removed);
-    }
+    let replacement = {from, to, inserted: insertion.length, removed};
+    for (let callback of this._replaceCallbacks)
+      callback(replacement);
     this.unfreeze(Document._replaceFreeze);
     return removed;
   }

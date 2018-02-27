@@ -22,6 +22,7 @@ const examples = [
 
 const jsHighlighter = new JSHighlighter();
 const defaultHighlighter = new DefaultHighlighter();
+let currentHighlighter;
 
 function addExamples(editor) {
   const select = document.querySelector('.examples');
@@ -153,10 +154,15 @@ class TokenHighlighter {
 async function setupEditor(editor, exampleName) {
   const response = await fetch(exampleName);
   const text = await response.text();
-  if (exampleName.endsWith('.js'))
-    editor.setHighlighter(jsHighlighter);
-  else
-    editor.setHighlighter(defaultHighlighter);
+
+  let highlighter = exampleName.endsWith('.js') ? jsHighlighter : defaultHighlighter;
+  if (highlighter !== currentHighlighter) {
+    if (currentHighlighter)
+      currentHighlighter.uninstall(editor.document());
+    highlighter.install(editor.document());
+    currentHighlighter = highlighter;
+  }
+
   if (exampleName.indexOf('jquery') !== -1)
     editor.reset(new Array(1000).fill(text).join(''));
   else if (exampleName.indexOf('megacolumn') !== -1)

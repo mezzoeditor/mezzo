@@ -16,11 +16,12 @@ import { RoundMode } from "../core/Unicode.mjs";
  */
 export class Selection {
   /**
-   * @param {!Document} document
+   * @param {!Viewport} viewport
    */
   constructor(viewport) {
     this._viewport = viewport;
     this._document = viewport.document();
+    this._document.addReplaceCallback(this._onReplace.bind(this));
     this._rangeDecorator = new ScrollbarDecorator('selection.range');
     this._focusDecorator = new ScrollbarDecorator('selection.focus');
     this._ranges = [];
@@ -369,15 +370,13 @@ export class Selection {
   }
 
   /**
-   * @override
-   * @param {number} from
-   * @param {number} to
-   * @param {number} inserted
+   * @param {!Replacement} replacement
    */
-  onReplace(from, to, inserted) {
+  _onReplace(replacement) {
     if (this._frozen)
       return;
 
+    let {from, to, inserted} = replacement;
     let ranges = [];
     for (let range of this._ranges) {
       let start = Math.min(range.anchor, range.focus);

@@ -6,6 +6,7 @@ export class History {
   constructor(document, selection) {
     this._document = document;
     this._selection = selection;
+    this._document.addReplaceCallback(this._onReplace.bind(this));
 
     this._changes = [];
     this._pos = -1;
@@ -109,16 +110,13 @@ export class History {
   }
 
   /**
-   * @override
-   * @param {number} from
-   * @param {number} to
-   * @param {number} inserted
-   * @param {string} removed
+   * @param {!Replacement} replacement
    */
-  onReplace(from, to, inserted, removed) {
+  _onReplace(replacement) {
     if (this._muteOnReplace)
       return;
 
+    let {from, to, inserted, removed} = replacement;
     if (!this._current) {
       this._current = {
         replacements: [],

@@ -18,6 +18,7 @@ export class Search {
    */
   constructor(document, selection, onUpdate) {
     this._document = document;
+    this._document.addReplaceCallback(this._onReplace.bind(this));
     this._chunkSize = 20000;
     this._rangeToProcess = null;  // [from, to] inclusive.
     this._selection = selection;
@@ -178,14 +179,12 @@ export class Search {
   }
 
   /**
-   * @override
-   * @param {number} from
-   * @param {number} to
-   * @param {number} inserted
+   * @param {!Replacement} replacement
    */
-  onReplace(from, to, inserted) {
-    this._decorator.onReplace(from, to, inserted);
-    this._currentMatchDecorator.onReplace(from, to, inserted);
+  _onReplace(replacement) {
+    let {from, to, inserted} = replacement;
+    this._decorator.replace(from, to, inserted);
+    this._currentMatchDecorator.replace(from, to, inserted);
     this._noReveal = true;
     if (this._currentMatch && this._currentMatch.from >= to) {
       let delta = inserted - (to - from);

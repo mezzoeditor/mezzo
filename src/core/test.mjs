@@ -638,7 +638,7 @@ describe('Decorator', () => {
     checkVisitor(v => dec.visitTouching(13, 14, v), []);
   });
 
-  it('Decorator.onReplace manual', () => {
+  it('Decorator.replace manual', () => {
     let before = {from: 10, to: 20};
     let cases = [
       {from: 0, to: 1, inserted: 5, expected: [{from: 14, to: 24}]},
@@ -666,7 +666,7 @@ describe('Decorator', () => {
       let {from, to, inserted, expected} = test;
       let dec = new Decorator();
       dec.add(before.from, before.to, '');
-      dec.onReplace(from, to, inserted);
+      dec.replace(from, to, inserted);
       let got = dec.listAll();
       expect(got.length).toBe(expected.length, `test: ${JSON.stringify(test)}`);
       for (let i = 0; i < got.length; i++) {
@@ -676,13 +676,13 @@ describe('Decorator', () => {
     }
   });
 
-  it('Decorator.onReplace large list to the right', () => {
+  it('Decorator.replace large list to the right', () => {
     let dec = new Decorator();
     let count = 10000;
     for (let i = 0; i < count; i++)
       dec.add(i + 200, i + 200, '');
     for (let i = 0; i < 99; i++)
-      dec.onReplace(2 * i, 2 * i + 1, 2);
+      dec.replace(2 * i, 2 * i + 1, 2);
     let list = dec.listAll();
     expect(list.length).toBe(count);
     for (let i = 0; i < count; i++) {
@@ -813,6 +813,12 @@ describe('Decorator', () => {
       expect(measurer.locateByWidth('a😀b𐀀c', 0, 6, 203, RoundMode.Round)).toEqual({offset: 6, columns: 4, width: 203});
       expect(measurer.locateByColumn('', 0, 0, 0, RoundMode.Ceil)).toEqual({offset: 0, columns: 0, width: 0});
       expect(measurer.locateByColumn('', 0, 0, 5, RoundMode.Floor)).toEqual({offset: -1, columns: 0, width: 0});
+
+      let defaultMeasurer = createDefaultMeasurer();
+      expect(defaultMeasurer.locateByWidth('abc', 0, 3, 0.5, RoundMode.Floor)).toEqual({offset: 0, columns: 0, width: 0});
+      expect(defaultMeasurer.locateByWidth('abc', 0, 3, 0.5, RoundMode.Round)).toEqual({offset: 0, columns: 0, width: 0});
+      expect(defaultMeasurer.locateByWidth('abc', 0, 3, 0.6, RoundMode.Round)).toEqual({offset: 1, columns: 1, width: 1});
+      expect(defaultMeasurer.locateByWidth('abc', 0, 3, 0.5, RoundMode.Ceil)).toEqual({offset: 1, columns: 1, width: 1});
     });
   });
 });

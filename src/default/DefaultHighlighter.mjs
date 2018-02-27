@@ -5,6 +5,20 @@ export class DefaultHighlighter {
   }
 
   /**
+   * @param {!Document} document
+   */
+  install(document) {
+    document.addPlugin(this);
+  }
+
+  /**
+   * @param {!Document} document
+   */
+  uninstall(document) {
+    document.removePlugin(this);
+  }
+
+  /**
    * @override
    * @param {!Frame} frame
    * @return {!PluginFrameResult}

@@ -8,17 +8,31 @@ import { trace } from "../core/Trace.mjs";
 export class JSHighlighter {
   constructor() {
     this._speculativeHighlight = new TextDecorator();
+    this._onReplaceCallback = this._onReplace.bind(this);
   }
 
   /**
-   * @override
-   * @param {number} from
-   * @param {number} to
-   * @param {number} inserted
+   * @param {!Document} document
    */
-  onReplace(from, to, inserted) {
-    this._speculativeHighlight.clearTouching(from, to);
-    this._speculativeHighlight.onReplace(from, to, inserted);
+  install(document) {
+    document.addPlugin(this);
+    document.addReplaceCallback(this._onReplaceCallback);
+  }
+
+  /**
+   * @param {!Document} document
+   */
+  uninstall(document) {
+    document.removePlugin(this);
+    document.removeReplaceCallback(this._onReplaceCallback);
+  }
+
+  /**
+   * @param {!Replacement} replacement
+   */
+  _onReplace(replacement) {
+    this._speculativeHighlight.clearTouching(replacement.from, replacement.to);
+    this._speculativeHighlight.replace(replacement.from, replacement.to, replacement.inserted);
   }
 
   /**

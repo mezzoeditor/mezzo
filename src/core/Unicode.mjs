@@ -286,6 +286,7 @@ Unicode.CachingMeasurer = class {
       let left = offset * this.defaultWidth;
       if (left === width || roundMode === RoundMode.Floor)
         return {offset: from + offset, columns: offset, width: left};
+      let right = left + this.defaultWidth;
       if (roundMode === RoundMode.Ceil || width - left > right - width)
         return {offset: from + offset + 1, columns: offset + 1, width: right};
       return {offset: from + offset, columns: offset, width: left};

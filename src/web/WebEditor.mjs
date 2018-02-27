@@ -25,8 +25,8 @@ export class WebEditor {
     this._setupHistory();
     this._setupEditing();
     this._setupSearch();
-    this._syntaxHighlighter = new DefaultHighlighter();
-    this._document.addPlugin(this._syntaxHighlighter);
+    let defaultHighlighter = new DefaultHighlighter();
+    defaultHighlighter.install(this._document);
     this._keymap = new Map();
     this._installKeyMap({
       'Up': 'selection.move.up',
@@ -60,12 +60,6 @@ export class WebEditor {
       let value = keyMap[key];
       this._keymap.set(stringToHash(key), value);
     }
-  }
-
-  setHighlighter(highlighter) {
-    this._document.removePlugin(this._syntaxHighlighter);
-    this._syntaxHighlighter = highlighter;
-    this._document.addPlugin(this._syntaxHighlighter);
   }
 
   invalidate() {

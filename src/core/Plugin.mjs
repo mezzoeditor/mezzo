@@ -19,15 +19,4 @@ class Plugin {
    */
   onFrame(frame) {
   }
-
-  /**
-   * Called when range in the text is replaced with something else.
-   * It is usually a good idea to call onReplace on plugin's Decorator(s) here.
-   * @param {number} from
-   * @param {number} to
-   * @param {number} inserted
-   * @param {string} removed
-   */
-  onReplace(from, to, inserted, removed) {
-  }
 };
