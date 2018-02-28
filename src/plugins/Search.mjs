@@ -21,10 +21,12 @@ export class Search {
     this._chunkSize = 20000;
     this._rangeToProcess = null;  // [from, to] inclusive.
     this._selection = selection;
+    this._selection.addChangeCallback(() => { this._shouldUpdateSelection = false; });
     this._decorator = new ScrollbarDecorator('search.match');
     this._currentMatchDecorator = new TextDecorator();
     this._options = null;
     this._currentMatch = null;
+    this._shouldUpdateSelection = false;
 
     this._onUpdate = (onUpdate || function() {}).bind(null);
     this._updated = false;
@@ -70,6 +72,7 @@ export class Search {
     this._options = options;
     this._needsProcessing({from: 0, to: this._document.length() - options.query.length});
     this._updated = true;
+    this._shouldUpdateSelection = true;
     this._document.invalidate();
   }
 
@@ -94,7 +97,7 @@ export class Search {
       match = this._decorator.firstStarting(0, this._document.length());
     if (!match)
       return false;
-    this._updateCurrentMatch(match, true);
+    this._updateCurrentMatch(match, true, true);
     this._updated = true;
     this._document.invalidate();
     return true;
@@ -115,7 +118,7 @@ export class Search {
       match = this._decorator.lastEnding(0, this._document.length());
     if (!match)
       return false;
-    this._updateCurrentMatch(match, true);
+    this._updateCurrentMatch(match, true, true);
     this._updated = true;
     this._document.invalidate();
     return true;
@@ -130,7 +133,7 @@ export class Search {
 
     let from = this._rangeToProcess.from;
     let to = Math.min(this._rangeToProcess.to, from + this._chunkSize);
-    this._searchRange({from, to}, true);
+    this._searchRange({from, to}, this._shouldUpdateSelection, this._shouldUpdateSelection);
     this._processed({from, to});
     this._document.invalidate();
     return !!this._rangeToProcess;
@@ -151,7 +154,7 @@ export class Search {
         let from = Math.max(0, range.from - this._options.query.length);
         let to = Math.min(range.to, this._document.length() - this._options.query.length);
         to = Math.max(from, to);
-        this._searchRange({from, to}, false);
+        this._searchRange({from, to}, this._shouldUpdateSelection, false);
         this._processed({from, to});
       }
       if (!hadCurrentMatch && this._currentMatch)
@@ -170,7 +173,7 @@ export class Search {
       }
     }
 
-    return {text: [this._decorator, this._currentMatchDecorator], scrollbar: [this._decorator]};
+    return {background: [this._decorator, this._currentMatchDecorator], scrollbar: [this._decorator]};
   }
 
   /**
@@ -182,14 +185,19 @@ export class Search {
     this._currentMatchDecorator.replace(from, to, inserted);
     if (this._currentMatch && this._currentMatch.from >= to) {
       let delta = inserted - (to - from);
-      this._updateCurrentMatch({from: this._currentMatch.from + delta, to: this._currentMatch.to + delta}, false);
+      this._updateCurrentMatch({from: this._currentMatch.from + delta, to: this._currentMatch.to + delta}, false, false);
     } else if (this._currentMatch && this._currentMatch.to > from) {
-      this._updateCurrentMatch(null, false);
+      this._updateCurrentMatch(null, false, false);
+    } else if (this._currentMatch) {
+      this._updateCurrentMatch(this._currentMatch, false, false);
     }
     this._updated = true;
     if (this._options) {
       this._processed({from: from - this._options.query.length, to});
-      this._needsProcessing({from, to: Math.min(from + inserted, this._document.length() - this._options.query.length)});
+      this._needsProcessing({
+        from: Math.max(from - this._options.query.length, 0),
+        to: Math.min(from + inserted, this._document.length())
+      });
     }
   }
 
@@ -203,16 +211,18 @@ export class Search {
 
   /**
    * @param {?Range} match
+   * @param {boolean} select
    * @param {boolean} reveal
    */
-  _updateCurrentMatch(match, reveal) {
+  _updateCurrentMatch(match, select, reveal) {
     if (this._currentMatch)
       this._currentMatchDecorator.clearAll();
     this._currentMatch = match;
     if (this._currentMatch) {
       this._currentMatchDecorator.add(this._currentMatch.from, this._currentMatch.to, 'search.match.current');
       // TODO: this probably should not go into history, or it messes up with undo.
-      this._selection.setRanges([this._currentMatch]);
+      if (select)
+        this._selection.setRanges([this._currentMatch]);
       if (reveal)
         this._viewport.reveal(this._currentMatch);
     }
@@ -249,10 +259,11 @@ export class Search {
 
   /**
    * @param {!Range} range
+   * @param {boolean} selectCurrentMatch
    * @param {boolean} revealCurrentMatch
    * @return {!Range}
    */
-  _searchRange(range, revealCurrentMatch) {
+  _searchRange(range, selectCurrentMatch, revealCurrentMatch) {
     let {from, to} = range;
     let query = this._options.query;
     this._decorator.clearStarting(from, to);
@@ -260,7 +271,7 @@ export class Search {
     while (iterator.find(query)) {
       this._decorator.add(iterator.offset, iterator.offset + query.length);
       if (!this._currentMatch)
-        this._updateCurrentMatch({from: iterator.offset, to: iterator.offset + query.length}, revealCurrentMatch);
+        this._updateCurrentMatch({from: iterator.offset, to: iterator.offset + query.length}, selectCurrentMatch, revealCurrentMatch);
       iterator.advance(query.length);
     }
     this._updated = true;

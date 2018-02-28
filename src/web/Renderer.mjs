@@ -368,7 +368,7 @@ export class Renderer {
     ctx.lineWidth = 1 / this._ratio;
 
     trace.begin('frame');
-    const {frame, text, scrollbar} = this._viewport.createFrame();
+    const {frame, text, background, scrollbar} = this._viewport.createFrame();
     trace.end('frame');
 
     trace.begin('gutter');
@@ -389,7 +389,7 @@ export class Renderer {
     textOrigin.x += this._editorRect.x;
     textOrigin.y += this._editorRect.y;
     ctx.translate(textOrigin.x, textOrigin.y);
-    this._drawText(ctx, frame, text);
+    this._drawText(ctx, frame, text, background);
     ctx.restore();
     trace.endGroup('text');
 
@@ -429,48 +429,54 @@ export class Renderer {
     }
   }
 
-  _drawText(ctx, frame, textDecorators) {
+  _drawText(ctx, frame, textDecorators, backgroundDecorators) {
     const lineHeight = this._metrics.lineHeight;
     const textOffset = this._metrics.textOffset;
     const lines = frame.lines();
     const frameRight = frame.origin().x + frame.width();
 
-    for (let decorator of textDecorators) {
-      for (let line of lines) {
-        let lineContent = line.content();
-        let offsetToX = new Float32Array(line.to.offset - line.from.offset + 1);
-        for (let x = line.from.x, i = 0; i <= line.to.offset - line.from.offset; ) {
-          offsetToX[i] = x;
-          if (i < lineContent.length) {
-            let charCode = lineContent.charCodeAt(i);
-            if (charCode >= 0xD800 && charCode <= 0xDBFF && i + 1 < lineContent.length) {
-              offsetToX[i + 1] = x;
-              x += this._metrics.measurer.measureSupplementaryCodePoint(lineContent.codePointAt(i));
-              i += 2;
-            } else {
-              x += this._metrics.measurer.measureBMPCodePoint(charCode);
-              i++;
-            }
+    for (let line of lines) {
+      let lineContent = line.content();
+      let offsetToX = new Float32Array(line.to.offset - line.from.offset + 1);
+      for (let x = line.from.x, i = 0; i <= line.to.offset - line.from.offset; ) {
+        offsetToX[i] = x;
+        if (i < lineContent.length) {
+          let charCode = lineContent.charCodeAt(i);
+          if (charCode >= 0xD800 && charCode <= 0xDBFF && i + 1 < lineContent.length) {
+            offsetToX[i + 1] = x;
+            x += this._metrics.measurer.measureSupplementaryCodePoint(lineContent.codePointAt(i));
+            i += 2;
           } else {
+            x += this._metrics.measurer.measureBMPCodePoint(charCode);
             i++;
           }
+        } else {
+          i++;
         }
+      }
 
+      for (let decorator of textDecorators) {
+        decorator.visitTouching(line.from.offset, line.to.offset, decoration => {
+          trace.count('decorations');
+          const style = this._theme[decoration.data];
+          if (!style || !style.text)
+            return;
+          ctx.fillStyle = style.text.color || 'rgb(33, 33, 33)';
+          let from = Math.max(line.from.offset, decoration.from);
+          let to = Math.min(line.to.offset, decoration.to);
+          if (from < to) {
+            let text = lineContent.substring(from - line.from.offset, to - line.from.offset);
+            ctx.fillText(text, offsetToX[from - line.from.offset], line.start.y + textOffset);
+          }
+        });
+      }
+
+      for (let decorator of backgroundDecorators) {
         decorator.visitTouching(line.from.offset, line.to.offset, decoration => {
           trace.count('decorations');
           const style = this._theme[decoration.data];
           if (!style)
             return;
-
-          if (style.text) {
-            ctx.fillStyle = style.text.color || 'rgb(33, 33, 33)';
-            let from = Math.max(line.from.offset, decoration.from);
-            let to = Math.min(line.to.offset, decoration.to);
-            if (from < to) {
-              let text = lineContent.substring(from - line.from.offset, to - line.from.offset);
-              ctx.fillText(text, offsetToX[from - line.from.offset], line.start.y + textOffset);
-            }
-          }
 
           // TODO: note that some editors only show selection up to line length. Setting?
           if (style.background && style.background.color) {

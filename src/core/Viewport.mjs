@@ -3,6 +3,7 @@ import {Frame} from './Frame.mjs';
 /**
  * @typdef {{
  *   text: !Array<!TextDecorator>|undefined,
+ *   background: !Array<!TextDecorator>|undefined,
  *   scrollbar: !Array<!ScrollbarDecorator>|undefined
  * }} FrameDecorationResult
  */
@@ -201,7 +202,7 @@ export class Viewport {
   }
 
   /**
-   * @return {!{frame: !Frame, text: !Array<!TextDecorator>, scrollbar: !Array<!ScrollbarDecorator>}}
+   * @return {!{frame: !Frame, text: !Array<!TextDecorator>, background: !Array<!TextDecorator>, scrollbar: !Array<!ScrollbarDecorator>}}
    */
   createFrame() {
     this._frozen = true;
@@ -209,15 +210,17 @@ export class Viewport {
     let frameOrigin = this.viewportPointToDocumentPoint({x: 0, y: 0});
     const frame = new Frame(this._document, frameOrigin, this._width, this._height);
     const text = [];
+    const background = [];
     const scrollbar = [];
     for (let decorateCallback of this._decorateCallbacks) {
       let result = decorateCallback(frame);
       text.push(...(result.text || []));
+      background.push(...(result.background || []));
       scrollbar.push(...(result.scrollbar || []));
     }
     this._document.unfreeze(Viewport._frameFreeze);
     this._frozen = false;
-    return {frame, text, scrollbar};
+    return {frame, text, background, scrollbar};
   }
 
   _recompute() {

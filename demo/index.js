@@ -146,7 +146,7 @@ class TokenHighlighter {
         index = text.indexOf(this._token, index + this._token.length);
       }
     }
-    return {text: [decorator]};
+    return {background: [decorator]};
   }
 }
 

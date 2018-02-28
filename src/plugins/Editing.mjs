@@ -29,7 +29,6 @@ export class Editing {
           return {from: Math.max(0, range.from - 1), to: range.to};
         return {from: this._document.positionToOffset({line, column: column - 1}), to: range.to};
       }
-        return ;
       return range;
     });
   }

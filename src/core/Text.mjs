@@ -648,12 +648,21 @@ export class Text {
         throw 'Point does not belong to text';
       point = {x: 0, y: point.y};
     }
-    let compare = (point.y - this._lastLocation.y) || (point.x - this._lastLocation.x);
-    if (compare >= 0) {
-      if (!strict || compare === 0)
+
+    let outside = false;
+    if (point.y >= this._lastLocation.y + this._measurer.defaultHeight) {
+      outside = true;
+    } else if (point.y >= this._lastLocation.y && point.x > this._lastLocation.x) {
+      outside = true;
+    }
+    if (outside) {
+      if (!strict)
         return this._lastLocation;
       throw 'Point does not belong to text';
     }
+    if (point.y === this._lastLocation.y && point.x === this._lastLocation.x)
+      return this._lastLocation;
+
     let found = findNode(this._root, {x: point.x, y: point.y}, this._measurer);
     if (!found) {
       if (!strict)

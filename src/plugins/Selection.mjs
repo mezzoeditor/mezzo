@@ -371,7 +371,7 @@ export class Selection {
           this._rangeDecorator.add(Math.min(range.focus, range.anchor), Math.max(range.focus, range.anchor));
       }
     }
-    return {text: [this._rangeDecorator, this._focusDecorator], scrollbar: [this._rangeDecorator, this._focusDecorator]};
+    return {background: [this._rangeDecorator, this._focusDecorator], scrollbar: [this._rangeDecorator, this._focusDecorator]};
   }
 
   /**
