@@ -423,6 +423,7 @@ export class Text {
 
   /**
    * @param {string} content
+   * @param {!Measurer} measurer
    * @return {!Text}
    */
   static withContent(content, measurer) {
@@ -431,11 +432,15 @@ export class Text {
 
   /**
    * @param {string} content
+   * @param {!Measurer} measurer
+   * @param {string=} firstChunk
    * @return {!TreeNode}
    */
-  static _withContent(content, measurer) {
+  static _withContent(content, measurer, firstChunk) {
     let index = 0;
     let nodes = [];
+    if (firstChunk)
+      nodes.push(createNode(firstChunk, measurer));
     while (index < content.length) {
       let length = Math.min(content.length - index, kDefaultChunkSize);
       if (!Unicode.isValidOffset(content, index + length))
@@ -566,7 +571,14 @@ export class Text {
       }
       visit(middle, true);
 
-      middle = Text._withContent(first + insertion + last, this._measurer);
+      if (first.length + insertion.length + last.length > kDefaultChunkSize &&
+          first.length + insertion.length <= kDefaultChunkSize) {
+        // For typical editing scenarios, we are most likely to replace at the
+        // end of |insertion| next time.
+        middle = Text._withContent(last, this._measurer, first + insertion);
+      } else {
+        middle = Text._withContent(first + insertion + last, this._measurer);
+      }
     }
 
     let text = new Text(mergeTrees(left, mergeTrees(middle, right, this._measurer), this._measurer), this._measurer);
