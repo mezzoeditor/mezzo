@@ -1,15 +1,58 @@
-import {Frame} from './Frame.mjs';
+import {RoundMode} from "./Unicode.mjs";
 import {trace} from './Trace.mjs';
+
+/**
+ * @typedef {{
+ *   document: !Document,
+ *   range: !Range,
+ *   ranges: !Array<!Viewport.VisibleRange>,
+ *   firstLine: number,
+ *   lastLine: number,
+ * }} Viewport.VisibleContent
+ */
 
 /**
  * @typdef {{
  *   text: !Array<!TextDecorator>|undefined,
  *   background: !Array<!TextDecorator>|undefined,
  *   scrollbar: !Array<!ScrollbarDecorator>|undefined
- * }} FrameDecorationResult
+ * }} Viewport.DecorationResult
  */
 
- const kMinScrollbarDecorationHeight = 5;
+ /**
+ * @typedef {{
+ *   x: number,
+ *   y: number,
+ *   content: string,
+ *   style: string
+ * }} Viewport.TextInfo
+ */
+
+/**
+ * @typedef {{
+ *   x: number,
+ *   y: number,
+ *   width: number,
+ *   style: string
+ * }} Viewport.BackgroundInfo
+ */
+
+/**
+ * @typedef {{
+ *   y: number,
+ *   height: number,
+ *   style: string
+ * }} Viewport.ScrollbarInfo
+ */
+
+/**
+ * @typedef {{
+ *   line: number,
+ *   y: number,
+ * }} Viewport.LineInfo
+ */
+
+const kMinScrollbarDecorationHeight = 5;
 
 /**
  * Viewport class abstracts the window that peeks onto a part of the
@@ -56,8 +99,8 @@ export class Viewport {
     this._frozen = false;
     this._decorateCallbacks = [];
 
-    this.hScrollbar = new Scrollbar(offset => this.setScrollLeft(offset));
-    this.vScrollbar = new Scrollbar(offset => this.setScrollTop(offset));
+    this.hScrollbar = new Viewport.Scrollbar(offset => this.setScrollLeft(offset));
+    this.vScrollbar = new Viewport.Scrollbar(offset => this.setScrollTop(offset));
 
     this._revealCallback = () => {};
   }
@@ -77,16 +120,16 @@ export class Viewport {
   }
 
   /**
-   * @param {function(!Frame):!FrameDecorationResult} callback
+   * @param {function(!Viewport.VisibleContent):!Viewport.DecorationResult} callback
    */
-  addFrameDecorationCallback(callback) {
+  addDecorationCallback(callback) {
     this._decorateCallbacks.push(callback);
   }
 
   /**
-   * @param {function(!Frame):!FrameDecorationResult} callback
+   * @param {function(!Viewport.VisibleContent):!Viewport.DecorationResult} callback
    */
-  removeFrameDecorationCallback(callback) {
+  removeDecorationCallback(callback) {
     let index = this._decorateCallbacks.indexOf(callback);
     if (index !== -1)
       this._decorateCallbacks.splice(index, 1);
@@ -184,7 +227,7 @@ export class Viewport {
    */
   reveal(range) {
     if (this._frozen)
-      throw 'Cannot reveal while building frame';
+      throw 'Cannot reveal while decorating';
 
     let from = this.documentPointToViewPoint(this._document.offsetToPoint(range.from));
     let to = this.documentPointToViewPoint(this._document.offsetToPoint(range.to));
@@ -206,50 +249,102 @@ export class Viewport {
 
   /**
    * @return {!{
-   *     frame: !Frame,
    *     text: !Array<!Viewport.TextInfo>,
    *     background: !Array<!Viewport.BackgroundInfo>,
    *     scrollbar: !Array<!Viewport.ScrollbarInfo>,
    *     lines: !Array<!Viewport.LineInfo>
    * }}
    */
-  createFrame() {
+  decorate() {
     this._frozen = true;
-    this._document.freeze(Viewport._frameFreeze);
-    let frameOrigin = this.viewportPointToDocumentPoint({x: 0, y: 0});
-    const frame = new Frame(this._document, frameOrigin, this._width, this._height);
-    const textDecorators = [];
-    const backgroundDecorators = [];
-    const scrollbarDecorators = [];
+    this._document.freeze(Viewport._decorateFreeze);
+
+    let origin = this.viewportPointToDocumentPoint({x: 0, y: 0});
+    let start = this._document.pointToLocation(origin);
+    let end = this._document.pointToLocation({x: origin.x + this._width, y: origin.y + this._height}, RoundMode.Ceil);
+
+    let lines = [];
+    let totalVisibleRange = 0;
+    for (let line = end.line; line >= start.line; line--) {
+      let start = this._document.positionToLocation({line, column: 0});
+      let end = this._document.lastLocation();
+      if (line + 1 < this._document.lineCount()) {
+        let nextStartOffset = lines.length
+            ? lines[lines.length - 1].start.offset
+            : this._document.positionToOffset({line: line + 1, column: 0});
+        end = this._document.offsetToLocation(nextStartOffset - 1);
+      }
+      let from = this._document.pointToLocation({x: origin.x, y: start.y});
+      let to = this._document.pointToLocation({x: origin.x + this._width, y: start.y}, RoundMode.Ceil);
+      lines.push({line, start, end, from, to});
+      totalVisibleRange += to.offset - from.offset;
+    }
+    lines.reverse();
+
+    let diffs = [];
+    for (let i = 0; i < lines.length - 1; i++)
+      diffs[i] = {i, len: lines[i + 1].from.offset - lines[i].to.offset};
+    diffs.sort((a, b) => a.len - b.len || a.i - b.i);
+    let join = new Array(lines.length).fill(false);
+    let remaining = totalVisibleRange * 0.5;
+    for (let diff of diffs) {
+      remaining -= diff.len;
+      if (remaining < 0)
+        break;
+      join[diff.i] = true;
+    }
+
+    let ranges = [];
+    for (let i = 0; i < lines.length; i++) {
+      if (i && join[i - 1])
+        ranges[ranges.length - 1].to = lines[i].to.offset;
+      else
+        ranges.push(new Viewport.VisibleRange(this._document, lines[i].from.offset, lines[i].to.offset));
+    }
+    let range = ranges.length ? {from: ranges[0].from, to: Math.min(this._document.length(), ranges[ranges.length - 1].to)} : {from: 0, to: 0};
+
+    let visibleContent = {
+      document: this._document,
+      range: range,
+      ranges: ranges,
+      firstLine: start.line,
+      lastLine: end.line
+    };
+
+    let textDecorators = [];
+    let backgroundDecorators = [];
+    let scrollbarDecorators = [];
     for (let decorateCallback of this._decorateCallbacks) {
-      let result = decorateCallback(frame);
+      let result = decorateCallback(visibleContent);
       textDecorators.push(...(result.text || []));
       backgroundDecorators.push(...(result.background || []));
       scrollbarDecorators.push(...(result.scrollbar || []));
     }
-    const {text, background} = this._buildFrameTextAndBackground(frame, textDecorators, backgroundDecorators);
-    const lines = [];
-    for (let line of frame.lines()) {
-      lines.push({
+
+    let {text, background} = this._buildTextAndBackground(origin, lines, textDecorators, backgroundDecorators);
+    let lineInfos = [];
+    for (let line of lines) {
+      lineInfos.push({
         line: line.line,
         y: line.start.y - this._scrollTop + this._padding.top
       });
     }
-    const scrollbar = this._buildFrameScrollbar(frame, scrollbarDecorators);
-    this._document.unfreeze(Viewport._frameFreeze);
+
+    let scrollbar = this._buildScrollbar(scrollbarDecorators);
+    this._document.unfreeze(Viewport._decorateFreeze);
     this._frozen = false;
-    return {frame, text, background, scrollbar, lines};
+    return {text, background, scrollbar, lines: lineInfos};
   }
 
-  _buildFrameTextAndBackground(frame, textDecorators, backgroundDecorators) {
+  _buildTextAndBackground(origin, lines, textDecorators, backgroundDecorators) {
     const measurer = this._document.measurer();
-    const frameRight = frame.origin().x + frame.width();
+    const viewportRight = origin.x + this._width;
     const text = [];
     const background = [];
     const dx = -this._scrollLeft + this._padding.left;
     const dy = -this._scrollTop + this._padding.top;
-    for (let line of frame.lines()) {
-      let lineContent = line.content();
+    for (let line of lines) {
+      let lineContent = this._document.content(line.from.offset, line.to.offset);
       let offsetToX = new Float32Array(line.to.offset - line.from.offset + 1);
       for (let x = line.from.x, i = 0; i <= line.to.offset - line.from.offset; ) {
         offsetToX[i] = x;
@@ -289,7 +384,7 @@ export class Viewport {
           trace.count('decorations');
           // TODO: note that some editors only show selection up to line length. Setting?
           let from = decoration.from < line.from.offset ? line.from.x - 1 : offsetToX[decoration.from - line.from.offset];
-          let to = decoration.to > line.to.offset ? frameRight + 1 : offsetToX[decoration.to - line.from.offset];
+          let to = decoration.to > line.to.offset ? viewportRight + 1 : offsetToX[decoration.to - line.from.offset];
           if (from <= to) {
             background.push({
               x: from + dx,
@@ -305,7 +400,7 @@ export class Viewport {
     return {text, background};
   }
 
-  _buildFrameScrollbar(frame, scrollbarDecorators) {
+  _buildScrollbar(scrollbarDecorators) {
     const defaultHeight = this._document.measurer().defaultHeight;
     let scrollbar = [];
     for (let decorator of scrollbarDecorators) {
@@ -313,8 +408,8 @@ export class Viewport {
       let lastBottom = -1;
       decorator.sparseVisitAll(decoration => {
         trace.count('decorations');
-        const from = frame.offsetToLocation(decoration.from);
-        const to = frame.offsetToLocation(decoration.to);
+        const from = this._document.offsetToLocation(decoration.from);
+        const to = this._document.offsetToLocation(decoration.to);
 
         let top = this.vScrollbar.contentOffsetToScrollbarOffset(from.y + this._padding.top);
         let bottom = this.vScrollbar.contentOffsetToScrollbarOffset(to.y + defaultHeight + this._padding.top);
@@ -330,9 +425,9 @@ export class Viewport {
         }
 
         let nextY = this.vScrollbar.scrollbarOffsetToContentOffset(bottom) - this._padding.top;
-        let line = frame.pointToPosition({x: 0, y: nextY}).line;
+        let line = this._document.pointToPosition({x: 0, y: nextY}).line;
         line = Math.max(to.line, line);
-        return Math.max(decoration.to, frame.positionToOffset({line, column: 0}));
+        return Math.max(decoration.to, this._document.positionToOffset({line, column: 0}));
       });
       if (lastTop >= 0)
         scrollbar.push({y: lastTop, height: lastBottom - lastTop, style: decorator.style()});
@@ -355,7 +450,7 @@ export class Viewport {
   }
 }
 
-class Scrollbar {
+Viewport.Scrollbar = class {
   /**
    * @param {function(number)} scrollCallback
    */
@@ -458,4 +553,49 @@ class Scrollbar {
   }
 }
 
-Viewport._frameFreeze = Symbol('Viewport.frame');
+Viewport.VisibleRange = class {
+  /**
+   * @param {!Document} document
+   * @param {number} from
+   * @param {number} to
+   */
+  constructor(document, from, to) {
+    this._document = document;
+    this.from = from;
+    this.to = to;
+  }
+
+  /**
+   * @param {number=} paddingLeft
+   * @param {number=} paddingRight
+   * @return {string}
+   */
+  content(paddingLeft = 0, paddingRight = 0) {
+    if (!this._cache)
+      this._cache = {};
+    return cachedContent(this._document, this.from, this.to, this._cache, paddingLeft, paddingRight);
+  }
+};
+
+/**
+ * @param {!Document} document
+ * @param {number} from
+ * @param {number} to
+ * @param {{content: string, left: number, right: number}} cache
+ * @param {number} left
+ * @param {number} right
+ * @return {string}
+ */
+function cachedContent(document, from, to, cache, left, right) {
+  left = Math.min(left, from);
+  right = Math.min(right, document.length() - to);
+  if (cache._content === undefined || cache._left < left || cache._right < right) {
+    cache._left = Math.max(left, cache._left || 0);
+    cache._right = Math.max(right, cache._right || 0);
+    cache._content = document.content(from - cache._left, to + cache._right);
+  }
+  return cache._content.substring(cache._left - left,
+                                  cache._content.length - (cache._right - right));
+}
+
+Viewport._decorateFreeze = Symbol('Viewport.decorate');

@@ -59,13 +59,13 @@ This is often a case with accents.
 
   Offset is a sequential number of a single Unicode code unit (including line breaks) in the document,
   if you think of a document as an array of code units.
-  
+
   Note that offset inbetween of a surrogate pair cannot be converted to a `position` or a `point`. Similary,
   document cannot be split at such offset.
 
 * #### Position = {line: integer, column: integer}
   - `columnDelta`, `codePoints` for a column delta.
-  
+
   Position is a 2-d coordinate system based on lines and columns. Not every position is a valid one.
   For example, line `abc` has 4 positions, with columns from 0 to 3.
 
@@ -87,22 +87,22 @@ ensures that user never sees a broken code point.
 
 * #### Document
   - `offset`, `position`, `point`, `location`, `documentPoint`
-  
+
   Document coordinates are relative to the document. This is default. When you see `point`,
   it usually means point relative to the document start.
-  
+
 * #### Viewport
   - `viewportPoint`
-  
+
   Coordinates relative to the viewport - a visible part of the document.
-  
+
 * #### View
   - `viewPoint`
-  
+
   Coordinates relative to the view - something rendered as a part of editor.
   This includes not only the viewport, but also (possibly) gutters, paddings, headers, footers, etc.
   These may be different for different views, and what's included is context-dependent.
- 
+
 ---
 
 ### Extensibility
@@ -111,7 +111,7 @@ Typical plugin can be integrated at multiple points:
 * Edit document with `Document.replace`.
 * Reveal text ranges with `Viewport.reveal`.
 * Listen to document changes with `replaceCallback`.
-* Decorate viewport frames with `frameDecorationCallback`.
+* Decorate viewport with `decorationCallback`.
 * Do asynchronous work with `idleCallback`.
 * Provide content-dependent data with `setHighlighter` or `setTokenizer`.
 * Use public APIs of other plugins, e.g. `selection.setRanges`.

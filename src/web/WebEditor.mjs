@@ -128,13 +128,13 @@ export class WebEditor {
     this._renderer.removeBeforeFrameCallback(callback);
   }
 
-  addFrameDecorationCallback(callback) {
-    this._renderer.viewport().addFrameDecorationCallback(callback);
+  addDecorationCallback(callback) {
+    this._renderer.viewport().addDecorationCallback(callback);
     this.invalidate();
   }
 
-  removeFrameDecorationCallback(callback) {
-    this._renderer.viewport().removeFrameDecorationCallback(callback);
+  removeDecorationCallback(callback) {
+    this._renderer.viewport().removeDecorationCallback(callback);
     this.invalidate();
   }
 

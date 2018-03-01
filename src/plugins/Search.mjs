@@ -15,7 +15,7 @@ export class Search {
    */
   constructor(viewport, selection, onUpdate) {
     this._viewport = viewport;
-    this._viewport.addFrameDecorationCallback(this._onFrame.bind(this));
+    this._viewport.addDecorationCallback(this._onDecorate.bind(this));
     this._document = viewport.document();
     this._document.addReplaceCallback(this._onReplace.bind(this));
     this._chunkSize = 20000;
@@ -142,15 +142,15 @@ export class Search {
   // ------ Internals -------
 
   /**
-   * @param {!Frame} frame
-   * @return {!FrameDecorationResult}
+   * @param {!Viewport.VisibleContent} visibleContent
+   * @return {!Viewpor.DecorationResult}
    */
-  _onFrame(frame) {
+  _onDecorate(visibleContent) {
     if (this._rangeToProcess &&
-        this._rangeToProcess.from <= frame.range().to &&
-        this._rangeToProcess.to >= frame.range().from - this._options.query.length) {
+        this._rangeToProcess.from <= visibleContent.range.to &&
+        this._rangeToProcess.to >= visibleContent.range.from - this._options.query.length) {
       let hadCurrentMatch = !!this._currentMatch;
-      for (let range of frame.ranges()) {
+      for (let range of visibleContent.ranges) {
         let from = Math.max(0, range.from - this._options.query.length);
         let to = Math.min(range.to, this._document.length() - this._options.query.length);
         to = Math.max(from, to);
@@ -158,7 +158,7 @@ export class Search {
         this._processed({from, to});
       }
       if (!hadCurrentMatch && this._currentMatch)
-        this._selection._onFrame(frame);
+        this._selection._onDecorate(visibleContent);
     }
 
     if (this._updated) {

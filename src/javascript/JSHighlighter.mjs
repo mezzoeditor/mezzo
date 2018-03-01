@@ -6,14 +6,14 @@ export class JSHighlighter {
   constructor() {
     this._speculativeHighlight = new TextDecorator();
     this._onReplaceCallback = this._onReplace.bind(this);
-    this._onFrameCallback = this._onFrame.bind(this);
+    this._onDecorateCallback = this._onDecorate.bind(this);
   }
 
   /**
    * @param {!Viewport} viewport
    */
   install(viewport) {
-    viewport.addFrameDecorationCallback(this._onFrameCallback);
+    viewport.addDecorationCallback(this._onDecorateCallback);
     viewport.document().addReplaceCallback(this._onReplaceCallback);
   }
 
@@ -21,7 +21,7 @@ export class JSHighlighter {
    * @param {!Viewport} viewport
    */
   uninstall(viewport) {
-    viewport.removeFrameDecorationCallback(this._onFrameCallback);
+    viewport.removeDecorationCallback(this._onDecorateCallback);
     viewport.document().removeReplaceCallback(this._onReplaceCallback);
   }
 
@@ -34,13 +34,13 @@ export class JSHighlighter {
   }
 
   /**
-   * @param {!Frame} frame
-   * @return {!FrameDecorationResult}
+   * @param {!Viewport.VisibleContent} visibleContent
+   * @return {!Viewport.DecorationResult}
    */
-  _onFrame(frame) {
+  _onDecorate(visibleContent) {
     trace.beginGroup('js');
     let decorator = new TextDecorator();
-    for (let range of frame.ranges()) {
+    for (let range of visibleContent.ranges) {
       let from = range.from;
       let decoration = this._speculativeHighlight.lastTouching(from, from);
       if (decoration) {
@@ -49,7 +49,7 @@ export class JSHighlighter {
       }
 
       this._speculativeHighlight.clearTouching(from + 1, range.to);
-      let iterator = frame.document().iterator(from, from, range.to);
+      let iterator = visibleContent.document.iterator(from, from, range.to);
       let tt = new Parser({allowHashBang: true}, iterator);
       for (let token of tt) {
         if (token.type.keyword || (token.type === TokenTypes.name && token.value === 'let')) {

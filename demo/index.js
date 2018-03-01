@@ -119,7 +119,7 @@ class TokenHighlighter {
   constructor(editor) {
     this._editor = editor;
     this._token = '';
-    this._editor.addFrameDecorationCallback(this._onFrame.bind(this));
+    this._editor.addDecorationCallback(this._onDecorate.bind(this));
   }
 
   setToken(token) {
@@ -129,11 +129,11 @@ class TokenHighlighter {
     this._editor.invalidate();
   }
 
-  _onFrame(frame) {
+  _onDecorate(visibleContent) {
     if (!this._token)
       return [];
     let decorator = new TextDecorator();
-    for (let range of frame.ranges()) {
+    for (let range of visibleContent.ranges) {
       let text = range.content(this._token.length, this._token.length);
       let offset = Math.max(0, range.from - this._token.length);
       let index = text.indexOf(this._token);

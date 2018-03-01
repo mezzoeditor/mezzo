@@ -366,7 +366,7 @@ export class Renderer {
     ctx.lineWidth = 1 / this._ratio;
 
     trace.begin('frame');
-    const {text, background, scrollbar, lines} = this._viewport.createFrame();
+    const {text, background, scrollbar, lines} = this._viewport.decorate();
     trace.end('frame');
 
     trace.begin('gutter');

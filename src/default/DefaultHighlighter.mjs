@@ -2,29 +2,29 @@ import { TextDecorator } from "../core/Decorator.mjs";
 
 export class DefaultHighlighter {
   constructor() {
-    this._onFrameCallback = this._onFrame.bind(this);
+    this._onDecorateCallback = this._onDecorate.bind(this);
   }
 
   /**
    * @param {!Viewport} viewport
    */
   install(viewport) {
-    viewport.addFrameDecorationCallback(this._onFrameCallback);
+    viewport.addDecorationCallback(this._onDecorateCallback);
   }
 
   /**
    * @param {!Viewport} viewport
    */
   uninstall(viewport) {
-    viewport.removeFrameDecorationCallback(this._onFrameCallback);
+    viewport.removeDecorationCallback(this._onDecorateCallback);
   }
 
   /**
-   * @param {!Frame} frame
-   * @return {!FrameDecorationCallback}
+   * @param {!Viewport.VisibleContent} visibleContent
+   * @return {!Viewport.DecorationResult}
    */
-  _onFrame(frame) {
-    let {from, to} = frame.range();
+  _onDecorate(visibleContent) {
+    let {from, to} = visibleContent.range;
     let decorator = new TextDecorator();
     decorator.add(from, to, 'syntax.default');
     return {text: [decorator]};

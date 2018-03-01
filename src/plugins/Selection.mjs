@@ -27,7 +27,7 @@ export class Selection {
    * @param {!Viewport} viewport
    */
   constructor(viewport) {
-    viewport.addFrameDecorationCallback(this._onFrame.bind(this));
+    viewport.addDecorationCallback(this._onDecorate.bind(this));
     this._document = viewport.document();
     this._document.addReplaceCallback(this._onReplace.bind(this));
     this._rangeDecorator = new ScrollbarDecorator('selection.range');
@@ -357,10 +357,10 @@ export class Selection {
   // -------- Internals --------
 
   /**
-   * @param {!Frame} frame
-   * @return {!FrameDecorationCallback}
+   * @param {!Viewport.VisibleContent} visibleContent
+   * @return {!Viewport.DecorationResult}
    */
-  _onFrame(frame) {
+  _onDecorate(visibleContent) {
     if (this._staleDecorations) {
       this._staleDecorations = false;
       this._rangeDecorator.clearAll();
