@@ -1,4 +1,3 @@
-import { Frame } from "../core/Frame.mjs";
 import { RoundMode, Unicode } from "../core/Unicode.mjs";
 import { Viewport } from "../core/Viewport.mjs";
 import { trace } from "../core/Trace.mjs";
@@ -32,7 +31,6 @@ class ContextBasedMetrics {
 const MIN_THUMB_SIZE = 30;
 const GUTTER_PADDING_LEFT_RIGHT = 4;
 const SCROLLBAR_WIDTH = 15;
-const kMinScrollbarDecorationHeight = 5;
 
 const MouseDownStates = {
   VSCROLL_DRAG: 'VSCROLL_DRAG',
@@ -368,7 +366,7 @@ export class Renderer {
     ctx.lineWidth = 1 / this._ratio;
 
     trace.begin('frame');
-    const {frame, text, background, scrollbarDecorators, lines} = this._viewport.createFrame();
+    const {text, background, scrollbar, lines} = this._viewport.createFrame();
     trace.end('frame');
 
     trace.begin('gutter');
@@ -392,13 +390,11 @@ export class Renderer {
 
     trace.beginGroup('scrollbar');
     ctx.save();
-    this._drawScrollbarMarkers(ctx, frame, scrollbarDecorators, this._vScrollbar.rect, this._viewport.vScrollbar);
+    this._drawScrollbarMarkers(ctx, scrollbar, this._vScrollbar.rect);
     this._drawScrollbar(ctx, this._vScrollbar, true /* isVertical */);
     this._drawScrollbar(ctx, this._hScrollbar, false /* isVertical */);
     ctx.restore();
     trace.endGroup('scrollbar');
-
-    frame.cleanup();
 
     this._rendering = false;
     trace.endGroup('render', 50);
@@ -487,48 +483,15 @@ export class Renderer {
     ctx.fillRect(scrollbar.thumbRect.x, scrollbar.thumbRect.y, scrollbar.thumbRect.width, scrollbar.thumbRect.height);
   }
 
-  _drawScrollbarMarkers(ctx, frame, scrollbarDecorators, rect, scrollbar) {
-    for (let decorator of scrollbarDecorators) {
-      const styleName = decorator.style();
-      if (!styleName)
+  _drawScrollbarMarkers(ctx, scrollbar, rect) {
+    for (let {y, height, style} of scrollbar) {
+      const theme = this._theme[style];
+      if (!theme || !theme.scrollbar || !theme.scrollbar.color)
         continue;
-      const style = this._theme[styleName];
-      if (!style || !style.scrollbar || !style.scrollbar.color)
-        continue;
-      ctx.fillStyle = style.scrollbar.color;
-      let left = Math.round(rect.width * (style.scrollbar.left || 0) / 100);
-      let right = Math.round(rect.width * (style.scrollbar.right || 100) / 100);
-
-      let lastTop = -1;
-      let lastBottom = -1;
-      decorator.sparseVisitAll(decoration => {
-        trace.count('decorations');
-        const from = frame.offsetToLocation(decoration.from);
-        const to = frame.offsetToLocation(decoration.to);
-
-        let top = scrollbar.contentOffsetToScrollbarOffset(this._viewport.documentPointToViewPoint(from).y);
-        let bottom = scrollbar.contentOffsetToScrollbarOffset(this._viewport.documentPointToViewPoint({
-          x: 0,
-          y: to.y + this._metrics.lineHeight
-        }).y);
-        bottom = Math.max(bottom, top + kMinScrollbarDecorationHeight);
-
-        if (top <= lastBottom) {
-          lastBottom = bottom;
-        } else {
-          if (lastTop >= 0)
-            ctx.fillRect(rect.x + left, rect.y + lastTop, right - left, lastBottom - lastTop);
-          lastTop = top;
-          lastBottom = bottom;
-        }
-
-        let nextY = this._viewport.viewPointToDocumentPoint({x: 0, y: scrollbar.scrollbarOffsetToContentOffset(bottom)}).y;
-        let line = frame.pointToPosition({x: 0, y: nextY}).line;
-        line = Math.max(to.line, line);
-        return Math.max(decoration.to, frame.positionToOffset({line, column: 0}));
-      });
-      if (lastTop >= 0)
-        ctx.fillRect(rect.x + left, rect.y + lastTop, right - left, lastBottom - lastTop);
+      ctx.fillStyle = theme.scrollbar.color;
+      let left = Math.round(rect.width * (theme.scrollbar.left || 0) / 100);
+      let right = Math.round(rect.width * (theme.scrollbar.right || 100) / 100);
+      ctx.fillRect(rect.x + left, rect.y + y, right - left, height);
     }
   }
 }

@@ -9,6 +9,8 @@ import {trace} from './Trace.mjs';
  * }} FrameDecorationResult
  */
 
+ const kMinScrollbarDecorationHeight = 5;
+
 /**
  * Viewport class abstracts the window that peeks onto a part of the
  * document. Viewport supports padding around text to implement overscrolling.
@@ -207,7 +209,7 @@ export class Viewport {
    *     frame: !Frame,
    *     text: !Array<!Viewport.TextInfo>,
    *     background: !Array<!Viewport.BackgroundInfo>,
-   *     scrollbarDecorators: !Array<!ScrollbarDecorator>,
+   *     scrollbar: !Array<!Viewport.ScrollbarInfo>,
    *     lines: !Array<!Viewport.LineInfo>
    * }}
    */
@@ -233,9 +235,10 @@ export class Viewport {
         y: line.start.y - this._scrollTop + this._padding.top
       });
     }
+    const scrollbar = this._buildFrameScrollbar(frame, scrollbarDecorators);
     this._document.unfreeze(Viewport._frameFreeze);
     this._frozen = false;
-    return {frame, text, background, scrollbarDecorators, lines};
+    return {frame, text, background, scrollbar, lines};
   }
 
   _buildFrameTextAndBackground(frame, textDecorators, backgroundDecorators) {
@@ -300,6 +303,41 @@ export class Viewport {
     }
 
     return {text, background};
+  }
+
+  _buildFrameScrollbar(frame, scrollbarDecorators) {
+    const defaultHeight = this._document.measurer().defaultHeight;
+    let scrollbar = [];
+    for (let decorator of scrollbarDecorators) {
+      let lastTop = -1;
+      let lastBottom = -1;
+      decorator.sparseVisitAll(decoration => {
+        trace.count('decorations');
+        const from = frame.offsetToLocation(decoration.from);
+        const to = frame.offsetToLocation(decoration.to);
+
+        let top = this.vScrollbar.contentOffsetToScrollbarOffset(from.y + this._padding.top);
+        let bottom = this.vScrollbar.contentOffsetToScrollbarOffset(to.y + defaultHeight + this._padding.top);
+        bottom = Math.max(bottom, top + kMinScrollbarDecorationHeight);
+
+        if (top <= lastBottom) {
+          lastBottom = bottom;
+        } else {
+          if (lastTop >= 0)
+            scrollbar.push({y: lastTop, height: lastBottom - lastTop, style: decorator.style()});
+          lastTop = top;
+          lastBottom = bottom;
+        }
+
+        let nextY = this.vScrollbar.scrollbarOffsetToContentOffset(bottom) - this._padding.top;
+        let line = frame.pointToPosition({x: 0, y: nextY}).line;
+        line = Math.max(to.line, line);
+        return Math.max(decoration.to, frame.positionToOffset({line, column: 0}));
+      });
+      if (lastTop >= 0)
+        scrollbar.push({y: lastTop, height: lastBottom - lastTop, style: decorator.style()});
+    }
+    return scrollbar;
   }
 
   _recompute() {

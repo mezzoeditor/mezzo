@@ -183,14 +183,6 @@ export class Frame {
   pointToPosition(point) {
     return this._document.pointToPosition(point);
   }
-
-  cleanup() {
-    delete this._cache;
-    for (let line of this._lines)
-      delete line._cache;
-    for (let range of this._ranges)
-      delete range._cache;
-  }
 }
 
 Frame.Range = class {
