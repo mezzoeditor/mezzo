@@ -1,4 +1,5 @@
 import {Frame} from './Frame.mjs';
+import {trace} from './Trace.mjs';
 
 /**
  * @typdef {{
@@ -8,7 +9,7 @@ import {Frame} from './Frame.mjs';
  * }} FrameDecorationResult
  */
 
- /**
+/**
  * Viewport class abstracts the window that peeks onto a part of the
  * document. Viewport supports padding around text to implement overscrolling.
  *
@@ -202,25 +203,103 @@ export class Viewport {
   }
 
   /**
-   * @return {!{frame: !Frame, text: !Array<!TextDecorator>, background: !Array<!TextDecorator>, scrollbar: !Array<!ScrollbarDecorator>}}
+   * @return {!{
+   *     frame: !Frame,
+   *     text: !Array<!Viewport.TextInfo>,
+   *     background: !Array<!Viewport.BackgroundInfo>,
+   *     scrollbarDecorators: !Array<!ScrollbarDecorator>,
+   *     lines: !Array<!Viewport.LineInfo>
+   * }}
    */
   createFrame() {
     this._frozen = true;
     this._document.freeze(Viewport._frameFreeze);
     let frameOrigin = this.viewportPointToDocumentPoint({x: 0, y: 0});
     const frame = new Frame(this._document, frameOrigin, this._width, this._height);
-    const text = [];
-    const background = [];
-    const scrollbar = [];
+    const textDecorators = [];
+    const backgroundDecorators = [];
+    const scrollbarDecorators = [];
     for (let decorateCallback of this._decorateCallbacks) {
       let result = decorateCallback(frame);
-      text.push(...(result.text || []));
-      background.push(...(result.background || []));
-      scrollbar.push(...(result.scrollbar || []));
+      textDecorators.push(...(result.text || []));
+      backgroundDecorators.push(...(result.background || []));
+      scrollbarDecorators.push(...(result.scrollbar || []));
+    }
+    const {text, background} = this._buildFrameTextAndBackground(frame, textDecorators, backgroundDecorators);
+    const lines = [];
+    for (let line of frame.lines()) {
+      lines.push({
+        line: line.line,
+        y: line.start.y - this._scrollTop + this._padding.top
+      });
     }
     this._document.unfreeze(Viewport._frameFreeze);
     this._frozen = false;
-    return {frame, text, background, scrollbar};
+    return {frame, text, background, scrollbarDecorators, lines};
+  }
+
+  _buildFrameTextAndBackground(frame, textDecorators, backgroundDecorators) {
+    const measurer = this._document.measurer();
+    const frameRight = frame.origin().x + frame.width();
+    const text = [];
+    const background = [];
+    const dx = -this._scrollLeft + this._padding.left;
+    const dy = -this._scrollTop + this._padding.top;
+    for (let line of frame.lines()) {
+      let lineContent = line.content();
+      let offsetToX = new Float32Array(line.to.offset - line.from.offset + 1);
+      for (let x = line.from.x, i = 0; i <= line.to.offset - line.from.offset; ) {
+        offsetToX[i] = x;
+        if (i < lineContent.length) {
+          let charCode = lineContent.charCodeAt(i);
+          if (charCode >= 0xD800 && charCode <= 0xDBFF && i + 1 < lineContent.length) {
+            offsetToX[i + 1] = x;
+            x += measurer.measureSupplementaryCodePoint(lineContent.codePointAt(i));
+            i += 2;
+          } else {
+            x += measurer.measureBMPCodePoint(charCode);
+            i++;
+          }
+        } else {
+          i++;
+        }
+      }
+
+      for (let decorator of textDecorators) {
+        decorator.visitTouching(line.from.offset, line.to.offset, decoration => {
+          trace.count('decorations');
+          let from = Math.max(line.from.offset, decoration.from);
+          let to = Math.min(line.to.offset, decoration.to);
+          if (from < to) {
+            text.push({
+              x: offsetToX[from - line.from.offset] + dx,
+              y: line.start.y + dy,
+              content: lineContent.substring(from - line.from.offset, to - line.from.offset),
+              style: decoration.data
+            });
+          }
+        });
+      }
+
+      for (let decorator of backgroundDecorators) {
+        decorator.visitTouching(line.from.offset, line.to.offset, decoration => {
+          trace.count('decorations');
+          // TODO: note that some editors only show selection up to line length. Setting?
+          let from = decoration.from < line.from.offset ? line.from.x - 1 : offsetToX[decoration.from - line.from.offset];
+          let to = decoration.to > line.to.offset ? frameRight + 1 : offsetToX[decoration.to - line.from.offset];
+          if (from <= to) {
+            background.push({
+              x: from + dx,
+              y: line.start.y + dy,
+              width: to - from,
+              style: decoration.data
+            });
+          }
+        });
+      }
+    }
+
+    return {text, background};
   }
 
   _recompute() {

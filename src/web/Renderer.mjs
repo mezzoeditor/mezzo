@@ -368,7 +368,7 @@ export class Renderer {
     ctx.lineWidth = 1 / this._ratio;
 
     trace.begin('frame');
-    const {frame, text, background, scrollbar} = this._viewport.createFrame();
+    const {frame, text, background, scrollbarDecorators, lines} = this._viewport.createFrame();
     trace.end('frame');
 
     trace.begin('gutter');
@@ -376,7 +376,7 @@ export class Renderer {
     ctx.beginPath();
     ctx.rect(this._gutterRect.x, this._gutterRect.y, this._gutterRect.width, this._gutterRect.height);
     ctx.clip();
-    this._drawGutter(ctx, frame);
+    this._drawGutter(ctx, lines);
     ctx.restore();
     trace.end('gutter');
 
@@ -385,17 +385,14 @@ export class Renderer {
     ctx.beginPath();
     ctx.rect(this._editorRect.x, this._editorRect.y, this._editorRect.width, this._editorRect.height);
     ctx.clip();
-    let textOrigin = this._viewport.documentPointToViewportPoint({x: 0, y: 0});
-    textOrigin.x += this._editorRect.x;
-    textOrigin.y += this._editorRect.y;
-    ctx.translate(textOrigin.x, textOrigin.y);
-    this._drawText(ctx, frame, text, background);
+    ctx.translate(this._editorRect.x, this._editorRect.y);
+    this._drawTextAndBackground(ctx, text, background);
     ctx.restore();
     trace.endGroup('text');
 
     trace.beginGroup('scrollbar');
     ctx.save();
-    this._drawScrollbarMarkers(ctx, frame, scrollbar, this._vScrollbar.rect, this._viewport.vScrollbar);
+    this._drawScrollbarMarkers(ctx, frame, scrollbarDecorators, this._vScrollbar.rect, this._viewport.vScrollbar);
     this._drawScrollbar(ctx, this._vScrollbar, true /* isVertical */);
     this._drawScrollbar(ctx, this._hScrollbar, false /* isVertical */);
     ctx.restore();
@@ -407,8 +404,7 @@ export class Renderer {
     trace.endGroup('render', 50);
   }
 
-  _drawGutter(ctx, frame) {
-    const textOffset = this._metrics.textOffset;
+  _drawGutter(ctx, lines) {
     ctx.fillStyle = '#eee';
     ctx.fillRect(0, 0, this._gutterRect.width, this._gutterRect.height);
     ctx.strokeStyle = 'rgb(187, 187, 187)';
@@ -418,101 +414,58 @@ export class Renderer {
     ctx.lineTo(this._gutterRect.width, this._gutterRect.height);
     ctx.stroke();
 
-    const textOrigin = this._viewport.documentPointToViewportPoint({x: 0, y: 0});
-    ctx.translate(0, textOrigin.y);
     ctx.textAlign = 'right';
     ctx.fillStyle = 'rgb(128, 128, 128)';
+    const textOffset = this._metrics.textOffset;
     const textX = this._gutterRect.width - GUTTER_PADDING_LEFT_RIGHT;
-    for (let line of frame.lines()) {
-      const number = (line.line + 1) + '';
-      ctx.fillText(number, textX, line.start.y + textOffset);
+    for (let {line, y} of lines) {
+      const number = (line + 1) + '';
+      ctx.fillText(number, textX, y + textOffset);
     }
   }
 
-  _drawText(ctx, frame, textDecorators, backgroundDecorators) {
+  _drawTextAndBackground(ctx, text, background) {
     const lineHeight = this._metrics.lineHeight;
     const textOffset = this._metrics.textOffset;
-    const lines = frame.lines();
-    const frameRight = frame.origin().x + frame.width();
 
-    for (let line of lines) {
-      let lineContent = line.content();
-      let offsetToX = new Float32Array(line.to.offset - line.from.offset + 1);
-      for (let x = line.from.x, i = 0; i <= line.to.offset - line.from.offset; ) {
-        offsetToX[i] = x;
-        if (i < lineContent.length) {
-          let charCode = lineContent.charCodeAt(i);
-          if (charCode >= 0xD800 && charCode <= 0xDBFF && i + 1 < lineContent.length) {
-            offsetToX[i + 1] = x;
-            x += this._metrics.measurer.measureSupplementaryCodePoint(lineContent.codePointAt(i));
-            i += 2;
-          } else {
-            x += this._metrics.measurer.measureBMPCodePoint(charCode);
-            i++;
-          }
+    for (let {x, y, content, style} of text) {
+      const theme = this._theme[style];
+      if (theme && theme.text) {
+        ctx.fillStyle = theme.text.color || 'rgb(33, 33, 33)';
+        ctx.fillText(content, x, y + textOffset);
+      }
+    }
+
+    for (let {x, y, width, style} of background) {
+      const theme = this._theme[style];
+      if (!theme)
+        continue;
+
+      if (theme.background && theme.background.color) {
+        ctx.fillStyle = theme.background.color;
+        ctx.fillRect(x, y, width, lineHeight);
+      }
+
+      if (theme.border) {
+        // TODO: lines of width not divisble by ratio should be snapped by 1 / ratio.
+        // Note: border decorations spanning multiple lines are not supported,
+        // and we silently crop them per line.
+        ctx.strokeStyle = theme.border.color || 'transparent';
+        ctx.lineWidth = (theme.border.width || 1) / this._ratio;
+
+        ctx.beginPath();
+        if (!width) {
+          ctx.moveTo(x, y);
+          ctx.lineTo(x, y + lineHeight);
         } else {
-          i++;
+          // TODO: border.radius should actually clip background.
+          const radius = Math.min(theme.border.radius || 0, Math.min(lineHeight, width) / 2) / this._ratio;
+          if (radius)
+            roundRect(ctx, x, y, width, lineHeight, radius);
+          else
+            ctx.rect(x, y, width, lineHeight);
         }
-      }
-
-      for (let decorator of textDecorators) {
-        decorator.visitTouching(line.from.offset, line.to.offset, decoration => {
-          trace.count('decorations');
-          const style = this._theme[decoration.data];
-          if (!style || !style.text)
-            return;
-          ctx.fillStyle = style.text.color || 'rgb(33, 33, 33)';
-          let from = Math.max(line.from.offset, decoration.from);
-          let to = Math.min(line.to.offset, decoration.to);
-          if (from < to) {
-            let text = lineContent.substring(from - line.from.offset, to - line.from.offset);
-            ctx.fillText(text, offsetToX[from - line.from.offset], line.start.y + textOffset);
-          }
-        });
-      }
-
-      for (let decorator of backgroundDecorators) {
-        decorator.visitTouching(line.from.offset, line.to.offset, decoration => {
-          trace.count('decorations');
-          const style = this._theme[decoration.data];
-          if (!style)
-            return;
-
-          // TODO: note that some editors only show selection up to line length. Setting?
-          if (style.background && style.background.color) {
-            ctx.fillStyle = style.background.color;
-            let from = decoration.from < line.from.offset ? line.from.x : offsetToX[decoration.from - line.from.offset];
-            let to = decoration.to > line.to.offset ? frameRight : offsetToX[decoration.to - line.from.offset];
-            if (from <= to)
-              ctx.fillRect(from, line.start.y, to - from, lineHeight);
-          }
-
-          // TODO: lines of width not divisble by ratio should be snapped by 1 / ratio.
-          if (style.border) {
-            ctx.strokeStyle = style.border.color || 'transparent';
-            ctx.lineWidth = (style.border.width || 1) / this._ratio;
-
-            // Note: border decorations spanning multiple lines are not supported,
-            // and we silently crop them here.
-            let from = decoration.from < line.from.offset ? line.from.x - 1 : offsetToX[decoration.from - line.from.offset];
-            let to = decoration.to > line.to.offset ? frameRight + 1 : offsetToX[decoration.to - line.from.offset];
-
-            ctx.beginPath();
-            if (from === to) {
-              ctx.moveTo(from, line.start.y);
-              ctx.lineTo(from, line.start.y + lineHeight);
-            } else {
-              const width = to - from;
-              // TODO: border.radius should actually clip background.
-              const radius = Math.min(style.border.radius || 0, Math.min(lineHeight, width) / 2) / this._ratio;
-              if (radius)
-                roundRect(ctx, from, line.start.y, width, lineHeight, radius);
-              else
-                ctx.rect(from, line.start.y, width, lineHeight);
-            }
-            ctx.stroke();
-          }
-        });
+        ctx.stroke();
       }
     }
   }
