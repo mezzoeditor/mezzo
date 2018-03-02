@@ -52,12 +52,5 @@ export class Parser {
     // Figure out if it's a module code.
     this.inModule = options.sourceType === "module"
     this.strict = this.inModule
-
-    // Flags to track whether we are in a function, a generator, an async function.
-    this.inFunction = this.inGenerator = this.inAsync = false
-    // Positions to delayed-check that yield/await does not exist in default parameters.
-    this.yieldPos = this.awaitPos = 0
-    // Labels in scope.
-    this.labels = []
   }
 }
