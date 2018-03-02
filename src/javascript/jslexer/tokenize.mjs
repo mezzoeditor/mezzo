@@ -12,7 +12,7 @@ export class Token {
     this.type = p.type
     this.value = p.value
     this.start = p.startOffset
-    this.end = p.end
+    this.end = p.endOffset
   }
 }
 
@@ -23,7 +23,7 @@ const pp = Parser.prototype
 // Move to the next token
 
 pp.getToken = function() {
-  this.lastTokEnd = this.end;
+  this.lastTokEnd = this.endOffset;
   this.nextToken()
   return new Token(this)
 }
@@ -134,7 +134,7 @@ pp.skipSpace = function() {
 
 pp.finishToken = function(type, val) {
   let prevType = this.type
-  this.end = this.it.offset;
+  this.endOffset = this.it.offset;
   this.type = type
   this.value = val
   this.updateContext(prevType)
