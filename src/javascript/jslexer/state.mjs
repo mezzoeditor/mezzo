@@ -1,4 +1,4 @@
-import {reservedWords, keywords} from "./identifier.mjs"
+import {keywords} from "./identifier.mjs"
 import {types as tt} from "./tokentype.mjs"
 import {getOptions} from "./options.mjs"
 
@@ -10,16 +10,6 @@ export class Parser {
   constructor(options, iterator) {
     this.options = options = getOptions(options)
     this.keywords = keywordRegexp(keywords[options.ecmaVersion >= 6 ? 6 : 5])
-    let reserved = ""
-    if (!options.allowReserved) {
-      for (let v = options.ecmaVersion;; v--)
-        if (reserved = reservedWords[v]) break
-      if (options.sourceType == "module") reserved += " await"
-    }
-    this.reservedWords = keywordRegexp(reserved)
-    let reservedStrict = (reserved ? reserved + " " : "") + reservedWords.strict
-    this.reservedWordsStrict = keywordRegexp(reservedStrict)
-    this.reservedWordsStrictBind = keywordRegexp(reservedStrict + " " + reservedWords.strictBind)
 
     this.it = iterator;
 

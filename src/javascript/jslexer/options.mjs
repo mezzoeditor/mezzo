@@ -11,11 +11,6 @@ export const defaultOptions = {
   // Can be either `"script"` or `"module"`. This influences global
   // strict mode and parsing of `import` and `export` declarations.
   sourceType: "script",
-  // By default, reserved words are only enforced if ecmaVersion >= 5.
-  // Set `allowReserved` to a boolean value to explicitly turn this on
-  // an off. When this option has the value "never", reserved words
-  // and keywords can also not be used as property names.
-  allowReserved: null,
   // When enabled, hashbang directive in the beginning of file
   // is allowed and treated as a line comment.
   allowHashBang: false,
@@ -31,9 +26,5 @@ export function getOptions(opts) {
 
   if (options.ecmaVersion >= 2015)
     options.ecmaVersion -= 2009
-
-  if (options.allowReserved == null)
-    options.allowReserved = options.ecmaVersion < 5
-
   return options
 }
