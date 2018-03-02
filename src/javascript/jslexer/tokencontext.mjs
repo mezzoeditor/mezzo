@@ -32,7 +32,7 @@ export const types = {
 const pp = Parser.prototype
 
 pp.initialContext = function() {
-  return [types.b_stat]
+  return types.b_stat;
 }
 
 pp.braceIsBlock = function(prevType) {
