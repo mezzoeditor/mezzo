@@ -54,7 +54,7 @@ export class JSHighlighter {
       for (let token of tt) {
         if (token.type.keyword || (token.type === TokenTypes.name && token.value === 'let')) {
           decorator.add(token.start, token.end, 'syntax.keyword');
-        } else if (token.type === TokenTypes.string || token.type === TokenTypes.regexp || token.type === TokenTypes.template || token.type === TokenTypes.invalidTemplate) {
+        } else if (token.type === TokenTypes.string || token.type === TokenTypes.regexp || token.type === TokenTypes.template) {
           decorator.add(token.start, token.end, 'syntax.string');
           this._speculativeHighlight.add(token.start, token.end, 'syntax.string');
         } else if (token.type === TokenTypes.num) {

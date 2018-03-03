@@ -457,23 +457,6 @@ pp.readString = function(quote) {
 
 // Reads template string tokens.
 
-const INVALID_TEMPLATE_ESCAPE_ERROR = {}
-
-pp.tryReadTemplateToken = function() {
-  this.inTemplateElement = true
-  try {
-    this.readTmplToken()
-  } catch (err) {
-    if (err === INVALID_TEMPLATE_ESCAPE_ERROR) {
-      this.readInvalidTemplateToken()
-    } else {
-      throw err
-    }
-  }
-
-  this.inTemplateElement = false
-}
-
 pp.readTmplToken = function() {
   for (;;) {
     if (this.it.outOfBounds()) {
@@ -482,7 +465,7 @@ pp.readTmplToken = function() {
 
     let ch = this.it.charCodeAt(0)
     if (ch === 96 || ch === 36 && this.it.charCodeAt(1) === 123) { // '`', '${'
-      if (this.it.offset === this.startOffset && (this.type === tt.template || this.type === tt.invalidTemplate)) {
+      if (this.it.offset === this.startOffset && (this.type === tt.template)) {
         if (ch === 36) {
           this.it.advance(2);
           return this.finishToken(tt.dollarBraceL)
@@ -509,29 +492,6 @@ pp.readTmplToken = function() {
       this.it.next();
     }
   }
-}
-
-// Reads a template token to search for the end, without validating any escape sequences
-pp.readInvalidTemplateToken = function() {
-  for (; !this.it.outOfBounds(); this.it.next()) {
-    switch (this.it.current) {
-    case "\\":
-      this.it.next();
-      break
-
-    case "$":
-      if (this.it.charAt(1) !== "{") {
-        break
-      }
-    // falls through
-
-    case "`":
-      return this.finishToken(tt.invalidTemplate)
-
-    // no default
-    }
-  }
-  return this.finishToken(tt.invalid);
 }
 
 // Used to read escaped characters
