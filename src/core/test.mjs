@@ -380,6 +380,16 @@ describe('Text.Iterator', () => {
     expect(iterator.offset).toBe(3);
     expect(iterator.current).toBe(undefined);
   });
+  it('Text.Iteratof.find unsuccessful across chunks', () => {
+    Text.test.setDefaultChunkSize(5);
+    let defaultMeasurer = createDefaultMeasurer();
+    let text = Text.withContent('/*-------------------------------------*/', defaultMeasurer);
+    let iterator = text.iterator(0, 0, 8);
+    expect(iterator.find('*/')).toBe(false);
+    expect(iterator.offset).toBe(8);
+    expect(iterator.current).toBe(undefined);
+    Text.test.restoreChunkSize();
+  });
 
   it('Text.Iterator constraints', () => {
     let defaultMeasurer = createDefaultMeasurer();

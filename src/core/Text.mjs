@@ -836,6 +836,7 @@ Text.Iterator = class {
       if (!this._iterator.next()) {
         this._pos = this._chunk.length;
         this.current = undefined;
+        this.offset = this._to;
         return false;
       }
       this._chunk = this._iterator.node().chunk;
@@ -955,3 +956,9 @@ Text.test.fromChunks = function(chunks, measurer) {
 Text.test.setDefaultChunkSize = function(chunkSize) {
   kDefaultChunkSize = chunkSize;
 };
+
+const savedDefaultChunkSize = kDefaultChunkSize;
+
+Text.test.restoreChunkSize = function() {
+  kDefaultChunkSize = savedDefaultChunkSize;
+}
