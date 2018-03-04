@@ -36,8 +36,18 @@ pp.getToken = function() {
   if (this.pendingToken) {
     const pendingToken = this.pendingToken;
     this.pendingToken = null;
-    this.it.reset(pendingToken.startOffset);
-    this.nextToken()
+    if (pendingToken.type === tt.blockComment && pendingToken.recoveryInfo) {
+      this.readBlockComment(pendingToken.recoveryInfo /* recoveryOffset */);
+    } else if (pendingToken.type === tt.lineComment && pendingToken.recoveryInfo) {
+      this.readLineComment(0, pendingToken.recoveryInfo /* recoveryOffset */);
+    } else if (pendingToken.type === tt.string && pendingToken.recoveryInfo) {
+      this.readString('', pendingToken.recoveryInfo);
+    } else if (pendingToken.type === tt.template && pendingToken.recoveryInfo) {
+      this.readTmplToken('', pendingToken.recoveryInfo /* recoveryOffset */);
+    } else {
+      this.it.reset(pendingToken.startOffset);
+      this.nextToken()
+    }
   } else {
     this.lastTokEnd = this.endOffset;
     this.nextToken()
@@ -102,21 +112,32 @@ pp.fullCharCodeAtPos = function() {
   return (code << 10) + next - 0x35fdc00
 }
 
-pp.readBlockComment = function() {
-  this.it.advance(2);
-  if (this.it.find("*/"))
+pp.readBlockComment = function(recoveryOffset) {
+  // Recovery offset can never be 0
+  if (recoveryOffset)
+    this.it.reset(recoveryOffset);
+  else
     this.it.advance(2);
-  return this.finishToken(tt.blockComment);
+  let commentClosed = this.it.find("*/");
+  recoveryOffset = this.it.offset;
+  if (commentClosed)
+    this.it.advance(2);
+  return this.finishToken(tt.blockComment, undefined, recoveryOffset);
 }
 
-pp.readLineComment = function(startSkip) {
-  this.it.advance(startSkip);
+pp.readLineComment = function(startSkip, recoveryOffset) {
+  if (recoveryOffset)
+    this.it.reset(recoveryOffset);
+  else
+    this.it.advance(startSkip);
   let ch = this.it.charCodeAt(0)
+  recoveryOffset = this.it.offset;
   while (!this.it.outOfBounds() && !isNewLine(ch)) {
+    recoveryOffset = this.it.offset;
     this.it.next();
     ch = this.it.charCodeAt(0)
   }
-  return this.finishToken(tt.lineComment);
+  return this.finishToken(tt.lineComment, undefined, recoveryOffset);
 }
 
 // Called at the start of the parse and after every token. Skips
@@ -151,13 +172,14 @@ pp.skipSpace = function() {
 // the token, so that the next one's `start` will point at the
 // right position.
 
-pp.finishToken = function(type, val) {
+pp.finishToken = function(type, val, recoveryInfo) {
   // If this is the last token, we should not commit to its reading because it might
   // change.
   if (this.it.outOfBounds()) {
     this.pendingToken = {
       endOffset: this.it.offset,
       startOffset: this.startOffset,
+      recoveryInfo: recoveryInfo,
       type: type,
       value: val
     };
@@ -465,37 +487,46 @@ function codePointToString(code) {
   return String.fromCharCode((code >> 10) + 0xD800, (code & 1023) + 0xDC00)
 }
 
-pp.readString = function(quote) {
-  this.it.next()
+pp.readString = function(quote, recoveryInfo) {
+  if (recoveryInfo) {
+    quote = recoveryInfo.quote;
+    this.it.reset(recoveryInfo.offset);
+  } else {
+    this.it.next()
+  }
+  let recoveryOffset = this.it.offset;
   for (;;) {
     if (this.it.outOfBounds()) {
-      return this.finishToken(tt.string);
+      return this.finishToken(tt.string, undefined, {quote, offset: recoveryOffset});
     }
+    recoveryOffset = this.it.offset;
     let ch = this.it.charCodeAt(0)
     if (ch === quote) break
     if (ch === 92) { // '\'
       this.readEscapedChar()
     } else {
       if (isNewLine(ch))
-        return this.finishToken(tt.string);
+        return this.finishToken(tt.string, undefined, {quote, offset: recoveryOffset});
       this.it.next()
     }
   }
   this.it.next();
-  return this.finishToken(tt.string)
+  return this.finishToken(tt.string, undefined, {quote, offset: recoveryOffset})
 }
 
 // Reads template string tokens.
 
 pp.readTmplToken = function() {
+  let recoveryOffset = this.it.offset;
   for (;;) {
+    recoveryOffset = this.it.offset;
     if (this.it.outOfBounds()) {
-      return this.finishToken(tt.template);
+      return this.finishToken(tt.template, undefined, recoveryOffset);
     }
 
     let ch = this.it.charCodeAt(0)
     if (ch === 96 || ch === 36 && this.it.charCodeAt(1) === 123) { // '`', '${'
-      if (this.it.offset === this.startOffset && (this.type === tt.template)) {
+      if (this.it.offset === this.startOffset && this.type === tt.template) {
         if (ch === 36) {
           this.it.advance(2);
           return this.finishToken(tt.dollarBraceL)
@@ -504,7 +535,7 @@ pp.readTmplToken = function() {
           return this.finishToken(tt.backQuote)
         }
       }
-      return this.finishToken(tt.template)
+      return this.finishToken(tt.template, undefined, recoveryOffset)
     }
     if (ch === 92) { // '\'
       this.readEscapedChar()

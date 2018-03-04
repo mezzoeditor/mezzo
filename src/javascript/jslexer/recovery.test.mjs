@@ -38,7 +38,7 @@ for (let typeName of Object.keys(TokenTypes)) {
 }
 
 describe('Recovery', () => {
-  it('should re-parse last token when iterator updated', () => {
+  it('should re-parse last token', () => {
     let document = new Document(() => {});
     document.reset('function');
     let parser = new Parser({allowHashBang: true}, document.iterator(0, 0, 4));
@@ -55,6 +55,79 @@ describe('Recovery', () => {
     expect(getTokens(parser)).toEqual([
       { name: 'keyword', start: 0, end: 8 }
     ]);
+  });
+  // NOTE: this test will work O(N^2) and will hang if parser
+  // recovery doesn't work.
+  it('should re-parse last block comment in O(N) time', () => {
+    let document = new Document(() => {});
+    // 10Mb comment
+    const N = 1024 * 1024 * 10;
+    let longComment = '/*' + (new Array(N).fill(' ').join('')) + '*/';
+    document.reset(longComment);
+    const CHUNK = 1024;
+    let parser = new Parser({allowHashBang: true}, document.iterator(0));
+    for (let rightBorder = 4; rightBorder < N + 4; rightBorder += CHUNK) {
+      let iterator = document.iterator(parser.it.offset, 0, rightBorder);
+      parser.setIterator(iterator);
+      expect(getTokens(parser)).toEqual([
+        { name: 'blockComment', start: 0, end: rightBorder }
+      ]);
+    }
+  });
+  // NOTE: this test will work O(N^2) and will hang if parser
+  // recovery doesn't work.
+  it('should re-parse last line comment in O(N) time', () => {
+    let document = new Document(() => {});
+    // 10Mb comment
+    const N = 1024 * 1024 * 10;
+    let longComment = '//' + (new Array(N).fill(' ').join(''));
+    document.reset(longComment);
+    const CHUNK = 1024;
+    let parser = new Parser({allowHashBang: true}, document.iterator(0));
+    for (let rightBorder = 2; rightBorder < N + 2; rightBorder += CHUNK) {
+      let iterator = document.iterator(parser.it.offset, 0, rightBorder);
+      parser.setIterator(iterator);
+      expect(getTokens(parser)).toEqual([
+        { name: 'lineComment', start: 0, end: rightBorder }
+      ]);
+    }
+  });
+  // NOTE: this test will work O(N^2) and will hang if parser
+  // recovery doesn't work.
+  it('should re-parse last string token in O(N) time', () => {
+    let document = new Document(() => {});
+    // 10Mb comment
+    const N = 1024 * 1024 * 10;
+    let longString = '"' + (new Array(N).fill(' ').join('')) + '"';
+    document.reset(longString);
+    const CHUNK = 1024;
+    let parser = new Parser({allowHashBang: true}, document.iterator(0));
+    for (let rightBorder = 2; rightBorder < N + 2; rightBorder += CHUNK) {
+      let iterator = document.iterator(parser.it.offset, 0, rightBorder);
+      parser.setIterator(iterator);
+      expect(getTokens(parser)).toEqual([
+        { name: 'string', start: 0, end: rightBorder }
+      ]);
+    }
+  });
+  // NOTE: this test will work O(N^2) and will hang if parser
+  // recovery doesn't work.
+  it('should re-parse last template token in O(N) time', () => {
+    let document = new Document(() => {});
+    // 10Mb comment
+    const N = 1024 * 1024 * 10;
+    let longTemplate = '`' + (new Array(N).fill(' ').join('')) + '`';
+    document.reset(longTemplate);
+    const CHUNK = 1024;
+    let parser = new Parser({allowHashBang: true}, document.iterator(0));
+    expect(tokenTypeNames.get(parser.getToken().type)).toBe('backQuote');
+    for (let rightBorder = 1 + CHUNK; rightBorder < N; rightBorder += CHUNK) {
+      let iterator = document.iterator(parser.it.offset, 0, rightBorder);
+      parser.setIterator(iterator);
+      expect(getTokens(parser)).toEqual([
+        { name: 'template', start: 1, end: rightBorder }
+      ]);
+    }
   });
 });
 
