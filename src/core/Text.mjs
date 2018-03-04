@@ -892,6 +892,13 @@ Text.Iterator = class {
 
   /**
    * @param {number} offset
+   */
+  reset(offset) {
+    this.advance(offset - this.offset);
+  }
+
+  /**
+   * @param {number} offset
    * @return {number}
    */
   charCodeAt(offset) {

@@ -8,11 +8,17 @@ import {lineBreak, lineBreakG, isLineBreak, isNewLine, nonASCIIwhitespace} from 
 // used for the onToken callback and the external tokenizer.
 
 export class Token {
-  constructor(p) {
-    this.type = p.type
-    this.value = p.value
-    this.start = p.startOffset
-    this.end = p.endOffset
+  /**
+   * @param {!TokenType} type
+   * @param {(string|undefined)} value
+   * @param {number} start
+   * @param {number} end
+   */
+  constructor(type, value, start, end) {
+    this.type = type;
+    this.value = value;
+    this.start = start;
+    this.end = end;
   }
 }
 
@@ -23,9 +29,22 @@ const pp = Parser.prototype
 // Move to the next token
 
 pp.getToken = function() {
-  this.lastTokEnd = this.endOffset;
-  this.nextToken()
-  return new Token(this)
+  if (this.it.outOfBounds()) {
+    return new Token(tt.eof, undefined, this.it.offset, this.it.offset);
+  }
+  // If we were interrupted while reading token - re-read.
+  if (this.pendingToken) {
+    const pendingToken = this.pendingToken;
+    this.pendingToken = null;
+    this.it.reset(pendingToken.startOffset);
+    this.nextToken()
+  } else {
+    this.lastTokEnd = this.endOffset;
+    this.nextToken()
+  }
+  if (this.pendingToken)
+    return new Token(this.pendingToken.type, this.pendingToken.value, this.pendingToken.startOffset, this.pendingToken.endOffset);
+  return new Token(this.type, this.value, this.startOffset, this.endOffset)
 }
 
 // If we're in an ES6 environment, make parsers iterable
@@ -133,11 +152,22 @@ pp.skipSpace = function() {
 // right position.
 
 pp.finishToken = function(type, val) {
-  let prevType = this.type
-  this.endOffset = this.it.offset;
-  this.type = type
-  this.value = val
-  this.updateContext(prevType)
+  // If this is the last token, we should not commit to its reading because it might
+  // change.
+  if (this.it.outOfBounds()) {
+    this.pendingToken = {
+      endOffset: this.it.offset,
+      startOffset: this.startOffset,
+      type: type,
+      value: val
+    };
+  } else {
+    let prevType = this.type
+    this.endOffset = this.it.offset;
+    this.type = type
+    this.value = val
+    this.updateContext(prevType)
+  }
 }
 
 // ### Token reading

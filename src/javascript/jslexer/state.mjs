@@ -57,5 +57,9 @@ export class Parser {
     this.inModule = this.options.sourceType === "module"
     this.strict = this.inModule
   }
+
+  setIterator(iterator) {
+    this.it = iterator;
+  }
 }
 
