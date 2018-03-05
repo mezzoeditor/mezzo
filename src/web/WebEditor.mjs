@@ -1,4 +1,5 @@
 import { Document } from "../core/Document.mjs";
+import { Decorator } from "../core/Decorator.mjs";
 import { Renderer } from "./Renderer.mjs";
 import { Selection } from "../plugins/Selection.mjs";
 import { History } from "../plugins/History.mjs";
@@ -17,8 +18,10 @@ export class WebEditor {
    */
   constructor(domDocument) {
     this._createDOM(domDocument);
+    this._handles = new Decorator();
     this._document = new Document(this.invalidate.bind(this));
     this._document.setTokenizer(new DefaultTokenizer());
+    this._document.addReplaceCallback(this._onReplace.bind(this));
     this._createRenderer(domDocument);
     this._setupScheduler();
     this._setupSelection();
@@ -136,6 +139,12 @@ export class WebEditor {
   removeDecorationCallback(callback) {
     this._renderer.viewport().removeDecorationCallback(callback);
     this.invalidate();
+  }
+
+  addHandle(from, to, onRemoved) {
+    if (to === undefined)
+      to = from;
+    return new RangeHandle(this._document, this._handles, from, to, onRemoved);
   }
 
   setHighlighter(highlighter) {
@@ -479,6 +488,11 @@ export class WebEditor {
       this._renderer.viewport().reveal({from: focus, to: focus});
     return success;
   }
+
+  _onReplace({from, to, inserted}) {
+    for (let removed of this._handles.replace(from, to, inserted))
+      removed[RangeHandle._symbol]._wasRemoved();
+  }
 }
 
 function eventToHash(event) {
@@ -520,3 +534,41 @@ function stringToHash(eventString) {
   return hash.join('-');
 }
 
+class RangeHandle {
+  constructor(document, decorator, from, to, onRemoved) {
+    this._document = document;
+    this._decorator = decorator;
+    this._onRemoved = onRemoved || function() {};
+    this._handle = decorator.add(from, to, this);
+    this._handle[RangeHandle._symbol] = this;
+  }
+
+  remove() {
+    if (this.removed())
+      return;
+    let {from, to} = this.resolve();
+    this._decorator.remove(this._handle);
+    delete this._handle[RangeHandle._symbol];
+    this._onRemoved = undefined;
+  }
+
+  resolve() {
+    if (this.removed())
+      throw 'Handle was removed!';
+    let {from, to} = this._decorator.resolve(this._handle);
+    return {from: this._document.offsetToLocation(from), to: this._document.offsetToLocation(to)};
+  }
+
+  _wasRemoved() {
+    delete this._handle[RangeHandle._symbol];
+    let onRemoved = this._onRemoved;
+    this._onRemoved = undefined;
+    onRemoved();
+  }
+
+  removed() {
+    return !this._onRemoved;
+  }
+}
+
+RangeHandle._symbol = Symbol('RangeHandle');

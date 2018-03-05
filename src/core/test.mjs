@@ -570,7 +570,7 @@ describe('Decorator', () => {
     let f = {from: 8, to: 8, data: 'f'};
     let g = {from: 12, to: 12, data: 'g'};
     for (let x of [a, b, c, d, e, f, g])
-      dec.add(x.from, x.to, x.data);
+      x.handle = dec.add(x.from, x.to, x.data);
 
     expect(dec.countAll()).toBe(7);
     expect(dec.countStarting(0, 4)).toBe(3);
@@ -646,6 +646,12 @@ describe('Decorator', () => {
     checkVisitor(v => dec.visitTouching(1, 15, v), [a, c, f, e, g, d]);
     checkVisitor(v => dec.visitTouching(9, 10, v), [e]);
     checkVisitor(v => dec.visitTouching(13, 14, v), []);
+
+    for (let x of [a, b, c, d, e, f, g]) {
+      let range = dec.resolve(x.handle);
+      expect(range.from).toBe(x.from);
+      expect(range.to).toBe(x.to);
+    }
   });
 
   it('Decorator.replace manual', () => {
@@ -675,13 +681,21 @@ describe('Decorator', () => {
     for (let test of cases) {
       let {from, to, inserted, expected} = test;
       let dec = new Decorator();
-      dec.add(before.from, before.to, '');
-      dec.replace(from, to, inserted);
+      let handle = dec.add(before.from, before.to, '');
+      let removed = dec.replace(from, to, inserted);
       let got = dec.listAll();
       expect(got.length).toBe(expected.length, `test: ${JSON.stringify(test)}`);
       for (let i = 0; i < got.length; i++) {
         expect(got[i].from).toBe(expected[i].from, `test: ${JSON.stringify(test)}`);
         expect(got[i].to).toBe(expected[i].to, `test: ${JSON.stringify(test)}`);
+      }
+      if (expected.length) {
+        let range = dec.resolve(handle);
+        expect(range.from).toBe(expected[0].from);
+        expect(range.to).toBe(expected[0].to);
+      } else {
+        expect(removed.length).toBe(1);
+        expect(removed[0]).toBe(handle);
       }
     }
   });
@@ -709,14 +723,16 @@ describe('Decorator', () => {
     let d = {from: 10, to: 20, data: 'd'};
     let e = {from: 21, to: 100, data: 'e'};
 
-    for (let x of [c, a, d, b, e])
-      dec.add(x.from, x.to, x.data);
+    let cHandle = dec.add(c.from, c.to, c.data);
+    let aHandle = dec.add(a.from, a.to, a.data);
+    let dHandle = dec.add(d.from, d.to, d.data);
+    let bHandle = dec.add(b.from, b.to, b.data);
+    let eHandle = dec.add(e.from, e.to, e.data);
+
     checkList(dec.listAll(), [a, b, c, d, e]);
 
-    dec.remove(e.from, e.to, false /* relaxed */);
-    checkList(dec.listAll(), [a, b, c, d]);
-
-    dec.remove(e.from, e.to, true /* relaxed */);
+    expect(dec.remove(eHandle)).toBe(e.data);
+    expect(dec.remove(eHandle)).toBe(undefined);
     checkList(dec.listAll(), [a, b, c, d]);
 
     dec.clearStarting(5, 15);
@@ -728,7 +744,7 @@ describe('Decorator', () => {
     dec.clearEnding(0, 3);
     checkList(dec.listAll(), [e]);
 
-    dec.add(a.from, a.to, a.data);
+    aHandle = dec.add(a.from, a.to, a.data);
     dec.add(b.from, b.to, b.data);
     dec.add(c.from, c.to, c.data);
     dec.add(d.from, d.to, d.data);
@@ -738,8 +754,8 @@ describe('Decorator', () => {
     checkList(dec.listAll(), [a, e]);
 
     dec.add(d.from, d.to, d.data);
-    dec.remove(a.from, a.to, true /* relaxed */);
-    dec.remove(42, 42, true /* relaxed */);
+    expect(dec.remove(aHandle)).toBe(a.data);
+    expect(dec.remove(eHandle)).toBe(undefined);
     checkList(dec.listAll(), [d, e]);
 
     dec.clearAll();

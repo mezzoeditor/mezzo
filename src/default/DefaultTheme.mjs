@@ -88,5 +88,10 @@ export let DefaultTheme = {
       width: 2,
     },
   },
+  'the-range': {
+    background: {
+      color: 'rgba(0, 0, 0, 0.4)',
+    }
+  }
 }
 

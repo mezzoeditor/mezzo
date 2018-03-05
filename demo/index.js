@@ -22,6 +22,7 @@ const examples = [
 
 const jsHighlighter = new JSHighlighter();
 const defaultHighlighter = new DefaultHighlighter();
+let rangeHandle;
 
 function addExamples(editor) {
   const select = document.querySelector('.examples');
@@ -97,6 +98,31 @@ function addSearch(editor) {
   }, true);
 }
 
+function addRangeHandle(editor) {
+  const rangeText = document.querySelector('.range');
+  rangeText.addEventListener('click', updateRangeHandle);
+  editor.addDecorationCallback(() => {
+    if (!rangeHandle || rangeHandle.removed())
+      return {};
+    let decorator = new TextDecorator();
+    let {from, to} = rangeHandle.resolve();
+    decorator.add(from.offset, to.offset, 'the-range');
+    return {background: [decorator]};
+  });
+}
+
+function updateRangeHandle() {
+  if (!rangeHandle)
+    return;
+  const rangeText = document.querySelector('.range');
+  if (rangeHandle.removed()) {
+    rangeText.textContent = 'Range removed';
+  } else {
+    const {from, to} = rangeHandle.resolve();
+    rangeText.textContent = `Range {${from.offset}/${from.line},${from.column}} : {${to.offset}/${to.line},${to.column}}`;
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const editor = new WebEditor(document);
   addExamples(editor);
@@ -105,6 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelector('.ismonospace').addEventListener('change', event => {
     editor.setUseMonospaceFont(event.target.checked);
   }, false);
+  addRangeHandle(editor);
 
   editor.element().classList.add('editor');
   document.body.appendChild(editor.element());
@@ -177,4 +204,7 @@ async function setupEditor(editor, exampleName) {
   }
   //let ranges = [{from: 0, to: 0}, {from: 9, to: 9}];
   editor.selection().setRanges(ranges);
+
+  rangeHandle = editor.addHandle(20, 40, updateRangeHandle);
+  updateRangeHandle();
 }

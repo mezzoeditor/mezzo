@@ -19,9 +19,14 @@ let random = Random(25);
  *   h: number,
  *   size: number,
  *   add: number|undefined,
- *   left: !Segment|undefined,
- *   right: !Segment|undefined,
+ *   left: !TreeNode|undefined,
+ *   right: !TreeNode|undefined,
+ *   parent: !TreeNode|undefined
  * }} TreeNode;
+ */
+
+/**
+ * @typedef {*} Decorator.Handle
  */
 
 /**
@@ -54,11 +59,15 @@ function setChildren(node, left, right) {
     throw 'Inconsistent';
   node.size = 1;
   node.left = left;
-  if (left)
+  if (left) {
     node.size += left.size;
+    left.parent = node;
+  }
   node.right = right;
-  if (right)
+  if (right) {
     node.size += right.size;
+    right.parent = node;
+  }
   return node;
 };
 
@@ -100,9 +109,11 @@ function split(node, offset, splitBy) {
       (splitBy === kTo ? node.to > offset : (node.from > offset || node.to > offset));
   if (nodeToRight) {
     let tmp = split(node.left, offset, splitBy);
+    node.parent = undefined;
     return {left: tmp.left, right: setChildren(node, tmp.right, node.right)};
   } else {
     let tmp = split(node.right, offset, splitBy);
+    node.parent = undefined;
     return {left: setChildren(node, node.left, tmp.left), right: tmp.right};
   }
 };
@@ -110,7 +121,7 @@ function split(node, offset, splitBy) {
 /**
  * @template T
  * @param {!TreeNode<T>|undefined} node
- * @param {function(!Decoration<T>)} visitor
+ * @param {function(!TreeNode<T>)} visitor
  */
 function visit(node, visitor) {
   if (!node)
@@ -165,6 +176,7 @@ function last(node) {
 function find(node, offset) {
   if (!node)
     return;
+  node = normalize(node);
   if (node.from >= offset)
     return find(node.left, offset) || node;
   return find(node.right, offset);
@@ -186,6 +198,7 @@ export class Decorator {
    * @param {number} from
    * @param {number} to
    * @param {T} data
+   * @return {!Decorator.Handle}
    */
   add(from, to, data) {
     if (from > to)
@@ -197,40 +210,62 @@ export class Decorator {
       throw 'Two collapsed decorations at the same offset are not allowed';
     let node = {data, from, to, h: random(), size: 1};
     this._root = merge(merge(tmp.left, node), tmp.right);
+    return node;
   }
 
   /**
-   * Removes a single decoration. Typically throws if the decoration
-   * is not present, but that can be disabled by |relaxed|.
-   * @param {number} from
-   * @param {number} to
-   * @param {boolean=} relaxed
+   * Removes a single decoration and returns it's data if any.
+   * @param {!Decorator.Handle} handle
    * @return {T|undefined}
    */
-  remove(from, to, relaxed) {
-    let collapsed = from === to;
-    let tmp = split(this._root, from, collapsed ? kFrom : kBetween);
-    let tmp2 = split(tmp.right, to, collapsed ? kBetween : kFrom);
+  remove(handle) {
+    let range = this.resolve(handle);
+    if (!range)
+      return;
+    let collapsed = range.from === range.to;
+    let tmp = split(this._root, range.from, collapsed ? kFrom : kBetween);
+    let tmp2 = split(tmp.right, range.to, collapsed ? kBetween : kFrom);
     let removed = tmp2.left;
-    if (!relaxed && (!removed || removed.from !== from || removed.to !== to))
-      throw 'Decoration is not present';
-    if (removed && (removed.left || removed.right))
+    if (!removed || removed.from !== range.from || removed.to !== range.to || removed.left || removed.right)
       throw 'Inconsistent';
+    removed.parent = undefined;
     this._root = merge(tmp.left, tmp2.right);
-    return removed ? removed.data : undefined;
+    return removed.data;
   }
 
   /**
-   * Adjusts decoration according to the replacement.
+   * Returns the range of a single decoration if any.
+   * @param {!Decorator.Handle} handle
+   * @return {!Range|undefined}
+   */
+  resolve(handle) {
+    let node = handle;
+    let stack = [];
+    while (node) {
+      stack.push(node);
+      node = node.parent;
+    }
+    stack.reverse();
+    if (stack[0] !== this._root)
+      return;
+    for (let parent of stack)
+      normalize(parent);
+    return {from: handle.from, to: handle.to};
+  }
+
+  /**
+   * Adjusts decorations according to the replacement.
    * The first of the following rules is applied to each decoration:
    *   - decorations covered by replaced range are removed;
    *   - decorations covering replaced range are resized by |inserted - to + from|;
    *   - decorations covering |from| are cropped to |from|;
    *   - decorations covering |to| are extended to |from + inserted];
    *   - decorations starting after |to| are moved by |inserted - to + from|.
+   * Returns the list of handles to removed decorations.
    * @param {number} from
    * @param {number} to
    * @param {number} inserted
+   * @return {!Array<!Decorator.Handle>}
    */
   replace(from, to, inserted) {
     let delta = inserted - (to - from);
@@ -242,13 +277,19 @@ export class Decorator {
     let crossLeft = tmp.left;
     tmp = split(tmp.right, to - 1, kTo);
     let crossRight = tmp.right;
-    // Decorations in tmp.left are strictly inside [from, to] and will be removed.
 
-    let processed1 = this._process(crossLeft, from, to, inserted);
-    let processed2 = this._process(crossRight, from, to, inserted);
+    let removed = [];
+    visit(tmp.left, node => {
+      node.parent = undefined;
+      removed.push(node);
+    });
+
+    let processed1 = this._process(crossLeft, from, to, inserted, removed);
+    let processed2 = this._process(crossRight, from, to, inserted, removed);
     if (right)
       right.add = (right.add || 0) + delta;
     this._root = merge(left, merge(merge(processed1, processed2), right));
+    return removed;
   }
 
   /**
@@ -568,15 +609,19 @@ export class Decorator {
    * @param {number} from
    * @param {number} to
    * @param {number} inserted
+   * @param {!Array<!Decorator.Handle>} removed
    * @return {!TreeNode}
    */
-  _process(root, from, to, inserted) {
+  _process(root, from, to, inserted, removed) {
     let result = undefined;
-    visit(root, decoration => {
-      let start = decoration.from;
-      let end = decoration.to;
-      if (from < start && to > start)
+    visit(root, node => {
+      let start = node.from;
+      let end = node.to;
+      if (from < start && to > start) {
+        node.parent = undefined;
+        removed.push(node);
         return;
+      }
 
       if (from <= start)
         start = to >= start ? from : start - (to - from);
@@ -588,7 +633,12 @@ export class Decorator {
       if (from <= end)
         end += inserted;
 
-      let node = {data: decoration.data, from: start, to: end, h: random(), size: 1};
+      node.from = start;
+      node.to = end;
+      node.size = 1;
+      delete node.left;
+      delete node.right;
+      node.parent = node.add = undefined;
       result = merge(result, node);
     });
     return result;
