@@ -762,93 +762,109 @@ describe('Decorator', () => {
     checkList(dec.listAll(), []);
   });
 
-  describe('Unicode', () => {
-    it('Unicode.isValidOffset', () => {
-      expect(Unicode.isValidOffset('abc', -1)).toBe(true);
-      expect(Unicode.isValidOffset('abc', 0)).toBe(true);
-      expect(Unicode.isValidOffset('abc', 1)).toBe(true);
-      expect(Unicode.isValidOffset('abc', 2)).toBe(true);
-      expect(Unicode.isValidOffset('abc', 3)).toBe(true);
-      expect(Unicode.isValidOffset('abc', 4)).toBe(true);
+  it('Decorator.multiple removals', () => {
+    let dec = new Decorator();
+    let a = {from: 1, to: 2, data: 'a'};
+    let b = {from: 2, to: 3, data: 'b'};
+    let c = {from: 3, to: 3, data: 'c'};
+    let d = {from: 10, to: 20, data: 'd'};
+    let e = {from: 21, to: 100, data: 'e'};
+    let all = [a, b, c, d, e];
+    for (let x of all)
+      x.handle = dec.add(x.from, x.to, x.data);
 
-      expect(Unicode.isValidOffset('𐀀𐀀', -1)).toBe(true);
-      expect(Unicode.isValidOffset('𐀀𐀀', 0)).toBe(true);
-      expect(Unicode.isValidOffset('𐀀𐀀', 1)).toBe(false);
-      expect(Unicode.isValidOffset('𐀀𐀀', 2)).toBe(true);
-      expect(Unicode.isValidOffset('𐀀𐀀', 3)).toBe(false);
-      expect(Unicode.isValidOffset('𐀀𐀀', 4)).toBe(true);
-      expect(Unicode.isValidOffset('𐀀𐀀', 5)).toBe(true);
-    });
-
-    it('Unicode.CachingMeasurer', () => {
-      let measurer = createTestMeasurer();
-
-      expect(measurer.measureBMPCodePoint('a'.charCodeAt(0))).toBe(1);
-      expect(measurer.measureBMPCodePoint('d'.charCodeAt(0))).toBe(4);
-      expect(measurer.measureBMPCodePoint('a'.charCodeAt(0))).toBe(1);
-      expect(measurer.measureBMPCodePoint('d'.charCodeAt(0))).toBe(4);
-
-      expect(measurer.measureSupplementaryCodePoint('𐀀'.codePointAt(0))).toBe(100);
-      expect(measurer.measureSupplementaryCodePoint('😀'.codePointAt(0))).toBe(100);
-      expect(measurer.measureSupplementaryCodePoint('𐀀'.codePointAt(0))).toBe(100);
-      expect(measurer.measureSupplementaryCodePoint('😀'.codePointAt(0))).toBe(100);
-
-      expect(measurer.measureString('abc', 1, 2)).toEqual({columns: 1, width: 2});
-      expect(measurer.measureString('abc', 0, 3)).toEqual({columns: 3, width: 6});
-      expect(measurer.measureString('abc', 2, 2)).toEqual({columns: 0, width: 0});
-      expect(measurer.measureString('abc𐀀𐀀', 2, 5)).toEqual({columns: 2, width: 103});
-      expect(measurer.measureString('abc𐀀𐀀', 5, 7)).toEqual({columns: 1, width: 100});
-      expect(measurer.measureString('abc𐀀𐀀', 0, 7)).toEqual({columns: 5, width: 206});
-      expect(measurer.measureString('a😀b𐀀c', 1, 6)).toEqual({columns: 3, width: 202});
-      expect(measurer.measureString('😀', 0, 2)).toEqual({columns: 1, width: 100});
-      expect(measurer.measureString('😀', 1, 1)).toEqual({columns: 0, width: 0});
-      expect(measurer.measureString('😀', 0, 0)).toEqual({columns: 0, width: 0});
-
-      expect(measurer.locateByColumn('abc', 0, 3, 2)).toEqual({offset: 2, columns: 2, width: 3});
-      expect(measurer.locateByColumn('abc', 0, 1, 3)).toEqual({offset: -1, columns: 1, width: 1});
-      expect(measurer.locateByColumn('abc', 0, 2, 1)).toEqual({offset: 1, columns: 1, width: 1});
-      expect(measurer.locateByColumn('abc', 1, 3, 0)).toEqual({offset: 1, columns: 0, width: 0});
-      expect(measurer.locateByColumn('abc𐀀𐀀', 2, 7, 2)).toEqual({offset: 5, columns: 2, width: 103});
-      expect(measurer.locateByColumn('abc𐀀𐀀', 2, 7, 3)).toEqual({offset: 7, columns: 3, width: 203});
-      expect(measurer.locateByColumn('abc𐀀𐀀', 2, 7, 4)).toEqual({offset: -1, columns: 3, width: 203});
-      expect(measurer.locateByColumn('a😀b𐀀c', 0, 6, 2)).toEqual({offset: 3, columns: 2, width: 101});
-      expect(measurer.locateByColumn('a😀b𐀀c', 0, 6, 4)).toEqual({offset: 6, columns: 4, width: 203});
-      expect(measurer.locateByColumn('a😀b𐀀c', 0, 6, 5)).toEqual({offset: -1, columns: 4, width: 203});
-      expect(measurer.locateByColumn('', 0, 0, 0)).toEqual({offset: 0, columns: 0, width: 0});
-      expect(measurer.locateByColumn('', 0, 0, 5)).toEqual({offset: -1, columns: 0, width: 0});
-
-      expect(measurer.locateByWidth('abc', 0, 3, 3, RoundMode.Floor)).toEqual({offset: 2, columns: 2, width: 3});
-      expect(measurer.locateByWidth('abc', 0, 3, 3, RoundMode.Round)).toEqual({offset: 2, columns: 2, width: 3});
-      expect(measurer.locateByWidth('abc', 0, 3, 3, RoundMode.Ceil)).toEqual({offset: 2, columns: 2, width: 3});
-      expect(measurer.locateByWidth('abc', 0, 3, 4.5, RoundMode.Floor)).toEqual({offset: 2, columns: 2, width: 3});
-      expect(measurer.locateByWidth('abc', 0, 3, 4.5, RoundMode.Round)).toEqual({offset: 2, columns: 2, width: 3});
-      expect(measurer.locateByWidth('abc', 0, 3, 4.5, RoundMode.Ceil)).toEqual({offset: 3, columns: 3, width: 6});
-      expect(measurer.locateByWidth('abc', 0, 3, 4.6, RoundMode.Floor)).toEqual({offset: 2, columns: 2, width: 3});
-      expect(measurer.locateByWidth('abc', 0, 3, 4.6, RoundMode.Round)).toEqual({offset: 3, columns: 3, width: 6});
-      expect(measurer.locateByWidth('abc', 0, 3, 4.6, RoundMode.Ceil)).toEqual({offset: 3, columns: 3, width: 6});
-      expect(measurer.locateByWidth('abc𐀀𐀀', 2, 7, 103, RoundMode.Floor)).toEqual({offset: 5, columns: 2, width: 103});
-      expect(measurer.locateByWidth('abc𐀀𐀀', 2, 7, 103, RoundMode.Round)).toEqual({offset: 5, columns: 2, width: 103});
-      expect(measurer.locateByWidth('abc𐀀𐀀', 2, 7, 103, RoundMode.Ceil)).toEqual({offset: 5, columns: 2, width: 103});
-      expect(measurer.locateByWidth('abc𐀀𐀀', 2, 7, 153, RoundMode.Floor)).toEqual({offset: 5, columns: 2, width: 103});
-      expect(measurer.locateByWidth('abc𐀀𐀀', 2, 7, 153, RoundMode.Round)).toEqual({offset: 5, columns: 2, width: 103});
-      expect(measurer.locateByWidth('abc𐀀𐀀', 2, 7, 153, RoundMode.Ceil)).toEqual({offset: 7, columns: 3, width: 203});
-      expect(measurer.locateByWidth('abc𐀀𐀀', 2, 7, 154, RoundMode.Floor)).toEqual({offset: 5, columns: 2, width: 103});
-      expect(measurer.locateByWidth('abc𐀀𐀀', 2, 7, 154, RoundMode.Round)).toEqual({offset: 7, columns: 3, width: 203});
-      expect(measurer.locateByWidth('abc𐀀𐀀', 2, 7, 154, RoundMode.Ceil)).toEqual({offset: 7, columns: 3, width: 203});
-      expect(measurer.locateByWidth('a😀b𐀀c', 0, 6, 204, RoundMode.Round)).toEqual({offset: -1, columns: 4, width: 203});
-      expect(measurer.locateByWidth('a😀b𐀀c', 0, 6, 203, RoundMode.Round)).toEqual({offset: 6, columns: 4, width: 203});
-      expect(measurer.locateByColumn('', 0, 0, 0, RoundMode.Ceil)).toEqual({offset: 0, columns: 0, width: 0});
-      expect(measurer.locateByColumn('', 0, 0, 5, RoundMode.Floor)).toEqual({offset: -1, columns: 0, width: 0});
-
-      let defaultMeasurer = createDefaultMeasurer();
-      expect(defaultMeasurer.locateByWidth('abc', 0, 3, 0.5, RoundMode.Floor)).toEqual({offset: 0, columns: 0, width: 0});
-      expect(defaultMeasurer.locateByWidth('abc', 0, 3, 0.5, RoundMode.Round)).toEqual({offset: 0, columns: 0, width: 0});
-      expect(defaultMeasurer.locateByWidth('abc', 0, 3, 0.6, RoundMode.Round)).toEqual({offset: 1, columns: 1, width: 1});
-      expect(defaultMeasurer.locateByWidth('abc', 0, 3, 0.5, RoundMode.Ceil)).toEqual({offset: 1, columns: 1, width: 1});
-    });
+    let removed = dec.replace(0, 101, 0);
+    expect(removed.length).toBe(all.length);
+    for (let i = 0; i < all.length; i++)
+      expect(removed[i]).toBe(all[i].handle);
   });
 });
 
+describe('Unicode', () => {
+  it('Unicode.isValidOffset', () => {
+    expect(Unicode.isValidOffset('abc', -1)).toBe(true);
+    expect(Unicode.isValidOffset('abc', 0)).toBe(true);
+    expect(Unicode.isValidOffset('abc', 1)).toBe(true);
+    expect(Unicode.isValidOffset('abc', 2)).toBe(true);
+    expect(Unicode.isValidOffset('abc', 3)).toBe(true);
+    expect(Unicode.isValidOffset('abc', 4)).toBe(true);
+
+    expect(Unicode.isValidOffset('𐀀𐀀', -1)).toBe(true);
+    expect(Unicode.isValidOffset('𐀀𐀀', 0)).toBe(true);
+    expect(Unicode.isValidOffset('𐀀𐀀', 1)).toBe(false);
+    expect(Unicode.isValidOffset('𐀀𐀀', 2)).toBe(true);
+    expect(Unicode.isValidOffset('𐀀𐀀', 3)).toBe(false);
+    expect(Unicode.isValidOffset('𐀀𐀀', 4)).toBe(true);
+    expect(Unicode.isValidOffset('𐀀𐀀', 5)).toBe(true);
+  });
+
+  it('Unicode.CachingMeasurer', () => {
+    let measurer = createTestMeasurer();
+
+    expect(measurer.measureBMPCodePoint('a'.charCodeAt(0))).toBe(1);
+    expect(measurer.measureBMPCodePoint('d'.charCodeAt(0))).toBe(4);
+    expect(measurer.measureBMPCodePoint('a'.charCodeAt(0))).toBe(1);
+    expect(measurer.measureBMPCodePoint('d'.charCodeAt(0))).toBe(4);
+
+    expect(measurer.measureSupplementaryCodePoint('𐀀'.codePointAt(0))).toBe(100);
+    expect(measurer.measureSupplementaryCodePoint('😀'.codePointAt(0))).toBe(100);
+    expect(measurer.measureSupplementaryCodePoint('𐀀'.codePointAt(0))).toBe(100);
+    expect(measurer.measureSupplementaryCodePoint('😀'.codePointAt(0))).toBe(100);
+
+    expect(measurer.measureString('abc', 1, 2)).toEqual({columns: 1, width: 2});
+    expect(measurer.measureString('abc', 0, 3)).toEqual({columns: 3, width: 6});
+    expect(measurer.measureString('abc', 2, 2)).toEqual({columns: 0, width: 0});
+    expect(measurer.measureString('abc𐀀𐀀', 2, 5)).toEqual({columns: 2, width: 103});
+    expect(measurer.measureString('abc𐀀𐀀', 5, 7)).toEqual({columns: 1, width: 100});
+    expect(measurer.measureString('abc𐀀𐀀', 0, 7)).toEqual({columns: 5, width: 206});
+    expect(measurer.measureString('a😀b𐀀c', 1, 6)).toEqual({columns: 3, width: 202});
+    expect(measurer.measureString('😀', 0, 2)).toEqual({columns: 1, width: 100});
+    expect(measurer.measureString('😀', 1, 1)).toEqual({columns: 0, width: 0});
+    expect(measurer.measureString('😀', 0, 0)).toEqual({columns: 0, width: 0});
+
+    expect(measurer.locateByColumn('abc', 0, 3, 2)).toEqual({offset: 2, columns: 2, width: 3});
+    expect(measurer.locateByColumn('abc', 0, 1, 3)).toEqual({offset: -1, columns: 1, width: 1});
+    expect(measurer.locateByColumn('abc', 0, 2, 1)).toEqual({offset: 1, columns: 1, width: 1});
+    expect(measurer.locateByColumn('abc', 1, 3, 0)).toEqual({offset: 1, columns: 0, width: 0});
+    expect(measurer.locateByColumn('abc𐀀𐀀', 2, 7, 2)).toEqual({offset: 5, columns: 2, width: 103});
+    expect(measurer.locateByColumn('abc𐀀𐀀', 2, 7, 3)).toEqual({offset: 7, columns: 3, width: 203});
+    expect(measurer.locateByColumn('abc𐀀𐀀', 2, 7, 4)).toEqual({offset: -1, columns: 3, width: 203});
+    expect(measurer.locateByColumn('a😀b𐀀c', 0, 6, 2)).toEqual({offset: 3, columns: 2, width: 101});
+    expect(measurer.locateByColumn('a😀b𐀀c', 0, 6, 4)).toEqual({offset: 6, columns: 4, width: 203});
+    expect(measurer.locateByColumn('a😀b𐀀c', 0, 6, 5)).toEqual({offset: -1, columns: 4, width: 203});
+    expect(measurer.locateByColumn('', 0, 0, 0)).toEqual({offset: 0, columns: 0, width: 0});
+    expect(measurer.locateByColumn('', 0, 0, 5)).toEqual({offset: -1, columns: 0, width: 0});
+
+    expect(measurer.locateByWidth('abc', 0, 3, 3, RoundMode.Floor)).toEqual({offset: 2, columns: 2, width: 3});
+    expect(measurer.locateByWidth('abc', 0, 3, 3, RoundMode.Round)).toEqual({offset: 2, columns: 2, width: 3});
+    expect(measurer.locateByWidth('abc', 0, 3, 3, RoundMode.Ceil)).toEqual({offset: 2, columns: 2, width: 3});
+    expect(measurer.locateByWidth('abc', 0, 3, 4.5, RoundMode.Floor)).toEqual({offset: 2, columns: 2, width: 3});
+    expect(measurer.locateByWidth('abc', 0, 3, 4.5, RoundMode.Round)).toEqual({offset: 2, columns: 2, width: 3});
+    expect(measurer.locateByWidth('abc', 0, 3, 4.5, RoundMode.Ceil)).toEqual({offset: 3, columns: 3, width: 6});
+    expect(measurer.locateByWidth('abc', 0, 3, 4.6, RoundMode.Floor)).toEqual({offset: 2, columns: 2, width: 3});
+    expect(measurer.locateByWidth('abc', 0, 3, 4.6, RoundMode.Round)).toEqual({offset: 3, columns: 3, width: 6});
+    expect(measurer.locateByWidth('abc', 0, 3, 4.6, RoundMode.Ceil)).toEqual({offset: 3, columns: 3, width: 6});
+    expect(measurer.locateByWidth('abc𐀀𐀀', 2, 7, 103, RoundMode.Floor)).toEqual({offset: 5, columns: 2, width: 103});
+    expect(measurer.locateByWidth('abc𐀀𐀀', 2, 7, 103, RoundMode.Round)).toEqual({offset: 5, columns: 2, width: 103});
+    expect(measurer.locateByWidth('abc𐀀𐀀', 2, 7, 103, RoundMode.Ceil)).toEqual({offset: 5, columns: 2, width: 103});
+    expect(measurer.locateByWidth('abc𐀀𐀀', 2, 7, 153, RoundMode.Floor)).toEqual({offset: 5, columns: 2, width: 103});
+    expect(measurer.locateByWidth('abc𐀀𐀀', 2, 7, 153, RoundMode.Round)).toEqual({offset: 5, columns: 2, width: 103});
+    expect(measurer.locateByWidth('abc𐀀𐀀', 2, 7, 153, RoundMode.Ceil)).toEqual({offset: 7, columns: 3, width: 203});
+    expect(measurer.locateByWidth('abc𐀀𐀀', 2, 7, 154, RoundMode.Floor)).toEqual({offset: 5, columns: 2, width: 103});
+    expect(measurer.locateByWidth('abc𐀀𐀀', 2, 7, 154, RoundMode.Round)).toEqual({offset: 7, columns: 3, width: 203});
+    expect(measurer.locateByWidth('abc𐀀𐀀', 2, 7, 154, RoundMode.Ceil)).toEqual({offset: 7, columns: 3, width: 203});
+    expect(measurer.locateByWidth('a😀b𐀀c', 0, 6, 204, RoundMode.Round)).toEqual({offset: -1, columns: 4, width: 203});
+    expect(measurer.locateByWidth('a😀b𐀀c', 0, 6, 203, RoundMode.Round)).toEqual({offset: 6, columns: 4, width: 203});
+    expect(measurer.locateByColumn('', 0, 0, 0, RoundMode.Ceil)).toEqual({offset: 0, columns: 0, width: 0});
+    expect(measurer.locateByColumn('', 0, 0, 5, RoundMode.Floor)).toEqual({offset: -1, columns: 0, width: 0});
+
+    let defaultMeasurer = createDefaultMeasurer();
+    expect(defaultMeasurer.locateByWidth('abc', 0, 3, 0.5, RoundMode.Floor)).toEqual({offset: 0, columns: 0, width: 0});
+    expect(defaultMeasurer.locateByWidth('abc', 0, 3, 0.5, RoundMode.Round)).toEqual({offset: 0, columns: 0, width: 0});
+    expect(defaultMeasurer.locateByWidth('abc', 0, 3, 0.6, RoundMode.Round)).toEqual({offset: 1, columns: 1, width: 1});
+    expect(defaultMeasurer.locateByWidth('abc', 0, 3, 0.5, RoundMode.Ceil)).toEqual({offset: 1, columns: 1, width: 1});
+  });
+});
 
 new Reporter(runner);
 runner.run();

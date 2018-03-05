@@ -613,14 +613,17 @@ export class Decorator {
    * @return {!TreeNode}
    */
   _process(root, from, to, inserted, removed) {
+    let all = [];
+    visit(root, all.push.bind(all));
+
     let result = undefined;
-    visit(root, node => {
+    for (let node of all) {
       let start = node.from;
       let end = node.to;
       if (from < start && to > start) {
         node.parent = undefined;
         removed.push(node);
-        return;
+        continue;
       }
 
       if (from <= start)
@@ -640,7 +643,7 @@ export class Decorator {
       delete node.right;
       node.parent = node.add = undefined;
       result = merge(result, node);
-    });
+    }
     return result;
   }
 };
