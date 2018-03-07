@@ -43,7 +43,7 @@ pp.getToken = function() {
     } else if (pendingToken.type === tt.string && pendingToken.recoveryInfo) {
       this.readString('', pendingToken.recoveryInfo);
     } else if (pendingToken.type === tt.template && pendingToken.recoveryInfo) {
-      this.readTmplToken('', pendingToken.recoveryInfo /* recoveryOffset */);
+      this.readTmplToken(pendingToken.recoveryInfo);
     } else {
       this.it.reset(pendingToken.startOffset);
       this.nextToken()
@@ -516,12 +516,14 @@ pp.readString = function(quote, recoveryInfo) {
 
 // Reads template string tokens.
 
-pp.readTmplToken = function() {
+pp.readTmplToken = function(recoveryInfo) {
+  if (recoveryInfo)
+    this.it.reset(recoveryInfo.offset);
   let recoveryOffset = this.it.offset;
   for (;;) {
     recoveryOffset = this.it.offset;
     if (this.it.outOfBounds()) {
-      return this.finishToken(tt.template, undefined, recoveryOffset);
+      return this.finishToken(tt.template, undefined, {offset: recoveryOffset});
     }
 
     let ch = this.it.charCodeAt(0)
@@ -535,7 +537,7 @@ pp.readTmplToken = function() {
           return this.finishToken(tt.backQuote)
         }
       }
-      return this.finishToken(tt.template, undefined, recoveryOffset)
+      return this.finishToken(tt.template, undefined, {offset: recoveryOffset})
     }
     if (ch === 92) { // '\'
       this.readEscapedChar()

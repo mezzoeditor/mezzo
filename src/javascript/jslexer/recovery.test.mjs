@@ -112,7 +112,7 @@ describe('Recovery', () => {
   });
   // NOTE: this test will work O(N^2) and will hang if parser
   // recovery doesn't work.
-  it('should re-parse last template token in O(N) time', () => {
+  fit('should re-parse last template token in O(N) time', () => {
     let document = new Document(() => {});
     // 10Mb comment
     const N = 1024 * 1024 * 10;
