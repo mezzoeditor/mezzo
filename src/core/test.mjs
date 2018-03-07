@@ -440,6 +440,32 @@ describe('Text.Iterator', () => {
     expect(iterator.substr(2)).toBe('');
   });
 
+  it('Text.Iterator.setConstraints', () => {
+    let defaultMeasurer = createDefaultMeasurer();
+    let text = Text.withContent('012', defaultMeasurer);
+    let iterator = text.iterator(0);
+    expect(iterator.outOfBounds()).toBe(false);
+    expect(iterator.current).toBe('0');
+
+    iterator.setConstraints(0, 0);
+    expect(iterator.outOfBounds()).toBe(true);
+    expect(iterator.current).toBe(undefined);
+
+    iterator.setConstraints(-1, 10);
+    expect(iterator.outOfBounds()).toBe(false);
+    expect(iterator.current).toBe('0');
+
+    iterator.advance(8);
+    expect(iterator.offset).toBe(3);
+    expect(iterator.outOfBounds()).toBe(true);
+    expect(iterator.current).toBe(undefined);
+
+    iterator.setConstraints(0, 1);
+    expect(iterator.outOfBounds()).toBe(true);
+    expect(iterator.current).toBe(undefined);
+    expect(iterator.offset).toBe(1);
+  });
+
   it('Text.Iterator all sizes', () => {
     let defaultMeasurer = createDefaultMeasurer();
     let random = Random(144);

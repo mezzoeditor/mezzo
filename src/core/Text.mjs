@@ -495,7 +495,7 @@ export class Text {
     offset = Math.max(from, offset);
     offset = Math.min(to, offset);
     let it = TreeIterator.create(this._root, offset, from, to);
-    return new Text.Iterator(it, offset, from, to);
+    return new Text.Iterator(it, offset, from, to, this._length);
   }
 
   /**
@@ -679,15 +679,35 @@ Text.Iterator = class {
    * @param {number} offset
    * @param {number} from
    * @param {number} to
+   * @param {number} length
    */
-  constructor(iterator, offset, from, to) {
+  constructor(iterator, offset, from, to, length) {
     this._iterator = iterator;
     this._from = from;
     this._to = to;
+    this._length = length;
 
     this.offset = offset;
     this._chunk = this._iterator.node().chunk;
     this._pos = offset - this._iterator.before();
+    this.current = this.outOfBounds() ? undefined : this._chunk[this._pos];
+  }
+
+  /**
+   * @param {number} from
+   * @param {number} to
+   */
+  setConstraints(from, to) {
+    from = Math.max(from, 0);
+    to = Math.min(to, this._length);
+    if (this.offset < from)
+      this.reset(from - 1);
+    else if (this.offset >= to)
+      this.reset(to);
+    this._from = from;
+    this._to = to;
+    this._iterator._from = from;
+    this._iterator._to = to;
     this.current = this.outOfBounds() ? undefined : this._chunk[this._pos];
   }
 
@@ -850,7 +870,7 @@ Text.Iterator = class {
    */
   clone() {
     let it = this._iterator.clone();
-    return new Text.Iterator(it, this.offset, this._from, this._to);
+    return new Text.Iterator(it, this.offset, this._from, this._to, this._length);
   }
 
   next() {
