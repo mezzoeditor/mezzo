@@ -1,3 +1,5 @@
+#!/usr/bin/env node --experimental-modules
+
 import {TestRunner, Reporter, Matchers} from '../../utils/testrunner/index.mjs';
 import {Metrics} from './Metrics.mjs';
 import {RoundMode, Unicode} from './Unicode.mjs';

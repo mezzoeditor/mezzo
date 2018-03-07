@@ -1,3 +1,4 @@
+#!/usr/bin/env node --experimental-modules
 /**
  * Copyright 2017 Google Inc. All rights reserved.
  *
