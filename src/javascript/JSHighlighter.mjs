@@ -50,7 +50,7 @@ export class JSHighlighter {
 
       this._speculativeHighlight.clearTouching(from + 1, range.to);
       let iterator = visibleContent.document.iterator(from, from, range.to);
-      let tt = new Parser({allowHashBang: true}, iterator);
+      let tt = new Parser(iterator);
       for (let token of tt) {
         if (token.type.keyword || (token.type === TokenTypes.name && token.value === 'let')) {
           decorator.add(token.start, token.end, 'syntax.keyword');

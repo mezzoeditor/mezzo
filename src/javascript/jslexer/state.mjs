@@ -17,11 +17,11 @@ export const defaultOptions = {
   sourceType: "script",
   // When enabled, hashbang directive in the beginning of file
   // is allowed and treated as a line comment.
-  allowHashBang: false,
+  allowHashBang: true,
 }
 
 export class Parser {
-  constructor(options, iterator) {
+  constructor(iterator, options = {}) {
     this.options = Object.assign({}, defaultOptions, options);
     this.keywords = keywordRegexp(keywords[this.options.ecmaVersion >= 6 ? 6 : 5])
 

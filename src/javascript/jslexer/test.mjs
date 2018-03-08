@@ -46,7 +46,7 @@ for (let fileName of files) {
     let text = await readFile(path.join(TESTDIR, fileName));
     let document = new Document(() => {});
     document.reset(text);
-    let tt = new Parser({allowHashBang: true}, document.iterator(0));
+    let tt = new Parser(document.iterator(0));
     const tokens = [];
     for (let token of tt)
       tokens.push(tokenTypeNames.get(token.type));

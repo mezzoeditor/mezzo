@@ -41,7 +41,7 @@ describe('Recovery', () => {
   it('should re-parse last token', () => {
     let document = new Document(() => {});
     document.reset('function');
-    let parser = new Parser({allowHashBang: true}, document.iterator(0, 0, 4));
+    let parser = new Parser(document.iterator(0, 0, 4));
     expect(getTokens(parser)).toEqual([
       { name: 'name', start: 0, end: 4 }
     ]);
@@ -65,7 +65,7 @@ describe('Recovery', () => {
     let longComment = '/*' + (new Array(N).fill(' ').join('')) + '*/';
     document.reset(longComment);
     const CHUNK = 1024;
-    let parser = new Parser({allowHashBang: true}, document.iterator(0));
+    let parser = new Parser(document.iterator(0));
     for (let rightBorder = 4; rightBorder < N + 4; rightBorder += CHUNK) {
       let iterator = document.iterator(parser.it.offset, 0, rightBorder);
       parser.setIterator(iterator);
@@ -83,7 +83,7 @@ describe('Recovery', () => {
     let longComment = '//' + (new Array(N).fill(' ').join(''));
     document.reset(longComment);
     const CHUNK = 1024;
-    let parser = new Parser({allowHashBang: true}, document.iterator(0));
+    let parser = new Parser(document.iterator(0));
     for (let rightBorder = 2; rightBorder < N + 2; rightBorder += CHUNK) {
       let iterator = document.iterator(parser.it.offset, 0, rightBorder);
       parser.setIterator(iterator);
@@ -101,7 +101,7 @@ describe('Recovery', () => {
     let longString = '"' + (new Array(N).fill(' ').join('')) + '"';
     document.reset(longString);
     const CHUNK = 1024;
-    let parser = new Parser({allowHashBang: true}, document.iterator(0));
+    let parser = new Parser(document.iterator(0));
     for (let rightBorder = 2; rightBorder < N + 2; rightBorder += CHUNK) {
       let iterator = document.iterator(parser.it.offset, 0, rightBorder);
       parser.setIterator(iterator);
@@ -119,7 +119,7 @@ describe('Recovery', () => {
     let longTemplate = '`' + (new Array(N).fill(' ').join('')) + '`';
     document.reset(longTemplate);
     const CHUNK = 1024;
-    let parser = new Parser({allowHashBang: true}, document.iterator(0));
+    let parser = new Parser(document.iterator(0));
     expect(tokenTypeNames.get(parser.getToken().type)).toBe('backQuote');
     for (let rightBorder = 1 + CHUNK; rightBorder < N; rightBorder += CHUNK) {
       let iterator = document.iterator(parser.it.offset, 0, rightBorder);
