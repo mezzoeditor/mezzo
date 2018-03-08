@@ -46,12 +46,12 @@ describe('Recovery', () => {
       { name: 'name', start: 0, end: 4 }
     ]);
 
-    parser.setIterator(document.iterator(parser.it.offset, 0, 7));
+    parser.it.setConstraints(0, 7);
     expect(getTokens(parser)).toEqual([
       { name: 'name', start: 0, end: 7 }
     ]);
 
-    parser.setIterator(document.iterator(parser.it.offset, 0, 8));
+    parser.it.setConstraints(0, 8);
     expect(getTokens(parser)).toEqual([
       { name: 'keyword', start: 0, end: 8 }
     ]);
@@ -67,8 +67,7 @@ describe('Recovery', () => {
     const CHUNK = 1024;
     let parser = new Parser(document.iterator(0));
     for (let rightBorder = 4; rightBorder < N + 4; rightBorder += CHUNK) {
-      let iterator = document.iterator(parser.it.offset, 0, rightBorder);
-      parser.setIterator(iterator);
+      parser.it.setConstraints(0, rightBorder);
       expect(getTokens(parser)).toEqual([
         { name: 'blockComment', start: 0, end: rightBorder }
       ]);
@@ -85,8 +84,7 @@ describe('Recovery', () => {
     const CHUNK = 1024;
     let parser = new Parser(document.iterator(0));
     for (let rightBorder = 2; rightBorder < N + 2; rightBorder += CHUNK) {
-      let iterator = document.iterator(parser.it.offset, 0, rightBorder);
-      parser.setIterator(iterator);
+      parser.it.setConstraints(0, rightBorder);
       expect(getTokens(parser)).toEqual([
         { name: 'lineComment', start: 0, end: rightBorder }
       ]);
@@ -103,8 +101,7 @@ describe('Recovery', () => {
     const CHUNK = 1024;
     let parser = new Parser(document.iterator(0));
     for (let rightBorder = 2; rightBorder < N + 2; rightBorder += CHUNK) {
-      let iterator = document.iterator(parser.it.offset, 0, rightBorder);
-      parser.setIterator(iterator);
+      parser.it.setConstraints(0, rightBorder);
       expect(getTokens(parser)).toEqual([
         { name: 'string', start: 0, end: rightBorder }
       ]);
@@ -112,7 +109,7 @@ describe('Recovery', () => {
   });
   // NOTE: this test will work O(N^2) and will hang if parser
   // recovery doesn't work.
-  fit('should re-parse last template token in O(N) time', () => {
+  it('should re-parse last template token in O(N) time', () => {
     let document = new Document(() => {});
     // 10Mb comment
     const N = 1024 * 1024 * 10;
@@ -122,8 +119,7 @@ describe('Recovery', () => {
     let parser = new Parser(document.iterator(0));
     expect(tokenTypeNames.get(parser.getToken().type)).toBe('backQuote');
     for (let rightBorder = 1 + CHUNK; rightBorder < N; rightBorder += CHUNK) {
-      let iterator = document.iterator(parser.it.offset, 0, rightBorder);
-      parser.setIterator(iterator);
+      parser.it.setConstraints(0, rightBorder);
       expect(getTokens(parser)).toEqual([
         { name: 'template', start: 1, end: rightBorder }
       ]);
