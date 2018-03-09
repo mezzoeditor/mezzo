@@ -36,25 +36,19 @@ pp.getToken = function() {
   if (this.pendingToken) {
     const pendingToken = this.pendingToken;
     this.pendingToken = null;
-    if (pendingToken.type === tt.blockComment && pendingToken.recoveryInfo) {
-      this.readBlockComment(pendingToken.recoveryInfo /* recoveryOffset */);
-    } else if (pendingToken.type === tt.lineComment && pendingToken.recoveryInfo) {
-      this.readLineComment(0, pendingToken.recoveryInfo /* recoveryOffset */);
-    } else if (pendingToken.type === tt.string && pendingToken.recoveryInfo) {
-      this.readString('', pendingToken.recoveryInfo);
-    } else if (pendingToken.type === tt.template && pendingToken.recoveryInfo) {
-      this.readTmplToken(pendingToken.recoveryInfo);
-    } else {
-      this.it.reset(pendingToken.startOffset);
-      this.nextToken()
-    }
-  } else {
-    this.lastTokEndOffset = this.endOffset;
-    this.nextToken()
+    if (pendingToken.type === tt.blockComment && pendingToken.recoveryInfo)
+      return this.readBlockComment(pendingToken.recoveryInfo /* recoveryOffset */);
+    if (pendingToken.type === tt.lineComment && pendingToken.recoveryInfo)
+      return this.readLineComment(0, pendingToken.recoveryInfo /* recoveryOffset */);
+    if (pendingToken.type === tt.string && pendingToken.recoveryInfo)
+      return this.readString('', pendingToken.recoveryInfo);
+    if (pendingToken.type === tt.template && pendingToken.recoveryInfo)
+      return this.readTmplToken(pendingToken.recoveryInfo);
+    this.it.reset(pendingToken.startOffset);
+    return this.nextToken()
   }
-  if (this.pendingToken)
-    return new Token(this.pendingToken.type, this.pendingToken.value, this.pendingToken.startOffset, this.pendingToken.endOffset);
-  return new Token(this.type, this.value, this.startOffset, this.endOffset)
+  this.lastTokEndOffset = this.endOffset;
+  return this.nextToken()
 }
 
 // If we're in an ES6 environment, make parsers iterable
@@ -89,8 +83,9 @@ pp.nextToken = function() {
   this.lineBreakSinceLastTokEnd = isLineBreak(this.it, this.lastTokEndOffset);
   if (this.it.outOfBounds()) return this.finishToken(tt.eof)
 
-  if (curContext.override) return curContext.override(this)
-  else this.readToken(this.fullCharCodeAtPos())
+  if (curContext.override)
+    return curContext.override(this)
+  return this.readToken(this.fullCharCodeAtPos())
 }
 
 pp.readToken = function(code) {
@@ -183,13 +178,15 @@ pp.finishToken = function(type, val, recoveryInfo) {
       type: type,
       value: val
     };
-  } else {
-    let prevType = this.type
-    this.endOffset = this.it.offset;
-    this.type = type
-    this.value = val
-    this.updateContext(prevType)
+    return new Token(type, val, this.startOffset, this.it.offset);
   }
+
+  let prevType = this.type
+  this.endOffset = this.it.offset;
+  this.type = type
+  this.value = val
+  this.updateContext(prevType)
+  return new Token(type, val, this.startOffset, this.it.offset)
 }
 
 // ### Token reading
