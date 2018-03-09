@@ -700,10 +700,7 @@ Text.Iterator = class {
   setConstraints(from, to) {
     from = Math.max(from, 0);
     to = Math.min(to, this._length);
-    if (this.offset < from)
-      this.reset(from - 1);
-    else if (this.offset >= to)
-      this.reset(to);
+    console.assert(from - 1 <= this.offset && this.offset <= to, 'Current offset does not belong to new constraints');
     this._from = from;
     this._to = to;
     this._iterator._from = from;

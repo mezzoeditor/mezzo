@@ -443,27 +443,35 @@ describe('Text.Iterator', () => {
   it('Text.Iterator.setConstraints', () => {
     let defaultMeasurer = createDefaultMeasurer();
     let text = Text.withContent('012', defaultMeasurer);
-    let iterator = text.iterator(0);
+    let iterator = text.iterator(0, 0, 1);
     expect(iterator.outOfBounds()).toBe(false);
+    expect(iterator.offset).toBe(0);
     expect(iterator.current).toBe('0');
 
-    iterator.setConstraints(0, 0);
+    expect(iterator.advance(8)).toBe(1);
     expect(iterator.outOfBounds()).toBe(true);
-    expect(iterator.current).toBe(undefined);
-
-    iterator.setConstraints(-1, 10);
-    expect(iterator.outOfBounds()).toBe(false);
-    expect(iterator.current).toBe('0');
-
-    iterator.advance(8);
-    expect(iterator.offset).toBe(3);
-    expect(iterator.outOfBounds()).toBe(true);
+    expect(iterator.offset).toBe(1);
     expect(iterator.current).toBe(undefined);
 
     iterator.setConstraints(0, 1);
     expect(iterator.outOfBounds()).toBe(true);
-    expect(iterator.current).toBe(undefined);
     expect(iterator.offset).toBe(1);
+    expect(iterator.current).toBe(undefined);
+
+    iterator.setConstraints(1, 3);
+    expect(iterator.outOfBounds()).toBe(false);
+    expect(iterator.offset).toBe(1);
+    expect(iterator.current).toBe('1');
+
+    expect(iterator.advance(-1)).toBe(-1);
+    expect(iterator.outOfBounds()).toBe(true);
+    expect(iterator.offset).toBe(0);
+    expect(iterator.current).toBe(undefined);
+
+    expect(iterator.advance(2)).toBe(2);
+    expect(iterator.outOfBounds()).toBe(false);
+    expect(iterator.offset).toBe(2);
+    expect(iterator.current).toBe('2');
   });
 
   it('Text.Iterator all sizes', () => {
