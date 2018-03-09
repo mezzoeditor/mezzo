@@ -49,7 +49,7 @@ pp.getToken = function() {
       this.nextToken()
     }
   } else {
-    this.lastTokEnd = this.endOffset;
+    this.lastTokEndOffset = this.endOffset;
     this.nextToken()
   }
   if (this.pendingToken)
@@ -86,7 +86,7 @@ pp.nextToken = function() {
   if (!curContext || !curContext.preserveSpace) this.skipSpace()
 
   this.startOffset = this.it.offset;
-  this.lineBreakSinceLastTokEnd = isLineBreak(this.it, this.lastTokEnd);
+  this.lineBreakSinceLastTokEnd = isLineBreak(this.it, this.lastTokEndOffset);
   if (this.it.outOfBounds()) return this.finishToken(tt.eof)
 
   if (curContext.override) return curContext.override(this)
@@ -254,7 +254,7 @@ pp.readToken_plus_min = function(code) { // '+-'
   let next = this.it.charCodeAt(1)
   if (next === code) {
     if (next == 45 && !this.inModule && this.it.charCodeAt(2) == 62 &&
-        (this.lastTokEnd === 0 || isLineBreak(this.it, this.lastTokEnd))) {
+        (this.lastTokEndOffset === 0 || isLineBreak(this.it, this.lastTokEndOffset))) {
       // A `-->` line comment
       return this.readLineComment(3)
     }
