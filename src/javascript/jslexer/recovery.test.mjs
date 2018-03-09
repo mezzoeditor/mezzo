@@ -56,6 +56,22 @@ describe('Recovery', () => {
       { name: 'keyword', start: 0, end: 8 }
     ]);
   });
+  it('should re-parse last block comment', () => {
+    let document = new Document(() => {});
+    let text = '/* test */ ';
+    document.reset(text);
+    let parser = new Parser(document.iterator(0));
+    parser.it.setConstraints(0, 1);
+    expect(getTokens(parser)).toEqual([
+      { name: 'regexp', start: 0, end: 1 }
+    ]);
+    for (let i = 2; i < text.length; ++i) {
+      parser.it.setConstraints(0, i);
+      expect(getTokens(parser)).toEqual([
+        { name: 'blockComment', start: 0, end: i }
+      ]);
+    }
+  });
   // NOTE: this test will work O(N^2) and will hang if parser
   // recovery doesn't work.
   it('should re-parse last block comment in O(N) time', () => {
@@ -70,6 +86,22 @@ describe('Recovery', () => {
       parser.it.setConstraints(0, rightBorder);
       expect(getTokens(parser)).toEqual([
         { name: 'blockComment', start: 0, end: rightBorder }
+      ]);
+    }
+  });
+  it('should re-parse last line comment', () => {
+    let document = new Document(() => {});
+    let text = '// test ';
+    document.reset(text);
+    let parser = new Parser(document.iterator(0));
+    parser.it.setConstraints(0, 1);
+    expect(getTokens(parser)).toEqual([
+      { name: 'regexp', start: 0, end: 1 }
+    ]);
+    for (let i = 2; i < text.length; ++i) {
+      parser.it.setConstraints(0, i);
+      expect(getTokens(parser)).toEqual([
+        { name: 'lineComment', start: 0, end: i }
       ]);
     }
   });
@@ -90,6 +122,18 @@ describe('Recovery', () => {
       ]);
     }
   });
+  it('should re-parse last string token', () => {
+    let document = new Document(() => {});
+    let text = '"foobar"';
+    document.reset(text);
+    let parser = new Parser(document.iterator(0));
+    for (let i = 1; i < text.length; ++i) {
+      parser.it.setConstraints(0, i);
+      expect(getTokens(parser)).toEqual([
+        { name: 'string', start: 0, end: i }
+      ]);
+    }
+  });
   // NOTE: this test will work O(N^2) and will hang if parser
   // recovery doesn't work.
   it('should re-parse last string token in O(N) time', () => {
@@ -104,6 +148,23 @@ describe('Recovery', () => {
       parser.it.setConstraints(0, rightBorder);
       expect(getTokens(parser)).toEqual([
         { name: 'string', start: 0, end: rightBorder }
+      ]);
+    }
+  });
+  it('should re-parse last template token', () => {
+    let document = new Document(() => {});
+    let text = '`foobar`';
+    document.reset(text);
+    let parser = new Parser(document.iterator(0));
+    parser.it.setConstraints(0, 2);
+    expect(getTokens(parser)).toEqual([
+      { name: 'backQuote', start: 0, end: 1 },
+      { name: 'template', start: 1, end: 2 }
+    ]);
+    for (let i = 3; i < text.length; ++i) {
+      parser.it.setConstraints(0, i);
+      expect(getTokens(parser)).toEqual([
+        { name: 'template', start: 1, end: i }
       ]);
     }
   });
