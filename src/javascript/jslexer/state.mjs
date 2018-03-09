@@ -47,7 +47,10 @@ export class Parser {
     this.lastTokEndOffset = this.it.offset;
     this.lineBreakSinceLastTokEnd = false;
 
-    this.pendingToken = null;
+    this.recoveryNeeded = false;
+    this.recoveryOffset = 0;
+    this.recoveryType = null;
+    this.recoveryQuote = '';
 
     // The context stack is used to superficially track syntactic
     // context to predict whether a regular expression is allowed in a

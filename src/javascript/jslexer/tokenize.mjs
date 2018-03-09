@@ -33,21 +33,21 @@ pp.getToken = function() {
     return new Token(tt.eof, undefined, this.it.offset, this.it.offset);
   }
   // If we were interrupted while reading token - re-read.
-  if (this.pendingToken) {
-    const pendingToken = this.pendingToken;
-    this.pendingToken = null;
-    if (pendingToken.type === tt.blockComment && pendingToken.recoveryInfo)
-      return this.readBlockComment(pendingToken.recoveryInfo /* recoveryOffset */);
-    if (pendingToken.type === tt.lineComment && pendingToken.recoveryInfo)
-      return this.readLineComment(0, pendingToken.recoveryInfo /* recoveryOffset */);
-    if (pendingToken.type === tt.string && pendingToken.recoveryInfo)
-      return this.readString('', pendingToken.recoveryInfo);
-    if (pendingToken.type === tt.template && pendingToken.recoveryInfo)
-      return this.readTmplToken(pendingToken.recoveryInfo);
-    this.it.reset(pendingToken.startOffset);
+  if (this.recoveryNeeded) {
+    this.recoveryNeeded = false;
+    this.it.reset(this.recoveryOffset);
+    if (this.recoveryType === tt.blockComment)
+      return this.readBlockComment(0);
+    if (this.recoveryType === tt.lineComment)
+      return this.readLineComment(0);
+    if (this.recoveryType === tt.string)
+      return this.readString(this.recoveryQuote, 0);
+    if (this.recoveryType === tt.template)
+      return this.readTmplToken();
     return this.nextToken()
   }
   this.lastTokEndOffset = this.endOffset;
+  this.recoveryOffset = this.endOffset;
   return this.nextToken()
 }
 
@@ -107,32 +107,25 @@ pp.fullCharCodeAtPos = function() {
   return (code << 10) + next - 0x35fdc00
 }
 
-pp.readBlockComment = function(recoveryOffset) {
-  // Recovery offset can never be 0
-  if (recoveryOffset)
-    this.it.reset(recoveryOffset);
-  else
-    this.it.advance(2);
+pp.readBlockComment = function(startSkip) {
+  this.it.advance(startSkip);
   let commentClosed = this.it.find("*/");
-  recoveryOffset = this.it.offset;
+  this.recoveryOffset = this.it.offset;
   if (commentClosed)
     this.it.advance(2);
-  return this.finishToken(tt.blockComment, undefined, recoveryOffset);
+  return this.finishToken(tt.blockComment, undefined);
 }
 
-pp.readLineComment = function(startSkip, recoveryOffset) {
-  if (recoveryOffset)
-    this.it.reset(recoveryOffset);
-  else
-    this.it.advance(startSkip);
+pp.readLineComment = function(startSkip) {
+  this.it.advance(startSkip);
   let ch = this.it.charCodeAt(0)
-  recoveryOffset = this.it.offset;
+  this.recoveryOffset = this.it.offset;
   while (!this.it.outOfBounds() && !isNewLine(ch)) {
-    recoveryOffset = this.it.offset;
+    this.recoveryOffset = this.it.offset;
     this.it.next();
     ch = this.it.charCodeAt(0)
   }
-  return this.finishToken(tt.lineComment, undefined, recoveryOffset);
+  return this.finishToken(tt.lineComment, undefined);
 }
 
 // Called at the start of the parse and after every token. Skips
@@ -167,17 +160,12 @@ pp.skipSpace = function() {
 // the token, so that the next one's `start` will point at the
 // right position.
 
-pp.finishToken = function(type, val, recoveryInfo) {
+pp.finishToken = function(type, val) {
   // If this is the last token, we should not commit to its reading because it might
   // change.
   if (this.it.outOfBounds()) {
-    this.pendingToken = {
-      endOffset: this.it.offset,
-      startOffset: this.startOffset,
-      recoveryInfo: recoveryInfo,
-      type: type,
-      value: val
-    };
+    this.recoveryNeeded = true;
+    this.recoveryType = type;
     return new Token(type, val, this.startOffset, this.it.offset);
   }
 
@@ -327,7 +315,7 @@ pp.getTokenFromCode = function(code) {
 
   // Quotes produce strings.
   case 34: case 39: // '"', "'"
-    return this.readString(code)
+    return this.readString(code, 1)
 
   // Operators are parsed inline in tiny state machines. '=' (61) is
   // often referred to. `finishOp` simply skips the amount of
@@ -337,7 +325,7 @@ pp.getTokenFromCode = function(code) {
   case 47: // '/'
     switch (this.it.charCodeAt(1)) {
     case 42: // '*'
-      return this.readBlockComment()
+      return this.readBlockComment(2)
     case 47:
       return this.readLineComment(2)
     }
@@ -484,43 +472,37 @@ function codePointToString(code) {
   return String.fromCharCode((code >> 10) + 0xD800, (code & 1023) + 0xDC00)
 }
 
-pp.readString = function(quote, recoveryInfo) {
-  if (recoveryInfo) {
-    quote = recoveryInfo.quote;
-    this.it.reset(recoveryInfo.offset);
-  } else {
-    this.it.next()
-  }
-  let recoveryOffset = this.it.offset;
+pp.readString = function(quote, startSkip) {
+  this.it.advance(startSkip)
+  this.recoveryOffset = this.it.offset;
+  this.recoveryQuote = quote;
   for (;;) {
     if (this.it.outOfBounds()) {
-      return this.finishToken(tt.string, undefined, {quote, offset: recoveryOffset});
+      return this.finishToken(tt.string, undefined);
     }
-    recoveryOffset = this.it.offset;
+    this.recoveryOffset = this.it.offset;
     let ch = this.it.charCodeAt(0)
     if (ch === quote) break
     if (ch === 92) { // '\'
       this.readEscapedChar()
     } else {
       if (isNewLine(ch))
-        return this.finishToken(tt.string, undefined, {quote, offset: recoveryOffset});
+        return this.finishToken(tt.string, undefined);
       this.it.next()
     }
   }
   this.it.next();
-  return this.finishToken(tt.string, undefined, {quote, offset: recoveryOffset})
+  return this.finishToken(tt.string, undefined)
 }
 
 // Reads template string tokens.
 
-pp.readTmplToken = function(recoveryInfo) {
-  if (recoveryInfo)
-    this.it.reset(recoveryInfo.offset);
-  let recoveryOffset = this.it.offset;
+pp.readTmplToken = function() {
+  this.recoveryOffset = this.it.offset;
   for (;;) {
-    recoveryOffset = this.it.offset;
+    this.recoveryOffset = this.it.offset;
     if (this.it.outOfBounds()) {
-      return this.finishToken(tt.template, undefined, {offset: recoveryOffset});
+      return this.finishToken(tt.template, undefined);
     }
 
     let ch = this.it.charCodeAt(0)
@@ -534,7 +516,7 @@ pp.readTmplToken = function(recoveryInfo) {
           return this.finishToken(tt.backQuote)
         }
       }
-      return this.finishToken(tt.template, undefined, {offset: recoveryOffset})
+      return this.finishToken(tt.template, undefined)
     }
     if (ch === 92) { // '\'
       this.readEscapedChar()
