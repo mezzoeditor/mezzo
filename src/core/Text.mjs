@@ -1,9 +1,8 @@
 import { Random } from "./Random.mjs";
 import { Metrics } from "./Metrics.mjs";
 import { RoundMode, Unicode } from "./Unicode.mjs";
+import { Tree } from "./Tree.mjs";
 import { trace } from "../core/Trace.mjs";
-
-let random = Random(42);
 
 // This is very efficient for loading large files and memory consumption.
 // It might slow down common operations though. We should measure that and
@@ -11,413 +10,41 @@ let random = Random(42);
 let kDefaultChunkSize = 1000;
 
 /**
- * @typedef {{
- *   chunk: string
- *   metrics: !Metrics,
- *   selfMetrics: !Metrics|undefined,
- *   left: !TreeNode|undefined,
- *   right: !TreeNode|undefined,
- *   h: number
- * }} TreeNode;
- */
-
-/**
- * @typedef {{
- *   offset: number|undefined,
- *   line: number|undefined,
- *   column: number|undefined,
- *   x: number|undefined,
- *   y: number|undefined,
- * }} FindKey;
- */
-
- /**
- * @param {!Location} location
- * @param {!FindKey} key
+ * @param {string} content
  * @param {!Measurer} measurer
- * @return {boolean}
+ * @param {string=} firstChunk
+ * @return {!Array<!{data: string, metrics: !Metrics}>}
  */
-function locationIsGreater(location, key, measurer) {
-  if (key.offset !== undefined)
-    return location.offset > key.offset;
-  if (key.line !== undefined)
-    return location.line > key.line || (location.line === key.line && location.column > key.column);
-  return location.y > key.y || (location.y + measurer.defaultHeight > key.y && location.x > key.x);
-};
-
-/**
- * @param {!Location} location
- * @param {!FindKey} key
- * @return {boolean}
- */
-function locationIsGreaterOrEqual(location, key) {
-  if (key.offset !== undefined)
-    return location.offset >= key.offset;
-  if (key.line !== undefined)
-    return location.line > key.line || (location.line === key.line && location.column >= key.column);
-  throw 'locationIsGreaterOrEqual cannot be used for points';
-};
-
-
-/**
- * @param {string} s
- * @param {!Measurer} measurer
- * @return {!TreeNode}
- */
-function createNode(s, measurer) {
-  return {
-    chunk: s,
-    h: random(),
-    metrics: Metrics.fromString(s, measurer)
-  };
+function chunkContent(content, measurer, firstChunk) {
+  let index = 0;
+  let chunks = [];
+  if (firstChunk)
+  chunks.push({data: firstChunk, metrics: Metrics.fromString(firstChunk, measurer)});
+  while (index < content.length) {
+    let length = Math.min(content.length - index, kDefaultChunkSize);
+    if (!Unicode.isValidOffset(content, index + length))
+      length++;
+    let chunk = content.substring(index, index + length);
+    chunks.push({data: chunk, metrics: Metrics.fromString(chunk, measurer)});
+    index += length;
+  }
+  if (!chunks.length)
+    chunks.push({data: '', metrics: Metrics.fromString('', measurer)});
+  return chunks;
 }
-
-/**
- * @param {!TreeNode} parent
- * @param {!TreeNode|undefined} left
- * @param {!TreeNode|undefined} right
- * @param {!Measurer} measurer
- * @param {boolean=} skipClone
- * @return {!TreeNode}
- */
-function setChildren(parent, left, right, measurer, skipClone) {
-  let node = skipClone ? parent : {
-    chunk: parent.chunk,
-    h: parent.h,
-    metrics: parent.selfMetrics || parent.metrics
-  };
-  if (!node.selfMetrics && (left || right))
-    node.selfMetrics = node.metrics;
-  if (left) {
-    node.left = left;
-    node.metrics = Metrics.combine(left.metrics, node.metrics, measurer);
-  }
-  if (right) {
-    node.right = right;
-    node.metrics = Metrics.combine(node.metrics, right.metrics, measurer);
-  }
-  return node;
-}
-
-/**
- * @param {!Array<!TreeNode>} nodes
- * @param {!Measurer} measurer
- * @return {!TreeNode|undefined}
- */
-function buildTree(nodes, measurer) {
-  if (!nodes.length)
-    return;
-  if (nodes.length === 1)
-    return nodes[0];
-
-  let stack = new Int32Array(nodes.length);
-  let stackLength = 0;
-  let p = new Int32Array(nodes.length);
-  for (let i = 0; i < nodes.length; i++) {
-    while (stackLength && nodes[stack[stackLength - 1]].h <= nodes[i].h)
-      stackLength--;
-    p[i] = stackLength ? stack[stackLength - 1] : -1;
-    stack[stackLength++] = i;
-  }
-  stackLength = 0;
-
-  let l = new Int32Array(nodes.length);
-  l.fill(-1);
-  let r = new Int32Array(nodes.length);
-  r.fill(-1);
-  let root = -1;
-  for (let i = nodes.length - 1; i >= 0; i--) {
-    while (stackLength && nodes[stack[stackLength - 1]].h <= nodes[i].h)
-      stackLength--;
-    let parent = stackLength ? stack[stackLength - 1] : -1;
-    if (parent === -1 || (p[i] !== -1 && nodes[p[i]].h < nodes[parent].h))
-      parent = p[i];
-    if (parent === -1)
-      root = i;
-    else if (parent > i)
-      l[parent] = i;
-    else
-      r[parent] = i;
-    stack[stackLength++] = i;
-  }
-  stackLength = 0;
-
-  /**
-   * @param {number} i
-   * @return {!TreeNode}
-   */
-  function fill(i) {
-    let left = l[i] === -1 ? undefined : fill(l[i]);
-    let right = r[i] === -1 ? undefined : fill(r[i]);
-    return setChildren(nodes[i], left, right, measurer, true);
-  }
-  return fill(root);
-}
-
-/**
- * Left part contains all nodes up to key.
- * If node contains a key location inside, it will be returned in right part,
- * unless |intersectionToLeft| is true.
- * @param {!TreeNode|undefined} root
- * @param {!PartialLocation} key
- * @param {boolean} intersectionToLeft
- * @param {!Measurer} measurer
- * @param {!Location=} current
- * @return {{left: !TreeNode|undefined, right: !TreeNode|undefined}}
- */
-function splitTree(root, key, intersectionToLeft, measurer, current) {
-  if (!root)
-    return {};
-  if (!current)
-    current = Metrics.origin;
-  if (locationIsGreaterOrEqual(current, key))
-    return {right: root};
-  if (!locationIsGreater(Metrics.advanceLocation(current, root.metrics, measurer), key, measurer))
-    return {left: root};
-
-  // intersection to left:
-  //   key a b  ->  root to right
-  //   a key b  ->  root to left
-  //   a b key  ->  root to left
-  //   rootToLeft = (key > a) == (a < key) == !(a >= key)
-
-  // intersection to right:
-  //   key a b  ->  root to right
-  //   a key b  ->  root to right
-  //   a b key  ->  root to left
-  //   rootToLeft = (key >= b) == (b <= key) == !(b > key)
-
-  let next = root.left ? Metrics.advanceLocation(current, root.left.metrics, measurer) : current;
-  let rootToLeft = !locationIsGreaterOrEqual(next, key);
-  next = Metrics.advanceLocation(next, root.selfMetrics || root.metrics, measurer);
-  if (!intersectionToLeft)
-    rootToLeft = !locationIsGreater(next, key, measurer);
-  if (rootToLeft) {
-    let tmp = splitTree(root.right, key, intersectionToLeft, measurer, next);
-    return {left: setChildren(root, root.left, tmp.left, measurer), right: tmp.right};
-  } else {
-    let tmp = splitTree(root.left, key, intersectionToLeft, measurer, current);
-    return {left: tmp.left, right: setChildren(root, tmp.right, root.right, measurer)};
-  }
-}
-
-/**
- * @param {!TreeNode|undefined} left
- * @param {!TreeNode|undefined} right
- * @param {!Measurer} measurer
- * @return {!TreeNode|undefined}
- */
-function mergeTrees(left, right, measurer) {
-  if (!left)
-    return right;
-  if (!right)
-    return left;
-  if (left.h > right.h)
-    return setChildren(left, left.left, mergeTrees(left.right, right, measurer), measurer);
-  else
-    return setChildren(right, mergeTrees(left, right.left, measurer), right.right, measurer);
-}
-
-/**
- * @param {!TreeNode} node
- * @param {!PartialLocation} key
- * @param {!Measurer} measurer
- * @return {{node: !TreeNode, location: !Location}|undefined}
- */
-function findNode(node, key, measurer) {
-  let current = Metrics.origin;
-  while (true) {
-    if (node.left) {
-      let next = Metrics.advanceLocation(current, node.left.metrics, measurer);
-      if (locationIsGreater(next, key, measurer)) {
-        node = node.left;
-        continue;
-      }
-      current = next;
-    }
-    let next = Metrics.advanceLocation(current, node.selfMetrics || node.metrics, measurer);
-    if (locationIsGreater(next, key, measurer))
-      return {node, location: current};
-    current = next;
-    if (!node.right)
-      return;
-    node = node.right;
-  }
-}
-
-class TreeIterator {
-  /**
-   * @param {!TreeNode} node
-   * @param {!Array<!TreeNode>} stack
-   * @param {number} from
-   * @param {number} to
-   * @param {number} before
-   * @param {number} after
-   */
-  constructor(node, stack, from, to, before, after) {
-    this._node = node;
-    this._stack = stack;
-    this._from = from;
-    this._to = to;
-    this._before = before;
-    this._after = after;
-  }
-
-  /**
-   * @param {!TreeNode} root
-   * @param {number} offset
-   * @param {number} from
-   * @param {number} to
-   * @return {!TreeIterator}
-   */
-  static create(root, offset, from, to) {
-    let it = new TreeIterator(root, [], from, to, 0, 0);
-    it._init(root, offset);
-    return it;
-  }
-
-  /**
-   * @return {!TreeIterator}
-   */
-  clone() {
-    return new TreeIterator(this._node, this._stack.slice(), this._from, this._to, this._before, this._after);
-  }
-
-  /**
-   * @param {!TreeNode} node
-   * @param {number} offset
-   */
-  _init(node, offset) {
-    this._stack = [];
-    let current = 0;
-    while (true) {
-      this._stack.push(node);
-      if (node.left) {
-        let next = current + node.left.metrics.length;
-        if (next > offset) {
-          node = node.left;
-          continue;
-        }
-        current = next;
-      }
-      let next = current + (node.selfMetrics || node.metrics).length;
-      if (next > offset || !node.right) {
-        this._node = node;
-        this._before = current;
-        this._after = next;
-        return;
-      }
-      current = next;
-      node = node.right;
-    }
-  }
-
-  /**
-   * @return {boolean}
-   */
-  next() {
-    if (this._after > this._to)
-      return false;
-
-    if (this._node.right) {
-      let right = this._node.right;
-      while (right.left) {
-        this._stack.push(right);
-        right = right.left;
-      }
-      this._stack.push(right);
-      this._before = this._after;
-      this._after += (right.selfMetrics || right.metrics).length;
-      this._node = right;
-      return true;
-    }
-
-    let len = this._stack.length;
-    while (len > 1 && this._stack[len - 2].right === this._stack[len - 1]) {
-      this._stack.pop();
-      len--;
-    }
-    if (len === 1)
-      return false;
-
-    let next = this._stack[len - 2];
-    this._stack.pop();
-    this._before = this._after;
-    this._after += (next.selfMetrics || next.metrics).length;
-    this._node = next;
-    return true;
-  }
-
-  /**
-   * @return {boolean}
-   */
-  prev() {
-    if (this._before < this._from)
-      return false;
-
-    if (this._node.left) {
-      let left = this._node.left;
-      while (left.right) {
-        this._stack.push(left);
-        left = left.right;
-      }
-      this._stack.push(left);
-      this._after = this._before;
-      this._before -= (left.selfMetrics || left.metrics).length;
-      this._node = left;
-      return true;
-    }
-
-    let len = this._stack.length;
-    while (len > 1 && this._stack[len - 2].left === this._stack[len - 1]) {
-      this._stack.pop();
-      len--;
-    }
-    if (len === 1)
-      return false;
-
-    let next = this._stack[len - 2];
-    this._stack.pop();
-    this._after = this._before;
-    this._before -= (next.selfMetrics || next.metrics).length;
-    this._node = next;
-    return true;
-  }
-
-  /**
-   * @return {!TreeNode}
-   */
-  node() {
-    return this._node;
-  }
-
-  /**
-   * @return {number}
-   */
-  before() {
-    return this._before;
-  }
-
-  /**
-   * @return {number}
-   */
-  after() {
-    return this._after;
-  }
-};
 
 export class Text {
   /**
-   * @param {!TreeNode} root
+   * @param {!Tree<string>} tree
    * @param {!Measurer} measurer
    */
-  constructor(root, measurer) {
-    this._root = root;
+  constructor(tree, measurer) {
+    this._tree = tree;
     this._measurer = measurer;
-    let metrics = this._root.metrics;
+    let metrics = this._tree.metrics();
     this._lineCount = (metrics.lineBreaks || 0) + 1;
     this._length = metrics.length;
-    this._lastLocation = Metrics.toLocation(metrics, this._measurer);
+    this._lastLocation = this._tree.endLocation();
     this._longestLineWidth = metrics.longestWidth || (metrics.longestColumns * this._measurer.defaultWidth);
   }
 
@@ -427,31 +54,8 @@ export class Text {
    * @return {!Text}
    */
   static withContent(content, measurer) {
-    return new Text(Text._withContent(content, measurer), measurer);
-  }
-
-  /**
-   * @param {string} content
-   * @param {!Measurer} measurer
-   * @param {string=} firstChunk
-   * @return {!TreeNode}
-   */
-  static _withContent(content, measurer, firstChunk) {
-    let index = 0;
-    let nodes = [];
-    if (firstChunk)
-      nodes.push(createNode(firstChunk, measurer));
-    while (index < content.length) {
-      let length = Math.min(content.length - index, kDefaultChunkSize);
-      if (!Unicode.isValidOffset(content, index + length))
-        length++;
-      let chunk = content.substring(index, index + length);
-      nodes.push(createNode(chunk, measurer));
-      index += length;
-    }
-    if (!nodes.length)
-      nodes.push(createNode('', measurer));
-    return buildTree(nodes, measurer);
+    let chunks = chunkContent(content, measurer);
+    return new Text(Tree.build(chunks, measurer.defaultHeight, measurer.defaultWidth), measurer);
   }
 
   resetCache() {
@@ -479,7 +83,6 @@ export class Text {
    */
   content(fromOffset, toOffset) {
     let {from, to} = this._clamp(fromOffset, toOffset);
-    let chunks = [];
     let iterator = this.iterator(from, from, to);
     return iterator.substr(to - from);
   }
@@ -494,7 +97,7 @@ export class Text {
     let {from, to} = this._clamp(fromOffset, toOffset);
     offset = Math.max(from, offset);
     offset = Math.min(to, offset);
-    let it = TreeIterator.create(this._root, offset, from, to);
+    let it = this._tree.iterator(offset, from, to);
     return new Text.Iterator(it, offset, from, to, this._length);
   }
 
@@ -534,54 +137,38 @@ export class Text {
    */
   replace(fromOffset, toOffset, insertion) {
     let {from, to} = this._clamp(fromOffset, toOffset);
-    let tmp = splitTree(this._root, {offset: to}, true /* intersectionToLeft */, this._measurer);
-    let right = tmp.right;
-    tmp = splitTree(tmp.left, {offset: from}, false /* intersectionToLeft */, this._measurer);
-    let left = tmp.left;
-    let middle = tmp.right;
+    let split = this._tree.split(from, to);
+
     let removed = '';
-    if (!middle) {
-      middle = Text._withContent(insertion, this._measurer);
-    } else {
-      let leftLength = left ? left.metrics.length : 0;
-      let middleLength = middle.metrics.length;
-      let first;
-      let last;
-
-      /**
-       * @param {!TreeNode} node
-       * @param {boolean} isLast
-       */
-      function visit(node, isLast) {
-        if (node.left)
-          visit(node.left, false);
-        let fromOffset = 0;
-        let toOffset = node.chunk.length;
-        if (first === undefined) {
-          fromOffset = from - leftLength;
-          first = node.chunk.substring(0, fromOffset);
-        }
-        if (isLast && !node.right) {
-          toOffset = node.chunk.length - (leftLength + middleLength - to);
-          last = node.chunk.substring(toOffset);
-        }
-        removed += node.chunk.substring(fromOffset, toOffset);
-        if (node.right)
-          visit(node.right, isLast);
+    let first = '';
+    let last = '';
+    for (let i = 0; i < split.middle.length; i++) {
+      let data = split.middle[i];
+      let fromOffset = 0;
+      let toOffset = data.length;
+      if (i === 0) {
+        fromOffset = from - split.left.metrics().length;
+        first = data.substring(0, fromOffset);
       }
-      visit(middle, true);
-
-      if (first.length + insertion.length + last.length > kDefaultChunkSize &&
-          first.length + insertion.length <= kDefaultChunkSize) {
-        // For typical editing scenarios, we are most likely to replace at the
-        // end of |insertion| next time.
-        middle = Text._withContent(last, this._measurer, first + insertion);
-      } else {
-        middle = Text._withContent(first + insertion + last, this._measurer);
+      if (i === split.middle.length - 1) {
+        toOffset = data.length - (this._length - split.right.metrics().length - to);
+        last = data.substring(toOffset);
       }
+      removed += data.substring(fromOffset, toOffset);
     }
 
-    let text = new Text(mergeTrees(left, mergeTrees(middle, right, this._measurer), this._measurer), this._measurer);
+    let chunks = [];
+    if (first.length + insertion.length + last.length > kDefaultChunkSize &&
+        first.length + insertion.length <= kDefaultChunkSize) {
+      // For typical editing scenarios, we are most likely to replace at the
+      // end of |insertion| next time.
+      chunks = chunkContent(last, this._measurer, first + insertion);
+    } else {
+      chunks = chunkContent(first + insertion + last, this._measurer);
+    }
+
+    let tree = Tree.build(chunks, this._measurer.defaultHeight, this._measurer.defaultWidth, split.left, split.right);
+    let text = new Text(tree, this._measurer);
     return {text, removed};
   }
 
@@ -590,14 +177,10 @@ export class Text {
    * @return {?Location}
    */
   offsetToLocation(offset) {
-    if (offset > this._length)
-      return null;
-    if (offset === this._length)
-      return this._lastLocation;
-    let found = findNode(this._root, {offset}, this._measurer);
-    if (!found)
-      throw 'Inconsistency';
-    return Metrics.stringOffsetToLocation(found.node.chunk, found.location, offset, this._measurer);
+    let found = this._tree.findByOffset(offset);
+    if (found.location === null || found.data === null)
+      return found.location;
+    return Metrics.stringOffsetToLocation(found.data, found.location, offset, this._measurer);
   }
 
   /**
@@ -606,29 +189,10 @@ export class Text {
    * @return {!Location}
    */
   positionToLocation(position, strict) {
-    if (position.line < 0) {
-      if (strict)
-        throw 'Position does not belong to text';
-      position = {line: 0, column: 0};
-    }
-    if (position.column < 0) {
-      if (strict)
-        throw 'Position does not belong to text';
-      position = {line: position.line, column: 0};
-    }
-    let compare = (position.line - this._lastLocation.line) || (position.column - this._lastLocation.column);
-    if (compare >= 0) {
-      if (!strict || compare === 0)
-        return this._lastLocation;
-      throw 'Position does not belong to text';
-    }
-    let found = findNode(this._root, {line: position.line, column: position.column}, this._measurer);
-    if (!found) {
-      if (!strict)
-        return this._lastLocation;
-      throw 'Position does not belong to text';
-    }
-    return Metrics.stringPositionToLocation(found.node.chunk, found.location, position, this._measurer, strict);
+    let found = this._tree.findByPosition(position, !!strict);
+    if (found.data === null)
+      return found.location;
+    return Metrics.stringPositionToLocation(found.data, found.location, found.clampedPosition, this._measurer, strict);
   }
 
   /**
@@ -638,38 +202,10 @@ export class Text {
    * @return {!Location}
    */
   pointToLocation(point, roundMode, strict) {
-    if (point.y < 0) {
-      if (strict)
-        throw 'Point does not belong to text';
-      point = {x: 0, y: 0};
-    }
-    if (point.x < 0) {
-      if (strict)
-        throw 'Point does not belong to text';
-      point = {x: 0, y: point.y};
-    }
-
-    let outside = false;
-    if (point.y >= this._lastLocation.y + this._measurer.defaultHeight) {
-      outside = true;
-    } else if (point.y >= this._lastLocation.y && point.x > this._lastLocation.x) {
-      outside = true;
-    }
-    if (outside) {
-      if (!strict)
-        return this._lastLocation;
-      throw 'Point does not belong to text';
-    }
-    if (point.y === this._lastLocation.y && point.x === this._lastLocation.x)
-      return this._lastLocation;
-
-    let found = findNode(this._root, {x: point.x, y: point.y}, this._measurer);
-    if (!found) {
-      if (!strict)
-        return this._lastLocation;
-      throw 'Point does not belong to text';
-    }
-    return Metrics.stringPointToLocation(found.node.chunk, found.location, point, this._measurer, roundMode, strict);
+    let found = this._tree.findByPoint(point, !!strict);
+    if (found.data === null)
+      return found.location;
+    return Metrics.stringPointToLocation(found.data, found.location, found.clampedPoint, this._measurer, roundMode, strict);
   }
 }
 
@@ -688,8 +224,8 @@ Text.Iterator = class {
     this._length = length;
 
     this.offset = offset;
-    this._chunk = this._iterator.node().chunk;
-    this._pos = offset - this._iterator.before();
+    this._chunk = this._iterator.data;
+    this._pos = offset - this._iterator.before;
     this.current = this.outOfBounds() ? undefined : this._chunk[this._pos];
   }
 
@@ -726,7 +262,7 @@ Text.Iterator = class {
     let moves = -1;
     do {
       ++moves;
-      let chunk = iterator.node().chunk;
+      let chunk = iterator.data;
       let word = chunk.substr(pos, length);
       pos = 0;
       result += word;
@@ -755,7 +291,7 @@ Text.Iterator = class {
     let moves = -1;
     do {
       moves++;
-      let chunk = iterator.node().chunk;
+      let chunk = iterator.data;
       let word = pos === -1 ? chunk.substr(-length) : chunk.substr(0, pos).substr(-length);
       pos = -1;
       result = word + result;
@@ -780,7 +316,7 @@ Text.Iterator = class {
     this._pos += length;
     while (this._pos >= this._chunk.length && this._iterator.next()) {
       this._pos -= this._chunk.length;
-      this._chunk = this._iterator.node().chunk;
+      this._chunk = this._iterator.data;
       result += this._chunk.substr(0, length - result.length);
     }
     this.current = this.outOfBounds() ? undefined : this._chunk[this._pos];
@@ -800,7 +336,7 @@ Text.Iterator = class {
     this.offset -= length;
     this._pos -= length;
     while (this._pos < 0 && this._iterator.prev()) {
-      this._chunk = this._iterator.node().chunk;
+      this._chunk = this._iterator.data;
       this._pos += this._chunk.length;
       result = this._chunk.substr(result.length - length) + result;
     }
@@ -836,7 +372,7 @@ Text.Iterator = class {
       while (searchWindow.length - skip < query.length - 1) {
         if (!endIterator.next())
           break;
-        searchWindow += endIterator.node().chunk;
+        searchWindow += endIterator.data;
       }
 
       let index = searchWindow.indexOf(query);
@@ -856,7 +392,7 @@ Text.Iterator = class {
         this.offset = this._to;
         return false;
       }
-      this._chunk = this._iterator.node().chunk;
+      this._chunk = this._iterator.data;
       this._pos = 0;
       this.current = this._chunk[this._pos];
     }
@@ -895,11 +431,11 @@ Text.Iterator = class {
     if (x > 0) {
       while (this._pos >= this._chunk.length && this._iterator.next()) {
         this._pos -= this._chunk.length;
-        this._chunk = this._iterator.node().chunk;
+        this._chunk = this._iterator.data;
       }
     } else {
       while (this._pos < 0 && this._iterator.prev()) {
-        this._chunk = this._iterator.node().chunk;
+        this._chunk = this._iterator.data;
         this._pos += this._chunk.length;
       }
     }
@@ -970,8 +506,8 @@ Text.test = {};
  * @return {!Text}
  */
 Text.test.fromChunks = function(chunks, measurer) {
-  let nodes = chunks.map(chunk => createNode(chunk, measurer));
-  return new Text(buildTree(nodes, measurer), measurer);
+  let nodes = chunks.map(chunk => ({data: chunk, metrics: Metrics.fromString(chunk, measurer)}));
+  return new Text(Tree.build(nodes, measurer.defaultHeight, measurer.defaultWidth), measurer);
 };
 
 /**

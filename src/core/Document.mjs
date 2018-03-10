@@ -49,9 +49,7 @@ export class Document {
    */
   setMeasurer(measurer) {
     this._measurer = measurer;
-    // TODO: this is not quite correct.
-    // Instead, we should either rebuild the whole history or mark history states
-    // with measurer and rebuild lazily.
+    // TODO: this is not quite correct, as it affects history.
     this.reset(this.content());
   }
 
