@@ -21,46 +21,111 @@ export const defaultOptions = {
 }
 
 export class Parser {
-  constructor(iterator, options = {}) {
-    this.options = Object.assign({}, defaultOptions, options);
-    this.keywords = keywordRegexp(keywords[this.options.ecmaVersion >= 6 ? 6 : 5])
+  static defaultState(options = {}) {
+    const state = {};
+    state.options = Object.assign({}, defaultOptions, options);
+    state.offset = 0;
+
+    // Used to signal to callers of `readWord1` whether the word
+    // contained any escape sequences. This is needed because words with
+    // escape sequences must not be interpreted as keywords.
+    state.containsEsc = false
+
+    // Set up token state
+
+    // Properties of the current token:
+    // Its type
+    state.type = tt.eof
+    // For tokens that include more information than their type, the value
+    state.value = null
+    // Its start and end offset
+    state.startOffset = 0;
+    state.endOffset = 0;
+
+    // Position information for the previous token
+    state.lastTokEndOffset = 0;
+    state.lineBreakSinceLastTokEnd = false;
+
+    state.recoveryNeeded = false;
+    state.recoveryOffset = 0;
+    state.recoveryType = null;
+    state.recoveryQuote = '';
+
+    // The context stack is used to superficially track syntactic
+    // context to predict whether a regular expression is allowed in a
+    // given position.
+    state.context = [Parser.prototype.initialContext()];
+    state.exprAllowed = true
+    return state;
+  }
+
+  constructor(iterator, state) {
+    this.options = state.options;
 
     this.it = iterator;
 
     // Used to signal to callers of `readWord1` whether the word
     // contained any escape sequences. This is needed because words with
     // escape sequences must not be interpreted as keywords.
-    this.containsEsc = false
+    this.containsEsc = state.containsEsc;
 
     // Set up token state
 
     // Properties of the current token:
     // Its type
-    this.type = tt.eof
+    this.type = state.type;
     // For tokens that include more information than their type, the value
-    this.value = null
+    this.value = state.value;
     // Its start and end offset
-    this.startOffset = this.it.offset;
-    this.endOffset = this.it.offset;
+    this.startOffset = state.startOffset;
+    this.endOffset = state.endOffset;
 
     // Position information for the previous token
-    this.lastTokEndOffset = this.it.offset;
-    this.lineBreakSinceLastTokEnd = false;
+    this.lastTokEndOffset = state.lastTokEndOffset;
+    this.lineBreakSinceLastTokEnd = state.lineBreakSinceLastTokEnd;
 
-    this.recoveryNeeded = false;
-    this.recoveryOffset = 0;
-    this.recoveryType = null;
-    this.recoveryQuote = '';
+    this.recoveryNeeded = state.recoveryNeeded;
+    this.recoveryOffset = state.recoveryOffset;
+    this.recoveryType = state.recoveryType;
+    this.recoveryQuote = state.recoveryQuote;
 
     // The context stack is used to superficially track syntactic
     // context to predict whether a regular expression is allowed in a
     // given position.
-    this.context = [this.initialContext()];
-    this.exprAllowed = true
+    this.context = state.context.slice();
+    this.exprAllowed = state.exprAllowed;
 
-    // Figure out if it's a module code.
+    // Infer state parts from options.
+    this.keywords = keywordRegexp(keywords[this.options.ecmaVersion >= 6 ? 6 : 5])
     this.inModule = this.options.sourceType === "module"
     this.strict = this.inModule
+
+    // Rebaseline offsets since we might be restored at a different position.
+    const offsetDelta = iterator.offset - state.offset;
+    this.startOffset += offsetDelta;
+    this.endOffset += offsetDelta;
+    this.lastTokEndOffset += offsetDelta;
+    this.recoveryOffset += offsetDelta;
+  }
+
+  state() {
+    return {
+      options: this.options,
+      offset: this.it.offset,
+      containsEsc: this.containsEsc,
+      type: this.type,
+      value: this.value,
+      startOffset: this.startOffset,
+      endOffset: this.endOffset,
+      lastTokEndOffset: this.lastTokEndOffset,
+      lineBreakSinceLastTokEnd: this.lineBreakSinceLastTokEnd,
+      recoveryNeeded: this.recoveryNeeded,
+      recoveryOffset: this.recoveryOffset,
+      recoveryType: this.recoveryType,
+      recoveryQuote: this.recoveryQuote,
+      context: this.context.slice(),
+      exprAllowed: this.exprAllowed,
+    };
   }
 }
 
