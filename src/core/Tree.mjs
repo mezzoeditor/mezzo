@@ -1,7 +1,54 @@
 import { Random } from './Random.mjs';
-import { Metrics } from './Metrics.mjs';
 
 let random = Random(42);
+
+/**
+ * @typedef {{
+ *   length: number,
+ *   lineBreaks: number|undefined,
+ *   firstColumns: number,
+ *   firstWidth: number|undefined,
+ *   lastColumns: number,
+ *   lastWidth: number|undefined,
+ *   longestColumns: number,
+ *   longestWidth: number|undefined,
+ * }} Metrics;
+ */
+
+/**
+ * @typedef {number} Offset;
+ */
+
+/**
+ * @typedef {{
+ *   line: number,
+ *   column: number,
+ * }} Position;
+ */
+
+/**
+ * @typedef {{
+ *   x: number,
+ *   y: number,
+ * }} Point;
+ */
+
+ /**
+ * @typedef {{
+ *   offset: number,
+ *   line: number,
+ *   column: number,
+ *   x: number,
+ *   y: number,
+ * }} Location;
+ */
+
+/**
+ * @typedef {{
+ *   from: number,
+ *   to: number
+ * }} Range;
+ */
 
 /**
  * @template T

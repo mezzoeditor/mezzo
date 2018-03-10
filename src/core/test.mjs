@@ -1,7 +1,6 @@
 #!/usr/bin/env node --experimental-modules
 
 import {TestRunner, Reporter, Matchers} from '../../utils/testrunner/index.mjs';
-import {Metrics} from './Metrics.mjs';
 import {RoundMode, Unicode} from './Unicode.mjs';
 import {Text} from './Text.mjs';
 import {Document} from './Document.mjs';
@@ -35,117 +34,6 @@ function createTestMeasurer() {
 function createDefaultMeasurer() {
   return new Unicode.CachingMeasurer(1, 1, Unicode.anythingRegex, s => 1, s => 1);
 }
-
-describe('Metrics', () => {
-  it('Metrics.fromString', () => {
-    let defaultMeasurer = createDefaultMeasurer();
-    expect(Metrics.fromString('one line', defaultMeasurer)).toEqual({length: 8, firstColumns: 8, lastColumns: 8, longestColumns: 8});
-    expect(Metrics.fromString('\none line', defaultMeasurer)).toEqual({length: 9, firstColumns: 0, lastColumns: 8, longestColumns: 8, lineBreaks: 1});
-    expect(Metrics.fromString('one line\n', defaultMeasurer)).toEqual({length: 9, firstColumns: 8, lastColumns: 0, longestColumns: 8, lineBreaks: 1});
-    expect(Metrics.fromString('\none line\n', defaultMeasurer)).toEqual({length: 10, firstColumns: 0, lastColumns: 0, longestColumns: 8, lineBreaks: 2});
-    expect(Metrics.fromString('short\nlongest\nlonger\ntiny', defaultMeasurer)).toEqual({length: 25, firstColumns: 5, lastColumns: 4, longestColumns: 7, lineBreaks: 3});
-
-    let testMeasurer = createTestMeasurer();
-    expect(Metrics.fromString('a', testMeasurer)).toEqual({length: 1, firstColumns: 1, lastColumns: 1, longestColumns: 1});
-    expect(Metrics.fromString('a\nb', testMeasurer)).toEqual({length: 3, firstColumns: 1, lastColumns: 1, longestColumns: 1, lineBreaks: 1, lastWidth: 2, longestWidth: 2});
-    expect(Metrics.fromString('b\na', testMeasurer)).toEqual({length: 3, firstColumns: 1, lastColumns: 1, longestColumns: 1, lineBreaks: 1, firstWidth: 2, longestWidth: 2});
-    expect(Metrics.fromString('bac', testMeasurer)).toEqual({length: 3, firstColumns: 3, lastColumns: 3, longestColumns: 3, firstWidth: 6, lastWidth: 6, longestWidth: 6});
-    expect(Metrics.fromString('b\na\nc', testMeasurer)).toEqual({length: 5, firstColumns: 1, lastColumns: 1, longestColumns: 1, lineBreaks: 2, firstWidth: 2, lastWidth: 3, longestWidth: 3});
-    expect(Metrics.fromString('b\naaaa\nc', testMeasurer)).toEqual({length: 8, firstColumns: 1, lastColumns: 1, longestColumns: 4, lineBreaks: 2, firstWidth: 2, lastWidth: 3});
-    expect(Metrics.fromString('b😀😀', testMeasurer)).toEqual({length: 5, firstColumns: 3, lastColumns: 3, longestColumns: 3, firstWidth: 202, lastWidth: 202, longestWidth: 202});
-    expect(Metrics.fromString('😀\n𐀀😀\n𐀀a', testMeasurer)).toEqual({length: 11, lineBreaks: 2, firstColumns: 1, lastColumns: 2, longestColumns: 2, firstWidth: 100, lastWidth: 101, longestWidth: 200});
-    expect(Metrics.fromString('\n𐀀', testMeasurer)).toEqual({length: 3, lineBreaks: 1, firstColumns: 0, lastColumns: 1, longestColumns: 1, lastWidth: 100, longestWidth: 100});
-  });
-
-  it('Metrics.string*ToLocation', () => {
-    let defaultMeasurer = createDefaultMeasurer();
-
-    let tests = [
-      {chunk: 'short', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 3, column: 11, offset: 18, x: 8, y: 10}},
-      {chunk: 'short\nlonger', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 3, column: 11, offset: 18, x: 8, y: 10}},
-      {chunk: 'short\nlonger', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 3, column: 13, offset: 20, x: 10, y: 10}},
-      {chunk: 'short\nlonger', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 4, column: 0, offset: 21, x: 0, y: 11}},
-      {chunk: '1\n23\n456\n78\n9\n0', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 7, column: 1, offset: 28, x: 1, y: 14}},
-    ];
-    for (let test of tests) {
-      expect(Metrics.stringOffsetToLocation(test.chunk, test.before, test.location.offset, defaultMeasurer)).toEqual(test.location);
-      expect(Metrics.stringPositionToLocation(test.chunk, test.before, test.location, defaultMeasurer)).toEqual(test.location);
-      expect(Metrics.stringPositionToLocation(test.chunk, test.before, test.location, defaultMeasurer, true /* strict */)).toEqual(test.location);
-      expect(Metrics.stringPointToLocation(test.chunk, test.before, test.location, defaultMeasurer, RoundMode.Floor, true /* strict */)).toEqual(test.location);
-    }
-
-    let nonStrict = [
-      {chunk: 'short', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, position: {line: 3, column: 22}, point: {x: 15, y: 10}, result: {line: 3, column: 13, offset: 20, x: 10, y: 10}},
-      {chunk: 'short\nlonger', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, position: {line: 3, column: 22}, point: {x: 15, y: 10}, result: {line: 3, column: 13, offset: 20, x: 10, y: 10}},
-      {chunk: 'short\nlonger', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, position: {line: 4, column: 22}, point: {x: 22, y: 11}, result: {line: 4, column: 6, offset: 27, x: 6, y: 11}},
-      {chunk: '1\n23\n456\n78\n9\n0', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, position: {line: 7, column: 22}, point: {x: 42, y: 14}, result: {line: 7, column: 1, offset: 28, x: 1, y: 14}},
-    ];
-    for (let test of nonStrict) {
-      expect(Metrics.stringPositionToLocation(test.chunk, test.before, test.position, defaultMeasurer)).toEqual(test.result);
-      expect(Metrics.stringPointToLocation(test.chunk, test.before, test.point, defaultMeasurer, RoundMode.Floor)).toEqual(test.result);
-    }
-  });
-
-  it('Metrics.string*ToLocation with measurer and unicode', () => {
-    let measurer = createTestMeasurer();
-
-    let tests = [
-      {chunk: 'abc', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 3, column: 11, offset: 18, x: 11, y: 10}},
-      {chunk: 'abc\na😀b𐀀c', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 3, column: 11, offset: 18, x: 11, y: 10}},
-      {chunk: 'abc\na😀b𐀀c', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 4, column: 0, offset: 19, x: 0, y: 13}},
-      {chunk: 'abc\na😀b𐀀c', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 4, column: 4, offset: 25, x: 203, y: 13}},
-      {chunk: 'a\n😀b\n𐀀ca\n𐀀𐀀\n😀\n0', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 7, column: 1, offset: 33, x: 100, y: 22}},
-    ];
-    for (let test of tests) {
-      expect(Metrics.stringOffsetToLocation(test.chunk, test.before, test.location.offset, measurer)).toEqual(test.location);
-      expect(Metrics.stringPositionToLocation(test.chunk, test.before, test.location, measurer)).toEqual(test.location);
-      expect(Metrics.stringPositionToLocation(test.chunk, test.before, test.location, measurer, true /* strict */)).toEqual(test.location);
-      expect(Metrics.stringPointToLocation(test.chunk, test.before, test.location, measurer, RoundMode.Floor, true /* strict */)).toEqual(test.location);
-    }
-
-    let nonStrict = [
-      {chunk: 'abc', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, position: {line: 3, column: 22}, point: {x: 15, y: 10}, result: {line: 3, column: 11, offset: 18, x: 11, y: 10}},
-      {chunk: 'abc\na😀b𐀀c', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, position: {line: 3, column: 22}, point: {x: 15, y: 10}, result: {line: 3, column: 11, offset: 18, x: 11, y: 10}},
-      {chunk: 'abc\na😀b𐀀c', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, position: {line: 4, column: 22}, point: {x: 220, y: 14}, result: {line: 4, column: 5, offset: 26, x: 206, y: 13}},
-      {chunk: 'a\n😀b\n𐀀ca\n𐀀𐀀\n😀\n0', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, position: {line: 7, column: 22}, point: {x: 420, y: 24}, result: {line: 7, column: 1, offset: 33, x: 100, y: 22}},
-    ];
-    for (let test of nonStrict) {
-      expect(Metrics.stringPositionToLocation(test.chunk, test.before, test.position, measurer)).toEqual(test.result);
-      expect(Metrics.stringPointToLocation(test.chunk, test.before, test.point, measurer, RoundMode.Floor)).toEqual(test.result);
-    }
-  });
-
-  it('Metrics.stringPointToLocation with round modes', () => {
-    let testMeasurer = createTestMeasurer();
-    let chunk = 'a\nb\naaaa\nbac\nc';
-    let before = {offset: 15, line: 3, column: 8, x: 5, y: 10};
-    let tests = [
-      {point: {x: 5, y: 10}, location: {offset: 15, line: 3, column: 8, x: 5, y: 10}, strict: true},
-      {point: {x: 6, y: 10}, location: {offset: 16, line: 3, column: 9, x: 6, y: 10}, strict: true},
-      {point: {x: 7, y: 10}, location: {offset: 16, line: 3, column: 9, x: 6, y: 10}},
-      {point: {x: 5, y: 11}, location: {offset: 15, line: 3, column: 8, x: 5, y: 10}, strict: true},
-      {point: {x: 0, y: 13}, location: {offset: 17, line: 4, column: 0, x: 0, y: 13}, strict: true},
-      {point: {x: 1, y: 13}, location: {offset: 17, line: 4, column: 0, x: 0, y: 13}, strict: true},
-      {point: {x: 0.9, y: 13}, location: {offset: 17, line: 4, column: 0, x: 0, y: 13}, roundMode: RoundMode.Round, strict: true},
-      {point: {x: 1.0, y: 13}, location: {offset: 17, line: 4, column: 0, x: 0, y: 13}, roundMode: RoundMode.Round, strict: true},
-      {point: {x: 1.1, y: 13}, location: {offset: 18, line: 4, column: 1, x: 2, y: 13}, roundMode: RoundMode.Round, strict: true},
-      {point: {x: 0, y: 13}, location: {offset: 17, line: 4, column: 0, x: 0, y: 13}, roundMode: RoundMode.Ceil, strict: true},
-      {point: {x: 1.0, y: 13}, location: {offset: 18, line: 4, column: 1, x: 2, y: 13}, roundMode: RoundMode.Ceil, strict: true},
-      {point: {x: 1.1, y: 13}, location: {offset: 18, line: 4, column: 1, x: 2, y: 13}, roundMode: RoundMode.Ceil, strict: true},
-      {point: {x: 2, y: 13}, location: {offset: 18, line: 4, column: 1, x: 2, y: 13}, strict: true},
-      {point: {x: 42, y: 15}, location: {offset: 18, line: 4, column: 1, x: 2, y: 13}},
-      {point: {x: 0, y: 16}, location: {offset: 19, line: 5, column: 0, x: 0, y: 16}, strict: true},
-      {point: {x: 1, y: 16}, location: {offset: 20, line: 5, column: 1, x: 1, y: 16}, strict: true},
-      {point: {x: 2, y: 16}, location: {offset: 21, line: 5, column: 2, x: 2, y: 16}, strict: true},
-      {point: {x: 3, y: 17}, location: {offset: 22, line: 5, column: 3, x: 3, y: 16}, strict: true},
-      {point: {x: 4, y: 18}, location: {offset: 23, line: 5, column: 4, x: 4, y: 16}, strict: true},
-      {point: {x: 3, y: 19}, location: {offset: 26, line: 6, column: 2, x: 3, y: 19}, strict: true},
-      {point: {x: 42, y: 19}, location: {offset: 27, line: 6, column: 3, x: 6, y: 19}},
-    ];
-    for (let test of tests)
-      expect(Metrics.stringPointToLocation(chunk, before, test.point, testMeasurer, test.roundMode || RoundMode.Floor, !!test.strict)).toEqual(test.location);
-  });
-});
 
 describe('Text', () => {
   it('Text.* manual', () => {
@@ -899,6 +787,115 @@ describe('Unicode', () => {
     expect(defaultMeasurer.locateByWidth('abc', 0, 3, 0.5, RoundMode.Round)).toEqual({offset: 0, columns: 0, width: 0});
     expect(defaultMeasurer.locateByWidth('abc', 0, 3, 0.6, RoundMode.Round)).toEqual({offset: 1, columns: 1, width: 1});
     expect(defaultMeasurer.locateByWidth('abc', 0, 3, 0.5, RoundMode.Ceil)).toEqual({offset: 1, columns: 1, width: 1});
+  });
+
+  it('Unicode.metricsFromString', () => {
+    let defaultMeasurer = createDefaultMeasurer();
+    expect(Unicode.metricsFromString('one line', defaultMeasurer)).toEqual({length: 8, firstColumns: 8, lastColumns: 8, longestColumns: 8});
+    expect(Unicode.metricsFromString('\none line', defaultMeasurer)).toEqual({length: 9, firstColumns: 0, lastColumns: 8, longestColumns: 8, lineBreaks: 1});
+    expect(Unicode.metricsFromString('one line\n', defaultMeasurer)).toEqual({length: 9, firstColumns: 8, lastColumns: 0, longestColumns: 8, lineBreaks: 1});
+    expect(Unicode.metricsFromString('\none line\n', defaultMeasurer)).toEqual({length: 10, firstColumns: 0, lastColumns: 0, longestColumns: 8, lineBreaks: 2});
+    expect(Unicode.metricsFromString('short\nlongest\nlonger\ntiny', defaultMeasurer)).toEqual({length: 25, firstColumns: 5, lastColumns: 4, longestColumns: 7, lineBreaks: 3});
+
+    let testMeasurer = createTestMeasurer();
+    expect(Unicode.metricsFromString('a', testMeasurer)).toEqual({length: 1, firstColumns: 1, lastColumns: 1, longestColumns: 1});
+    expect(Unicode.metricsFromString('a\nb', testMeasurer)).toEqual({length: 3, firstColumns: 1, lastColumns: 1, longestColumns: 1, lineBreaks: 1, lastWidth: 2, longestWidth: 2});
+    expect(Unicode.metricsFromString('b\na', testMeasurer)).toEqual({length: 3, firstColumns: 1, lastColumns: 1, longestColumns: 1, lineBreaks: 1, firstWidth: 2, longestWidth: 2});
+    expect(Unicode.metricsFromString('bac', testMeasurer)).toEqual({length: 3, firstColumns: 3, lastColumns: 3, longestColumns: 3, firstWidth: 6, lastWidth: 6, longestWidth: 6});
+    expect(Unicode.metricsFromString('b\na\nc', testMeasurer)).toEqual({length: 5, firstColumns: 1, lastColumns: 1, longestColumns: 1, lineBreaks: 2, firstWidth: 2, lastWidth: 3, longestWidth: 3});
+    expect(Unicode.metricsFromString('b\naaaa\nc', testMeasurer)).toEqual({length: 8, firstColumns: 1, lastColumns: 1, longestColumns: 4, lineBreaks: 2, firstWidth: 2, lastWidth: 3});
+    expect(Unicode.metricsFromString('b😀😀', testMeasurer)).toEqual({length: 5, firstColumns: 3, lastColumns: 3, longestColumns: 3, firstWidth: 202, lastWidth: 202, longestWidth: 202});
+    expect(Unicode.metricsFromString('😀\n𐀀😀\n𐀀a', testMeasurer)).toEqual({length: 11, lineBreaks: 2, firstColumns: 1, lastColumns: 2, longestColumns: 2, firstWidth: 100, lastWidth: 101, longestWidth: 200});
+    expect(Unicode.metricsFromString('\n𐀀', testMeasurer)).toEqual({length: 3, lineBreaks: 1, firstColumns: 0, lastColumns: 1, longestColumns: 1, lastWidth: 100, longestWidth: 100});
+  });
+
+  it('Unicode.locateInStringBy*', () => {
+    let defaultMeasurer = createDefaultMeasurer();
+
+    let tests = [
+      {chunk: 'short', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 3, column: 11, offset: 18, x: 8, y: 10}},
+      {chunk: 'short\nlonger', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 3, column: 11, offset: 18, x: 8, y: 10}},
+      {chunk: 'short\nlonger', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 3, column: 13, offset: 20, x: 10, y: 10}},
+      {chunk: 'short\nlonger', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 4, column: 0, offset: 21, x: 0, y: 11}},
+      {chunk: '1\n23\n456\n78\n9\n0', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 7, column: 1, offset: 28, x: 1, y: 14}},
+    ];
+    for (let test of tests) {
+      expect(Unicode.locateInStringByOffset(test.chunk, test.before, test.location.offset, defaultMeasurer)).toEqual(test.location);
+      expect(Unicode.locateInStringByPosition(test.chunk, test.before, test.location, defaultMeasurer)).toEqual(test.location);
+      expect(Unicode.locateInStringByPosition(test.chunk, test.before, test.location, defaultMeasurer, true /* strict */)).toEqual(test.location);
+      expect(Unicode.locateInStringByPoint(test.chunk, test.before, test.location, defaultMeasurer, RoundMode.Floor, true /* strict */)).toEqual(test.location);
+    }
+
+    let nonStrict = [
+      {chunk: 'short', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, position: {line: 3, column: 22}, point: {x: 15, y: 10}, result: {line: 3, column: 13, offset: 20, x: 10, y: 10}},
+      {chunk: 'short\nlonger', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, position: {line: 3, column: 22}, point: {x: 15, y: 10}, result: {line: 3, column: 13, offset: 20, x: 10, y: 10}},
+      {chunk: 'short\nlonger', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, position: {line: 4, column: 22}, point: {x: 22, y: 11}, result: {line: 4, column: 6, offset: 27, x: 6, y: 11}},
+      {chunk: '1\n23\n456\n78\n9\n0', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, position: {line: 7, column: 22}, point: {x: 42, y: 14}, result: {line: 7, column: 1, offset: 28, x: 1, y: 14}},
+    ];
+    for (let test of nonStrict) {
+      expect(Unicode.locateInStringByPosition(test.chunk, test.before, test.position, defaultMeasurer)).toEqual(test.result);
+      expect(Unicode.locateInStringByPoint(test.chunk, test.before, test.point, defaultMeasurer, RoundMode.Floor)).toEqual(test.result);
+    }
+  });
+
+  it('Unicode.locateInStringBy* with measurer and non-bmp', () => {
+    let measurer = createTestMeasurer();
+
+    let tests = [
+      {chunk: 'abc', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 3, column: 11, offset: 18, x: 11, y: 10}},
+      {chunk: 'abc\na😀b𐀀c', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 3, column: 11, offset: 18, x: 11, y: 10}},
+      {chunk: 'abc\na😀b𐀀c', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 4, column: 0, offset: 19, x: 0, y: 13}},
+      {chunk: 'abc\na😀b𐀀c', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 4, column: 4, offset: 25, x: 203, y: 13}},
+      {chunk: 'a\n😀b\n𐀀ca\n𐀀𐀀\n😀\n0', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 7, column: 1, offset: 33, x: 100, y: 22}},
+    ];
+    for (let test of tests) {
+      expect(Unicode.locateInStringByOffset(test.chunk, test.before, test.location.offset, measurer)).toEqual(test.location);
+      expect(Unicode.locateInStringByPosition(test.chunk, test.before, test.location, measurer)).toEqual(test.location);
+      expect(Unicode.locateInStringByPosition(test.chunk, test.before, test.location, measurer, true /* strict */)).toEqual(test.location);
+      expect(Unicode.locateInStringByPoint(test.chunk, test.before, test.location, measurer, RoundMode.Floor, true /* strict */)).toEqual(test.location);
+    }
+
+    let nonStrict = [
+      {chunk: 'abc', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, position: {line: 3, column: 22}, point: {x: 15, y: 10}, result: {line: 3, column: 11, offset: 18, x: 11, y: 10}},
+      {chunk: 'abc\na😀b𐀀c', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, position: {line: 3, column: 22}, point: {x: 15, y: 10}, result: {line: 3, column: 11, offset: 18, x: 11, y: 10}},
+      {chunk: 'abc\na😀b𐀀c', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, position: {line: 4, column: 22}, point: {x: 220, y: 14}, result: {line: 4, column: 5, offset: 26, x: 206, y: 13}},
+      {chunk: 'a\n😀b\n𐀀ca\n𐀀𐀀\n😀\n0', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, position: {line: 7, column: 22}, point: {x: 420, y: 24}, result: {line: 7, column: 1, offset: 33, x: 100, y: 22}},
+    ];
+    for (let test of nonStrict) {
+      expect(Unicode.locateInStringByPosition(test.chunk, test.before, test.position, measurer)).toEqual(test.result);
+      expect(Unicode.locateInStringByPoint(test.chunk, test.before, test.point, measurer, RoundMode.Floor)).toEqual(test.result);
+    }
+  });
+
+  it('Unicode.locateInStringByPoint with round modes', () => {
+    let testMeasurer = createTestMeasurer();
+    let chunk = 'a\nb\naaaa\nbac\nc';
+    let before = {offset: 15, line: 3, column: 8, x: 5, y: 10};
+    let tests = [
+      {point: {x: 5, y: 10}, location: {offset: 15, line: 3, column: 8, x: 5, y: 10}, strict: true},
+      {point: {x: 6, y: 10}, location: {offset: 16, line: 3, column: 9, x: 6, y: 10}, strict: true},
+      {point: {x: 7, y: 10}, location: {offset: 16, line: 3, column: 9, x: 6, y: 10}},
+      {point: {x: 5, y: 11}, location: {offset: 15, line: 3, column: 8, x: 5, y: 10}, strict: true},
+      {point: {x: 0, y: 13}, location: {offset: 17, line: 4, column: 0, x: 0, y: 13}, strict: true},
+      {point: {x: 1, y: 13}, location: {offset: 17, line: 4, column: 0, x: 0, y: 13}, strict: true},
+      {point: {x: 0.9, y: 13}, location: {offset: 17, line: 4, column: 0, x: 0, y: 13}, roundMode: RoundMode.Round, strict: true},
+      {point: {x: 1.0, y: 13}, location: {offset: 17, line: 4, column: 0, x: 0, y: 13}, roundMode: RoundMode.Round, strict: true},
+      {point: {x: 1.1, y: 13}, location: {offset: 18, line: 4, column: 1, x: 2, y: 13}, roundMode: RoundMode.Round, strict: true},
+      {point: {x: 0, y: 13}, location: {offset: 17, line: 4, column: 0, x: 0, y: 13}, roundMode: RoundMode.Ceil, strict: true},
+      {point: {x: 1.0, y: 13}, location: {offset: 18, line: 4, column: 1, x: 2, y: 13}, roundMode: RoundMode.Ceil, strict: true},
+      {point: {x: 1.1, y: 13}, location: {offset: 18, line: 4, column: 1, x: 2, y: 13}, roundMode: RoundMode.Ceil, strict: true},
+      {point: {x: 2, y: 13}, location: {offset: 18, line: 4, column: 1, x: 2, y: 13}, strict: true},
+      {point: {x: 42, y: 15}, location: {offset: 18, line: 4, column: 1, x: 2, y: 13}},
+      {point: {x: 0, y: 16}, location: {offset: 19, line: 5, column: 0, x: 0, y: 16}, strict: true},
+      {point: {x: 1, y: 16}, location: {offset: 20, line: 5, column: 1, x: 1, y: 16}, strict: true},
+      {point: {x: 2, y: 16}, location: {offset: 21, line: 5, column: 2, x: 2, y: 16}, strict: true},
+      {point: {x: 3, y: 17}, location: {offset: 22, line: 5, column: 3, x: 3, y: 16}, strict: true},
+      {point: {x: 4, y: 18}, location: {offset: 23, line: 5, column: 4, x: 4, y: 16}, strict: true},
+      {point: {x: 3, y: 19}, location: {offset: 26, line: 6, column: 2, x: 3, y: 19}, strict: true},
+      {point: {x: 42, y: 19}, location: {offset: 27, line: 6, column: 3, x: 6, y: 19}},
+    ];
+    for (let test of tests)
+      expect(Unicode.locateInStringByPoint(chunk, before, test.point, testMeasurer, test.roundMode || RoundMode.Floor, !!test.strict)).toEqual(test.location);
   });
 });
 

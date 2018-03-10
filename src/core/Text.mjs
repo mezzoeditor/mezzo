@@ -1,8 +1,5 @@
-import { Random } from "./Random.mjs";
-import { Metrics } from "./Metrics.mjs";
 import { RoundMode, Unicode } from "./Unicode.mjs";
 import { Tree } from "./Tree.mjs";
-import { trace } from "../core/Trace.mjs";
 
 // This is very efficient for loading large files and memory consumption.
 // It might slow down common operations though. We should measure that and
@@ -19,17 +16,17 @@ function chunkContent(content, measurer, firstChunk) {
   let index = 0;
   let chunks = [];
   if (firstChunk)
-  chunks.push({data: firstChunk, metrics: Metrics.fromString(firstChunk, measurer)});
+  chunks.push({data: firstChunk, metrics: Unicode.metricsFromString(firstChunk, measurer)});
   while (index < content.length) {
     let length = Math.min(content.length - index, kDefaultChunkSize);
     if (!Unicode.isValidOffset(content, index + length))
       length++;
     let chunk = content.substring(index, index + length);
-    chunks.push({data: chunk, metrics: Metrics.fromString(chunk, measurer)});
+    chunks.push({data: chunk, metrics: Unicode.metricsFromString(chunk, measurer)});
     index += length;
   }
   if (!chunks.length)
-    chunks.push({data: '', metrics: Metrics.fromString('', measurer)});
+    chunks.push({data: '', metrics: Unicode.metricsFromString('', measurer)});
   return chunks;
 }
 
@@ -180,7 +177,7 @@ export class Text {
     let found = this._tree.findByOffset(offset);
     if (found.location === null || found.data === null)
       return found.location;
-    return Metrics.stringOffsetToLocation(found.data, found.location, offset, this._measurer);
+    return Unicode.locateInStringByOffset(found.data, found.location, offset, this._measurer);
   }
 
   /**
@@ -192,7 +189,7 @@ export class Text {
     let found = this._tree.findByPosition(position, !!strict);
     if (found.data === null)
       return found.location;
-    return Metrics.stringPositionToLocation(found.data, found.location, found.clampedPosition, this._measurer, strict);
+    return Unicode.locateInStringByPosition(found.data, found.location, found.clampedPosition, this._measurer, strict);
   }
 
   /**
@@ -205,7 +202,7 @@ export class Text {
     let found = this._tree.findByPoint(point, !!strict);
     if (found.data === null)
       return found.location;
-    return Metrics.stringPointToLocation(found.data, found.location, found.clampedPoint, this._measurer, roundMode, strict);
+    return Unicode.locateInStringByPoint(found.data, found.location, found.clampedPoint, this._measurer, roundMode, strict);
   }
 }
 
@@ -506,7 +503,7 @@ Text.test = {};
  * @return {!Text}
  */
 Text.test.fromChunks = function(chunks, measurer) {
-  let nodes = chunks.map(chunk => ({data: chunk, metrics: Metrics.fromString(chunk, measurer)}));
+  let nodes = chunks.map(chunk => ({data: chunk, metrics: Unicode.metricsFromString(chunk, measurer)}));
   return new Text(Tree.build(nodes, measurer.defaultHeight, measurer.defaultWidth), measurer);
 };
 
