@@ -58,6 +58,13 @@ export class WebEditor {
       'Shift-Cmd-Left': 'selection.select.linestart',
       'Shift-Cmd-Right': 'selection.select.lineend',
       'Escape': 'selection.collapse',
+
+      'Enter': 'editing.newline',
+      'Backspace': 'editing.backspace',
+      'Delete': 'editing.delete',
+
+      'Cmd/Ctrl-z': 'history.undo',
+      'Cmd/Ctrl-Shift-z': 'history.redo',
     });
   }
 
@@ -363,36 +370,6 @@ export class WebEditor {
       this._revealCursors();
       this._input.value = '';
     });
-    this._input.addEventListener('keydown', event => {
-      let handled = false;
-      switch (event.key) {
-        case 'Enter':
-          handled = this._editing.insertNewLine();
-          this._revealSelection(handled);
-          break;
-        case 'z':
-        case 'Z':
-          // TODO: handle shortcuts properly.
-          if (event.metaKey || event.ctrlKey)
-            handled = event.shiftKey ? this._history.redo() : this._history.undo();
-          break;
-      }
-      switch (event.keyCode) {
-        case 8: /* backspace */
-          handled = this._editing.deleteBefore();
-          this._revealSelection(handled);
-          break;
-        case 46: /* delete */
-          handled = this._editing.deleteAfter();
-          this._revealSelection(handled);
-          break;
-      }
-      if (handled) {
-        this._revealCursors();
-        event.preventDefault();
-        event.stopPropagation();
-      }
-    });
   }
 
   _setupSearch() {
@@ -446,6 +423,18 @@ export class WebEditor {
 
   _performCommand(command) {
     switch (command) {
+      case 'history.undo':
+        return this._history.undo();
+      case 'history.redo':
+        return this._history.redo();
+
+      case 'editing.backspace':
+        return this._revealSelection(this._editing.deleteBefore());
+      case 'editing.delete':
+        return this._revealSelection(this._editing.deleteAfter());
+      case 'editing.newline':
+        return this._revealSelection(this._editing.insertNewLine());
+
       case 'selection.move.up':
         return this._revealSelection(this._selection.moveUp());
       case 'selection.move.down':
