@@ -32,16 +32,20 @@ export class Tokenizer {
  * @param {number} offset
  * @return {number}
  */
-Tokenizer.leftWordBoundary = function(document, offset) {
+Tokenizer.leftBoundary = function(document, offset) {
   // TODO: this is not aware of code points.
   let tokenizer = document.tokenizer();
   if (!tokenizer)
     return offset;
   let it = document.iterator(offset);
-  while (it.offset && tokenizer.isSpaceChar(it))
+  if (it.current === '\n')
+    return offset;
+  while (it.offset && tokenizer.isSpaceChar(it) && it.current !== '\n')
     it.prev();
   if (!it.offset)
     return 0;
+  if (it.current === '\n')
+    return it.offset + 1;
   if (tokenizer.isPunctuationChar(it)) {
     while (it.offset && tokenizer.isPunctuationChar(it))
       it.prev();
@@ -57,16 +61,20 @@ Tokenizer.leftWordBoundary = function(document, offset) {
  * @param {number} offset
  * @return {number}
  */
-Tokenizer.rightWordBoundary = function(document, offset) {
+Tokenizer.rightBoundary = function(document, offset) {
   // TODO: this is not aware of code points.
-  let it = document.iterator(offset);
   let tokenizer = document.tokenizer();
   if (!tokenizer)
     return offset;
-  while (!it.outOfBounds() && tokenizer.isSpaceChar(it))
+  let it = document.iterator(offset);
+  if (it.current === '\n')
+    return offset + 1;
+  while (!it.outOfBounds() && it.curreent !== '\n' && tokenizer.isSpaceChar(it))
     it.next();
   if (it.outOfBounds())
     return it.offset;
+  if (it.current === '\n')
+    return it.offset + 1;
   if (tokenizer.isPunctuationChar(it)) {
     while (!it.outOfBounds() && tokenizer.isPunctuationChar(it))
       it.next();

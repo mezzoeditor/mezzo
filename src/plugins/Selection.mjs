@@ -208,7 +208,7 @@ export class Selection {
    */
   moveWordLeft() {
     return this._operation(range => {
-      let offset = Tokenizer.leftWordBoundary(this._document, range.focus - 1);
+      let offset = Tokenizer.leftBoundary(this._document, range.focus - 1);
       return {id: range.id, upDownX: -1, anchor: offset, focus: offset};
     });
   }
@@ -218,7 +218,7 @@ export class Selection {
    */
   moveWordRight() {
     return this._operation(range => {
-      let offset = Tokenizer.rightWordBoundary(this._document, range.focus + 1);
+      let offset = Tokenizer.rightBoundary(this._document, range.focus);
       return {id: range.id, upDownX: -1, anchor: offset, focus: offset};
     });
   }
@@ -326,7 +326,7 @@ export class Selection {
    */
   selectWordLeft() {
     return this._operation(range => {
-      return {id: range.id, upDownX: -1, anchor: range.anchor, focus: Tokenizer.leftWordBoundary(this._document, range.focus - 1)};
+      return {id: range.id, upDownX: -1, anchor: range.anchor, focus: Tokenizer.leftBoundary(this._document, range.focus - 1)};
     });
   }
 
@@ -335,7 +335,7 @@ export class Selection {
    */
   selectWordRight() {
     return this._operation(range => {
-      return {id: range.id, upDownX: -1, anchor: range.anchor, focus: Tokenizer.rightWordBoundary(this._document, range.focus + 1)};
+      return {id: range.id, upDownX: -1, anchor: range.anchor, focus: Tokenizer.rightBoundary(this._document, range.focus)};
     });
   }
 
