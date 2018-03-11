@@ -422,15 +422,6 @@ export class Renderer {
 
   _drawTextAndBackground(ctx, text, background) {
     const lineHeight = this._metrics.lineHeight;
-    const textOffset = this._metrics.textOffset;
-
-    for (let {x, y, content, style} of text) {
-      const theme = this._theme[style];
-      if (theme && theme.text) {
-        ctx.fillStyle = theme.text.color || 'rgb(33, 33, 33)';
-        ctx.fillText(content, x, y + textOffset);
-      }
-    }
 
     for (let {x, y, width, style} of background) {
       const theme = this._theme[style];
@@ -462,6 +453,15 @@ export class Renderer {
             ctx.rect(x, y, width, lineHeight);
         }
         ctx.stroke();
+      }
+    }
+
+    const textOffset = this._metrics.textOffset;
+    for (let {x, y, content, style} of text) {
+      const theme = this._theme[style];
+      if (theme && theme.text) {
+        ctx.fillStyle = theme.text.color || 'rgb(33, 33, 33)';
+        ctx.fillText(content, x, y + textOffset);
       }
     }
   }
