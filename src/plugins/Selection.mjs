@@ -226,6 +226,26 @@ export class Selection {
   /**
    * @return {boolean}
    */
+  moveDocumentStart() {
+    return this._operation(range => {
+      let offset = 0;
+      return {id: range.id, upDownX: -1, anchor: offset, focus: offset};
+    });
+  }
+
+  /**
+   * @return {boolean}
+   */
+  moveDocumentEnd() {
+    return this._operation(range => {
+      let offset = this._document.length();
+      return {id: range.id, upDownX: -1, anchor: offset, focus: offset};
+    });
+  }
+
+  /**
+   * @return {boolean}
+   */
   moveLineStart() {
     return this._operation(range => {
       let offset = this._lineStart(range.focus);
