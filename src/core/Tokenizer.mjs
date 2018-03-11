@@ -84,3 +84,31 @@ Tokenizer.rightBoundary = function(document, offset) {
   }
   return it.offset;
 };
+
+/**
+ * @param {!Document} document
+ * @param {number} offset
+ * @return {!Range}
+ */
+Tokenizer.characterGroupRange = function(document, offset) {
+  let tokenizer = document.tokenizer();
+  if (!tokenizer)
+    return offset;
+  let from = document.iterator(offset);
+  if (from.current === '\n')
+    from.prev();
+  let to = from.clone();
+  let groupFn = null;
+  if (tokenizer.isPunctuationChar(from))
+    groupFn = tokenizer.isPunctuationChar;
+  else if (tokenizer.isWordChar(from))
+    groupFn = tokenizer.isWordChar;
+  else
+    groupFn = tokenizer.isSpaceChar;
+
+  while (from.current !== '\n' && !from.outOfBounds() && groupFn.call(tokenizer, from))
+    from.prev();
+  while (to.current !== '\n' && !to.outOfBounds() && groupFn.call(tokenizer, to))
+    to.next();
+  return {from: from.offset + 1, to: to.offset};
+}

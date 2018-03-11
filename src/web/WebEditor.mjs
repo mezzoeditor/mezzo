@@ -223,8 +223,9 @@ export class WebEditor {
       lastMouseEvent = event;
       let offset = this._renderer.mouseEventToTextOffset(event);
       if (event.detail === 2) {
-        mouseRangeStartOffset = Tokenizer.leftBoundary(this._document, offset);
-        mouseRangeEndOffset = Tokenizer.rightBoundary(this._document, offset);
+        let range = Tokenizer.characterGroupRange(this._document, offset);
+        mouseRangeStartOffset = range.from;
+        mouseRangeEndOffset = range.to;
         this._selection.setRanges([{from: mouseRangeStartOffset, to: mouseRangeEndOffset}]);
         event.preventDefault();
         event.stopPropagation();
