@@ -77,6 +77,12 @@ let zeroMetrics = { length: 0, firstColumns: 0, lastColumns: 0, longestColumns: 
 /** @type {!Location} */
 let origin = { offset: 0, line: 0, column: 0, x: 0, y: 0 };
 
+const kClone = true;
+const kNoClone = false;
+
+const kSplitIntersectionToLeft = true;
+const kSplitIntersectionToRight = false;
+
 /**
  * This is a generic metrics-aware immutable tree. Each node in the tree contains
  * data (of type T) and additive metrics (see Metrics definition above).
@@ -279,53 +285,53 @@ export class Tree {
    *
    * @param {number} from
    * @param {number} to
-   * @return {!{left: !Tree<T>, right: !Tree<T>, middle: !Array<T>}}
+   * @return {!{left: !Tree<T>, right: !Tree<T>, middle: !Tree<T>}}
    */
   split(from, to) {
-    let tmp = this._split(this._root, {offset: to}, true /* intersectionToLeft */);
-    let right = new Tree(this._lineHeight, this._defaultWidth);
-    right._setRoot(tmp.right);
-    tmp = this._split(tmp.left, {offset: from}, false /* intersectionToLeft */);
-    let left = new Tree(this._lineHeight, this._defaultWidth);
-    left._setRoot(tmp.left);
-    let middle = [];
-    if (tmp.right)
-      this._collect(tmp.right, middle);
+    let tmp = this._split(this._root, {offset: to}, kSplitIntersectionToLeft);
+    let right = this._wrap(tmp.right);
+    tmp = this._split(tmp.left, {offset: from}, kSplitIntersectionToRight);
+    let left = this._wrap(tmp.left);
+    let middle = this._wrap(tmp.right);
     return {left, right, middle};
   }
 
   /**
-   * @param {!Location} location
-   * @param {!FindKey} key
-   * @return {boolean}
+   * Splits the first node of the tree if any.
+   * @return {!{first: ?T, rest: !Tree<T>}}
    */
-  _locationIsGreater(location, key) {
-    if (key.offset !== undefined)
-      return location.offset > key.offset;
-    if (key.line !== undefined)
-      return location.line > key.line || (location.line === key.line && location.column > key.column);
-    return location.y > key.y || (location.y + this._lineHeight > key.y && location.x > key.x);
+  splitFirst() {
+    let tmp = this._splitFirst(this._root);
+    return {first: tmp.left ? tmp.left.data : null, rest: this._wrap(tmp.right)};
   }
 
   /**
-   * @param {!Location} location
-   * @param {!FindKey} key
-   * @return {boolean}
+   * Splits the last node of the tree if any.
+   * @return {!{last: ?T, rest: !Tree<T>}}
    */
-  _locationIsGreaterOrEqual(location, key) {
-    if (key.offset !== undefined)
-      return location.offset >= key.offset;
-    if (key.line !== undefined)
-      return location.line > key.line || (location.line === key.line && location.column >= key.column);
-    throw 'locationIsGreaterOrEqual cannot be used for points';
+  splitLast() {
+    let tmp = this._splitLast(this._root);
+    return {last: tmp.right ? tmp.right.data : null, rest: this._wrap(tmp.left)};
   }
 
   /**
+   * Returns every node's data.
+   * @return {!Array<T>}
+   */
+  collect() {
+    let list = [];
+    if (this._root)
+      this._collect(this._root, list);
+    return list;
+  }
+
+  /**
+   * Combines two additive metrics in the left->right order.
    * @param {!Metrics} left
    * @param {!Metrics} right
    * @return {!Metrics}
    */
-  _combineMetrics(left, right) {
+  combineMetrics(left, right) {
     let defaultWidth = this._defaultWidth;
     let result = {
       longestColumns: Math.max(Math.max(left.longestColumns, left.lastColumns + right.firstColumns), right.longestColumns),
@@ -358,6 +364,32 @@ export class Tree {
 
   /**
    * @param {!Location} location
+   * @param {!FindKey} key
+   * @return {boolean}
+   */
+  _locationIsGreater(location, key) {
+    if (key.offset !== undefined)
+      return location.offset > key.offset;
+    if (key.line !== undefined)
+      return location.line > key.line || (location.line === key.line && location.column > key.column);
+    return location.y > key.y || (location.y + this._lineHeight > key.y && location.x > key.x);
+  }
+
+  /**
+   * @param {!Location} location
+   * @param {!FindKey} key
+   * @return {boolean}
+   */
+  _locationIsGreaterOrEqual(location, key) {
+    if (key.offset !== undefined)
+      return location.offset >= key.offset;
+    if (key.line !== undefined)
+      return location.line > key.line || (location.line === key.line && location.column >= key.column);
+    throw 'locationIsGreaterOrEqual cannot be used for points';
+  }
+
+  /**
+   * @param {!Location} location
    * @param {!Metrics} metrics
    * @return {!Location}
    */
@@ -376,24 +408,24 @@ export class Tree {
    * @param {!TreeNode<T>} parent
    * @param {!TreeNode<T>|undefined} left
    * @param {!TreeNode<T>|undefined} right
-   * @param {boolean=} skipClone
+   * @param {boolean} clone
    * @return {!TreeNode<T>}
    */
-  _setChildren(parent, left, right, skipClone) {
-    let node = skipClone ? parent : {
+  _setChildren(parent, left, right, clone) {
+    let node = clone === kClone ? {
       data: parent.data,
       h: parent.h,
       metrics: parent.selfMetrics || parent.metrics
-    };
+    } : parent;
     if (!node.selfMetrics && (left || right))
       node.selfMetrics = node.metrics;
     if (left) {
       node.left = left;
-      node.metrics = this._combineMetrics(left.metrics, node.metrics);
+      node.metrics = this.combineMetrics(left.metrics, node.metrics);
     }
     if (right) {
       node.right = right;
-      node.metrics = this._combineMetrics(node.metrics, right.metrics);
+      node.metrics = this.combineMetrics(node.metrics, right.metrics);
     }
     return node;
   }
@@ -465,7 +497,7 @@ export class Tree {
     let fill = i => {
       let left = l[i] === -1 ? undefined : fill(l[i]);
       let right = r[i] === -1 ? undefined : fill(r[i]);
-      return this._setChildren(nodes[i], left, right, true);
+      return this._setChildren(nodes[i], left, right, kNoClone);
     };
     return fill(root);
   }
@@ -505,14 +537,44 @@ export class Tree {
     let next = root.left ? this._advanceLocation(current, root.left.metrics) : current;
     let rootToLeft = !this._locationIsGreaterOrEqual(next, key);
     next = this._advanceLocation(next, root.selfMetrics || root.metrics);
-    if (!intersectionToLeft)
+    if (intersectionToLeft === kSplitIntersectionToRight)
       rootToLeft = !this._locationIsGreater(next, key);
     if (rootToLeft) {
       let tmp = this._split(root.right, key, intersectionToLeft, next);
-      return {left: this._setChildren(root, root.left, tmp.left), right: tmp.right};
+      return {left: this._setChildren(root, root.left, tmp.left, kClone), right: tmp.right};
     } else {
       let tmp = this._split(root.left, key, intersectionToLeft, current);
-      return {left: tmp.left, right: this._setChildren(root, tmp.right, root.right)};
+      return {left: tmp.left, right: this._setChildren(root, tmp.right, root.right, kClone)};
+    }
+  }
+
+  /**
+   * @param {!TreeNode<T>|undefined} root
+   * @return {{left: !TreeNode<T>|undefined, right: !TreeNode<T>|undefined}}
+   */
+  _splitFirst(root) {
+    if (!root)
+      return {};
+    if (root.left) {
+      let tmp = this._splitFirst(root.left);
+      return {left: tmp.left, right: this._setChildren(root, tmp.right, root.right, kClone)};
+    } else {
+      return {left: this._setChildren(root, undefined, undefined, kClone), right: root.right};
+    }
+  }
+
+  /**
+   * @param {!TreeNode<T>|undefined} root
+   * @return {{left: !TreeNode<T>|undefined, right: !TreeNode<T>|undefined}}
+   */
+  _splitLast(root) {
+    if (!root)
+      return {};
+    if (root.right) {
+      let tmp = this._splitLast(root.right);
+      return {left: this._setChildren(root, root.left, tmp.left, kClone), right: tmp.right};
+    } else {
+      return {left: root.left, right: this._setChildren(root, undefined, undefined, kClone)};
     }
   }
 
@@ -527,9 +589,9 @@ export class Tree {
     if (!right)
       return left;
     if (left.h > right.h)
-      return this._setChildren(left, left.left, this._merge(left.right, right));
+      return this._setChildren(left, left.left, this._merge(left.right, right), kClone);
     else
-      return this._setChildren(right, this._merge(left, right.left), right.right);
+      return this._setChildren(right, this._merge(left, right.left), right.right, kClone);
   }
 
   /**
@@ -568,6 +630,16 @@ export class Tree {
     list.push(node.data);
     if (node.right)
       this._collect(node.right, list);
+  }
+
+  /**
+   * @param {!TreeNode<T>|undefined} root
+   * @return {!Tree<T>}
+   */
+  _wrap(root) {
+    let tree = new Tree(this._lineHeight, this._defaultWidth);
+    tree._setRoot(root);
+    return tree;
   }
 };
 

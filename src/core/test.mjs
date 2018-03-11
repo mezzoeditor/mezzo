@@ -161,6 +161,32 @@ describe('Text', () => {
       }
     }
   });
+
+  it('Text.rangeMetrics all sizes', () => {
+    let defaultMeasurer = createDefaultMeasurer();
+    let random = Random(153);
+    let lineCount = 20;
+    let chunks = [];
+    for (let i = 0; i < lineCount; i++) {
+      let s = 'abcdefghuijklmnopqrstuvwxyz';
+      let length = 1 + (random() % (s.length - 1));
+      chunks.push(s.substring(0, length) + '\n');
+    }
+    let content = chunks.join('');
+
+    for (let chunkSize = 1; chunkSize <= 50; chunkSize += 7) {
+      Text.test.setDefaultChunkSize(chunkSize);
+      content = chunks.join('');
+      let text = Text.withContent(content, defaultMeasurer);
+      for (let from = 0; from <= content.length; from++) {
+        for (let to = from; to <= content.length; to++) {
+          let got = text.rangeMetrics(from, to);
+          let expected = Unicode.metricsFromString(content.substring(from, to), defaultMeasurer);
+          expect(got).toEqual(expected);
+        }
+      }
+    }
+  });
 });
 
 describe('TextIterator', () => {

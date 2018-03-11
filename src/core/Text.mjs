@@ -140,15 +140,16 @@ export class Text {
     let removed = '';
     let first = '';
     let last = '';
-    for (let i = 0; i < split.middle.length; i++) {
-      let data = split.middle[i];
+    let middle = split.middle.collect();
+    for (let i = 0; i < middle.length; i++) {
+      let data = middle[i];
       let fromOffset = 0;
       let toOffset = data.length;
       if (i === 0) {
         fromOffset = from - split.left.metrics().length;
         first = data.substring(0, fromOffset);
       }
-      if (i === split.middle.length - 1) {
+      if (i === middle.length - 1) {
         toOffset = data.length - (this._length - split.right.metrics().length - to);
         last = data.substring(toOffset);
       }
@@ -168,6 +169,33 @@ export class Text {
     let tree = Tree.build(chunks, this._measurer.defaultHeight, this._measurer.defaultWidth, split.left, split.right);
     let text = new Text(tree, this._measurer);
     return {text, removed};
+  }
+
+  /**
+   * @param {number=} fromOffset
+   * @param {number=} toOffset
+   * @return {!Metrics}
+   */
+  rangeMetrics(fromOffset, toOffset) {
+    let {from, to} = this._clamp(fromOffset, toOffset);
+    let split = this._tree.split(from, to);
+    let skipLeft = from - split.left.metrics().length;
+    let skipRight = this._length - split.right.metrics().length - to;
+    let tmp = split.middle.splitFirst();
+    if (!tmp.first)
+      return { length: 0, firstColumns: 0, lastColumns: 0, longestColumns: 0 };
+    let left = tmp.first;
+    tmp = tmp.rest.splitLast();
+    if (!tmp.last) {
+      if (skipLeft + skipRight > left.length)
+        throw 'Inconsistent';
+      return Unicode.metricsFromString(left.substring(skipLeft, left.length - skipRight), this._measurer);
+    }
+    let right = tmp.last;
+    let middle = tmp.rest;
+    let leftMetrics = Unicode.metricsFromString(left.substring(skipLeft), this._measurer);
+    let rightMetrics = Unicode.metricsFromString(right.substring(0, right.length - skipRight), this._measurer);
+    return middle.combineMetrics(leftMetrics, middle.combineMetrics(middle.metrics(), rightMetrics));
   }
 
   /**
