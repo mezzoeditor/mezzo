@@ -53,6 +53,8 @@ export class WebEditor {
       'Cmd-Right': 'selection.move.lineend',
       'Cmd-Up': 'selection.move.documentstart',
       'Cmd-Down': 'selection.move.documentend',
+      'Cmd-Shift-Up': 'selection.select.documentstart',
+      'Cmd-Shift-Down': 'selection.select.documentend',
       'Shift-Cmd-Left': 'selection.select.linestart',
       'Shift-Cmd-Right': 'selection.select.lineend',
       'Escape': 'selection.collapse',
@@ -467,6 +469,10 @@ export class WebEditor {
         return this._revealSelection(this._selection.selectUp());
       case 'selection.select.down':
         return this._revealSelection(this._selection.selectDown());
+      case 'selection.select.documentstart':
+        return this._revealSelection(this._selection.selectDocumentStart());
+      case 'selection.select.documentend':
+        return this._revealSelection(this._selection.selectDocumentEnd());
       case 'selection.select.left':
         return this._revealSelection(this._selection.selectLeft());
       case 'selection.select.right':
