@@ -101,11 +101,20 @@ export class Parser {
     this.strict = this.inModule
 
     // Rebaseline offsets since we might be restored at a different position.
-    const offsetDelta = iterator.offset - state.offset;
+    this._rebaselineOffsets(state.offset, iterator.offset);
+  }
+
+  _rebaselineOffsets(oldOffset, newOffset) {
+    const offsetDelta = newOffset - oldOffset;
     this.startOffset += offsetDelta;
     this.endOffset += offsetDelta;
     this.lastTokEndOffset += offsetDelta;
     this.recoveryOffset += offsetDelta;
+  }
+
+  setIterator(it) {
+    this._rebaselineOffsets(this.it.offset, it.offset);
+    this.it = it;
   }
 
   state() {
