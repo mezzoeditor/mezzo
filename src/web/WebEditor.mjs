@@ -1,14 +1,14 @@
-import { Document } from "../core/Document.mjs";
-import { Decorator } from "../core/Decorator.mjs";
-import { Renderer } from "./Renderer.mjs";
-import { Selection } from "../plugins/Selection.mjs";
-import { History } from "../plugins/History.mjs";
-import { Editing } from "../plugins/Editing.mjs";
-import { Search } from "../plugins/Search.mjs";
-import { DefaultTheme } from "../default/DefaultTheme.mjs";
-import { DefaultHighlighter } from "../default/DefaultHighlighter.mjs";
-import { DefaultTokenizer } from "../default/DefaultTokenizer.mjs";
-import { Tokenizer } from "../core/Tokenizer.mjs";
+import { Document } from '../core/Document.mjs';
+import { Decorator } from '../core/Decorator.mjs';
+import { Renderer } from './Renderer.mjs';
+import { Selection } from '../plugins/Selection.mjs';
+import { History } from '../plugins/History.mjs';
+import { Editing } from '../plugins/Editing.mjs';
+import { Search } from '../plugins/Search.mjs';
+import { DefaultTheme } from '../default/DefaultTheme.mjs';
+import { DefaultHighlighter } from '../default/DefaultHighlighter.mjs';
+import { DefaultTokenizer } from '../default/DefaultTokenizer.mjs';
+import { Tokenizer } from '../core/Tokenizer.mjs';
 
 const isMac = navigator.platform.toUpperCase().indexOf('MAC') !== -1;
 

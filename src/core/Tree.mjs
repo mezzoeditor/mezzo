@@ -78,10 +78,21 @@ let zeroMetrics = { length: 0, firstColumns: 0, lastColumns: 0, longestColumns: 
 let origin = { offset: 0, line: 0, column: 0, x: 0, y: 0 };
 
 /**
+ * This is a generic metrics-aware immutable tree. Each node in the tree contains
+ * data (of type T) and additive metrics (see Metrics definition above).
+ * The tree manages an ordered sequence of nodes and supports efficient
+ * constructin, lookup by different metrics, merging and splitting.
+ *
+ * Tree needs |lineHeight| and |defaultWidth| values to work with metrics:
+ * - lineHeight defines conversion between lines and y-coordinate;
+ * - defaultWidth defines conversion between columns and missing x-coordinate;
+ *   useful for monospace text to save memory.
+ *
  * @template T
  */
 export class Tree {
   /**
+   * Constructs an empty tree.
    * @param {number} lineHeight
    * @param {number} defaultWidth
    */
@@ -93,7 +104,14 @@ export class Tree {
   }
 
   /**
-   * Takes ownership of |nodes| - do not use them after calling this.
+   * Constructs a tree from a sequence of |nodes|. Additionally, can
+   * merge this tree with |left| and/or |right| trees from the corresponding
+   * side.
+   *
+   * Note that |left| and |right| are not invalidated and can be used
+   * afterwards. In contrary, this takes ownership of |nodes|,
+   * which cannot be used afterwards.
+   *
    * @param {!Array<!{data: T, metrics: !Metrics}>} nodes
    * @param {number} lineHeight
    * @param {number} defaultWidth
@@ -119,6 +137,7 @@ export class Tree {
   }
 
   /**
+   * Total metrics of all nodes combined.
    * @return {!Metrics}
    */
   metrics() {
@@ -126,6 +145,7 @@ export class Tree {
   }
 
   /**
+   * The location of the last node's end.
    * @return {!Location}
    */
   endLocation() {
@@ -133,6 +153,8 @@ export class Tree {
   }
 
   /**
+   * Creates an iterator starting at |offset|, constrained to the range
+   * [from, to). All numbers are offsets (as opposite to positions or points).
    * @param {number} offset
    * @param {number} from
    * @param {number} to
@@ -145,11 +167,16 @@ export class Tree {
   }
 
   /**
+   * Returns a node containing |offset| (start included, end excluded).
+   * Returns it's data and exact location of the node's start.
+   * Returns nulls if the offset is out of range.
+   * When the offset is at the end of the tree, does not return |data|, as
+   * this offset does not effectively belong to any node.
    * @param {number} offset
    * @return {!{data: ?T, location: ?Location}}
    */
   findByOffset(offset) {
-    if (!this._root || offset > this._root.metrics.length)
+    if (!this._root || offset < 0 || offset > this._root.metrics.length)
       return {data: null, location: null};
     if (offset === this._root.metrics.length)
       return {data: null, location: this._endLocation};
@@ -160,6 +187,14 @@ export class Tree {
   }
 
   /**
+   * Returns a node containing |position| (start included, end excluded).
+   * Returns it's data and exact location of the node's start.
+   *
+   * If |strict| is false, |position| is clamped to nearest position which
+   * belongs to the tree. This position is returned as |clampedPosition|.
+   *
+   * When the position is at the end of the tree, does not return |data|, as
+   * this position does not effectively belong to any node.
    * @param {!Position} position
    * @param {boolean} strict
    * @return {!{data: ?T, location: !Location, clampedPosition: !Position}}
@@ -191,6 +226,14 @@ export class Tree {
   }
 
   /**
+   * Returns a node containing |point| (start included, end excluded).
+   * Returns it's data and exact location of the node's start.
+   *
+   * If |strict| is false, |point| is clamped to nearest point which
+   * belongs to the tree. This point is returned as |clampedPoint|.
+   *
+   * When the point is at the end of the tree, does not return |data|, as
+   * this point does not effectively belong to any node.
    * @param {!Point} point
    * @param {boolean} strict
    * @return {!{data: ?T, location: !Location, clampedPoint: !Point}}
@@ -231,6 +274,9 @@ export class Tree {
   }
 
   /**
+   * Splits the tree by two offsets, putting the nodes containing |from| and |to|
+   * to the middle part.
+   *
    * @param {number} from
    * @param {number} to
    * @return {!{left: !Tree<T>, right: !Tree<T>, middle: !Array<T>}}

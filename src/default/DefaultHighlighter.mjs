@@ -1,4 +1,4 @@
-import { TextDecorator } from "../core/Decorator.mjs";
+import { TextDecorator } from '../core/Decorator.mjs';
 
 export class DefaultHighlighter {
   constructor() {

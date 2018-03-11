@@ -1,4 +1,4 @@
-import { Unicode } from "../core/Unicode.mjs";
+import { Unicode } from '../core/Unicode.mjs';
 
 export class DefaultTokenizer {
   /**

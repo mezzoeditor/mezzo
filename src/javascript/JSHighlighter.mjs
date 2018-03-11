@@ -1,6 +1,6 @@
-import { TextDecorator } from "../core/Decorator.mjs";
+import { TextDecorator } from '../core/Decorator.mjs';
 import { Parser, TokenTypes, KeywordTypes } from './jslexer/index.mjs';
-import { trace } from "../core/Trace.mjs";
+import { trace } from '../core/Trace.mjs';
 
 export class JSHighlighter {
   constructor() {

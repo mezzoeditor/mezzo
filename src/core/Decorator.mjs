@@ -1,4 +1,4 @@
-import { Random } from "./Random.mjs";
+import { Random } from './Random.mjs';
 let random = Random(25);
 
 /**

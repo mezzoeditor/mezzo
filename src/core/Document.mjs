@@ -1,5 +1,5 @@
-import { Text } from "./Text.mjs";
-import { RoundMode, Unicode } from "./Unicode.mjs";
+import { Text } from './Text.mjs';
+import { RoundMode, Unicode } from './Unicode.mjs';
 
 /**
  * @typedef {{

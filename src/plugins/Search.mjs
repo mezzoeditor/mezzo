@@ -1,4 +1,4 @@
-import { TextDecorator, ScrollbarDecorator } from "../core/Decorator.mjs";
+import { TextDecorator, ScrollbarDecorator } from '../core/Decorator.mjs';
 
 /**
  * @typdef {{

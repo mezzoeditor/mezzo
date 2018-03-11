@@ -3,6 +3,7 @@
 import {TestRunner, Reporter, Matchers} from '../../utils/testrunner/index.mjs';
 import {RoundMode, Unicode} from './Unicode.mjs';
 import {Text} from './Text.mjs';
+import {TextIterator} from './TextIterator.mjs';
 import {Document} from './Document.mjs';
 import {Random} from './Random.mjs';
 import {Decorator} from './Decorator.mjs';
@@ -162,8 +163,8 @@ describe('Text', () => {
   });
 });
 
-describe('Text.Iterator', () => {
-  it('Text.Iterator basics', () => {
+describe('TextIterator', () => {
+  it('TextIterator basics', () => {
     let defaultMeasurer = createDefaultMeasurer();
     let text = Text.withContent('world', defaultMeasurer);
     let iterator = text.iterator(0);
@@ -177,7 +178,7 @@ describe('Text.Iterator', () => {
     expect(iterator.offset).toBe(0);
   });
 
-  it('Text.Iterator.advance', () => {
+  it('TextIterator.advance', () => {
     let defaultMeasurer = createDefaultMeasurer();
     let text = Text.withContent('world', defaultMeasurer);
     let iterator = text.iterator(0);
@@ -187,7 +188,7 @@ describe('Text.Iterator', () => {
     expect(iterator.current).toBe('r');
   });
 
-  it('Text.Iterator.read', () => {
+  it('TextIterator.read', () => {
     let defaultMeasurer = createDefaultMeasurer();
     let text = Text.withContent('world', defaultMeasurer);
     let iterator = text.iterator(0);
@@ -197,7 +198,7 @@ describe('Text.Iterator', () => {
     expect(iterator.current).toBe('r');
   });
 
-  it('Text.Iterator.charAt', () => {
+  it('TextIterator.charAt', () => {
     let defaultMeasurer = createDefaultMeasurer();
     let text = Text.withContent('world', defaultMeasurer);
     let iterator = text.iterator(2);
@@ -221,7 +222,7 @@ describe('Text.Iterator', () => {
     expect(iterator.offset).toBe(2);
   });
 
-  it('Text.Iterator.find successful', () => {
+  it('TextIterator.find successful', () => {
     let defaultMeasurer = createDefaultMeasurer();
     let text = Text.withContent('hello, world', defaultMeasurer);
     let iterator = text.iterator(0);
@@ -230,7 +231,7 @@ describe('Text.Iterator', () => {
     expect(iterator.current).toBe('w');
   });
 
-  it('Text.Iterator.find manual chunks 1', () => {
+  it('TextIterator.find manual chunks 1', () => {
     let defaultMeasurer = createDefaultMeasurer();
     let text = Text.test.fromChunks(['hello, w', 'o', 'r', 'ld!!!'], defaultMeasurer);
     let iterator = text.iterator(0);
@@ -239,7 +240,7 @@ describe('Text.Iterator', () => {
     expect(iterator.current).toBe('w');
   });
 
-  it('Text.Iterator.find manual chunks 2', () => {
+  it('TextIterator.find manual chunks 2', () => {
     let defaultMeasurer = createDefaultMeasurer();
     let text = Text.test.fromChunks(['hello', ',', ' ', 'w', 'orl', 'd!!!'], defaultMeasurer);
     let iterator = text.iterator(0);
@@ -248,7 +249,7 @@ describe('Text.Iterator', () => {
     expect(iterator.current).toBe('w');
   });
 
-  it('Text.Iterator.find manual chunks 3', () => {
+  it('TextIterator.find manual chunks 3', () => {
     let defaultMeasurer = createDefaultMeasurer();
     let text = Text.test.fromChunks(['hello, w', 'or', 'ld', '!!!'], defaultMeasurer);
     let iterator = text.iterator(0);
@@ -257,7 +258,7 @@ describe('Text.Iterator', () => {
     expect(iterator.current).toBe('w');
   });
 
-  it('Text.Iterator.find unsuccessful', () => {
+  it('TextIterator.find unsuccessful', () => {
     let defaultMeasurer = createDefaultMeasurer();
     let text = Text.withContent('hello, world', defaultMeasurer);
     let iterator = text.iterator(0);
@@ -270,7 +271,8 @@ describe('Text.Iterator', () => {
     expect(iterator.offset).toBe(3);
     expect(iterator.current).toBe(undefined);
   });
-  it('Text.Iteratof.find unsuccessful across chunks', () => {
+
+  it('TextIteratof.find unsuccessful across chunks', () => {
     Text.test.setDefaultChunkSize(5);
     let defaultMeasurer = createDefaultMeasurer();
     let text = Text.withContent('/*-------------------------------------*/', defaultMeasurer);
@@ -281,7 +283,7 @@ describe('Text.Iterator', () => {
     Text.test.restoreChunkSize();
   });
 
-  it('Text.Iterator constraints', () => {
+  it('TextIterator constraints', () => {
     let defaultMeasurer = createDefaultMeasurer();
     let text = Text.withContent('hello', defaultMeasurer);
     let iterator = text.iterator(0, 0, 2);
@@ -317,7 +319,7 @@ describe('Text.Iterator', () => {
     expect(iterator.current).toBe('h');
   });
 
-  it('Text.Iterator out-of-bounds API', () => {
+  it('TextIterator out-of-bounds API', () => {
     let defaultMeasurer = createDefaultMeasurer();
     let text = Text.withContent('abcdefg', defaultMeasurer);
     let iterator = text.iterator(4, 2, 4);
@@ -328,7 +330,7 @@ describe('Text.Iterator', () => {
     expect(iterator.substr(2)).toBe('');
   });
 
-  it('Text.Iterator.setConstraints', () => {
+  it('TextIterator.setConstraints', () => {
     let defaultMeasurer = createDefaultMeasurer();
     let text = Text.withContent('012', defaultMeasurer);
     let iterator = text.iterator(0, 0, 1);
@@ -362,7 +364,7 @@ describe('Text.Iterator', () => {
     expect(iterator.current).toBe('2');
   });
 
-  it('Text.Iterator all sizes', () => {
+  it('TextIterator all sizes', () => {
     let defaultMeasurer = createDefaultMeasurer();
     let random = Random(144);
     let lineCount = 20;

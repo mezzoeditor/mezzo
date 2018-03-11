@@ -1,4 +1,4 @@
-import {RoundMode} from "./Unicode.mjs";
+import {RoundMode} from './Unicode.mjs';
 import {trace} from './Trace.mjs';
 
 /**

@@ -1,6 +1,6 @@
-import { RoundMode, Unicode } from "../core/Unicode.mjs";
-import { Viewport } from "../core/Viewport.mjs";
-import { trace } from "../core/Trace.mjs";
+import { RoundMode, Unicode } from '../core/Unicode.mjs';
+import { Viewport } from '../core/Viewport.mjs';
+import { trace } from '../core/Trace.mjs';
 
 class ContextBasedMetrics {
   constructor(ctx, monospace) {
