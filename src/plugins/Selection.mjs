@@ -57,6 +57,14 @@ export class Selection {
   }
 
   /**
+   * @return {?number}
+   */
+  anchor() {
+    let range = this._maxRange();
+    return range ? range.anchor : null;
+  }
+
+  /**
    * @return {?Range}
    */
   range() {

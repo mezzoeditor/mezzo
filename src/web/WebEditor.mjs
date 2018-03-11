@@ -257,9 +257,15 @@ export class WebEditor {
         event.stopPropagation();
         return;
       }
-      this._selection.setRanges([{from: offset, to: offset}]);
-      mouseRangeStartOffset = offset;
-      mouseRangeEndOffset = offset;
+      if (event.shiftKey) {
+        mouseRangeStartOffset = this._selection.anchor();
+        mouseRangeEndOffset = offset;
+        this._selection.setRanges([{from: mouseRangeStartOffset, to: mouseRangeEndOffset}]);
+      } else {
+        this._selection.setRanges([{from: offset, to: offset}]);
+        mouseRangeStartOffset = offset;
+        mouseRangeEndOffset = offset;
+      }
       event.stopPropagation();
       event.preventDefault();
     });
