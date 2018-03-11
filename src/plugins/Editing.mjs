@@ -1,3 +1,5 @@
+import { Tokenizer } from "../core/Tokenizer.mjs";
+
 export class Editing {
   /**
    * @param {!Document} document
@@ -29,6 +31,18 @@ export class Editing {
       if (!column)
         return {s: range.s, from: Math.max(0, range.from - 1), to: range.to};
       return {s: range.s, from: this._document.positionToOffset({line, column: column - 1}), to: range.to};
+    });
+  }
+
+  /**
+   * @return {boolean}
+   */
+  deleteWordBefore() {
+    return this._replace('', range => {
+      if (range.from !== range.to)
+        return range;
+      let offset = Tokenizer.leftBoundary(this._document, range.from - 1);
+      return {s: range.s, from: offset, to: range.to};
     });
   }
 
