@@ -32,12 +32,12 @@ export class Tokenizer {
  * @param {number} offset
  * @return {number}
  */
-Tokenizer.previousWord = function(document, offset) {
+Tokenizer.leftWordBoundary = function(document, offset) {
   // TODO: this is not aware of code points.
-  let it = document.iterator(offset - 1);
   let tokenizer = document.tokenizer();
   if (!tokenizer)
     return offset;
+  let it = document.iterator(offset);
   while (it.offset && tokenizer.isSpaceChar(it))
     it.prev();
   if (!it.offset)
@@ -57,9 +57,9 @@ Tokenizer.previousWord = function(document, offset) {
  * @param {number} offset
  * @return {number}
  */
-Tokenizer.nextWord = function(document, offset) {
+Tokenizer.rightWordBoundary = function(document, offset) {
   // TODO: this is not aware of code points.
-  let it = document.iterator(offset + 1);
+  let it = document.iterator(offset);
   let tokenizer = document.tokenizer();
   if (!tokenizer)
     return offset;
