@@ -23,13 +23,12 @@ export class Editing {
    */
   deleteBefore() {
     return this._replace('', range => {
-      if (range.from === range.to) {
-        let {line, column} = this._document.offsetToPosition(range.from);
-        if (!column)
-          return {from: Math.max(0, range.from - 1), to: range.to};
-        return {from: this._document.positionToOffset({line, column: column - 1}), to: range.to};
-      }
-      return range;
+      if (range.from !== range.to)
+        return range;
+      let {line, column} = this._document.offsetToPosition(range.from);
+      if (!column)
+        return {s: range.s, from: Math.max(0, range.from - 1), to: range.to};
+      return {s: range.s, from: this._document.positionToOffset({line, column: column - 1}), to: range.to};
     });
   }
 
@@ -38,14 +37,13 @@ export class Editing {
    */
   deleteAfter() {
     return this._replace('', range => {
-      if (range.from === range.to) {
-        let {line, column} = this._document.offsetToPosition(range.to);
-        let next = this._document.positionToOffset({line, column: column + 1});
-        if (next === range.to)
-          return {from: range.from, to: Math.min(this._document.length(), range.to + 1)};
-        return {from: range.from, to: next};
-      }
-      return range;
+      if (range.from !== range.to)
+        return range;
+      let {line, column} = this._document.offsetToPosition(range.to);
+      let next = this._document.positionToOffset({line, column: column + 1});
+      if (next === range.to)
+        return {s: range.s, from: range.from, to: Math.min(this._document.length(), range.to + 1)};
+      return {s: range.s, from: range.from, to: next};
     });
   }
 
@@ -61,7 +59,16 @@ export class Editing {
    * @return {boolean}
    */
   insertNewLine() {
-    return this._replace('\n', range => range);
+    return this._replace('\n', range => {
+      let position = this._document.offsetToPosition(range.from);
+      let linePosition = {line: position.line, column: 0};
+      let startOffset = this._document.positionToOffset(linePosition);
+      let it = this._document.iterator(startOffset, 0, startOffset + 1000);
+      while (it.current === ' ' && !it.outOfBounds())
+        it.next();
+      let indent = ' '.repeat(it.offset - startOffset);
+      return {s: range.s + indent, from: range.from, to: range.to};
+    });
   }
 
   /**
@@ -80,10 +87,10 @@ export class Editing {
     for (let range of ranges) {
       let from = Math.max(0, Math.min(range.from + delta, this._document.length()));
       let to = Math.max(0, Math.min(range.to + delta, this._document.length()));
-      let replaced = rangeCallback({from, to});
-      this._document.replace(replaced.from, replaced.to, s);
-      newRanges.push({from: replaced.from + s.length, to: replaced.from + s.length});
-      delta += s.length - (replaced.to - replaced.from);
+      let replaced = rangeCallback({from, to, s});
+      this._document.replace(replaced.from, replaced.to, replaced.s);
+      newRanges.push({from: replaced.from + replaced.s.length, to: replaced.from + replaced.s.length});
+      delta += replaced.s.length - (replaced.to - replaced.from);
     }
     this._selection.unfreeze(savedSelection, newRanges);
     this._history.endOperation();
