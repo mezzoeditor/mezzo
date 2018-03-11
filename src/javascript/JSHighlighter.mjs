@@ -65,6 +65,8 @@ export class JSHighlighter {
   _onReplace(replacement) {
     this._highlightStates.clearTouching(replacement.from, replacement.to);
     this._highlightStates.replace(replacement.from, replacement.to, replacement.inserted);
+    if (replacement.from === 0)
+      this._highlightStates.add(0, 0, Parser.defaultState());
     if (this._highlightOffset <= replacement.from) {
       this._parser.setIterator(this._document.iterator(this._highlightOffset));
       this._scheduleHighlight();
