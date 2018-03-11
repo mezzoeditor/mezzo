@@ -1,5 +1,13 @@
 import { Tokenizer } from "../core/Tokenizer.mjs";
 
+/**
+ * @typedef {{
+ *   from: number,
+ *   to: number,
+ *   s: string,
+ * }} RangeEdit;
+ */
+
 export class Editing {
   /**
    * @param {!Document} document
@@ -10,6 +18,7 @@ export class Editing {
     this._document = document;
     this._selection = selection;
     this._history = history;
+    this._indent = ' '.repeat(2);
   }
 
   /**
@@ -86,8 +95,22 @@ export class Editing {
   }
 
   /**
+   * @return {boolean}
+   */
+  insertIndent() {
+    return this._replace(this._indent, range => {
+      let position = this._document.offsetToPosition(range.from);
+      let linePosition = {line: position.line, column: 0};
+      let startOffset = this._document.positionToOffset(linePosition);
+      let pendingIndent = (range.from - startOffset) % this._indent.length;
+      let indent = ' '.repeat(this._indent.length - pendingIndent);
+      return {s: indent, from: range.from, to: range.to};
+    });
+  }
+
+  /**
    * @param {string} s
-   * @param {function(!Range):!Range} rangeCallback
+   * @param {function(!RangeEdit):!RangeEdit} rangeCallback
    * @return {boolean}
    */
   _replace(s, rangeCallback) {

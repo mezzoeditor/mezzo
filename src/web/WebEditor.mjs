@@ -63,6 +63,7 @@ export class WebEditor {
       'Backspace': 'editing.backspace',
       'Delete': 'editing.delete',
       'Alt-Backspace': 'editing.backspace.word',
+      'Tab': 'editing.indent',
 
       'Cmd/Ctrl-z': 'history.undo',
       'Cmd/Ctrl-Shift-z': 'history.redo',
@@ -443,6 +444,8 @@ export class WebEditor {
         return this._revealSelection(this._editing.deleteAfter());
       case 'editing.newline':
         return this._revealSelection(this._editing.insertNewLine());
+      case 'editing.indent':
+        return this._revealSelection(this._editing.insertIndent());
 
       case 'selection.move.up':
         return this._revealSelection(this._selection.moveUp());
