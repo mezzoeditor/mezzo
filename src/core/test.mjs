@@ -301,11 +301,17 @@ describe('TextIterator', () => {
   it('TextIteratof.find unsuccessful across chunks', () => {
     Text.test.setDefaultChunkSize(5);
     let defaultMeasurer = createDefaultMeasurer();
-    let text = Text.withContent('/*-------------------------------------*/', defaultMeasurer);
+    let text = Text.withContent('/*abcdefghijklmonpqrsuvwxyz0123456789@!*/', defaultMeasurer);
     let iterator = text.iterator(0, 0, 8);
     expect(iterator.find('*/')).toBe(false);
     expect(iterator.offset).toBe(8);
+    expect(iterator.outOfBounds()).toBe(true);
     expect(iterator.current).toBe(undefined);
+
+    iterator.setConstraints(0, 100);
+    expect(iterator.outOfBounds()).toBe(false);
+    expect(iterator.current).toBe('g');
+
     Text.test.restoreChunkSize();
   });
 

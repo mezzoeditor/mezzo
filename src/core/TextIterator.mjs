@@ -202,9 +202,9 @@ export class TextIterator {
       searchWindow = searchWindow.substring(skip);
       this.offset += skip;
       if (!this._iterator.next()) {
-        this._pos = this._chunk.length;
         this.current = undefined;
         this.offset = this._to;
+        this._pos = this._to - this._iterator.before;
         return false;
       }
       this._chunk = this._iterator.data;
