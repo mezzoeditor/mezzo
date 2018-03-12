@@ -93,7 +93,7 @@ Tokenizer.rightBoundary = function(document, offset) {
 Tokenizer.characterGroupRange = function(document, offset) {
   let tokenizer = document.tokenizer();
   if (!tokenizer)
-    return offset;
+    return {from: offset, to: offset};
   let from = document.iterator(offset);
   if (from.current === '\n')
     from.prev();
