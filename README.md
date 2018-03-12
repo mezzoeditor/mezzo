@@ -15,7 +15,7 @@
 #### Tier 1 features
 * [x] search/replace
 * [x] keyboard bindings
-* [ ] auto-indent
+* [x] auto-indent
 * [ ] instant indent block
 * [ ] inline widgets (width = multiple of character when using monospace)
 * [ ] gutter widgets
@@ -24,7 +24,7 @@
 * [ ] custom themes
 
 #### Content type features
-* [ ] syntax highlight:
+* [x] syntax highlight:
     - JavaScript
 * [ ] syntax-indent
 * [ ] bracket matching
