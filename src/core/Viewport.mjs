@@ -383,8 +383,8 @@ export class Viewport {
         decorator.visitTouching(line.from.offset, line.to.offset, decoration => {
           trace.count('decorations');
           // TODO: note that some editors only show selection up to line length. Setting?
-          let from = decoration.from < line.from.offset ? line.from.x : offsetToX[decoration.from - line.from.offset];
-          let to = decoration.to > line.to.offset ? viewportRight + 1 : offsetToX[decoration.to - line.from.offset];
+          let from = decoration.from < line.from.offset ? line.from.x - 10 : offsetToX[decoration.from - line.from.offset];
+          let to = decoration.to > line.to.offset ? viewportRight + 10 : offsetToX[decoration.to - line.from.offset];
           if (from <= to) {
             background.push({
               x: from + dx,
