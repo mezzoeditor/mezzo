@@ -432,9 +432,9 @@ export class WebEditor {
   _performCommand(command) {
     switch (command) {
       case 'history.undo':
-        return this._history.undo();
+        return this._history.undo() || true;
       case 'history.redo':
-        return this._history.redo();
+        return this._history.redo() || true;
 
       case 'editing.backspace':
         return this._revealSelection(this._editing.deleteBefore());
