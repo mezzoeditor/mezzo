@@ -855,6 +855,7 @@ describe('Unicode', () => {
     ];
     for (let test of tests) {
       expect(Unicode.locateInStringByOffset(test.chunk, test.before, test.location.offset, defaultMeasurer)).toEqual(test.location);
+      expect(Unicode.locateInStringByOffset(test.chunk, test.before, test.location.offset, defaultMeasurer, true /* strict */)).toEqual(test.location);
       expect(Unicode.locateInStringByPosition(test.chunk, test.before, test.location, defaultMeasurer)).toEqual(test.location);
       expect(Unicode.locateInStringByPosition(test.chunk, test.before, test.location, defaultMeasurer, true /* strict */)).toEqual(test.location);
       expect(Unicode.locateInStringByPoint(test.chunk, test.before, test.location, defaultMeasurer, RoundMode.Floor, true /* strict */)).toEqual(test.location);
@@ -884,6 +885,7 @@ describe('Unicode', () => {
     ];
     for (let test of tests) {
       expect(Unicode.locateInStringByOffset(test.chunk, test.before, test.location.offset, measurer)).toEqual(test.location);
+      expect(Unicode.locateInStringByOffset(test.chunk, test.before, test.location.offset, measurer, true /* strict */)).toEqual(test.location);
       expect(Unicode.locateInStringByPosition(test.chunk, test.before, test.location, measurer)).toEqual(test.location);
       expect(Unicode.locateInStringByPosition(test.chunk, test.before, test.location, measurer, true /* strict */)).toEqual(test.location);
       expect(Unicode.locateInStringByPoint(test.chunk, test.before, test.location, measurer, RoundMode.Floor, true /* strict */)).toEqual(test.location);
@@ -899,6 +901,12 @@ describe('Unicode', () => {
       expect(Unicode.locateInStringByPosition(test.chunk, test.before, test.position, measurer)).toEqual(test.result);
       expect(Unicode.locateInStringByPoint(test.chunk, test.before, test.point, measurer, RoundMode.Floor)).toEqual(test.result);
     }
+  });
+
+  it('Unicode.locateInStringByOffset non-strict', () => {
+    let measurer = createTestMeasurer();
+    expect(Unicode.locateInStringByOffset('😀😀', {offset: 3, line: 3, column: 3, x: 3, y: 3}, 6, measurer))
+        .toEqual({offset: 5, line: 3, column: 4, x: 103, y: 3});
   });
 
   it('Unicode.locateInStringByPoint with round modes', () => {

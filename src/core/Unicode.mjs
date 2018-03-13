@@ -494,14 +494,20 @@ Unicode.locateInStringByPoint = function(s, before, point, measurer, roundMode, 
  * @param {!Location} before
  * @param {number} offset
  * @param {!Measurer} measurer
+ * @param {boolean=} strict
  * @return {!Location}
  */
-Unicode.locateInStringByOffset = function(s, before, offset, measurer) {
+Unicode.locateInStringByOffset = function(s, before, offset, measurer, strict) {
   if (s.length < offset - before.offset)
     throw 'Inconsistent';
 
-  if (!Unicode.isValidOffset(s, offset - before.offset))
-    throw 'Offset belongs to a middle of surrogate pair';
+  if (!Unicode.isValidOffset(s, offset - before.offset)) {
+    if (strict)
+      throw 'Offset belongs to a middle of surrogate pair';
+    offset--;
+    if (offset < before.offset || !Unicode.isValidOffset(s, offset - before.offset))
+      throw 'Inconsistent';
+  }
 
   let {line, column, x, y} = before;
   offset -= before.offset;
