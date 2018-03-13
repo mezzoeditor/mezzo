@@ -63,6 +63,7 @@ export class WebEditor {
       'Backspace': 'editing.backspace',
       'Delete': 'editing.delete',
       'Alt-Backspace': 'editing.backspace.word',
+      'Cmd-Backspace': 'editing.backspace.line',
       'Tab': 'editing.indent',
 
       'Cmd/Ctrl-z': 'history.undo',
@@ -440,6 +441,8 @@ export class WebEditor {
         return this._revealSelection(this._editing.deleteBefore());
       case 'editing.backspace.word':
         return this._revealSelection(this._editing.deleteWordBefore());
+      case 'editing.backspace.line':
+        return this._revealSelection(this._editing.deleteLineBefore());
       case 'editing.delete':
         return this._revealSelection(this._editing.deleteAfter());
       case 'editing.newline':

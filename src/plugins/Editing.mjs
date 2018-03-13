@@ -58,6 +58,18 @@ export class Editing {
   /**
    * @return {boolean}
    */
+  deleteLineBefore() {
+    return this._replace('', range => {
+      let position = this._document.offsetToPosition(range.from);
+      let linePosition = {line: position.line, column: 0};
+      let startOffset = this._document.positionToOffset(linePosition);
+      return {s: range.s, from: startOffset, to: range.from};
+    });
+  }
+
+  /**
+   * @return {boolean}
+   */
   deleteAfter() {
     return this._replace('', range => {
       if (range.from !== range.to)
