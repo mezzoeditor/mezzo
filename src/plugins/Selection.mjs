@@ -277,6 +277,12 @@ export class Selection {
   moveLineStart() {
     return this._operation(range => {
       let offset = this._lineStart(range.focus);
+      let it = this._document.iterator(offset);
+      while (it.current === ' ') it.next();
+      if (offset === range.focus)
+        offset = it.offset;
+      else if (range.focus > it.offset)
+        offset = it.offset;
       return {id: range.id, upDownX: -1, anchor: offset, focus: offset};
     });
   }
@@ -352,7 +358,14 @@ export class Selection {
    */
   selectLineStart() {
     return this._operation(range => {
-      return {id: range.id, upDownX: -1, anchor: range.anchor, focus: this._lineStart(range.focus)};
+      let offset = this._lineStart(range.focus);
+      let it = this._document.iterator(offset);
+      while (it.current === ' ') it.next();
+      if (offset === range.focus)
+        offset = it.offset;
+      else if (range.focus > it.offset)
+        offset = it.offset;
+      return {id: range.id, upDownX: -1, anchor: range.anchor, focus: offset};
     });
   }
 
