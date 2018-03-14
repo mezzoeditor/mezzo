@@ -146,6 +146,20 @@ export class Viewport {
   }
 
   /**
+   * @return {number}
+   */
+  width() {
+    return this._width;
+  }
+
+  /**
+   * @return {number}
+   */
+  height() {
+    return this._height;
+  }
+
+  /**
    * @param {number} scrollLeft
    */
   setScrollLeft(scrollLeft) {
