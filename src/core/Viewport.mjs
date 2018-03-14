@@ -224,24 +224,32 @@ export class Viewport {
 
   /**
    * @param {!Range} range
+   * @param {!{left: number, right: number, top: number, bottom: number}=} rangePadding
    */
-  reveal(range) {
+  reveal(range, rangePadding) {
     if (this._frozen)
       throw 'Cannot reveal while decorating';
+
+    rangePadding = Object.assign({
+      left: 10,
+      right: 10,
+      top: 0,
+      bottom: 0
+    }, rangePadding);
 
     let from = this.documentPointToViewPoint(this._document.offsetToPoint(range.from));
     let to = this.documentPointToViewPoint(this._document.offsetToPoint(range.to));
     to.y += this._document.measurer().defaultHeight;
 
     if (this._scrollTop > from.y) {
-      this._scrollTop = from.y;
+      this._scrollTop = Math.max(from.y - rangePadding.top, 0);
     } else if (this._scrollTop + this._height < to.y) {
-      this._scrollTop = to.y - this._height;
+      this._scrollTop = Math.min(to.y - this._height + rangePadding.bottom, this._maxScrollTop);
     }
     if (this._scrollLeft > from.x) {
-      this._scrollLeft = from.x;
+      this._scrollLeft = Math.max(from.x - rangePadding.left, 0);
     } else if (this._scrollLeft + this._width < to.x) {
-      this._scrollLeft = to.x - this._width;
+      this._scrollLeft = Math.min(to.x - this._width + rangePadding.right, this._maxScrollLeft);
     }
     this._recompute();
     this._revealCallback.call(null);
