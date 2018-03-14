@@ -148,6 +148,40 @@ export class Editing {
     return true;
   }
 
+  removeIndent() {
+    let ranges = this._selection.ranges();
+    if (!ranges.length)
+      return false;
+    this._history.beginOperation();
+    let savedSelection = this._selection.freeze();
+    let newRanges = [];
+    let delta = 0;
+    for (let range of ranges) {
+      let from = Math.max(0, Math.min(range.from + delta, this._document.length()));
+      let to = Math.max(0, Math.min(range.to + delta, this._document.length()));
+      let startPosition = this._document.offsetToPosition(from);
+      let endPosition = this._document.offsetToPosition(to);
+      let endOffset = this._document.positionToOffset({line: endPosition.line, column: 0});
+      if (endOffset === to)
+        --endPosition.line;
+      let startDelta = 0;
+      for (let line = startPosition.line; line <= endPosition.line; ++line) {
+        let offset = this._document.positionToOffset({line, column: 0});
+        let it = this._document.iterator(offset);
+        while (it.current === ' ' && it.offset - offset < this._indent.length)
+          it.next();
+        this._document.replace(offset, it.offset, '');
+        delta -= it.offset - offset;
+        if (line === startPosition.line)
+          startDelta -= Math.min(it.offset - offset, startPosition.column);
+      }
+      newRanges.push({from: from + startDelta, to: to + delta});
+    }
+    this._selection.unfreeze(savedSelection, newRanges);
+    this._history.endOperation();
+    return true;
+  }
+
   /**
    * @param {string} s
    * @param {function(!RangeEdit):!RangeEdit} rangeCallback
