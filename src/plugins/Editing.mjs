@@ -110,14 +110,42 @@ export class Editing {
    * @return {boolean}
    */
   insertIndent() {
-    return this._replace(this._indent, range => {
-      let position = this._document.offsetToPosition(range.from);
-      let linePosition = {line: position.line, column: 0};
-      let startOffset = this._document.positionToOffset(linePosition);
-      let pendingIndent = (range.from - startOffset) % this._indent.length;
-      let indent = ' '.repeat(this._indent.length - pendingIndent);
-      return {s: indent, from: range.from, to: range.to};
-    });
+    let ranges = this._selection.ranges();
+    if (!ranges.length)
+      return false;
+    this._history.beginOperation();
+    let savedSelection = this._selection.freeze();
+    let newRanges = [];
+    let delta = 0;
+    for (let range of ranges) {
+      let from = Math.max(0, Math.min(range.from + delta, this._document.length()));
+      let to = Math.max(0, Math.min(range.to + delta, this._document.length()));
+      let startPosition = {line: this._document.offsetToPosition(from).line, column: 0};
+      let startOffset = this._document.positionToOffset(startPosition);
+      if (from === to) {
+        let pendingIndent = (from - startOffset) % this._indent.length;
+        let indent = ' '.repeat(this._indent.length - pendingIndent);
+        this._document.replace(from, from, indent);
+        newRanges.push({from: from + indent.length, to: from + indent.length});
+        delta += indent.length;
+      } else {
+        let endPosition = {line: this._document.offsetToPosition(to).line, column: 0};
+        let endOffset = this._document.positionToOffset(endPosition);
+        if (endOffset === to)
+          --endPosition.line;
+        for (let line = startPosition.line; line <= endPosition.line; ++line) {
+          let offset = this._document.positionToOffset({line, column: 0});
+          if (this._document.iterator(offset).current === '\n')
+            continue;
+          this._document.replace(offset, offset, this._indent);
+          delta += this._indent.length;
+        }
+        newRanges.push({from: from + this._indent.length, to: to + delta});
+      }
+    }
+    this._selection.unfreeze(savedSelection, newRanges);
+    this._history.endOperation();
+    return true;
   }
 
   /**
