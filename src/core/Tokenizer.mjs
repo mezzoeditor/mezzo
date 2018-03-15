@@ -47,10 +47,10 @@ Tokenizer.leftBoundary = function(document, offset) {
   if (it.current === '\n')
     return it.offset + 1;
   if (tokenizer.isPunctuationChar(it)) {
-    while (it.offset && tokenizer.isPunctuationChar(it))
+    while (!it.outOfBounds() && tokenizer.isPunctuationChar(it))
       it.prev();
   } else {
-    while (it.offset && tokenizer.isWordChar(it))
+    while (!it.outOfBounds() && tokenizer.isWordChar(it))
       it.prev();
   }
   return it.offset + 1;
