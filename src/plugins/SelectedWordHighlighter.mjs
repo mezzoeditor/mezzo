@@ -38,10 +38,10 @@ export class SelectedWordHighlighter {
    * @return {?Viewpor.DecorationResult}
    */
   _onDecorate(visibleContent) {
-    const decorator = new TextDecorator();
     let tokenizer = this._document.tokenizer();
     if (!this._selectedWord || !tokenizer)
-      return {background: [decorator]};
+      return null;
+    const decorator = new TextDecorator();
     let word = this._selectedWord;
     for (let range of visibleContent.ranges) {
       let iterator = this._document.iterator(range.from - word.length, range.from - word.length, range.to + word.length);

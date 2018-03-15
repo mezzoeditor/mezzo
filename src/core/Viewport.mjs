@@ -338,6 +338,8 @@ export class Viewport {
     let scrollbarDecorators = [];
     for (let decorateCallback of this._decorateCallbacks) {
       let result = decorateCallback(visibleContent);
+      if (!result)
+        continue;
       textDecorators.push(...(result.text || []));
       backgroundDecorators.push(...(result.background || []));
       scrollbarDecorators.push(...(result.scrollbar || []));
