@@ -14,11 +14,22 @@ export class SelectedWordHighlighter {
     this._selection.addChangeCallback(this._onSelectionChanged.bind(this));
     this._selectedWord = '';
     this._selectedWordRange = null;
+    this._enabled = true;
+  }
+
+  /**
+   * @param {boolean} enabled
+   */
+  setEnabled(enabled) {
+    if (this._enabled === enabled)
+      return;
+    this._enabled = enabled;
+    this._onSelectionChanged();
   }
 
   _onSelectionChanged() {
     this._selectedWord = '';
-    if (!this._selection.hasSingleRange())
+    if (!this._enabled || !this._selection.hasSingleRange())
       return;
     let selectionRange = this._selection.ranges()[0];
     if (selectionRange.from === selectionRange.to)
@@ -57,7 +68,7 @@ export class SelectedWordHighlighter {
         iterator.advance(word.length);
         if (tokenizer.isWordChar(iterator.current))
           continue;
-        decorator.add(iterator.offset - word.length, iterator.offset, 'selectedword.occurence');
+        decorator.add(iterator.offset - word.length, iterator.offset, 'search.match');
       }
     }
     return {background: [decorator]};

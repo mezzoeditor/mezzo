@@ -394,9 +394,11 @@ export class WebEditor {
     this._search = new Search(this._renderer.viewport(), this._selection, onUpdate);
 
     this.find = query => {
+      this._selectedWordHighlighter.setEnabled(false);
       this._search.search({query});
     };
     this.findCancel = () => {
+      this._selectedWordHighlighter.setEnabled(true);
       this._search.cancel();
     };
     this.findNext = () => {
