@@ -112,3 +112,26 @@ Tokenizer.characterGroupRange = function(document, offset) {
     to.next();
   return {from: from.offset + 1, to: to.offset};
 }
+
+/**
+ * @param {!Document} document
+ * @param {!Range} range
+ * @return {boolean}
+ */
+Tokenizer.isWord = function(document, range) {
+  let tokenizer = document.tokenizer();
+  if (!tokenizer)
+    return false;
+  if (range.from >= range.to)
+    return false;
+  if (Tokenizer.leftBoundary(document, range.from) !== range.from)
+    return false;
+  if (Tokenizer.rightBoundary(document, range.to - 1) !== range.to)
+    return false;
+  let it = document.iterator(range.from, range.from, range.to);
+  for (it; !it.outOfBounds(); it.next()) {
+    if (!tokenizer.isWordChar(it.current))
+      return false;
+  }
+  return true;
+}

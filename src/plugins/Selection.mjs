@@ -49,6 +49,13 @@ export class Selection {
   }
 
   /**
+   * @return {boolean}
+   */
+  isSingleSelection() {
+    return this._ranges.length === 1;
+  }
+
+  /**
    * @return {?number}
    */
   focus() {

@@ -3,6 +3,7 @@ import { Decorator } from '../core/Decorator.mjs';
 import { Renderer } from './Renderer.mjs';
 import { Selection } from '../plugins/Selection.mjs';
 import { History } from '../plugins/History.mjs';
+import { SelectedWordHighlighter } from '../plugins/SelectedWordHighlighter.mjs';
 import { Editing } from '../plugins/Editing.mjs';
 import { Search } from '../plugins/Search.mjs';
 import { DefaultTheme } from '../default/DefaultTheme.mjs';
@@ -25,6 +26,7 @@ export class WebEditor {
     this._createRenderer(domDocument);
     this._setupScheduler();
     this._setupSelection();
+    this._selectedWordHighlighter = new SelectedWordHighlighter(this._renderer.viewport(), this._selection);
     this._setupHistory();
     this._setupEditing();
     this._setupSearch();

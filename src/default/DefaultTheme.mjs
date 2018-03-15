@@ -56,6 +56,13 @@ export let DefaultTheme = {
       color: 'hsl(120, 100%, 23%)',
     },
   },
+  'selectedword.occurence': {
+    border: {
+      width: 1,
+      color: 'black',
+      radius: 8,
+    },
+  },
   'red': {
     text: {
       color: 'red',

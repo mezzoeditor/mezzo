@@ -283,5 +283,3 @@ export class Search {
     return range;
   }
 };
-
-Search.Decorations = new Set(['search.match', 'search.match.current']);
