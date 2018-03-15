@@ -18,7 +18,7 @@ export class SelectedWordHighlighter {
 
   _onSelectionChanged() {
     this._selectedWord = '';
-    if (!this._selection.isSingleSelection())
+    if (!this._selection.hasSingleRange())
       return;
     let selectionRange = this._selection.ranges()[0];
     if (selectionRange.from === selectionRange.to)

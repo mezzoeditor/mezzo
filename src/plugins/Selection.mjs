@@ -51,7 +51,7 @@ export class Selection {
   /**
    * @return {boolean}
    */
-  isSingleSelection() {
+  hasSingleRange() {
     return this._ranges.length === 1;
   }
 
