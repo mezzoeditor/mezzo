@@ -3,27 +3,27 @@
  */
 export class Tokenizer {
   /**
-   * @param {!Text.Iterator} it
+   * @param {string} char
    * @return {boolean}
    * Return weather the char belongs to the word
    */
-  isWordChar(it) {
+  isWordChar(char) {
   }
 
   /**
-   * @param {!Text.Iterator} it
+   * @param {string} char
    * @return {boolean}
    * Return weather the char belongs to the word
    */
-  isSpaceChar(it) {
+  isSpaceChar(char) {
   }
 
   /**
-   * @param {!Text.Iterator} it
+   * @param {string} char
    * @return {boolean}
    * Return weather the char belongs to the word
    */
-  isPunctuationChar(it) {
+  isPunctuationChar(char) {
   }
 };
 
@@ -40,17 +40,17 @@ Tokenizer.leftBoundary = function(document, offset) {
   let it = document.iterator(offset);
   if (it.current === '\n')
     return offset;
-  while (it.offset && tokenizer.isSpaceChar(it) && it.current !== '\n')
+  while (it.offset && tokenizer.isSpaceChar(it.current) && it.current !== '\n')
     it.prev();
   if (!it.offset)
     return 0;
   if (it.current === '\n')
     return it.offset + 1;
-  if (tokenizer.isPunctuationChar(it)) {
-    while (!it.outOfBounds() && tokenizer.isPunctuationChar(it))
+  if (tokenizer.isPunctuationChar(it.current)) {
+    while (!it.outOfBounds() && tokenizer.isPunctuationChar(it.current))
       it.prev();
   } else {
-    while (!it.outOfBounds() && tokenizer.isWordChar(it))
+    while (!it.outOfBounds() && tokenizer.isWordChar(it.current))
       it.prev();
   }
   return it.offset + 1;
@@ -69,17 +69,17 @@ Tokenizer.rightBoundary = function(document, offset) {
   let it = document.iterator(offset);
   if (it.current === '\n')
     return offset + 1;
-  while (!it.outOfBounds() && it.curreent !== '\n' && tokenizer.isSpaceChar(it))
+  while (!it.outOfBounds() && it.curreent !== '\n' && tokenizer.isSpaceChar(it.current))
     it.next();
   if (it.outOfBounds())
     return it.offset;
   if (it.current === '\n')
     return it.offset + 1;
-  if (tokenizer.isPunctuationChar(it)) {
-    while (!it.outOfBounds() && tokenizer.isPunctuationChar(it))
+  if (tokenizer.isPunctuationChar(it.current)) {
+    while (!it.outOfBounds() && tokenizer.isPunctuationChar(it.current))
       it.next();
   } else {
-    while (!it.outOfBounds() && tokenizer.isWordChar(it))
+    while (!it.outOfBounds() && tokenizer.isWordChar(it.current))
       it.next();
   }
   return it.offset;
@@ -99,16 +99,16 @@ Tokenizer.characterGroupRange = function(document, offset) {
     from.prev();
   let to = from.clone();
   let groupFn = null;
-  if (tokenizer.isPunctuationChar(from))
+  if (tokenizer.isPunctuationChar(from.current))
     groupFn = tokenizer.isPunctuationChar;
-  else if (tokenizer.isWordChar(from))
+  else if (tokenizer.isWordChar(from.current))
     groupFn = tokenizer.isWordChar;
   else
     groupFn = tokenizer.isSpaceChar;
 
-  while (from.current !== '\n' && !from.outOfBounds() && groupFn.call(tokenizer, from))
+  while (from.current !== '\n' && !from.outOfBounds() && groupFn.call(tokenizer, from.current))
     from.prev();
-  while (to.current !== '\n' && !to.outOfBounds() && groupFn.call(tokenizer, to))
+  while (to.current !== '\n' && !to.outOfBounds() && groupFn.call(tokenizer, to.current))
     to.next();
   return {from: from.offset + 1, to: to.offset};
 }

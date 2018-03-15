@@ -2,29 +2,29 @@ import { Unicode } from '../core/Unicode.mjs';
 
 export class DefaultTokenizer {
   /**
-   * @param {!Text.Iterator} it
+   * @param {string} char
    * @return {boolean}
    * Return weather the char belongs to the word
    */
-  isWordChar(it) {
-    return !this.isSpaceChar(it) && !this.isPunctuationChar(it);
+  isWordChar(char) {
+    return !this.isSpaceChar(char) && !this.isPunctuationChar(char);
   }
 
   /**
-   * @param {!Text.Iterator} it
+   * @param {string} char
    * @return {boolean}
    * Return weather the char belongs to the word
    */
-  isSpaceChar(it) {
-    return Unicode.whitespaceRegex.test(it.current);
+  isSpaceChar(char) {
+    return Unicode.whitespaceRegex.test(char);
   }
 
   /**
-   * @param {!Text.Iterator} it
+   * @param {string} char
    * @return {boolean}
    * Return weather the char belongs to the word
    */
-  isPunctuationChar(it) {
-    return `\`~!@#$%^&*()-=+[{]}\\|;:\'",.<>/?`.indexOf(it.current) !== -1;
+  isPunctuationChar(char) {
+    return `\`~!@#$%^&*()-=+[{]}\\|;:\'",.<>/?`.indexOf(char) !== -1;
   }
 }
