@@ -30,6 +30,13 @@ export class Editing {
   }
 
   /**
+   * @return {string}
+   */
+  indent() {
+    return this._indent;
+  }
+
+  /**
    * @param {?function(!RangeEdit):?EditingOverride} override
    */
   addEditingOverride(override) {
