@@ -8,6 +8,13 @@ import { Tokenizer } from "../core/Tokenizer.mjs";
  * }} RangeEdit;
  */
 
+/**
+ * @typedef {{
+ *  edit: RangeEdit,
+ *  cursorOffset: number
+ * }} EditingOverride;
+ */
+
 export class Editing {
   /**
    * @param {!Document} document
@@ -19,6 +26,21 @@ export class Editing {
     this._selection = selection;
     this._history = history;
     this._indent = ' '.repeat(2);
+    this._overrides = new Set();
+  }
+
+  /**
+   * @param {?function(!RangeEdit):?EditingOverride} override
+   */
+  addEditingOverride(override) {
+    this._overrides.add(override);
+  }
+
+  /**
+   * @param {?function(!RangeEdit):?EditingOverride} override
+   */
+  removeEditingOverride(override) {
+    this._overrides.delete(override);
   }
 
   /**
@@ -199,8 +221,17 @@ export class Editing {
       let from = Math.max(0, Math.min(range.from + delta, this._document.length()));
       let to = Math.max(0, Math.min(range.to + delta, this._document.length()));
       let replaced = rangeCallback({from, to, s});
+      let cursorOffset = replaced.from + replaced.s.length;
+      for (let override of this._overrides) {
+        let result = override.call(null, replaced);
+        if (result) {
+          replaced = result.edit;
+          cursorOffset = result.cursorOffset;
+          break;
+        }
+      }
       this._document.replace(replaced.from, replaced.to, replaced.s);
-      newRanges.push({from: replaced.from + replaced.s.length, to: replaced.from + replaced.s.length});
+      newRanges.push({from: cursorOffset, to: cursorOffset});
       delta += replaced.s.length - (replaced.to - replaced.from);
     }
     this._selection.unfreeze(savedSelection, newRanges);

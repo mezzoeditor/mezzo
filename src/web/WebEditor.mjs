@@ -6,6 +6,7 @@ import { History } from '../plugins/History.mjs';
 import { SelectedWordHighlighter } from '../plugins/SelectedWordHighlighter.mjs';
 import { Editing } from '../plugins/Editing.mjs';
 import { Search } from '../plugins/Search.mjs';
+import { SmartBraces } from '../plugins/SmartBraces.mjs';
 import { DefaultTheme } from '../default/DefaultTheme.mjs';
 import { DefaultHighlighter } from '../default/DefaultHighlighter.mjs';
 import { DefaultTokenizer } from '../default/DefaultTokenizer.mjs';
@@ -31,6 +32,7 @@ export class WebEditor {
     this._setupEditing();
     this._setupSearch();
     this._highlighter = null;
+    this._smartBraces = new SmartBraces(this._document, this._editing);
     this.setHighlighter(new DefaultHighlighter());
     this._keymap = new Map();
     this._installKeyMap({
