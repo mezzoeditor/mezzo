@@ -28,7 +28,7 @@
     - JavaScript
 * [ ] syntax-indent
 * [ ] bracket matching
-* [ ] auto-closing brackets
+* [x] auto-closing brackets
 * [ ] autocomplete
 
 #### Tier 2 features
