@@ -7,30 +7,6 @@ import { TextIterator } from './TextIterator.mjs';
 // consider different chunk sizes based on total document length.
 let kDefaultChunkSize = 1000;
 
-/**
- * @param {string} content
- * @param {!Measurer} measurer
- * @param {string=} firstChunk
- * @return {!Array<!{data: string, metrics: !Metrics}>}
- */
-function chunkContent(content, measurer, firstChunk) {
-  let index = 0;
-  let chunks = [];
-  if (firstChunk)
-  chunks.push({data: firstChunk, metrics: Unicode.metricsFromString(firstChunk, measurer)});
-  while (index < content.length) {
-    let length = Math.min(content.length - index, kDefaultChunkSize);
-    if (!Unicode.isValidOffset(content, index + length))
-      length++;
-    let chunk = content.substring(index, index + length);
-    chunks.push({data: chunk, metrics: Unicode.metricsFromString(chunk, measurer)});
-    index += length;
-  }
-  if (!chunks.length)
-    chunks.push({data: '', metrics: Unicode.metricsFromString('', measurer)});
-  return chunks;
-}
-
 export class Text {
   /**
    * @param {!Tree<string>} tree
@@ -52,7 +28,7 @@ export class Text {
    * @return {!Text}
    */
   static withContent(content, measurer) {
-    let chunks = chunkContent(content, measurer);
+    let chunks = Unicode.chunkString(kDefaultChunkSize, content, measurer);
     return new Text(Tree.build(chunks, measurer.defaultHeight, measurer.defaultWidth), measurer);
   }
 
@@ -161,9 +137,9 @@ export class Text {
         first.length + insertion.length <= kDefaultChunkSize) {
       // For typical editing scenarios, we are most likely to replace at the
       // end of |insertion| next time.
-      chunks = chunkContent(last, this._measurer, first + insertion);
+      chunks = Unicode.chunkString(kDefaultChunkSize, last, this._measurer, first + insertion);
     } else {
-      chunks = chunkContent(first + insertion + last, this._measurer);
+      chunks = Unicode.chunkString(kDefaultChunkSize, first + insertion + last, this._measurer);
     }
 
     let tree = Tree.build(chunks, this._measurer.defaultHeight, this._measurer.defaultWidth, split.left, split.right);

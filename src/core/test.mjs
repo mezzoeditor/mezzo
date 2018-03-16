@@ -939,6 +939,20 @@ describe('Unicode', () => {
     for (let test of tests)
       expect(Unicode.locateInStringByPoint(chunk, before, test.point, testMeasurer, test.roundMode || RoundMode.Floor, !!test.strict)).toEqual(test.location);
   });
+
+  it('Unicode.chunkString', () => {
+    let measurer = createTestMeasurer();
+    expect(Unicode.chunkString(5, '', measurer)).toEqual([
+      {data: '', metrics: {length: 0, firstColumns: 0, lastColumns: 0, longestColumns: 0}}
+    ]);
+    expect(Unicode.chunkString(1, '😀', measurer)).toEqual([
+      {data: '😀', metrics: {length: 2, firstColumns: 1, firstWidth: 100, lastColumns: 1, lastWidth: 100, longestColumns: 1, longestWidth: 100}}
+    ]);
+    expect(Unicode.chunkString(2, 'a', measurer, 'b')).toEqual([
+      {data: 'b', metrics: {length: 1, firstColumns: 1, firstWidth: 2, lastColumns: 1, lastWidth: 2, longestColumns: 1, longestWidth: 2}},
+      {data: 'a', metrics: {length: 1, firstColumns: 1, lastColumns: 1, longestColumns: 1}}
+    ]);
+  });
 });
 
 new Reporter(runner);

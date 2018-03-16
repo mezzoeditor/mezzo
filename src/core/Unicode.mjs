@@ -534,3 +534,29 @@ Unicode.locateInStringByOffset = function(s, before, offset, measurer, strict) {
     y: y
   };
 };
+
+/**
+ * Chunks content and measures it.
+ * @param {number} chunkSize
+ * @param {string} content
+ * @param {!Measurer} measurer
+ * @param {string=} firstChunk
+ * @return {!Array<!{data: string, metrics: !Metrics}>}
+ */
+Unicode.chunkString = function(chunkSize, content, measurer, firstChunk) {
+  let index = 0;
+  let chunks = [];
+  if (firstChunk)
+  chunks.push({data: firstChunk, metrics: Unicode.metricsFromString(firstChunk, measurer)});
+  while (index < content.length) {
+    let length = Math.min(content.length - index, chunkSize);
+    if (!Unicode.isValidOffset(content, index + length))
+      length++;
+    let chunk = content.substring(index, index + length);
+    chunks.push({data: chunk, metrics: Unicode.metricsFromString(chunk, measurer)});
+    index += length;
+  }
+  if (!chunks.length)
+    chunks.push({data: '', metrics: Unicode.metricsFromString('', measurer)});
+  return chunks;
+};
