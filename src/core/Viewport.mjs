@@ -462,7 +462,7 @@ export class Viewport {
   _recompute() {
     // To properly handle input events, we have to update rects synchronously.
     this._maxScrollTop = Math.max(0, this._document.height() - this._height + this._padding.top + this._padding.bottom);
-    this._maxScrollLeft = Math.max(0, this._document.longestLineWidth() - this._width + this._padding.left + this._padding.right);
+    this._maxScrollLeft = Math.max(0, this._document.width() - this._width + this._padding.left + this._padding.right);
 
     this._scrollLeft = Math.max(this._scrollLeft, 0);
     this._scrollLeft = Math.min(this._scrollLeft, this._maxScrollLeft);

@@ -2,7 +2,6 @@
 
 import {TestRunner, Reporter, Matchers} from '../../utils/testrunner/index.mjs';
 import {RoundMode, Unicode} from './Unicode.mjs';
-import {Text} from './Text.mjs';
 import {TextIterator} from './TextIterator.mjs';
 import {Document} from './Document.mjs';
 import {Random} from './Random.mjs';
@@ -36,22 +35,23 @@ function createDefaultMeasurer() {
   return new Unicode.CachingMeasurer(1, 1, Unicode.anythingRegex, s => 1, s => 1);
 }
 
-describe('Text', () => {
-  it('Text.* manual', () => {
-    let defaultMeasurer = createDefaultMeasurer();
+describe('Document', () => {
+  it('Document text API manual chunks', () => {
     let chunks = ['ab\ncd', 'def', '\n', '', 'a\n\n\nbbbc', 'xy', 'za\nh', 'pp', '\n', ''];
     let content = chunks.join('');
-    let text = Text.test.fromChunks(chunks, defaultMeasurer);
-    expect(text.lineCount()).toBe(8);
-    expect(text.longestLineWidth()).toBe(8);
-    expect(text.length()).toBe(content.length);
+    let document = new Document(() => {});
+    document.setMeasurer(createDefaultMeasurer());
+    Document.test.setChunks(document, chunks);
+    expect(document.lineCount()).toBe(8);
+    expect(document.width()).toBe(8);
+    expect(document.length()).toBe(content.length);
     for (let from = 0; from <= content.length; from++) {
       for (let to = from; to <= content.length; to++)
-        expect(text.content(from, to)).toBe(content.substring(from, to));
+        expect(document.content(from, to)).toBe(content.substring(from, to));
     }
   });
 
-  it('Text.* all sizes', () => {
+  it('Document tet API all chunk sizes', () => {
     let testMeasurer = createTestMeasurer();
     let random = Random(143);
     let lineCount = 200;
@@ -87,42 +87,42 @@ describe('Text', () => {
     }
 
     for (let chunkSize = 1; chunkSize <= 100; chunkSize++) {
-      Text.test.setDefaultChunkSize(chunkSize);
-      let text = Text.withContent(content, testMeasurer);
-      expect(text.lineCount()).toBe(lineCount + 1);
-      expect(text.longestLineWidth()).toBe(longest);
-      expect(text.length()).toBe(content.length);
+      let document = new Document(() => {});
+      document.setMeasurer(testMeasurer);
+      Document.test.setContent(document, content, chunkSize);
+      expect(document.lineCount()).toBe(lineCount + 1);
+      expect(document.width()).toBe(longest);
+      expect(document.length()).toBe(content.length);
       for (let {from, to} of contentQueries)
-        expect(text.content(from, to)).toBe(content.substring(from, to));
-      expect(text.offsetToLocation(0)).toEqual({line: 0, column: 0, offset: 0, x: 0, y: 0});
-      expect(text.offsetToLocation(content.length)).toEqual({line: lineCount, column: 0, offset: content.length, x: 0, y: lineCount * 3});
-      expect(text.offsetToLocation(content.length + 1)).toBe(null);
+        expect(document.content(from, to)).toBe(content.substring(from, to));
+      expect(document.offsetToLocation(0)).toEqual({line: 0, column: 0, offset: 0, x: 0, y: 0});
+      expect(document.offsetToLocation(content.length)).toEqual({line: lineCount, column: 0, offset: content.length, x: 0, y: lineCount * 3});
+      expect(document.offsetToLocation(content.length + 1)).toBe(null);
       for (let {line, column, offset, x, y, nonStrict, rounded} of locationQueries) {
         if (nonStrict) {
-          expect(text.positionToLocation({line, column: nonStrict.column})).toEqual({line, column, offset, x, y});
-          expect(text.pointToLocation({x: nonStrict.x, y}, RoundMode.Floor)).toEqual({line, column, offset, x, y});
+          expect(document.positionToLocation({line, column: nonStrict.column})).toEqual({line, column, offset, x, y});
+          expect(document.pointToLocation({x: nonStrict.x, y}, RoundMode.Floor)).toEqual({line, column, offset, x, y});
         } else {
-          expect(text.offsetToLocation(offset)).toEqual({line, column, offset, x, y});
-          expect(text.positionToLocation({line, column})).toEqual({line, column, offset, x, y});
-          expect(text.positionToLocation({line, column}, true)).toEqual({line, column, offset, x, y});
-          expect(text.pointToLocation({x, y}, RoundMode.Floor)).toEqual({line, column, offset, x, y});
-          expect(text.pointToLocation({x: x + 0.5, y: y + 0.5}, RoundMode.Floor, false /* strict */)).toEqual({line, column, offset, x, y});
-          expect(text.pointToLocation({x, y}, RoundMode.Floor, true /* strict */)).toEqual({line, column, offset, x, y});
+          expect(document.offsetToLocation(offset)).toEqual({line, column, offset, x, y});
+          expect(document.positionToLocation({line, column})).toEqual({line, column, offset, x, y});
+          expect(document.positionToLocation({line, column}, true)).toEqual({line, column, offset, x, y});
+          expect(document.pointToLocation({x, y}, RoundMode.Floor)).toEqual({line, column, offset, x, y});
+          expect(document.pointToLocation({x: x + 0.5, y: y + 0.5}, RoundMode.Floor, false /* strict */)).toEqual({line, column, offset, x, y});
+          expect(document.pointToLocation({x, y}, RoundMode.Floor, true /* strict */)).toEqual({line, column, offset, x, y});
           if (rounded) {
-            expect(text.pointToLocation({x: x + 0.4, y}, RoundMode.Round, true /* strict */)).toEqual({line, column, offset, x, y});
-            expect(text.pointToLocation({x: x + 0.5, y}, RoundMode.Round, true /* strict */)).toEqual({line, column, offset, x, y});
-            expect(text.pointToLocation({x: x + 0.6, y}, RoundMode.Round, true /* strict */)).toEqual({line, column: column + 1, offset: offset + 1, x: x + 1, y});
-            expect(text.pointToLocation({x, y}, RoundMode.Ceil, true /* strict */)).toEqual({line, column, offset, x, y});
-            expect(text.pointToLocation({x: x + 0.5, y}, RoundMode.Ceil, true /* strict */)).toEqual({line, column: column + 1, offset: offset + 1, x: x + 1, y});
-            expect(text.pointToLocation({x: x + 1, y}, RoundMode.Ceil, true /* strict */)).toEqual({line, column: column + 1, offset: offset + 1, x: x + 1, y});
+            expect(document.pointToLocation({x: x + 0.4, y}, RoundMode.Round, true /* strict */)).toEqual({line, column, offset, x, y});
+            expect(document.pointToLocation({x: x + 0.5, y}, RoundMode.Round, true /* strict */)).toEqual({line, column, offset, x, y});
+            expect(document.pointToLocation({x: x + 0.6, y}, RoundMode.Round, true /* strict */)).toEqual({line, column: column + 1, offset: offset + 1, x: x + 1, y});
+            expect(document.pointToLocation({x, y}, RoundMode.Ceil, true /* strict */)).toEqual({line, column, offset, x, y});
+            expect(document.pointToLocation({x: x + 0.5, y}, RoundMode.Ceil, true /* strict */)).toEqual({line, column: column + 1, offset: offset + 1, x: x + 1, y});
+            expect(document.pointToLocation({x: x + 1, y}, RoundMode.Ceil, true /* strict */)).toEqual({line, column: column + 1, offset: offset + 1, x: x + 1, y});
           }
         }
       }
     }
   });
 
-  it('Text.replace all sizes', () => {
-    let defaultMeasurer = createDefaultMeasurer();
+  it('Document.replace all chunk sizes', () => {
     let random = Random(142);
     let lineCount = 10;
     let chunks = [];
@@ -145,24 +145,24 @@ describe('Text', () => {
     }
 
     for (let chunkSize = 1; chunkSize <= 100; chunkSize++) {
-      Text.test.setDefaultChunkSize(chunkSize);
       content = chunks.join('');
-      let text = Text.withContent(content, defaultMeasurer);
+      let document = new Document(() => {});
+      document.setMeasurer(createDefaultMeasurer());
+      Document.test.setContent(document, content, chunkSize);
       for (let {from, to, insertion} of editQueries) {
-        let {removed, text: newText} = text.replace(from, to, insertion);
+        let removed = document.replace(from, to, insertion);
         expect(removed).toBe(content.substring(from, to));
         content = content.substring(0, from) + insertion + content.substring(to, content.length);
-        text = newText;
-        expect(text.length()).toBe(content.length);
+        expect(document.length()).toBe(content.length);
         for (let from = 0; from <= content.length; from++) {
           for (let to = from; to <= content.length; to++)
-            expect(text.content(from, to)).toBe(content.substring(from, to));
+            expect(document.content(from, to)).toBe(content.substring(from, to));
         }
       }
     }
   });
 
-  it('Text.rangeMetrics all sizes', () => {
+  it('Document.rangeMetrics all chunk sizes', () => {
     let defaultMeasurer = createDefaultMeasurer();
     let random = Random(153);
     let lineCount = 20;
@@ -175,12 +175,13 @@ describe('Text', () => {
     let content = chunks.join('');
 
     for (let chunkSize = 1; chunkSize <= 50; chunkSize += 7) {
-      Text.test.setDefaultChunkSize(chunkSize);
       content = chunks.join('');
-      let text = Text.withContent(content, defaultMeasurer);
+      let document = new Document(() => {});
+      document.setMeasurer(defaultMeasurer);
+      Document.test.setContent(document, content, chunkSize);
       for (let from = 0; from <= content.length; from++) {
         for (let to = from; to <= content.length; to++) {
-          let got = text.rangeMetrics(from, to);
+          let got = document.rangeMetrics(from, to);
           let expected = Unicode.metricsFromString(content.substring(from, to), defaultMeasurer);
           expect(got).toEqual(expected);
         }
@@ -191,9 +192,10 @@ describe('Text', () => {
 
 describe('TextIterator', () => {
   it('TextIterator basics', () => {
-    let defaultMeasurer = createDefaultMeasurer();
-    let text = Text.withContent('world', defaultMeasurer);
-    let iterator = text.iterator(0);
+    let document = new Document(() => {});
+    document.setMeasurer(createDefaultMeasurer());
+    document.reset('world');
+    let iterator = document.iterator(0);
     expect(iterator.current).toBe('w');
     expect(iterator.offset).toBe(0);
     iterator.next();
@@ -205,9 +207,10 @@ describe('TextIterator', () => {
   });
 
   it('TextIterator.advance', () => {
-    let defaultMeasurer = createDefaultMeasurer();
-    let text = Text.withContent('world', defaultMeasurer);
-    let iterator = text.iterator(0);
+    let document = new Document(() => {});
+    document.setMeasurer(createDefaultMeasurer());
+    document.reset('world');
+    let iterator = document.iterator(0);
     iterator.advance(4);
     expect(iterator.current).toBe('d');
     iterator.advance(-2);
@@ -215,9 +218,10 @@ describe('TextIterator', () => {
   });
 
   it('TextIterator.read', () => {
-    let defaultMeasurer = createDefaultMeasurer();
-    let text = Text.withContent('world', defaultMeasurer);
-    let iterator = text.iterator(0);
+    let document = new Document(() => {});
+    document.setMeasurer(createDefaultMeasurer());
+    document.reset('world');
+    let iterator = document.iterator(0);
     expect(iterator.read(4)).toBe('worl');
     expect(iterator.current).toBe('d');
     expect(iterator.rread(2)).toBe('rl');
@@ -225,9 +229,10 @@ describe('TextIterator', () => {
   });
 
   it('TextIterator.charAt', () => {
-    let defaultMeasurer = createDefaultMeasurer();
-    let text = Text.withContent('world', defaultMeasurer);
-    let iterator = text.iterator(2);
+    let document = new Document(() => {});
+    document.setMeasurer(createDefaultMeasurer());
+    document.reset('world');
+    let iterator = document.iterator(2);
     expect(iterator.charAt(0)).toBe('r');
     expect(iterator.offset).toBe(2);
     expect(iterator.charAt(1)).toBe('l');
@@ -249,60 +254,65 @@ describe('TextIterator', () => {
   });
 
   it('TextIterator.find successful', () => {
-    let defaultMeasurer = createDefaultMeasurer();
-    let text = Text.withContent('hello, world', defaultMeasurer);
-    let iterator = text.iterator(0);
+    let document = new Document(() => {});
+    document.setMeasurer(createDefaultMeasurer());
+    document.reset('hello, world');
+    let iterator = document.iterator(0);
     expect(iterator.find('world')).toBe(true);
     expect(iterator.offset).toBe(7);
     expect(iterator.current).toBe('w');
   });
 
   it('TextIterator.find manual chunks 1', () => {
-    let defaultMeasurer = createDefaultMeasurer();
-    let text = Text.test.fromChunks(['hello, w', 'o', 'r', 'ld!!!'], defaultMeasurer);
-    let iterator = text.iterator(0);
+    let document = new Document(() => {});
+    document.setMeasurer(createDefaultMeasurer());
+    Document.test.setChunks(document, ['hello, w', 'o', 'r', 'ld!!!']);
+    let iterator = document.iterator(0);
     expect(iterator.find('world')).toBe(true);
     expect(iterator.offset).toBe(7);
     expect(iterator.current).toBe('w');
   });
 
   it('TextIterator.find manual chunks 2', () => {
-    let defaultMeasurer = createDefaultMeasurer();
-    let text = Text.test.fromChunks(['hello', ',', ' ', 'w', 'orl', 'd!!!'], defaultMeasurer);
-    let iterator = text.iterator(0);
+    let document = new Document(() => {});
+    document.setMeasurer(createDefaultMeasurer());
+    Document.test.setChunks(document, ['hello', ',', ' ', 'w', 'orl', 'd!!!']);
+    let iterator = document.iterator(0);
     expect(iterator.find('world')).toBe(true);
     expect(iterator.offset).toBe(7);
     expect(iterator.current).toBe('w');
   });
 
   it('TextIterator.find manual chunks 3', () => {
-    let defaultMeasurer = createDefaultMeasurer();
-    let text = Text.test.fromChunks(['hello, w', 'or', 'ld', '!!!'], defaultMeasurer);
-    let iterator = text.iterator(0);
+    let document = new Document(() => {});
+    document.setMeasurer(createDefaultMeasurer());
+    Document.test.setChunks(document, ['hello, w', 'or', 'ld', '!!!']);
+    let iterator = document.iterator(0);
     expect(iterator.find('world')).toBe(true);
     expect(iterator.offset).toBe(7);
     expect(iterator.current).toBe('w');
   });
 
   it('TextIterator.find unsuccessful', () => {
-    let defaultMeasurer = createDefaultMeasurer();
-    let text = Text.withContent('hello, world', defaultMeasurer);
-    let iterator = text.iterator(0);
+    let document = new Document(() => {});
+    document.setMeasurer(createDefaultMeasurer());
+    document.reset('hello, world');
+    let iterator = document.iterator(0);
     expect(iterator.find('eee')).toBe(false);
     expect(iterator.offset).toBe(12);
     expect(iterator.current).toBe(undefined);
 
-    iterator = text.iterator(0, 0, 3);
+    iterator = document.iterator(0, 0, 3);
     expect(iterator.find('hello')).toBe(false);
     expect(iterator.offset).toBe(3);
     expect(iterator.current).toBe(undefined);
   });
 
   it('TextIteratof.find unsuccessful across chunks', () => {
-    Text.test.setDefaultChunkSize(5);
-    let defaultMeasurer = createDefaultMeasurer();
-    let text = Text.withContent('/*abcdefghijklmonpqrsuvwxyz0123456789@!*/', defaultMeasurer);
-    let iterator = text.iterator(0, 0, 8);
+    let document = new Document(() => {});
+    document.setMeasurer(createDefaultMeasurer());
+    Document.test.setContent(document, '/*abcdefghijklmonpqrsuvwxyz0123456789@!*/', 5);
+    let iterator = document.iterator(0, 0, 8);
     expect(iterator.find('*/')).toBe(false);
     expect(iterator.offset).toBe(8);
     expect(iterator.outOfBounds()).toBe(true);
@@ -311,14 +321,13 @@ describe('TextIterator', () => {
     iterator.setConstraints(0, 100);
     expect(iterator.outOfBounds()).toBe(false);
     expect(iterator.current).toBe('g');
-
-    Text.test.restoreChunkSize();
   });
 
   it('TextIterator constraints', () => {
-    let defaultMeasurer = createDefaultMeasurer();
-    let text = Text.withContent('hello', defaultMeasurer);
-    let iterator = text.iterator(0, 0, 2);
+    let document = new Document(() => {});
+    document.setMeasurer(createDefaultMeasurer());
+    document.reset('hello');
+    let iterator = document.iterator(0, 0, 2);
     expect(iterator.offset).toBe(0);
     expect(iterator.current).toBe('h');
 
@@ -352,9 +361,10 @@ describe('TextIterator', () => {
   });
 
   it('TextIterator out-of-bounds API', () => {
-    let defaultMeasurer = createDefaultMeasurer();
-    let text = Text.withContent('abcdefg', defaultMeasurer);
-    let iterator = text.iterator(4, 2, 4);
+    let document = new Document(() => {});
+    document.setMeasurer(createDefaultMeasurer());
+    document.reset('abcdefg');
+    let iterator = document.iterator(4, 2, 4);
     expect(iterator.offset).toBe(4);
     expect(iterator.current).toBe(undefined);
     expect(iterator.charCodeAt(0)).toBe(NaN);
@@ -363,9 +373,10 @@ describe('TextIterator', () => {
   });
 
   it('TextIterator.setConstraints', () => {
-    let defaultMeasurer = createDefaultMeasurer();
-    let text = Text.withContent('012', defaultMeasurer);
-    let iterator = text.iterator(0, 0, 1);
+    let document = new Document(() => {});
+    document.setMeasurer(createDefaultMeasurer());
+    document.reset('012');
+    let iterator = document.iterator(0, 0, 1);
     expect(iterator.outOfBounds()).toBe(false);
     expect(iterator.offset).toBe(0);
     expect(iterator.current).toBe('0');
@@ -397,7 +408,6 @@ describe('TextIterator', () => {
   });
 
   it('TextIterator all sizes', () => {
-    let defaultMeasurer = createDefaultMeasurer();
     let random = Random(144);
     let lineCount = 20;
     let chunks = [];
@@ -409,10 +419,11 @@ describe('TextIterator', () => {
     let content = chunks.join('');
 
     for (let chunkSize = 1; chunkSize <= 101; chunkSize += 10) {
-      Text.test.setDefaultChunkSize(chunkSize);
-      let text = Text.withContent(content, defaultMeasurer);
+      let document = new Document(() => {});
+      document.setMeasurer(createDefaultMeasurer());
+      Document.test.setContent(document, content, chunkSize);
       for (let from = 0; from <= content.length; from++) {
-        let iterator = text.iterator(from, from, content.length);
+        let iterator = document.iterator(from, from, content.length);
         let length = content.length - from;
         expect(iterator.length()).toBe(length);
         let s = content.substring(from, content.length);

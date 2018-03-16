@@ -1,5 +1,6 @@
-import { Text } from './Text.mjs';
 import { RoundMode, Unicode } from './Unicode.mjs';
+import { Tree } from './Tree.mjs';
+import { TextIterator } from './TextIterator.mjs';
 
 /**
  * @typedef {{
@@ -17,7 +18,7 @@ export class Document {
   constructor(invalidateCallback) {
     this._invalidateCallback = invalidateCallback;
     this._measurer = new Unicode.CachingMeasurer(1, 1, Unicode.anythingRegex, s => 1, s => 1);
-    this._text = Text.withContent('', this._measurer);
+    this._setTree(this._treeWithContent(''));
     this._frozenSymbols = [];
     this._tokenizer = null;
     this._replaceCallbacks = [];
@@ -48,9 +49,10 @@ export class Document {
    * @param {!Measurer} measurer
    */
   setMeasurer(measurer) {
-    this._measurer = measurer;
     // TODO: this is not quite correct, as it affects history.
-    this.reset(this.content());
+    let content = this.content();
+    this._measurer = measurer;
+    this.reset(content);
   }
 
   /**
@@ -69,15 +71,15 @@ export class Document {
   }
 
   /**
-   * @param {string} text
+   * @param {string} content
    */
-  reset(text) {
+  reset(content) {
     if (this._frozenSymbols.length)
       throw 'Cannot edit while frozen';
-    let to = this._text.length();
-    let removed = this._text.content();
-    this._text = Text.withContent(text, this._measurer);
-    let replacement = {from: 0, to, inserted: text.length, removed};
+    let to = this._length;
+    let removed = this.content();
+    this._setTree(this._treeWithContent(content));
+    let replacement = {from: 0, to, inserted: content.length, removed};
     for (let callback of this._replaceCallbacks)
       callback(replacement);
     this.invalidate();
@@ -114,9 +116,7 @@ export class Document {
     if (this._frozenSymbols.length && this._frozenSymbols[this._frozenSymbols.length - 1] !== symbol)
       throw 'Cannot edit while frozen';
     this.freeze(Document._replaceFreeze);
-    let {text, removed} = this._text.replace(from, to, insertion);
-    this._text.resetCache();
-    this._text = text;
+    let removed = this._replaceRange(from, to, insertion);
     let replacement = {from, to, inserted: insertion.length, removed};
     for (let callback of this._replaceCallbacks)
       callback(replacement);
@@ -126,57 +126,63 @@ export class Document {
   }
 
   /**
-   * @param {number=} from
-   * @param {number=} to
+   * @param {number=} fromOffset
+   * @param {number=} toOffset
    * @return {string}
    */
-  content(from, to) {
-    return this._text.content(from, to);
+  content(fromOffset, toOffset) {
+    let {from, to} = this._clamp(fromOffset, toOffset);
+    let iterator = this.iterator(from, from, to);
+    return iterator.substr(to - from);
   }
 
   /**
    * @param {number} offset
-   * @param {number=} from
-   * @param {number=} to
-   * @return {!Text.Iterator}
+   * @param {number=} fromOffset
+   * @param {number=} toOffset
+   * @return {!TextIterator}
    */
-  iterator(offset, from, to) {
-    return this._text.iterator(offset, from, to);
+  iterator(offset, fromOffset, toOffset) {
+    let {from, to} = this._clamp(fromOffset, toOffset);
+    offset = Math.max(from, offset);
+    offset = Math.min(to, offset);
+    let it = this._tree.iterator(offset, from, to);
+    return new TextIterator(it, offset, from, to, this._length);
   }
 
   /**
    * @return {number}
    */
   lineCount() {
-    return this._text.lineCount();
+    return this._lineCount;
   }
 
   /**
    * @return {number}
    */
   length() {
-    return this._text.length();
+    return this._length;
   }
 
   /**
    * @return {!Location}
    */
   lastLocation() {
-    return this._text.lastLocation();
+    return this._lastLocation;
   }
 
   /**
    * @return {number}
    */
   height() {
-    return this._text.lastLocation().y + this._measurer.defaultHeight;
+    return this._lastLocation.y + this._measurer.defaultHeight;
   }
 
   /**
    * @return {number}
    */
-  longestLineWidth() {
-    return this._text.longestLineWidth();
+  width() {
+    return this._width;
   }
 
   /**
@@ -184,7 +190,7 @@ export class Document {
    * @return {?Position}
    */
   offsetToPosition(offset) {
-    return this._text.offsetToLocation(offset);
+    return this.offsetToLocation(offset);
   }
 
   /**
@@ -192,7 +198,7 @@ export class Document {
    * @return {?Point}
    */
   offsetToPoint(offset) {
-    return this._text.offsetToLocation(offset);
+    return this.offsetToLocation(offset);
   }
 
   /**
@@ -200,7 +206,10 @@ export class Document {
    * @return {?Location}
    */
   offsetToLocation(offset) {
-    return this._text.offsetToLocation(offset);
+    let found = this._tree.findByOffset(offset);
+    if (found.location === null || found.data === null)
+      return found.location;
+    return Unicode.locateInStringByOffset(found.data, found.location, offset, this._measurer);
   }
 
   /**
@@ -209,7 +218,16 @@ export class Document {
    * @return {number}
    */
   positionToOffset(position, strict) {
-    return this._text.positionToLocation(position, strict).offset;
+    return this.positionToLocation(position, strict).offset;
+  }
+
+  /**
+   * @param {!Position} position
+   * @param {boolean=} strict
+   * @return {!Point}
+   */
+  positionToPoint(position, strict) {
+    return this.positionToLocation(position, strict);
   }
 
   /**
@@ -218,7 +236,10 @@ export class Document {
    * @return {!Location}
    */
   positionToLocation(position, strict) {
-    return this._text.positionToLocation(position, strict);
+    let found = this._tree.findByPosition(position, !!strict);
+    if (found.data === null)
+      return found.location;
+    return Unicode.locateInStringByPosition(found.data, found.location, found.clampedPosition, this._measurer, strict);
   }
 
   /**
@@ -228,7 +249,7 @@ export class Document {
    * @return {!Position}
    */
   pointToPosition(point, roundMode = RoundMode.Floor, strict) {
-    return this._text.pointToLocation(point, roundMode, strict);
+    return this.pointToLocation(point, roundMode, strict);
   }
 
   /**
@@ -238,7 +259,7 @@ export class Document {
    * @return {number}
    */
   pointToOffset(point, roundMode = RoundMode.Floor, strict) {
-    return this._text.pointToLocation(point, roundMode, strict).offset;
+    return this.pointToLocation(point, roundMode, strict).offset;
   }
 
   /**
@@ -248,8 +269,137 @@ export class Document {
    * @return {!Location}
    */
   pointToLocation(point, roundMode = RoundMode.Floor, strict) {
-    return this._text.pointToLocation(point, roundMode, strict);
+    let found = this._tree.findByPoint(point, !!strict);
+    if (found.data === null)
+      return found.location;
+    return Unicode.locateInStringByPoint(found.data, found.location, found.clampedPoint, this._measurer, roundMode, strict);
+  }
+
+  /**
+   * @param {number=} fromOffset
+   * @param {number=} toOffset
+   * @return {!Metrics}
+   */
+  rangeMetrics(fromOffset, toOffset) {
+    let {from, to} = this._clamp(fromOffset, toOffset);
+    let split = this._tree.split(from, to);
+    let skipLeft = from - split.left.metrics().length;
+    let skipRight = this._length - split.right.metrics().length - to;
+    let tmp = split.middle.splitFirst();
+    if (!tmp.first)
+      return { length: 0, firstColumns: 0, lastColumns: 0, longestColumns: 0 };
+    let left = tmp.first;
+    tmp = tmp.rest.splitLast();
+    if (!tmp.last) {
+      if (skipLeft + skipRight > left.length)
+        throw 'Inconsistent';
+      return Unicode.metricsFromString(left.substring(skipLeft, left.length - skipRight), this._measurer);
+    }
+    let right = tmp.last;
+    let middle = tmp.rest;
+    let leftMetrics = Unicode.metricsFromString(left.substring(skipLeft), this._measurer);
+    let rightMetrics = Unicode.metricsFromString(right.substring(0, right.length - skipRight), this._measurer);
+    return middle.combineMetrics(leftMetrics, middle.combineMetrics(middle.metrics(), rightMetrics));
+  }
+
+  /**
+   * @param {!Tree<string>} tree
+   */
+  _setTree(tree) {
+    this._tree = tree;
+    let metrics = tree.metrics();
+    this._lineCount = (metrics.lineBreaks || 0) + 1;
+    this._length = metrics.length;
+    this._lastLocation = tree.endLocation();
+    this._width = metrics.longestWidth || (metrics.longestColumns * this._measurer.defaultWidth);
+  }
+
+  /**
+   * @param {string} content
+   * @return {!Tree<string>}
+   */
+  _treeWithContent(content) {
+    let chunks = Unicode.chunkString(kDefaultChunkSize, content, this._measurer);
+    return Tree.build(chunks, this._measurer.defaultHeight, this._measurer.defaultWidth);
+  }
+
+  /**
+   * @param {number} from
+   * @param {number} to
+   * @param {string} insertion
+   * @return string
+   */
+  _replaceRange(from, to, insertion) {
+    let split = this._tree.split(from, to);
+
+    let removed = '';
+    let first = '';
+    let last = '';
+    let middle = split.middle.collect();
+    for (let i = 0; i < middle.length; i++) {
+      let data = middle[i];
+      let fromOffset = 0;
+      let toOffset = data.length;
+      if (i === 0) {
+        fromOffset = from - split.left.metrics().length;
+        first = data.substring(0, fromOffset);
+      }
+      if (i === middle.length - 1) {
+        toOffset = data.length - (this._length - split.right.metrics().length - to);
+        last = data.substring(toOffset);
+      }
+      removed += data.substring(fromOffset, toOffset);
+    }
+
+    let chunks = [];
+    if (first.length + insertion.length + last.length > kDefaultChunkSize &&
+        first.length + insertion.length <= kDefaultChunkSize) {
+      // For typical editing scenarios, we are most likely to replace at the
+      // end of |insertion| next time.
+      chunks = Unicode.chunkString(kDefaultChunkSize, last, this._measurer, first + insertion);
+    } else {
+      chunks = Unicode.chunkString(kDefaultChunkSize, first + insertion + last, this._measurer);
+    }
+
+    this._setTree(Tree.build(chunks, this._measurer.defaultHeight, this._measurer.defaultWidth, split.left, split.right));
+    return removed;
+  }
+
+  /**
+   * @param {number=} from
+   * @param {number=} to
+   * @return {!Range}
+   */
+  _clamp(from, to) {
+    if (from === undefined)
+      from = 0;
+    from = Math.max(0, from);
+    if (to === undefined)
+      to = this._length;
+    to = Math.min(this._length, to);
+    return {from, to};
   }
 };
 
 Document._replaceFreeze = Symbol('Document.replace');
+
+// This is very efficient for loading large files and memory consumption.
+// It might slow down common operations though. We should measure that and
+// consider different chunk sizes based on total document length.
+let kDefaultChunkSize = 1000;
+
+Document.test = {};
+
+/**
+ * @param {!Document} document
+ * @param {!Array<string>} chunks
+ */
+Document.test.setChunks = function(document, chunks) {
+  let nodes = chunks.map(chunk => ({data: chunk, metrics: Unicode.metricsFromString(chunk, document._measurer)}));
+  document._setTree(Tree.build(nodes, document._measurer.defaultHeight, document._measurer.defaultWidth));
+};
+
+Document.test.setContent = function(document, content, chunkSize) {
+  let chunks = Unicode.chunkString(chunkSize, content, document._measurer);
+  document._setTree(Tree.build(chunks, document._measurer.defaultHeight, document._measurer.defaultWidth));
+};
