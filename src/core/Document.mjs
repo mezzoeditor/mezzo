@@ -49,10 +49,10 @@ export class Document {
    * @param {!Measurer} measurer
    */
   setMeasurer(measurer) {
-    // TODO: this is not quite correct, as it affects history.
     let content = this.content();
     this._measurer = measurer;
-    this.reset(content);
+    this._setTree(this._treeWithContent(content));
+    this.invalidate();
   }
 
   /**

@@ -72,9 +72,9 @@ export class Renderer {
     this._cssWidth = 0;
     this._cssHeight = 0;
     this._ratio = this._getRatio();
-    this._updateMetrics();
     this._viewport = new Viewport(document);
     this._viewport.setRevealCallback(() => this.invalidate());
+    this._updateMetrics();
 
     this._render = this._render.bind(this);
 
@@ -182,9 +182,10 @@ export class Renderer {
 
   _updateMetrics(fromResizeBuggy) {
     this._metrics = new ContextBasedMetrics(this._canvas.getContext('2d'), this._monospace);
-    // Updating in document every time is slow, but not doing it is a bug.
+    // Updating in viewport every time is slow, but not doing it might be wrong on
+    // scale change. We should detect that.
     if (!fromResizeBuggy)
-      this._document.setMeasurer(this._metrics.measurer);
+      this._viewport.setMeasurer(this._metrics.measurer);
   }
 
   _mouseEventToCanvas(event) {

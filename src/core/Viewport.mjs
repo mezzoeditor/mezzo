@@ -12,7 +12,7 @@ import {trace} from './Trace.mjs';
  */
 
 /**
- * @typdef {{
+ * @typedef {{
  *   text: !Array<!TextDecorator>|undefined,
  *   background: !Array<!TextDecorator>|undefined,
  *   scrollbar: !Array<!ScrollbarDecorator>|undefined
@@ -52,7 +52,30 @@ import {trace} from './Trace.mjs';
  * }} Viewport.LineInfo
  */
 
-const kMinScrollbarDecorationHeight = 5;
+/**
+ * @typedef {{
+ *   from: number,
+ *   to: number,
+ *   metrics: !Metrics
+ * }} TextChunk
+ */
+
+/**
+ * @typedef {{
+ *   from: number,
+ *   to: number,
+ *   metrics: !Metrics
+ * }} TextGap
+ */
+
+/**
+ * @typedef {{
+ *   gap: !TextGap|undefined,
+ *   chunk: !TextChunk|undefined
+ * }} TextItem
+ */
+
+ const kMinScrollbarDecorationHeight = 5;
 
 /**
  * Viewport class abstracts the window that peeks onto a part of the
@@ -89,6 +112,7 @@ export class Viewport {
    */
   constructor(document) {
     this._document = document;
+    this._measurer = document.measurer();
     this._width = 0;
     this._height = 0;
     this._scrollTop = 0;
@@ -117,6 +141,14 @@ export class Viewport {
    */
   setRevealCallback(revealCallback) {
     this._revealCallback = revealCallback;
+  }
+
+  /**
+   * @param {!Measurer} measurer
+   */
+  setMeasurer(measurer) {
+    this._measurer = measurer;
+    this._document.setMeasurer(measurer);
   }
 
   /**
@@ -253,7 +285,7 @@ export class Viewport {
 
     let from = this.documentPointToViewPoint(this._document.offsetToPoint(range.from));
     let to = this.documentPointToViewPoint(this._document.offsetToPoint(range.to));
-    to.y += this._document.measurer().defaultHeight;
+    to.y += this._measurer.defaultHeight;
 
     if (this._scrollTop > from.y) {
       this._scrollTop = Math.max(from.y - rangePadding.top, 0);
@@ -361,8 +393,8 @@ export class Viewport {
   }
 
   _buildTextAndBackground(origin, lines, textDecorators, backgroundDecorators) {
-    const measurer = this._document.measurer();
     const viewportRight = origin.x + this._width;
+    const decorationMaxRight = Math.min(viewportRight + 10, this._maxScrollLeft + this._width - this._padding.right);
     const text = [];
     const background = [];
     const dx = -this._scrollLeft + this._padding.left;
@@ -376,10 +408,10 @@ export class Viewport {
           let charCode = lineContent.charCodeAt(i);
           if (charCode >= 0xD800 && charCode <= 0xDBFF && i + 1 < lineContent.length) {
             offsetToX[i + 1] = x;
-            x += measurer.measureSupplementaryCodePoint(lineContent.codePointAt(i));
+            x += this._measurer.measureSupplementaryCodePoint(lineContent.codePointAt(i));
             i += 2;
           } else {
-            x += measurer.measureBMPCodePoint(charCode);
+            x += this._measurer.measureBMPCodePoint(charCode);
             i++;
           }
         } else {
@@ -408,7 +440,7 @@ export class Viewport {
           trace.count('decorations');
           // TODO: note that some editors only show selection up to line length. Setting?
           let from = decoration.from < line.from.offset ? Math.max(line.from.x - 10, 0) : offsetToX[decoration.from - line.from.offset];
-          let to = decoration.to > line.to.offset ? Math.min(viewportRight + 10, this._maxScrollLeft + this._width - this._padding.right)  : offsetToX[decoration.to - line.from.offset];
+          let to = decoration.to > line.to.offset ? decorationMaxRight : offsetToX[decoration.to - line.from.offset];
           if (from <= to) {
             background.push({
               x: from + dx,
@@ -425,7 +457,7 @@ export class Viewport {
   }
 
   _buildScrollbar(scrollbarDecorators) {
-    const defaultHeight = this._document.measurer().defaultHeight;
+    const defaultHeight = this._measurer.defaultHeight;
     let scrollbar = [];
     for (let decorator of scrollbarDecorators) {
       let lastTop = -1;
