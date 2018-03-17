@@ -224,7 +224,12 @@ export class Search {
       if (select)
         this._selection.setRanges([this._currentMatch]);
       if (reveal)
-        this._viewport.reveal(this._currentMatch);
+        this._viewport.reveal(this._currentMatch, {
+          left: 10,
+          right: 10,
+          top: this._viewport.height() / 2,
+          bottom: this._viewport.height() / 2,
+        });
     }
   }
 
