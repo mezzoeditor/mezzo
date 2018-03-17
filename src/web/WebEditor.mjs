@@ -244,7 +244,7 @@ export class WebEditor {
         let range = Tokenizer.characterGroupRange(this._document, offset);
         mouseRangeStartOffset = range.from;
         mouseRangeEndOffset = range.to;
-        this._selection.setRanges([{from: mouseRangeStartOffset, to: mouseRangeEndOffset}]);
+        this._selection.setLastRange({from: mouseRangeStartOffset, to: mouseRangeEndOffset});
         event.preventDefault();
         event.stopPropagation();
         return;
@@ -260,7 +260,7 @@ export class WebEditor {
           column: 0
         });
 
-        this._selection.setRanges([{from, to}]);
+        this._selection.setLastRange({from, to});
         mouseRangeStartOffset = from;
         mouseRangeEndOffset = to;
         event.preventDefault();
