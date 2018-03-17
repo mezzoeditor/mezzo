@@ -91,9 +91,7 @@ export class Selection {
       anchor: range.from,
       focus: range.to
     })));
-    this._staleDecorations = true;
-    for (let callback of this._changeCallbacks)
-      callback();
+    this._notifyChanged();
   }
 
   /**
@@ -114,9 +112,7 @@ export class Selection {
       maxRange.upDownX = -1;
     }
     this._ranges = this._rebuild(this._ranges);
-    this._staleDecorations = true;
-    for (let callback of this._changeCallbacks)
-      callback();
+    this._notifyChanged();
   }
 
   /**
@@ -130,9 +126,7 @@ export class Selection {
       focus: range.to
     });
     this._ranges = this._rebuild(this._ranges);
-    this._staleDecorations = true;
-    for (let callback of this._changeCallbacks)
-      callback();
+    this._notifyChanged();
   }
 
   /**
@@ -194,18 +188,14 @@ export class Selection {
           minRange = range;
       }
       this._ranges = [minRange];
-      this._staleDecorations = true;
-      for (let callback of this._changeCallbacks)
-        callback();
+      this._notifyChanged();
       return true;
     }
     let range = this._ranges[0];
     if (range.anchor === range.focus)
       return false;
     range.focus = range.anchor;
-    this._staleDecorations = true;
-    for (let callback of this._changeCallbacks)
-      callback();
+    this._notifyChanged();
     return true;
   }
 
@@ -436,9 +426,7 @@ export class Selection {
     if (this._frozen)
       throw 'Cannot change selection while frozen';
     this._ranges = [{anchor: 0, focus: this._document.length(), upDownX: -1, id: ++this._lastId}];
-    this._staleDecorations = true;
-    for (let callback of this._changeCallbacks)
-      callback();
+    this._notifyChanged();
   }
 
   /**
@@ -464,9 +452,7 @@ export class Selection {
         newRanges.push({id: this._ranges[i].id, upDownX: -1, anchor: ranges[i].from, focus: ranges[i].to});
       this._ranges = this._rebuild(newRanges);
     }
-    this._staleDecorations = true;
-    for (let callback of this._changeCallbacks)
-      callback();
+    this._notifyChanged();
   }
 
   // -------- Internals --------
@@ -520,9 +506,7 @@ export class Selection {
         ranges.push({id: range.id, upDownX: -1, anchor: start, focus: end});
     }
     this._ranges = this._rebuild(ranges);
-    this._staleDecorations = true;
-    for (let callback of this._changeCallbacks)
-      callback();
+    this._notifyChanged();
   }
 
   /**
@@ -541,9 +525,7 @@ export class Selection {
         ranges.push(updated);
     }
     this._ranges = this._join(ranges);
-    this._staleDecorations = true;
-    for (let callback of this._changeCallbacks)
-      callback();
+    this._notifyChanged();
     return true;
   }
 
@@ -595,6 +577,12 @@ export class Selection {
       return (aFrom - bFrom) || (aTo - bTo);
     });
     return this._join(ranges);
+  }
+
+  _notifyChanged() {
+    this._staleDecorations = true;
+    for (let callback of this._changeCallbacks)
+      callback();
   }
 
   /**
