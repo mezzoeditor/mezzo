@@ -185,16 +185,24 @@ export class Selection {
   collapse() {
     if (this._frozen)
       throw 'Cannot change selection while frozen';
-    let collapsed = false;
-    let ranges = [];
-    for (let range of this._ranges) {
-      if (range.anchor !== range.focus)
-        collapsed = true;
-      ranges.push({id: range.id, upDownX: -1, anchor: range.anchor, focus: range.anchor});
-    }
-    if (!collapsed)
+    if (this._ranges.length === 0)
       return false;
-    this._ranges = ranges;
+    if (this._ranges.length > 1) {
+      let minRange = null;
+      for (let range of this._ranges) {
+        if (!minRange || minRange.anchor > range.anchor)
+          minRange = range;
+      }
+      this._ranges = [minRange];
+      this._staleDecorations = true;
+      for (let callback of this._changeCallbacks)
+        callback();
+      return true;
+    }
+    let range = this._ranges[0];
+    if (range.anchor === range.focus)
+      return false;
+    range.focus = range.anchor;
     this._staleDecorations = true;
     for (let callback of this._changeCallbacks)
       callback();
