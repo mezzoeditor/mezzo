@@ -468,7 +468,7 @@ export class WebEditor {
         return this._revealSelection(this._editing.removeIndent());
 
       case 'selection.addnext':
-        return this._revealSelection(this._selection.addNextOccurence()) || true;
+        return this._revealSelection(this._selection.addNextOccurence(), true /* center */) || true;
       case 'selection.move.up':
         return this._revealSelection(this._selection.moveUp());
       case 'selection.move.down':
@@ -513,15 +513,17 @@ export class WebEditor {
         this._selection.selectAll();
         return this._revealSelection(true);
       case 'selection.collapse':
-        return this._revealSelection(this._selection.collapse());
+        return this._revealSelection(this._selection.collapse(), true /* center */);
     }
     return false;
   }
 
-  _revealSelection(success) {
+  _revealSelection(success, center = false) {
     let focus = this._selection.focus();
-    if (success && focus !== null)
-      this._renderer.viewport().reveal({from: focus, to: focus});
+    if (success && focus !== null) {
+      let vPadding = center ? this._renderer.viewport().height() / 2 : 0;
+      this._renderer.viewport().reveal({from: focus, to: focus}, {top: vPadding, bottom: vPadding});
+    }
     return success;
   }
 
