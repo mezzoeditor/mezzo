@@ -1,4 +1,4 @@
-import { RoundMode, Unicode } from './Unicode.mjs';
+import { RoundMode, Metrics } from './Metrics.mjs';
 import { Tree } from './Tree.mjs';
 import { TextIterator } from './TextIterator.mjs';
 
@@ -11,13 +11,35 @@ import { TextIterator } from './TextIterator.mjs';
  * }} Replacement;
  */
 
+class CharactersMeasurer {
+  defaultWidth() {
+    return 1;
+  }
+
+  defaultHeight() {
+    return 1;
+  }
+
+  defaultRegex() {
+    return Metrics.bmpRegex;
+  }
+
+  measureBMP(char) {
+    return 1;
+  }
+
+  measureSupplementary(char) {
+    return 1;
+  }
+};
+
 export class Document {
   /**
    * @param {function()} invalidateCallback
    */
   constructor(invalidateCallback) {
     this._invalidateCallback = invalidateCallback;
-    this._measurer = new Unicode.CachingMeasurer(1, 1, Unicode.anythingRegex, s => 1, s => 1);
+    this._metrics = new Metrics(new CharactersMeasurer());
     this._setTree(this._treeWithContent(''));
     this._frozenSymbols = [];
     this._tokenizer = null;
@@ -39,18 +61,11 @@ export class Document {
   }
 
   /**
-   * @return {!Measurer}
+   * @param {!Metrics} metrics
    */
-  measurer() {
-    return this._measurer;
-  }
-
-  /**
-   * @param {!Measurer} measurer
-   */
-  setMeasurer(measurer) {
+  setMetrics(metrics) {
     let content = this.content();
-    this._measurer = measurer;
+    this._metrics = metrics;
     this._setTree(this._treeWithContent(content));
     this.invalidate();
   }
@@ -175,7 +190,7 @@ export class Document {
    * @return {number}
    */
   height() {
-    return this._lastLocation.y + this._measurer.defaultHeight;
+    return this._lastLocation.y + this._metrics.defaultHeight;
   }
 
   /**
@@ -209,7 +224,7 @@ export class Document {
     let found = this._tree.findByOffset(offset);
     if (found.location === null || found.data === null)
       return found.location;
-    return Unicode.locateInStringByOffset(found.data, found.location, offset, this._measurer);
+    return this._metrics.locateByOffset(found.data, found.location, offset);
   }
 
   /**
@@ -239,7 +254,7 @@ export class Document {
     let found = this._tree.findByPosition(position, !!strict);
     if (found.data === null)
       return found.location;
-    return Unicode.locateInStringByPosition(found.data, found.location, found.clampedPosition, this._measurer, strict);
+    return this._metrics.locateByPosition(found.data, found.location, found.clampedPosition, strict);
   }
 
   /**
@@ -272,13 +287,13 @@ export class Document {
     let found = this._tree.findByPoint(point, !!strict);
     if (found.data === null)
       return found.location;
-    return Unicode.locateInStringByPoint(found.data, found.location, found.clampedPoint, this._measurer, roundMode, strict);
+    return this._metrics.locateByPoint(found.data, found.location, found.clampedPoint, roundMode, strict);
   }
 
   /**
    * @param {number=} fromOffset
    * @param {number=} toOffset
-   * @return {!Metrics}
+   * @return {!TextMetrics}
    */
   rangeMetrics(fromOffset, toOffset) {
     let {from, to} = this._clamp(fromOffset, toOffset);
@@ -293,12 +308,12 @@ export class Document {
     if (!tmp.last) {
       if (skipLeft + skipRight > left.length)
         throw 'Inconsistent';
-      return Unicode.metricsFromString(left.substring(skipLeft, left.length - skipRight), this._measurer);
+      return this._metrics.forString(left.substring(skipLeft, left.length - skipRight));
     }
     let right = tmp.last;
     let middle = tmp.rest;
-    let leftMetrics = Unicode.metricsFromString(left.substring(skipLeft), this._measurer);
-    let rightMetrics = Unicode.metricsFromString(right.substring(0, right.length - skipRight), this._measurer);
+    let leftMetrics = this._metrics.forString(left.substring(skipLeft));
+    let rightMetrics = this._metrics.forString(right.substring(0, right.length - skipRight));
     return middle.combineMetrics(leftMetrics, middle.combineMetrics(middle.metrics(), rightMetrics));
   }
 
@@ -311,7 +326,7 @@ export class Document {
     this._lineCount = (metrics.lineBreaks || 0) + 1;
     this._length = metrics.length;
     this._lastLocation = tree.endLocation();
-    this._width = metrics.longestWidth || (metrics.longestColumns * this._measurer.defaultWidth);
+    this._width = metrics.longestWidth || (metrics.longestColumns * this._metrics.defaultWidth);
   }
 
   /**
@@ -319,8 +334,8 @@ export class Document {
    * @return {!Tree<string>}
    */
   _treeWithContent(content) {
-    let chunks = Unicode.chunkString(kDefaultChunkSize, content, this._measurer);
-    return Tree.build(chunks, this._measurer.defaultHeight, this._measurer.defaultWidth);
+    let chunks = this._metrics.chunkString(kDefaultChunkSize, content);
+    return Tree.build(chunks, this._metrics.defaultHeight, this._metrics.defaultWidth);
   }
 
   /**
@@ -356,12 +371,12 @@ export class Document {
         first.length + insertion.length <= kDefaultChunkSize) {
       // For typical editing scenarios, we are most likely to replace at the
       // end of |insertion| next time.
-      chunks = Unicode.chunkString(kDefaultChunkSize, last, this._measurer, first + insertion);
+      chunks = this._metrics.chunkString(kDefaultChunkSize, last, first + insertion);
     } else {
-      chunks = Unicode.chunkString(kDefaultChunkSize, first + insertion + last, this._measurer);
+      chunks = this._metrics.chunkString(kDefaultChunkSize, first + insertion + last);
     }
 
-    this._setTree(Tree.build(chunks, this._measurer.defaultHeight, this._measurer.defaultWidth, split.left, split.right));
+    this._setTree(Tree.build(chunks, this._metrics.defaultHeight, this._metrics.defaultWidth, split.left, split.right));
     return removed;
   }
 
@@ -395,11 +410,11 @@ Document.test = {};
  * @param {!Array<string>} chunks
  */
 Document.test.setChunks = function(document, chunks) {
-  let nodes = chunks.map(chunk => ({data: chunk, metrics: Unicode.metricsFromString(chunk, document._measurer)}));
-  document._setTree(Tree.build(nodes, document._measurer.defaultHeight, document._measurer.defaultWidth));
+  let nodes = chunks.map(chunk => ({data: chunk, metrics: document._metrics.forString(chunk)}));
+  document._setTree(Tree.build(nodes, document._metrics.defaultHeight, document._metrics.defaultWidth));
 };
 
 Document.test.setContent = function(document, content, chunkSize) {
-  let chunks = Unicode.chunkString(chunkSize, content, document._measurer);
-  document._setTree(Tree.build(chunks, document._measurer.defaultHeight, document._measurer.defaultWidth));
+  let chunks = document._metrics.chunkString(chunkSize, content);
+  document._setTree(Tree.build(chunks, document._metrics.defaultHeight, document._metrics.defaultWidth));
 };

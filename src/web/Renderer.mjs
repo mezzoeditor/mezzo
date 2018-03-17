@@ -1,8 +1,11 @@
-import { RoundMode, Unicode } from '../core/Unicode.mjs';
+import { RoundMode, Metrics } from '../core/Metrics.mjs';
 import { Viewport } from '../core/Viewport.mjs';
 import { trace } from '../core/Trace.mjs';
 
-class ContextBasedMetrics {
+/**
+ * @implements Measurer
+ */
+class ContextBasedMeasurer {
   constructor(ctx, monospace) {
     // The following will be shipped soon.
     // const fontHeight = metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent;
@@ -18,13 +21,30 @@ class ContextBasedMetrics {
     this.width9 = ctx.measureText('9').width;
     this.widthM = ctx.measureText('M').width;
 
-    this.measurer = new Unicode.CachingMeasurer(
-      monospace ? ctx.measureText('M').width : 0,
-      fontHeight,
-      monospace ? Unicode.asciiRegex : null,
-      s => ctx.measureText(s).width,
-      s => ctx.measureText(s).width
-    );
+    this._defaultWidth = monospace ? ctx.measureText('M').width : 0;
+    this._defaultHeight = fontHeight;
+    this._defaultRegex = monospace ? Metrics.asciiRegex : null;
+    this._ctx = ctx;
+  }
+
+  defaultWidth() {
+    return this._defaultWidth;
+  }
+
+  defaultHeight() {
+    return this._defaultHeight;
+  }
+
+  defaultRegex() {
+    return this._defaultRegex;
+  }
+
+  measureBMP(char) {
+    return this._ctx.measureText(char).width;
+  }
+
+  measureSupplementary(char) {
+    return this._ctx.measureText(char).width;
   }
 };
 
@@ -72,9 +92,9 @@ export class Renderer {
     this._cssWidth = 0;
     this._cssHeight = 0;
     this._ratio = this._getRatio();
-    this._viewport = new Viewport(document);
+    this._measurer = new ContextBasedMeasurer(this._canvas.getContext('2d'), this._monospace);
+    this._viewport = new Viewport(document, this._measurer);
     this._viewport.setRevealCallback(() => this.invalidate());
-    this._updateMetrics();
 
     this._render = this._render.bind(this);
 
@@ -150,7 +170,11 @@ export class Renderer {
     this._canvas.height = cssHeight * this._ratio;
     this._canvas.style.width = cssWidth + 'px';
     this._canvas.style.height = cssHeight + 'px';
-    this._updateMetrics(true);
+    this._measurer = new ContextBasedMeasurer(this._canvas.getContext('2d'), this._monospace);
+    // Updating in viewport every time is slow, but not doing it might be wrong on
+    // scale change. We should detect that.
+    if (false)
+      this._viewport.setMeasurer(this._measurer);
     this.invalidate();
   }
 
@@ -159,7 +183,8 @@ export class Renderer {
    */
   setUseMonospaceFont(monospace) {
     this._monospace = monospace;
-    this._updateMetrics();
+    this._measurer = new ContextBasedMeasurer(this._canvas.getContext('2d'), this._monospace);
+    this._viewport.setMeasurer(this._measurer);
     this.invalidate();
   }
 
@@ -178,14 +203,6 @@ export class Renderer {
    */
   canvas() {
     return this._canvas;
-  }
-
-  _updateMetrics(fromResizeBuggy) {
-    this._metrics = new ContextBasedMetrics(this._canvas.getContext('2d'), this._monospace);
-    // Updating in viewport every time is slow, but not doing it might be wrong on
-    // scale change. We should detect that.
-    if (!fromResizeBuggy)
-      this._viewport.setMeasurer(this._metrics.measurer);
   }
 
   _mouseEventToCanvas(event) {
@@ -296,7 +313,7 @@ export class Renderer {
       return;
     // To properly handle input events, we have to update rects synchronously.
     const gutterLength = (Math.max(this._document.lineCount(), 100) + '').length;
-    const gutterWidth = this._metrics.width9 * gutterLength;
+    const gutterWidth = this._measurer.width9 * gutterLength;
     this._gutterRect.width = gutterWidth + 2 * GUTTER_PADDING_LEFT_RIGHT;
     this._gutterRect.height = this._cssHeight;
 
@@ -311,7 +328,7 @@ export class Renderer {
       left: 4,
       right: 4,
       top: 4,
-      bottom: this._editorRect.height - this._metrics.lineHeight - 4
+      bottom: this._editorRect.height - this._measurer.lineHeight - 4
     });
 
     this._vScrollbar.rect.x = this._cssWidth - SCROLLBAR_WIDTH;
@@ -413,7 +430,7 @@ export class Renderer {
 
     ctx.textAlign = 'right';
     ctx.fillStyle = 'rgb(128, 128, 128)';
-    const textOffset = this._metrics.textOffset;
+    const textOffset = this._measurer.textOffset;
     const textX = this._gutterRect.width - GUTTER_PADDING_LEFT_RIGHT;
     for (let {line, y} of lines) {
       const number = (line + 1) + '';
@@ -422,7 +439,7 @@ export class Renderer {
   }
 
   _drawTextAndBackground(ctx, text, background) {
-    const lineHeight = this._metrics.lineHeight;
+    const lineHeight = this._measurer.lineHeight;
 
     for (let {x, y, width, style} of background) {
       const theme = this._theme[style];
@@ -457,7 +474,7 @@ export class Renderer {
       }
     }
 
-    const textOffset = this._metrics.textOffset;
+    const textOffset = this._measurer.textOffset;
     for (let {x, y, content, style} of text) {
       const theme = this._theme[style];
       if (theme && theme.text) {

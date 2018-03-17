@@ -1,6 +1,6 @@
 import { ScrollbarDecorator } from '../core/Decorator.mjs';
 import { Tokenizer } from '../core/Tokenizer.mjs';
-import { RoundMode } from '../core/Unicode.mjs';
+import { RoundMode } from '../core/Metrics.mjs';
 
 /**
  * @typedef {{
@@ -27,7 +27,8 @@ export class Selection {
    * @param {!Viewport} viewport
    */
   constructor(viewport) {
-    viewport.addDecorationCallback(this._onDecorate.bind(this));
+    this._viewport = viewport;
+    this._viewport.addDecorationCallback(this._onDecorate.bind(this));
     this._document = viewport.document();
     this._document.addReplaceCallback(this._onReplace.bind(this));
     this._rangeDecorator = new ScrollbarDecorator('selection.range');
@@ -637,7 +638,7 @@ export class Selection {
     let location = this._document.offsetToLocation(offset);
     if (upDownX === -1)
       upDownX = location.x;
-    offset = this._document.pointToOffset({x: upDownX, y: location.y - this._document.measurer().defaultHeight}, RoundMode.Round);
+    offset = this._document.pointToOffset({x: upDownX, y: location.y - this._viewport.metrics().defaultHeight}, RoundMode.Round);
     return {offset, upDownX};
   }
 
@@ -650,7 +651,7 @@ export class Selection {
     let location = this._document.offsetToLocation(offset);
     if (upDownX === -1)
       upDownX = location.x;
-    offset = this._document.pointToOffset({x: upDownX, y: location.y + this._document.measurer().defaultHeight}, RoundMode.Round);
+    offset = this._document.pointToOffset({x: upDownX, y: location.y + this._viewport.metrics().defaultHeight}, RoundMode.Round);
     return {offset, upDownX};
   }
 

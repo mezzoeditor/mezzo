@@ -1,7 +1,7 @@
 #!/usr/bin/env node --experimental-modules
 
 import {TestRunner, Reporter, Matchers} from '../../utils/testrunner/index.mjs';
-import {RoundMode, Unicode} from './Unicode.mjs';
+import {RoundMode, Metrics} from './Metrics.mjs';
 import {TextIterator} from './TextIterator.mjs';
 import {Document} from './Document.mjs';
 import {Random} from './Random.mjs';
@@ -16,23 +16,29 @@ const {beforeAll, beforeEach, afterAll, afterEach} = runner;
 
 const {expect} = new Matchers();
 
-function createTestMeasurer() {
-  let measurer = new Unicode.CachingMeasurer(
-    1,
-    3,
-    null,
-    s => s.charCodeAt(0) - 'a'.charCodeAt(0) + 1,
-    s => 100
-  );
-  measurer._measureString = (s, from, to) => {
-    let result = measurer.measureString(s, from, to);
-    return result.width || result.columns * measurer.defaultWidth;
+function createTestMetrics() {
+  let metrics = new Metrics({
+    defaultWidth: () => 1,
+    defaultHeight: () => 3,
+    defaultRegex: () => null,
+    measureBMP: s => s.charCodeAt(0) - 'a'.charCodeAt(0) + 1,
+    measureSupplementary: s => 100
+  });
+  metrics._measureString = (s, from, to) => {
+    let result = metrics.measureString(s, from, to);
+    return result.width || result.columns * metrics.defaultWidth;
   };
-  return measurer;
+  return metrics;
 }
 
-function createDefaultMeasurer() {
-  return new Unicode.CachingMeasurer(1, 1, Unicode.anythingRegex, s => 1, s => 1);
+function createDefaultMetrics() {
+  return new Metrics({
+    defaultWidth: () => 1,
+    defaultHeight: () => 1,
+    defaultRegex: () => Metrics.bmpRegex,
+    measureBMP: s => 1,
+    measureSupplementary: s => 1
+  });
 }
 
 describe('Document', () => {
@@ -40,7 +46,7 @@ describe('Document', () => {
     let chunks = ['ab\ncd', 'def', '\n', '', 'a\n\n\nbbbc', 'xy', 'za\nh', 'pp', '\n', ''];
     let content = chunks.join('');
     let document = new Document(() => {});
-    document.setMeasurer(createDefaultMeasurer());
+    document.setMetrics(createDefaultMetrics());
     Document.test.setChunks(document, chunks);
     expect(document.lineCount()).toBe(8);
     expect(document.width()).toBe(8);
@@ -52,7 +58,7 @@ describe('Document', () => {
   });
 
   it('Document tet API all chunk sizes', () => {
-    let testMeasurer = createTestMeasurer();
+    let testMetrics = createTestMetrics();
     let random = Random(143);
     let lineCount = 200;
     let chunks = [];
@@ -63,7 +69,7 @@ describe('Document', () => {
       let s = 'abcdefghijklmnopqrstuvwxyz';
       let length = 1 + (random() % (s.length - 1));
       let chunk = s.substring(0, length);
-      let width = testMeasurer._measureString(chunk, 0, length);
+      let width = testMetrics._measureString(chunk, 0, length);
       longest = Math.max(longest, width);
       chunks.push(chunk + '\n');
       locationQueries.push({line: i, column: 0, offset: offset, x: 0, y: i * 3, rounded: true});
@@ -72,7 +78,7 @@ describe('Document', () => {
       locationQueries.push({line: i, column: length, offset: offset + length, x: width, y: i * 3, nonStrict: {column: length + 1, x: width + 3}});
       locationQueries.push({line: i, column: length, offset: offset + length, x: width, y: i * 3, nonStrict: {column: length + 100, x: width + 100}});
       let column = random() % length;
-      locationQueries.push({line: i, column: column, offset: offset + column, x: testMeasurer._measureString(chunk, 0, column), y: i * 3});
+      locationQueries.push({line: i, column: column, offset: offset + column, x: testMetrics._measureString(chunk, 0, column), y: i * 3});
       offset += length + 1;
     }
     let content = chunks.join('');
@@ -88,7 +94,7 @@ describe('Document', () => {
 
     for (let chunkSize = 1; chunkSize <= 100; chunkSize++) {
       let document = new Document(() => {});
-      document.setMeasurer(testMeasurer);
+      document.setMetrics(testMetrics);
       Document.test.setContent(document, content, chunkSize);
       expect(document.lineCount()).toBe(lineCount + 1);
       expect(document.width()).toBe(longest);
@@ -147,7 +153,7 @@ describe('Document', () => {
     for (let chunkSize = 1; chunkSize <= 100; chunkSize++) {
       content = chunks.join('');
       let document = new Document(() => {});
-      document.setMeasurer(createDefaultMeasurer());
+      document.setMetrics(createDefaultMetrics());
       Document.test.setContent(document, content, chunkSize);
       for (let {from, to, insertion} of editQueries) {
         let removed = document.replace(from, to, insertion);
@@ -163,7 +169,7 @@ describe('Document', () => {
   });
 
   it('Document.rangeMetrics all chunk sizes', () => {
-    let defaultMeasurer = createDefaultMeasurer();
+    let defaultMetrics = createDefaultMetrics();
     let random = Random(153);
     let lineCount = 20;
     let chunks = [];
@@ -177,12 +183,12 @@ describe('Document', () => {
     for (let chunkSize = 1; chunkSize <= 50; chunkSize += 7) {
       content = chunks.join('');
       let document = new Document(() => {});
-      document.setMeasurer(defaultMeasurer);
+      document.setMetrics(defaultMetrics);
       Document.test.setContent(document, content, chunkSize);
       for (let from = 0; from <= content.length; from++) {
         for (let to = from; to <= content.length; to++) {
           let got = document.rangeMetrics(from, to);
-          let expected = Unicode.metricsFromString(content.substring(from, to), defaultMeasurer);
+          let expected = defaultMetrics.forString(content.substring(from, to));
           expect(got).toEqual(expected);
         }
       }
@@ -193,7 +199,7 @@ describe('Document', () => {
 describe('TextIterator', () => {
   it('TextIterator basics', () => {
     let document = new Document(() => {});
-    document.setMeasurer(createDefaultMeasurer());
+    document.setMetrics(createDefaultMetrics());
     document.reset('world');
     let iterator = document.iterator(0);
     expect(iterator.current).toBe('w');
@@ -208,7 +214,7 @@ describe('TextIterator', () => {
 
   it('TextIterator.advance', () => {
     let document = new Document(() => {});
-    document.setMeasurer(createDefaultMeasurer());
+    document.setMetrics(createDefaultMetrics());
     document.reset('world');
     let iterator = document.iterator(0);
     iterator.advance(4);
@@ -219,7 +225,7 @@ describe('TextIterator', () => {
 
   it('TextIterator.read', () => {
     let document = new Document(() => {});
-    document.setMeasurer(createDefaultMeasurer());
+    document.setMetrics(createDefaultMetrics());
     document.reset('world');
     let iterator = document.iterator(0);
     expect(iterator.read(4)).toBe('worl');
@@ -230,7 +236,7 @@ describe('TextIterator', () => {
 
   it('TextIterator.charAt', () => {
     let document = new Document(() => {});
-    document.setMeasurer(createDefaultMeasurer());
+    document.setMetrics(createDefaultMetrics());
     document.reset('world');
     let iterator = document.iterator(2);
     expect(iterator.charAt(0)).toBe('r');
@@ -255,7 +261,7 @@ describe('TextIterator', () => {
 
   it('TextIterator.find successful', () => {
     let document = new Document(() => {});
-    document.setMeasurer(createDefaultMeasurer());
+    document.setMetrics(createDefaultMetrics());
     document.reset('hello, world');
     let iterator = document.iterator(0);
     expect(iterator.find('world')).toBe(true);
@@ -265,7 +271,7 @@ describe('TextIterator', () => {
 
   it('TextIterator.find manual chunks 1', () => {
     let document = new Document(() => {});
-    document.setMeasurer(createDefaultMeasurer());
+    document.setMetrics(createDefaultMetrics());
     Document.test.setChunks(document, ['hello, w', 'o', 'r', 'ld!!!']);
     let iterator = document.iterator(0);
     expect(iterator.find('world')).toBe(true);
@@ -275,7 +281,7 @@ describe('TextIterator', () => {
 
   it('TextIterator.find manual chunks 2', () => {
     let document = new Document(() => {});
-    document.setMeasurer(createDefaultMeasurer());
+    document.setMetrics(createDefaultMetrics());
     Document.test.setChunks(document, ['hello', ',', ' ', 'w', 'orl', 'd!!!']);
     let iterator = document.iterator(0);
     expect(iterator.find('world')).toBe(true);
@@ -285,7 +291,7 @@ describe('TextIterator', () => {
 
   it('TextIterator.find manual chunks 3', () => {
     let document = new Document(() => {});
-    document.setMeasurer(createDefaultMeasurer());
+    document.setMetrics(createDefaultMetrics());
     Document.test.setChunks(document, ['hello, w', 'or', 'ld', '!!!']);
     let iterator = document.iterator(0);
     expect(iterator.find('world')).toBe(true);
@@ -295,7 +301,7 @@ describe('TextIterator', () => {
 
   it('TextIterator.find unsuccessful', () => {
     let document = new Document(() => {});
-    document.setMeasurer(createDefaultMeasurer());
+    document.setMetrics(createDefaultMetrics());
     document.reset('hello, world');
     let iterator = document.iterator(0);
     expect(iterator.find('eee')).toBe(false);
@@ -310,7 +316,7 @@ describe('TextIterator', () => {
 
   it('TextIteratof.find unsuccessful across chunks', () => {
     let document = new Document(() => {});
-    document.setMeasurer(createDefaultMeasurer());
+    document.setMetrics(createDefaultMetrics());
     Document.test.setContent(document, '/*abcdefghijklmonpqrsuvwxyz0123456789@!*/', 5);
     let iterator = document.iterator(0, 0, 8);
     expect(iterator.find('*/')).toBe(false);
@@ -325,7 +331,7 @@ describe('TextIterator', () => {
 
   it('TextIterator constraints', () => {
     let document = new Document(() => {});
-    document.setMeasurer(createDefaultMeasurer());
+    document.setMetrics(createDefaultMetrics());
     document.reset('hello');
     let iterator = document.iterator(0, 0, 2);
     expect(iterator.offset).toBe(0);
@@ -362,7 +368,7 @@ describe('TextIterator', () => {
 
   it('TextIterator out-of-bounds API', () => {
     let document = new Document(() => {});
-    document.setMeasurer(createDefaultMeasurer());
+    document.setMetrics(createDefaultMetrics());
     document.reset('abcdefg');
     let iterator = document.iterator(4, 2, 4);
     expect(iterator.offset).toBe(4);
@@ -374,7 +380,7 @@ describe('TextIterator', () => {
 
   it('TextIterator.setConstraints', () => {
     let document = new Document(() => {});
-    document.setMeasurer(createDefaultMeasurer());
+    document.setMetrics(createDefaultMetrics());
     document.reset('012');
     let iterator = document.iterator(0, 0, 1);
     expect(iterator.outOfBounds()).toBe(false);
@@ -420,7 +426,7 @@ describe('TextIterator', () => {
 
     for (let chunkSize = 1; chunkSize <= 101; chunkSize += 10) {
       let document = new Document(() => {});
-      document.setMeasurer(createDefaultMeasurer());
+      document.setMetrics(createDefaultMetrics());
       Document.test.setContent(document, content, chunkSize);
       for (let from = 0; from <= content.length; from++) {
         let iterator = document.iterator(from, from, content.length);
@@ -465,10 +471,15 @@ describe('TextIterator', () => {
 describe('Viewport', () => {
   beforeEach(state => {
     let document = new Document(() => {});
-    let measurer = new Unicode.CachingMeasurer(10, 10, null, s => 10, s => 10);
-    document.setMeasurer(measurer);
+    let measurer = {
+      defaultWidth: () => 10,
+      defaultHeight: () => 10,
+      defaultRegex: () => null,
+      measureBMP: s => 10,
+      measureSupplementary: s => 10
+    };
+    state.viewport = new Viewport(document, measurer);
     document.reset(new Array(10).fill('').join('\n'));
-    state.viewport = new Viewport(document);
     state.viewport.setSize(100, 100);
     state.viewport.vScrollbar.setSize(100);
   });
@@ -749,113 +760,113 @@ describe('Decorator', () => {
   });
 });
 
-describe('Unicode', () => {
-  it('Unicode.isValidOffset', () => {
-    expect(Unicode.isValidOffset('abc', -1)).toBe(true);
-    expect(Unicode.isValidOffset('abc', 0)).toBe(true);
-    expect(Unicode.isValidOffset('abc', 1)).toBe(true);
-    expect(Unicode.isValidOffset('abc', 2)).toBe(true);
-    expect(Unicode.isValidOffset('abc', 3)).toBe(true);
-    expect(Unicode.isValidOffset('abc', 4)).toBe(true);
+describe('Metrics', () => {
+  it('Metrics.isValidOffset', () => {
+    expect(Metrics.isValidOffset('abc', -1)).toBe(true);
+    expect(Metrics.isValidOffset('abc', 0)).toBe(true);
+    expect(Metrics.isValidOffset('abc', 1)).toBe(true);
+    expect(Metrics.isValidOffset('abc', 2)).toBe(true);
+    expect(Metrics.isValidOffset('abc', 3)).toBe(true);
+    expect(Metrics.isValidOffset('abc', 4)).toBe(true);
 
-    expect(Unicode.isValidOffset('𐀀𐀀', -1)).toBe(true);
-    expect(Unicode.isValidOffset('𐀀𐀀', 0)).toBe(true);
-    expect(Unicode.isValidOffset('𐀀𐀀', 1)).toBe(false);
-    expect(Unicode.isValidOffset('𐀀𐀀', 2)).toBe(true);
-    expect(Unicode.isValidOffset('𐀀𐀀', 3)).toBe(false);
-    expect(Unicode.isValidOffset('𐀀𐀀', 4)).toBe(true);
-    expect(Unicode.isValidOffset('𐀀𐀀', 5)).toBe(true);
+    expect(Metrics.isValidOffset('𐀀𐀀', -1)).toBe(true);
+    expect(Metrics.isValidOffset('𐀀𐀀', 0)).toBe(true);
+    expect(Metrics.isValidOffset('𐀀𐀀', 1)).toBe(false);
+    expect(Metrics.isValidOffset('𐀀𐀀', 2)).toBe(true);
+    expect(Metrics.isValidOffset('𐀀𐀀', 3)).toBe(false);
+    expect(Metrics.isValidOffset('𐀀𐀀', 4)).toBe(true);
+    expect(Metrics.isValidOffset('𐀀𐀀', 5)).toBe(true);
   });
 
-  it('Unicode.CachingMeasurer', () => {
-    let measurer = createTestMeasurer();
+  it('Metrics', () => {
+    let metrics = createTestMetrics();
 
-    expect(measurer.measureBMPCodePoint('a'.charCodeAt(0))).toBe(1);
-    expect(measurer.measureBMPCodePoint('d'.charCodeAt(0))).toBe(4);
-    expect(measurer.measureBMPCodePoint('a'.charCodeAt(0))).toBe(1);
-    expect(measurer.measureBMPCodePoint('d'.charCodeAt(0))).toBe(4);
+    expect(metrics.measureBMPCodePoint('a'.charCodeAt(0))).toBe(1);
+    expect(metrics.measureBMPCodePoint('d'.charCodeAt(0))).toBe(4);
+    expect(metrics.measureBMPCodePoint('a'.charCodeAt(0))).toBe(1);
+    expect(metrics.measureBMPCodePoint('d'.charCodeAt(0))).toBe(4);
 
-    expect(measurer.measureSupplementaryCodePoint('𐀀'.codePointAt(0))).toBe(100);
-    expect(measurer.measureSupplementaryCodePoint('😀'.codePointAt(0))).toBe(100);
-    expect(measurer.measureSupplementaryCodePoint('𐀀'.codePointAt(0))).toBe(100);
-    expect(measurer.measureSupplementaryCodePoint('😀'.codePointAt(0))).toBe(100);
+    expect(metrics.measureSupplementaryCodePoint('𐀀'.codePointAt(0))).toBe(100);
+    expect(metrics.measureSupplementaryCodePoint('😀'.codePointAt(0))).toBe(100);
+    expect(metrics.measureSupplementaryCodePoint('𐀀'.codePointAt(0))).toBe(100);
+    expect(metrics.measureSupplementaryCodePoint('😀'.codePointAt(0))).toBe(100);
 
-    expect(measurer.measureString('abc', 1, 2)).toEqual({columns: 1, width: 2});
-    expect(measurer.measureString('abc', 0, 3)).toEqual({columns: 3, width: 6});
-    expect(measurer.measureString('abc', 2, 2)).toEqual({columns: 0, width: 0});
-    expect(measurer.measureString('abc𐀀𐀀', 2, 5)).toEqual({columns: 2, width: 103});
-    expect(measurer.measureString('abc𐀀𐀀', 5, 7)).toEqual({columns: 1, width: 100});
-    expect(measurer.measureString('abc𐀀𐀀', 0, 7)).toEqual({columns: 5, width: 206});
-    expect(measurer.measureString('a😀b𐀀c', 1, 6)).toEqual({columns: 3, width: 202});
-    expect(measurer.measureString('😀', 0, 2)).toEqual({columns: 1, width: 100});
-    expect(measurer.measureString('😀', 1, 1)).toEqual({columns: 0, width: 0});
-    expect(measurer.measureString('😀', 0, 0)).toEqual({columns: 0, width: 0});
+    expect(metrics.measureString('abc', 1, 2)).toEqual({columns: 1, width: 2});
+    expect(metrics.measureString('abc', 0, 3)).toEqual({columns: 3, width: 6});
+    expect(metrics.measureString('abc', 2, 2)).toEqual({columns: 0, width: 0});
+    expect(metrics.measureString('abc𐀀𐀀', 2, 5)).toEqual({columns: 2, width: 103});
+    expect(metrics.measureString('abc𐀀𐀀', 5, 7)).toEqual({columns: 1, width: 100});
+    expect(metrics.measureString('abc𐀀𐀀', 0, 7)).toEqual({columns: 5, width: 206});
+    expect(metrics.measureString('a😀b𐀀c', 1, 6)).toEqual({columns: 3, width: 202});
+    expect(metrics.measureString('😀', 0, 2)).toEqual({columns: 1, width: 100});
+    expect(metrics.measureString('😀', 1, 1)).toEqual({columns: 0, width: 0});
+    expect(metrics.measureString('😀', 0, 0)).toEqual({columns: 0, width: 0});
 
-    expect(measurer.locateByColumn('abc', 0, 3, 2)).toEqual({offset: 2, columns: 2, width: 3});
-    expect(measurer.locateByColumn('abc', 0, 1, 3)).toEqual({offset: -1, columns: 1, width: 1});
-    expect(measurer.locateByColumn('abc', 0, 2, 1)).toEqual({offset: 1, columns: 1, width: 1});
-    expect(measurer.locateByColumn('abc', 1, 3, 0)).toEqual({offset: 1, columns: 0, width: 0});
-    expect(measurer.locateByColumn('abc𐀀𐀀', 2, 7, 2)).toEqual({offset: 5, columns: 2, width: 103});
-    expect(measurer.locateByColumn('abc𐀀𐀀', 2, 7, 3)).toEqual({offset: 7, columns: 3, width: 203});
-    expect(measurer.locateByColumn('abc𐀀𐀀', 2, 7, 4)).toEqual({offset: -1, columns: 3, width: 203});
-    expect(measurer.locateByColumn('a😀b𐀀c', 0, 6, 2)).toEqual({offset: 3, columns: 2, width: 101});
-    expect(measurer.locateByColumn('a😀b𐀀c', 0, 6, 4)).toEqual({offset: 6, columns: 4, width: 203});
-    expect(measurer.locateByColumn('a😀b𐀀c', 0, 6, 5)).toEqual({offset: -1, columns: 4, width: 203});
-    expect(measurer.locateByColumn('', 0, 0, 0)).toEqual({offset: 0, columns: 0, width: 0});
-    expect(measurer.locateByColumn('', 0, 0, 5)).toEqual({offset: -1, columns: 0, width: 0});
+    expect(metrics.locateByColumn('abc', 0, 3, 2)).toEqual({offset: 2, columns: 2, width: 3});
+    expect(metrics.locateByColumn('abc', 0, 1, 3)).toEqual({offset: -1, columns: 1, width: 1});
+    expect(metrics.locateByColumn('abc', 0, 2, 1)).toEqual({offset: 1, columns: 1, width: 1});
+    expect(metrics.locateByColumn('abc', 1, 3, 0)).toEqual({offset: 1, columns: 0, width: 0});
+    expect(metrics.locateByColumn('abc𐀀𐀀', 2, 7, 2)).toEqual({offset: 5, columns: 2, width: 103});
+    expect(metrics.locateByColumn('abc𐀀𐀀', 2, 7, 3)).toEqual({offset: 7, columns: 3, width: 203});
+    expect(metrics.locateByColumn('abc𐀀𐀀', 2, 7, 4)).toEqual({offset: -1, columns: 3, width: 203});
+    expect(metrics.locateByColumn('a😀b𐀀c', 0, 6, 2)).toEqual({offset: 3, columns: 2, width: 101});
+    expect(metrics.locateByColumn('a😀b𐀀c', 0, 6, 4)).toEqual({offset: 6, columns: 4, width: 203});
+    expect(metrics.locateByColumn('a😀b𐀀c', 0, 6, 5)).toEqual({offset: -1, columns: 4, width: 203});
+    expect(metrics.locateByColumn('', 0, 0, 0)).toEqual({offset: 0, columns: 0, width: 0});
+    expect(metrics.locateByColumn('', 0, 0, 5)).toEqual({offset: -1, columns: 0, width: 0});
 
-    expect(measurer.locateByWidth('abc', 0, 3, 3, RoundMode.Floor)).toEqual({offset: 2, columns: 2, width: 3});
-    expect(measurer.locateByWidth('abc', 0, 3, 3, RoundMode.Round)).toEqual({offset: 2, columns: 2, width: 3});
-    expect(measurer.locateByWidth('abc', 0, 3, 3, RoundMode.Ceil)).toEqual({offset: 2, columns: 2, width: 3});
-    expect(measurer.locateByWidth('abc', 0, 3, 4.5, RoundMode.Floor)).toEqual({offset: 2, columns: 2, width: 3});
-    expect(measurer.locateByWidth('abc', 0, 3, 4.5, RoundMode.Round)).toEqual({offset: 2, columns: 2, width: 3});
-    expect(measurer.locateByWidth('abc', 0, 3, 4.5, RoundMode.Ceil)).toEqual({offset: 3, columns: 3, width: 6});
-    expect(measurer.locateByWidth('abc', 0, 3, 4.6, RoundMode.Floor)).toEqual({offset: 2, columns: 2, width: 3});
-    expect(measurer.locateByWidth('abc', 0, 3, 4.6, RoundMode.Round)).toEqual({offset: 3, columns: 3, width: 6});
-    expect(measurer.locateByWidth('abc', 0, 3, 4.6, RoundMode.Ceil)).toEqual({offset: 3, columns: 3, width: 6});
-    expect(measurer.locateByWidth('abc𐀀𐀀', 2, 7, 103, RoundMode.Floor)).toEqual({offset: 5, columns: 2, width: 103});
-    expect(measurer.locateByWidth('abc𐀀𐀀', 2, 7, 103, RoundMode.Round)).toEqual({offset: 5, columns: 2, width: 103});
-    expect(measurer.locateByWidth('abc𐀀𐀀', 2, 7, 103, RoundMode.Ceil)).toEqual({offset: 5, columns: 2, width: 103});
-    expect(measurer.locateByWidth('abc𐀀𐀀', 2, 7, 153, RoundMode.Floor)).toEqual({offset: 5, columns: 2, width: 103});
-    expect(measurer.locateByWidth('abc𐀀𐀀', 2, 7, 153, RoundMode.Round)).toEqual({offset: 5, columns: 2, width: 103});
-    expect(measurer.locateByWidth('abc𐀀𐀀', 2, 7, 153, RoundMode.Ceil)).toEqual({offset: 7, columns: 3, width: 203});
-    expect(measurer.locateByWidth('abc𐀀𐀀', 2, 7, 154, RoundMode.Floor)).toEqual({offset: 5, columns: 2, width: 103});
-    expect(measurer.locateByWidth('abc𐀀𐀀', 2, 7, 154, RoundMode.Round)).toEqual({offset: 7, columns: 3, width: 203});
-    expect(measurer.locateByWidth('abc𐀀𐀀', 2, 7, 154, RoundMode.Ceil)).toEqual({offset: 7, columns: 3, width: 203});
-    expect(measurer.locateByWidth('a😀b𐀀c', 0, 6, 204, RoundMode.Round)).toEqual({offset: -1, columns: 4, width: 203});
-    expect(measurer.locateByWidth('a😀b𐀀c', 0, 6, 203, RoundMode.Round)).toEqual({offset: 6, columns: 4, width: 203});
-    expect(measurer.locateByColumn('', 0, 0, 0, RoundMode.Ceil)).toEqual({offset: 0, columns: 0, width: 0});
-    expect(measurer.locateByColumn('', 0, 0, 5, RoundMode.Floor)).toEqual({offset: -1, columns: 0, width: 0});
+    expect(metrics.locateByWidth('abc', 0, 3, 3, RoundMode.Floor)).toEqual({offset: 2, columns: 2, width: 3});
+    expect(metrics.locateByWidth('abc', 0, 3, 3, RoundMode.Round)).toEqual({offset: 2, columns: 2, width: 3});
+    expect(metrics.locateByWidth('abc', 0, 3, 3, RoundMode.Ceil)).toEqual({offset: 2, columns: 2, width: 3});
+    expect(metrics.locateByWidth('abc', 0, 3, 4.5, RoundMode.Floor)).toEqual({offset: 2, columns: 2, width: 3});
+    expect(metrics.locateByWidth('abc', 0, 3, 4.5, RoundMode.Round)).toEqual({offset: 2, columns: 2, width: 3});
+    expect(metrics.locateByWidth('abc', 0, 3, 4.5, RoundMode.Ceil)).toEqual({offset: 3, columns: 3, width: 6});
+    expect(metrics.locateByWidth('abc', 0, 3, 4.6, RoundMode.Floor)).toEqual({offset: 2, columns: 2, width: 3});
+    expect(metrics.locateByWidth('abc', 0, 3, 4.6, RoundMode.Round)).toEqual({offset: 3, columns: 3, width: 6});
+    expect(metrics.locateByWidth('abc', 0, 3, 4.6, RoundMode.Ceil)).toEqual({offset: 3, columns: 3, width: 6});
+    expect(metrics.locateByWidth('abc𐀀𐀀', 2, 7, 103, RoundMode.Floor)).toEqual({offset: 5, columns: 2, width: 103});
+    expect(metrics.locateByWidth('abc𐀀𐀀', 2, 7, 103, RoundMode.Round)).toEqual({offset: 5, columns: 2, width: 103});
+    expect(metrics.locateByWidth('abc𐀀𐀀', 2, 7, 103, RoundMode.Ceil)).toEqual({offset: 5, columns: 2, width: 103});
+    expect(metrics.locateByWidth('abc𐀀𐀀', 2, 7, 153, RoundMode.Floor)).toEqual({offset: 5, columns: 2, width: 103});
+    expect(metrics.locateByWidth('abc𐀀𐀀', 2, 7, 153, RoundMode.Round)).toEqual({offset: 5, columns: 2, width: 103});
+    expect(metrics.locateByWidth('abc𐀀𐀀', 2, 7, 153, RoundMode.Ceil)).toEqual({offset: 7, columns: 3, width: 203});
+    expect(metrics.locateByWidth('abc𐀀𐀀', 2, 7, 154, RoundMode.Floor)).toEqual({offset: 5, columns: 2, width: 103});
+    expect(metrics.locateByWidth('abc𐀀𐀀', 2, 7, 154, RoundMode.Round)).toEqual({offset: 7, columns: 3, width: 203});
+    expect(metrics.locateByWidth('abc𐀀𐀀', 2, 7, 154, RoundMode.Ceil)).toEqual({offset: 7, columns: 3, width: 203});
+    expect(metrics.locateByWidth('a😀b𐀀c', 0, 6, 204, RoundMode.Round)).toEqual({offset: -1, columns: 4, width: 203});
+    expect(metrics.locateByWidth('a😀b𐀀c', 0, 6, 203, RoundMode.Round)).toEqual({offset: 6, columns: 4, width: 203});
+    expect(metrics.locateByColumn('', 0, 0, 0, RoundMode.Ceil)).toEqual({offset: 0, columns: 0, width: 0});
+    expect(metrics.locateByColumn('', 0, 0, 5, RoundMode.Floor)).toEqual({offset: -1, columns: 0, width: 0});
 
-    let defaultMeasurer = createDefaultMeasurer();
-    expect(defaultMeasurer.locateByWidth('abc', 0, 3, 0.5, RoundMode.Floor)).toEqual({offset: 0, columns: 0, width: 0});
-    expect(defaultMeasurer.locateByWidth('abc', 0, 3, 0.5, RoundMode.Round)).toEqual({offset: 0, columns: 0, width: 0});
-    expect(defaultMeasurer.locateByWidth('abc', 0, 3, 0.6, RoundMode.Round)).toEqual({offset: 1, columns: 1, width: 1});
-    expect(defaultMeasurer.locateByWidth('abc', 0, 3, 0.5, RoundMode.Ceil)).toEqual({offset: 1, columns: 1, width: 1});
+    let defaultMetrics = createDefaultMetrics();
+    expect(defaultMetrics.locateByWidth('abc', 0, 3, 0.5, RoundMode.Floor)).toEqual({offset: 0, columns: 0, width: 0});
+    expect(defaultMetrics.locateByWidth('abc', 0, 3, 0.5, RoundMode.Round)).toEqual({offset: 0, columns: 0, width: 0});
+    expect(defaultMetrics.locateByWidth('abc', 0, 3, 0.6, RoundMode.Round)).toEqual({offset: 1, columns: 1, width: 1});
+    expect(defaultMetrics.locateByWidth('abc', 0, 3, 0.5, RoundMode.Ceil)).toEqual({offset: 1, columns: 1, width: 1});
   });
 
-  it('Unicode.metricsFromString', () => {
-    let defaultMeasurer = createDefaultMeasurer();
-    expect(Unicode.metricsFromString('one line', defaultMeasurer)).toEqual({length: 8, firstColumns: 8, lastColumns: 8, longestColumns: 8});
-    expect(Unicode.metricsFromString('\none line', defaultMeasurer)).toEqual({length: 9, firstColumns: 0, lastColumns: 8, longestColumns: 8, lineBreaks: 1});
-    expect(Unicode.metricsFromString('one line\n', defaultMeasurer)).toEqual({length: 9, firstColumns: 8, lastColumns: 0, longestColumns: 8, lineBreaks: 1});
-    expect(Unicode.metricsFromString('\none line\n', defaultMeasurer)).toEqual({length: 10, firstColumns: 0, lastColumns: 0, longestColumns: 8, lineBreaks: 2});
-    expect(Unicode.metricsFromString('short\nlongest\nlonger\ntiny', defaultMeasurer)).toEqual({length: 25, firstColumns: 5, lastColumns: 4, longestColumns: 7, lineBreaks: 3});
+  it('Metrics.forString', () => {
+    let defaultMetrics = createDefaultMetrics();
+    expect(defaultMetrics.forString('one line')).toEqual({length: 8, firstColumns: 8, lastColumns: 8, longestColumns: 8});
+    expect(defaultMetrics.forString('\none line')).toEqual({length: 9, firstColumns: 0, lastColumns: 8, longestColumns: 8, lineBreaks: 1});
+    expect(defaultMetrics.forString('one line\n')).toEqual({length: 9, firstColumns: 8, lastColumns: 0, longestColumns: 8, lineBreaks: 1});
+    expect(defaultMetrics.forString('\none line\n')).toEqual({length: 10, firstColumns: 0, lastColumns: 0, longestColumns: 8, lineBreaks: 2});
+    expect(defaultMetrics.forString('short\nlongest\nlonger\ntiny')).toEqual({length: 25, firstColumns: 5, lastColumns: 4, longestColumns: 7, lineBreaks: 3});
 
-    let testMeasurer = createTestMeasurer();
-    expect(Unicode.metricsFromString('a', testMeasurer)).toEqual({length: 1, firstColumns: 1, lastColumns: 1, longestColumns: 1});
-    expect(Unicode.metricsFromString('a\nb', testMeasurer)).toEqual({length: 3, firstColumns: 1, lastColumns: 1, longestColumns: 1, lineBreaks: 1, lastWidth: 2, longestWidth: 2});
-    expect(Unicode.metricsFromString('b\na', testMeasurer)).toEqual({length: 3, firstColumns: 1, lastColumns: 1, longestColumns: 1, lineBreaks: 1, firstWidth: 2, longestWidth: 2});
-    expect(Unicode.metricsFromString('bac', testMeasurer)).toEqual({length: 3, firstColumns: 3, lastColumns: 3, longestColumns: 3, firstWidth: 6, lastWidth: 6, longestWidth: 6});
-    expect(Unicode.metricsFromString('b\na\nc', testMeasurer)).toEqual({length: 5, firstColumns: 1, lastColumns: 1, longestColumns: 1, lineBreaks: 2, firstWidth: 2, lastWidth: 3, longestWidth: 3});
-    expect(Unicode.metricsFromString('b\naaaa\nc', testMeasurer)).toEqual({length: 8, firstColumns: 1, lastColumns: 1, longestColumns: 4, lineBreaks: 2, firstWidth: 2, lastWidth: 3});
-    expect(Unicode.metricsFromString('b😀😀', testMeasurer)).toEqual({length: 5, firstColumns: 3, lastColumns: 3, longestColumns: 3, firstWidth: 202, lastWidth: 202, longestWidth: 202});
-    expect(Unicode.metricsFromString('😀\n𐀀😀\n𐀀a', testMeasurer)).toEqual({length: 11, lineBreaks: 2, firstColumns: 1, lastColumns: 2, longestColumns: 2, firstWidth: 100, lastWidth: 101, longestWidth: 200});
-    expect(Unicode.metricsFromString('\n𐀀', testMeasurer)).toEqual({length: 3, lineBreaks: 1, firstColumns: 0, lastColumns: 1, longestColumns: 1, lastWidth: 100, longestWidth: 100});
+    let testMetrics = createTestMetrics();
+    expect(testMetrics.forString('a')).toEqual({length: 1, firstColumns: 1, lastColumns: 1, longestColumns: 1});
+    expect(testMetrics.forString('a\nb')).toEqual({length: 3, firstColumns: 1, lastColumns: 1, longestColumns: 1, lineBreaks: 1, lastWidth: 2, longestWidth: 2});
+    expect(testMetrics.forString('b\na')).toEqual({length: 3, firstColumns: 1, lastColumns: 1, longestColumns: 1, lineBreaks: 1, firstWidth: 2, longestWidth: 2});
+    expect(testMetrics.forString('bac')).toEqual({length: 3, firstColumns: 3, lastColumns: 3, longestColumns: 3, firstWidth: 6, lastWidth: 6, longestWidth: 6});
+    expect(testMetrics.forString('b\na\nc')).toEqual({length: 5, firstColumns: 1, lastColumns: 1, longestColumns: 1, lineBreaks: 2, firstWidth: 2, lastWidth: 3, longestWidth: 3});
+    expect(testMetrics.forString('b\naaaa\nc')).toEqual({length: 8, firstColumns: 1, lastColumns: 1, longestColumns: 4, lineBreaks: 2, firstWidth: 2, lastWidth: 3});
+    expect(testMetrics.forString('b😀😀')).toEqual({length: 5, firstColumns: 3, lastColumns: 3, longestColumns: 3, firstWidth: 202, lastWidth: 202, longestWidth: 202});
+    expect(testMetrics.forString('😀\n𐀀😀\n𐀀a')).toEqual({length: 11, lineBreaks: 2, firstColumns: 1, lastColumns: 2, longestColumns: 2, firstWidth: 100, lastWidth: 101, longestWidth: 200});
+    expect(testMetrics.forString('\n𐀀')).toEqual({length: 3, lineBreaks: 1, firstColumns: 0, lastColumns: 1, longestColumns: 1, lastWidth: 100, longestWidth: 100});
   });
 
-  it('Unicode.locateInStringBy*', () => {
-    let defaultMeasurer = createDefaultMeasurer();
+  it('Metrics.locateBy*', () => {
+    let defaultMetrics = createDefaultMetrics();
 
     let tests = [
       {chunk: 'short', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 3, column: 11, offset: 18, x: 8, y: 10}},
@@ -865,11 +876,11 @@ describe('Unicode', () => {
       {chunk: '1\n23\n456\n78\n9\n0', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 7, column: 1, offset: 28, x: 1, y: 14}},
     ];
     for (let test of tests) {
-      expect(Unicode.locateInStringByOffset(test.chunk, test.before, test.location.offset, defaultMeasurer)).toEqual(test.location);
-      expect(Unicode.locateInStringByOffset(test.chunk, test.before, test.location.offset, defaultMeasurer, true /* strict */)).toEqual(test.location);
-      expect(Unicode.locateInStringByPosition(test.chunk, test.before, test.location, defaultMeasurer)).toEqual(test.location);
-      expect(Unicode.locateInStringByPosition(test.chunk, test.before, test.location, defaultMeasurer, true /* strict */)).toEqual(test.location);
-      expect(Unicode.locateInStringByPoint(test.chunk, test.before, test.location, defaultMeasurer, RoundMode.Floor, true /* strict */)).toEqual(test.location);
+      expect(defaultMetrics.locateByOffset(test.chunk, test.before, test.location.offset)).toEqual(test.location);
+      expect(defaultMetrics.locateByOffset(test.chunk, test.before, test.location.offset, true /* strict */)).toEqual(test.location);
+      expect(defaultMetrics.locateByPosition(test.chunk, test.before, test.location)).toEqual(test.location);
+      expect(defaultMetrics.locateByPosition(test.chunk, test.before, test.location, true /* strict */)).toEqual(test.location);
+      expect(defaultMetrics.locateByPoint(test.chunk, test.before, test.location, RoundMode.Floor, true /* strict */)).toEqual(test.location);
     }
 
     let nonStrict = [
@@ -879,13 +890,13 @@ describe('Unicode', () => {
       {chunk: '1\n23\n456\n78\n9\n0', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, position: {line: 7, column: 22}, point: {x: 42, y: 14}, result: {line: 7, column: 1, offset: 28, x: 1, y: 14}},
     ];
     for (let test of nonStrict) {
-      expect(Unicode.locateInStringByPosition(test.chunk, test.before, test.position, defaultMeasurer)).toEqual(test.result);
-      expect(Unicode.locateInStringByPoint(test.chunk, test.before, test.point, defaultMeasurer, RoundMode.Floor)).toEqual(test.result);
+      expect(defaultMetrics.locateByPosition(test.chunk, test.before, test.position)).toEqual(test.result);
+      expect(defaultMetrics.locateByPoint(test.chunk, test.before, test.point, RoundMode.Floor)).toEqual(test.result);
     }
   });
 
-  it('Unicode.locateInStringBy* with measurer and non-bmp', () => {
-    let measurer = createTestMeasurer();
+  it('Metrics.locateBy* with non-bmp', () => {
+    let metrics = createTestMetrics();
 
     let tests = [
       {chunk: 'abc', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 3, column: 11, offset: 18, x: 11, y: 10}},
@@ -895,11 +906,11 @@ describe('Unicode', () => {
       {chunk: 'a\n😀b\n𐀀ca\n𐀀𐀀\n😀\n0', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 7, column: 1, offset: 33, x: 100, y: 22}},
     ];
     for (let test of tests) {
-      expect(Unicode.locateInStringByOffset(test.chunk, test.before, test.location.offset, measurer)).toEqual(test.location);
-      expect(Unicode.locateInStringByOffset(test.chunk, test.before, test.location.offset, measurer, true /* strict */)).toEqual(test.location);
-      expect(Unicode.locateInStringByPosition(test.chunk, test.before, test.location, measurer)).toEqual(test.location);
-      expect(Unicode.locateInStringByPosition(test.chunk, test.before, test.location, measurer, true /* strict */)).toEqual(test.location);
-      expect(Unicode.locateInStringByPoint(test.chunk, test.before, test.location, measurer, RoundMode.Floor, true /* strict */)).toEqual(test.location);
+      expect(metrics.locateByOffset(test.chunk, test.before, test.location.offset)).toEqual(test.location);
+      expect(metrics.locateByOffset(test.chunk, test.before, test.location.offset, true /* strict */)).toEqual(test.location);
+      expect(metrics.locateByPosition(test.chunk, test.before, test.location)).toEqual(test.location);
+      expect(metrics.locateByPosition(test.chunk, test.before, test.location, true /* strict */)).toEqual(test.location);
+      expect(metrics.locateByPoint(test.chunk, test.before, test.location, RoundMode.Floor, true /* strict */)).toEqual(test.location);
     }
 
     let nonStrict = [
@@ -909,19 +920,19 @@ describe('Unicode', () => {
       {chunk: 'a\n😀b\n𐀀ca\n𐀀𐀀\n😀\n0', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, position: {line: 7, column: 22}, point: {x: 420, y: 24}, result: {line: 7, column: 1, offset: 33, x: 100, y: 22}},
     ];
     for (let test of nonStrict) {
-      expect(Unicode.locateInStringByPosition(test.chunk, test.before, test.position, measurer)).toEqual(test.result);
-      expect(Unicode.locateInStringByPoint(test.chunk, test.before, test.point, measurer, RoundMode.Floor)).toEqual(test.result);
+      expect(metrics.locateByPosition(test.chunk, test.before, test.position)).toEqual(test.result);
+      expect(metrics.locateByPoint(test.chunk, test.before, test.point, RoundMode.Floor)).toEqual(test.result);
     }
   });
 
-  it('Unicode.locateInStringByOffset non-strict', () => {
-    let measurer = createTestMeasurer();
-    expect(Unicode.locateInStringByOffset('😀😀', {offset: 3, line: 3, column: 3, x: 3, y: 3}, 6, measurer))
+  it('Metrics.locateByOffset non-strict', () => {
+    let metrics = createTestMetrics();
+    expect(metrics.locateByOffset('😀😀', {offset: 3, line: 3, column: 3, x: 3, y: 3}, 6))
         .toEqual({offset: 5, line: 3, column: 4, x: 103, y: 3});
   });
 
-  it('Unicode.locateInStringByPoint with round modes', () => {
-    let testMeasurer = createTestMeasurer();
+  it('Metrics.locateByPoint with round modes', () => {
+    let testMetrics = createTestMetrics();
     let chunk = 'a\nb\naaaa\nbac\nc';
     let before = {offset: 15, line: 3, column: 8, x: 5, y: 10};
     let tests = [
@@ -948,18 +959,18 @@ describe('Unicode', () => {
       {point: {x: 42, y: 19}, location: {offset: 27, line: 6, column: 3, x: 6, y: 19}},
     ];
     for (let test of tests)
-      expect(Unicode.locateInStringByPoint(chunk, before, test.point, testMeasurer, test.roundMode || RoundMode.Floor, !!test.strict)).toEqual(test.location);
+      expect(testMetrics.locateByPoint(chunk, before, test.point, test.roundMode || RoundMode.Floor, !!test.strict)).toEqual(test.location);
   });
 
-  it('Unicode.chunkString', () => {
-    let measurer = createTestMeasurer();
-    expect(Unicode.chunkString(5, '', measurer)).toEqual([
+  it('Metrics.chunkString', () => {
+    let metrics = createTestMetrics();
+    expect(metrics.chunkString(5, '')).toEqual([
       {data: '', metrics: {length: 0, firstColumns: 0, lastColumns: 0, longestColumns: 0}}
     ]);
-    expect(Unicode.chunkString(1, '😀', measurer)).toEqual([
+    expect(metrics.chunkString(1, '😀')).toEqual([
       {data: '😀', metrics: {length: 2, firstColumns: 1, firstWidth: 100, lastColumns: 1, lastWidth: 100, longestColumns: 1, longestWidth: 100}}
     ]);
-    expect(Unicode.chunkString(2, 'a', measurer, 'b')).toEqual([
+    expect(metrics.chunkString(2, 'a', 'b')).toEqual([
       {data: 'b', metrics: {length: 1, firstColumns: 1, firstWidth: 2, lastColumns: 1, lastWidth: 2, longestColumns: 1, longestWidth: 2}},
       {data: 'a', metrics: {length: 1, firstColumns: 1, lastColumns: 1, longestColumns: 1}}
     ]);

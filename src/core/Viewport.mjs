@@ -1,4 +1,4 @@
-import {RoundMode} from './Unicode.mjs';
+import {RoundMode, Metrics} from './Metrics.mjs';
 import {trace} from './Trace.mjs';
 
 /**
@@ -56,7 +56,7 @@ import {trace} from './Trace.mjs';
  * @typedef {{
  *   from: number,
  *   to: number,
- *   metrics: !Metrics
+ *   metrics: !TextMetrics
  * }} TextChunk
  */
 
@@ -64,7 +64,7 @@ import {trace} from './Trace.mjs';
  * @typedef {{
  *   from: number,
  *   to: number,
- *   metrics: !Metrics
+ *   metrics: !TextMetrics
  * }} TextGap
  */
 
@@ -108,11 +108,13 @@ import {trace} from './Trace.mjs';
  */
 export class Viewport {
   /**
-   * @param {!Documnet} document
+   * @param {!Document} document
+   * @param {!Measurer} measurer
    */
-  constructor(document) {
+  constructor(document, measurer) {
     this._document = document;
-    this._measurer = document.measurer();
+    this._metrics = new Metrics(measurer);
+    this._document.setMetrics(this._metrics);
     this._width = 0;
     this._height = 0;
     this._scrollTop = 0;
@@ -147,8 +149,15 @@ export class Viewport {
    * @param {!Measurer} measurer
    */
   setMeasurer(measurer) {
-    this._measurer = measurer;
-    this._document.setMeasurer(measurer);
+    this._metrics = new Metrics(measurer);
+    this._document.setMetrics(metrics);
+  }
+
+  /**
+   * @return {!Metrics}
+   */
+  metrics() {
+    return this._metrics;
   }
 
   /**
@@ -285,7 +294,7 @@ export class Viewport {
 
     let from = this.documentPointToViewPoint(this._document.offsetToPoint(range.from));
     let to = this.documentPointToViewPoint(this._document.offsetToPoint(range.to));
-    to.y += this._measurer.defaultHeight;
+    to.y += this._metrics.defaultHeight;
 
     if (this._scrollTop > from.y) {
       this._scrollTop = Math.max(from.y - rangePadding.top, 0);
@@ -408,10 +417,10 @@ export class Viewport {
           let charCode = lineContent.charCodeAt(i);
           if (charCode >= 0xD800 && charCode <= 0xDBFF && i + 1 < lineContent.length) {
             offsetToX[i + 1] = x;
-            x += this._measurer.measureSupplementaryCodePoint(lineContent.codePointAt(i));
+            x += this._metrics.measureSupplementaryCodePoint(lineContent.codePointAt(i));
             i += 2;
           } else {
-            x += this._measurer.measureBMPCodePoint(charCode);
+            x += this._metrics.measureBMPCodePoint(charCode);
             i++;
           }
         } else {
@@ -457,7 +466,7 @@ export class Viewport {
   }
 
   _buildScrollbar(scrollbarDecorators) {
-    const defaultHeight = this._measurer.defaultHeight;
+    const defaultHeight = this._metrics.defaultHeight;
     let scrollbar = [];
     for (let decorator of scrollbarDecorators) {
       let lastTop = -1;

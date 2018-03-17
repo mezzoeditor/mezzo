@@ -3,19 +3,6 @@ import { Random } from './Random.mjs';
 let random = Random(42);
 
 /**
- * @typedef {{
- *   length: number,
- *   lineBreaks: number|undefined,
- *   firstColumns: number,
- *   firstWidth: number|undefined,
- *   lastColumns: number,
- *   lastWidth: number|undefined,
- *   longestColumns: number,
- *   longestWidth: number|undefined,
- * }} Metrics;
- */
-
-/**
  * @typedef {number} Offset;
  */
 
@@ -54,8 +41,8 @@ let random = Random(42);
  * @template T
  * @typedef {{
  *   data: T,
- *   metrics: !Metrics,
- *   selfMetrics: !Metrics|undefined,
+ *   metrics: !TextMetrics,
+ *   selfMetrics: !TextMetrics|undefined,
  *   left: !TreeNode<T>|undefined,
  *   right: !TreeNode<T>|undefined,
  *   h: number
@@ -72,7 +59,7 @@ let random = Random(42);
  * }} FindKey;
  */
 
-/** @type {!Metrics} */
+/** @type {!TextMetrics} */
 let zeroMetrics = { length: 0, firstColumns: 0, lastColumns: 0, longestColumns: 0 };
 /** @type {!Location} */
 let origin = { offset: 0, line: 0, column: 0, x: 0, y: 0 };
@@ -85,7 +72,7 @@ const kSplitIntersectionToRight = false;
 
 /**
  * This is a generic metrics-aware immutable tree. Each node in the tree contains
- * data (of type T) and additive metrics (see Metrics definition above).
+ * data (of type T) and additive metrics (see TextMetrics definition).
  * The tree manages an ordered sequence of nodes and supports efficient
  * constructin, lookup by different metrics, merging and splitting.
  *
@@ -118,7 +105,7 @@ export class Tree {
    * afterwards. In contrary, this takes ownership of |nodes|,
    * which cannot be used afterwards.
    *
-   * @param {!Array<!{data: T, metrics: !Metrics}>} nodes
+   * @param {!Array<!{data: T, metrics: !TextMetrics}>} nodes
    * @param {number} lineHeight
    * @param {number} defaultWidth
    * @param {!Tree<T>=} left
@@ -144,7 +131,7 @@ export class Tree {
 
   /**
    * Total metrics of all nodes combined.
-   * @return {!Metrics}
+   * @return {!TextMetrics}
    */
   metrics() {
     return this._root ? this._root.metrics : zeroMetrics;
@@ -327,9 +314,9 @@ export class Tree {
 
   /**
    * Combines two additive metrics in the left->right order.
-   * @param {!Metrics} left
-   * @param {!Metrics} right
-   * @return {!Metrics}
+   * @param {!TextMetrics} left
+   * @param {!TextMetrics} right
+   * @return {!TextMetrics}
    */
   combineMetrics(left, right) {
     let defaultWidth = this._defaultWidth;
@@ -390,7 +377,7 @@ export class Tree {
 
   /**
    * @param {!Location} location
-   * @param {!Metrics} metrics
+   * @param {!TextMetrics} metrics
    * @return {!Location}
    */
   _advanceLocation(location, metrics) {
@@ -447,7 +434,7 @@ export class Tree {
   }
 
   /**
-   * @param {!Array<!{data: T, metrics: !Metrics}>} nodes
+   * @param {!Array<!{data: T, metrics: !TextMetrics}>} nodes
    * @return {!TreeNode<T>|undefined}
    */
   _build(nodes) {
