@@ -309,7 +309,7 @@ export class Renderer {
     this._viewport.hScrollbar.setSize(this._cssWidth - this._gutterRect.width - SCROLLBAR_WIDTH);
     this._viewport.setPadding({
       left: 4,
-      right: this._metrics.widthM * 3,
+      right: 4,
       top: 4,
       bottom: this._editorRect.height - this._metrics.lineHeight - 4
     });
