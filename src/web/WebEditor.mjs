@@ -271,6 +271,10 @@ export class WebEditor {
         mouseRangeStartOffset = this._selection.anchor();
         mouseRangeEndOffset = offset;
         this._selection.setRanges([{from: mouseRangeStartOffset, to: mouseRangeEndOffset}]);
+      } else if ((isMac && event.metaKey) || (!isMac && event.ctrlKey)) {
+        this._selection.addRange({from: offset, to: offset});
+        mouseRangeStartOffset = offset;
+        mouseRangeEndOffset = offset;
       } else {
         this._selection.setRanges([{from: offset, to: offset}]);
         mouseRangeStartOffset = offset;
@@ -285,11 +289,11 @@ export class WebEditor {
       lastMouseEvent = event;
       let offset = this._renderer.mouseEventToTextOffset(event);
       if (offset <= mouseRangeStartOffset)
-        this._selection.setRanges([{from: mouseRangeEndOffset, to: offset}]);
+        this._selection.setLastRange({from: mouseRangeEndOffset, to: offset});
       else if (offset >= mouseRangeEndOffset)
-        this._selection.setRanges([{from: mouseRangeStartOffset, to: offset}]);
+        this._selection.setLastRange({from: mouseRangeStartOffset, to: offset});
       else
-        this._selection.setRanges([{from: mouseRangeStartOffset, to: mouseRangeEndOffset}]);
+        this._selection.setLastRange({from: mouseRangeStartOffset, to: mouseRangeEndOffset});
       this._revealCursors();
     });
     this._element.addEventListener('wheel', event => {
@@ -297,11 +301,11 @@ export class WebEditor {
         return;
       let offset = this._renderer.mouseEventToTextOffset(lastMouseEvent);
       if (offset <= mouseRangeStartOffset)
-        this._selection.setRanges([{from: mouseRangeEndOffset, to: offset}]);
+        this._selection.setLastRange({from: mouseRangeEndOffset, to: offset});
       else if (offset >= mouseRangeEndOffset)
-        this._selection.setRanges([{from: mouseRangeStartOffset, to: offset}]);
+        this._selection.setLastRange({from: mouseRangeStartOffset, to: offset});
       else
-        this._selection.setRanges([{from: mouseRangeStartOffset, to: mouseRangeEndOffset}]);
+        this._selection.setLastRange({from: mouseRangeStartOffset, to: mouseRangeEndOffset});
       this._revealCursors();
     });
     this._element.addEventListener('mouseup', event => {

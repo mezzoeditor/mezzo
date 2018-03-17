@@ -97,6 +97,45 @@ export class Selection {
   }
 
   /**
+   * @param {!Range} range
+   */
+  setLastRange(range) {
+    let maxRange = this._maxRange();
+    if (!maxRange) {
+      this._ranges = [{
+        id: ++this._lastId,
+        upDownX: -1,
+        anchor: range.from,
+        focus: range.to
+      }];
+    } else {
+      maxRange.anchor = range.from;
+      maxRange.focus = range.to;
+      maxRange.upDownX = -1;
+    }
+    this._ranges = this._rebuild(this._ranges);
+    this._staleDecorations = true;
+    for (let callback of this._changeCallbacks)
+      callback();
+  }
+
+  /**
+   * @param {!Range} range
+   */
+  addRange(range) {
+    this._ranges.push({
+      id: ++this._lastId,
+      upDownX: -1,
+      anchor: range.from,
+      focus: range.to
+    });
+    this._ranges = this._rebuild(this._ranges);
+    this._staleDecorations = true;
+    for (let callback of this._changeCallbacks)
+      callback();
+  }
+
+  /**
    * @return {*}
    */
   freeze() {
