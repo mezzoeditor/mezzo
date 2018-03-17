@@ -411,11 +411,18 @@ export class Selection {
     if (hasCollapsedRange) {
       let ranges = [];
       for (let range of this._ranges) {
-        let from = Math.min(range.anchor, range.focus);
-        let to = range.anchor === range.focus ? from : Math.max(range.anchor, range.focus) - 1;
-        let anchor = Tokenizer.leftBoundary(this._document, from);
-        let focus = Tokenizer.rightBoundary(this._document, to);
-        ranges.push({id: range.id, anchor, focus, upDownX: range.upDownX});
+        if (range.anchor === range.focus) {
+          let offset = range.anchor;
+          // Gravitate towards word selection in borderline cases for collapsed cursors.
+          if (offset > 0 && tokenizer.isWordChar(this._document.iterator(offset - 1).current))
+            --offset;
+          let {from, to} = Tokenizer.characterGroupRange(this._document, offset);
+          ranges.push({id: range.id, anchor: from, focus: to, upDownX: range.upDownX});
+        } else {
+          let anchor = Tokenizer.leftBoundary(this._document, Math.min(range.anchor, range.focus));
+          let focus = Tokenizer.rightBoundary(this._document, Math.max(range.anchor, range.focus) - 1);
+          ranges.push({id: range.id, anchor, focus, upDownX: range.upDownX});
+        }
       }
       this._ranges = this._rebuild(ranges);
       this._nextOccurenceGroupOnly = true;
