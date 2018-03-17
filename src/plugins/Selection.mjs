@@ -38,6 +38,11 @@ export class Selection {
     this._lastId = 0;
     this._staleDecorations = true;
     this._changeCallbacks = [];
+
+    this._nextOccurenceText = null;
+    this._nextOccurenceGroupOnly = false;
+    this._nextOccurenceSearchOffset = 0;
+    this._nextOccurenceSearchEnd = 0;
   }
 
   // -------- Public API --------
@@ -393,6 +398,72 @@ export class Selection {
     });
   }
 
+  addNextOccurence() {
+    if (this._frozen)
+      throw 'Cannot change selection while frozen';
+    let tokenizer = this._document.tokenizer();
+    if (!this._ranges.length || !tokenizer)
+      return false;
+    let hasCollapsedRange = false;
+    for (let range of this._ranges)
+      hasCollapsedRange = hasCollapsedRange || range.anchor === range.focus;
+    // Step 1: if at least one range is collapased, then expand to boundaries every where
+    if (hasCollapsedRange) {
+      let ranges = [];
+      for (let range of this._ranges) {
+        let from = Math.min(range.anchor, range.focus);
+        let to = range.anchor === range.focus ? from : Math.max(range.anchor, range.focus) - 1;
+        let anchor = Tokenizer.leftBoundary(this._document, from);
+        let focus = Tokenizer.rightBoundary(this._document, to);
+        ranges.push({id: range.id, anchor, focus, upDownX: range.upDownX});
+      }
+      this._ranges = this._rebuild(ranges);
+      this._nextOccurenceGroupOnly = true;
+      this._notifyChanged(true /* keepNextOccurenceState */);
+      return true;
+    }
+    // Step 2: if all ranges are non-collapsed, figure the text to search for.
+    if (!this._nextOccurenceText) {
+      let lastRange = this._ranges[0];
+      for (let range of this._ranges) {
+        if (range.anchor > lastRange.anchor)
+          lastRange = range;
+      }
+      this._nextOccurenceText = this._document.content(Math.min(lastRange.anchor, lastRange.focus), Math.max(lastRange.anchor, lastRange.focus));
+      this._nextOccurenceSearchOffset = Math.max(lastRange.anchor, lastRange.focus);
+      this._nextOccurenceSearchEnd = Math.min(lastRange.anchor, lastRange.focus);
+    }
+    // Step 3: search for the text below the initial range, and then from top.
+    while (this._nextOccurenceSearchOffset !== this._nextOccurenceSearchEnd) {
+      let it = null;
+      // Decide which half we should search.
+      if (this._nextOccurenceSearchOffset < this._nextOccurenceSearchEnd)
+        it = this._document.iterator(this._nextOccurenceSearchOffset, this._nextOccurenceSearchOffset, this._nextOccurenceSearchEnd);
+      else
+        it = this._document.iterator(this._nextOccurenceSearchOffset);
+      let result = it.find(this._nextOccurenceText);
+      if (!result) {
+        this._nextOccurenceSearchOffset = it.offset > this._nextOccurenceSearchEnd ? 0 : it.offset;
+        continue;
+      }
+      this._nextOccurenceSearchOffset = it.offset + this._nextOccurenceText.length;
+      if (this._nextOccurenceGroupOnly) {
+        let range = Tokenizer.characterGroupRange(this._document, it.offset);
+        if (range.from !== it.offset || range.to !== it.offset + this._nextOccurenceText.length)
+          continue;
+      }
+      let initialLength = this._ranges.length;
+      this._ranges.push({id: ++this._lastId, upDownX: -1, anchor: it.offset, focus: it.offset + this._nextOccurenceText.length});
+      this._ranges = this._rebuild(this._ranges);
+      // If we managed to add a new range - return. Otherwise, continue searching.
+      if (this._ranges.length > initialLength) {
+        this._notifyChanged(true /* keepNextOccurenceState */);
+        return true;
+      }
+    }
+    return false;
+  }
+
   /**
    * @return {boolean}
    */
@@ -584,7 +655,13 @@ export class Selection {
     return this._join(ranges);
   }
 
-  _notifyChanged() {
+  _notifyChanged(keepNextOccurenceState = false) {
+    if (!keepNextOccurenceState) {
+      this._nextOccurenceText = null;
+      this._nextOccurenceGroupOnly = false;
+      this._nextOccurenceSearchEnd = 0;
+      this._nextOccurenceSearchOffset = 0;
+    }
     this._staleDecorations = true;
     for (let callback of this._changeCallbacks)
       callback();

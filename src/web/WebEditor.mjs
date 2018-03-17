@@ -57,6 +57,7 @@ export class WebEditor {
       'Cmd/Ctrl-a': 'selection.select.all',
       'Cmd-Left': 'selection.move.linestart',
       'Cmd-Right': 'selection.move.lineend',
+      'Cmd/Ctrl-d': 'selection.addnext',
       'Cmd-Up': 'selection.move.documentstart',
       'Cmd-Down': 'selection.move.documentend',
       'Cmd-Shift-Up': 'selection.select.documentstart',
@@ -466,6 +467,8 @@ export class WebEditor {
       case 'editing.unindent':
         return this._revealSelection(this._editing.removeIndent());
 
+      case 'selection.addnext':
+        return this._revealSelection(this._selection.addNextOccurence()) || true;
       case 'selection.move.up':
         return this._revealSelection(this._selection.moveUp());
       case 'selection.move.down':
