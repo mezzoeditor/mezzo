@@ -285,12 +285,21 @@ export class Viewport {
     if (this._frozen)
       throw 'Cannot reveal while decorating';
 
-    rangePadding = Object.assign({
-      left: 10,
-      right: 10,
-      top: 0,
-      bottom: 0
-    }, rangePadding);
+    if (!rangePadding) {
+      rangePadding = {
+        left: 10,
+        right: 10,
+        top: 0,
+        bottom: this._height / 2,
+      };
+    } else {
+      rangePadding = Object.assign({
+        left: 0,
+        right: 0,
+        top: 0,
+        bottom: 0
+      }, rangePadding);
+    }
 
     let from = this.documentPointToViewPoint(this._document.offsetToPoint(range.from));
     let to = this.documentPointToViewPoint(this._document.offsetToPoint(range.to));
