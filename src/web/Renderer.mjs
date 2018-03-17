@@ -226,7 +226,7 @@ export class Renderer {
       this._vScrollbar.dragged = true;
       this._mouseDownState.name = MouseDownStates.VSCROLL_DRAG;
       this._mouseDownState.insideThumb = this._viewport.vScrollbar.thumbOffset() - (canvasPosition.y - this._vScrollbar.rect.y);
-      this._scheduleRender();
+      this.raf();
       event.stopPropagation();
       event.preventDefault();
       return;
@@ -236,7 +236,7 @@ export class Renderer {
       this._hScrollbar.dragged = true;
       this._mouseDownState.name = MouseDownStates.HSCROLL_DRAG;
       this._mouseDownState.insideThumb = this._viewport.hScrollbar.thumbOffset() - (canvasPosition.x - this._hScrollbar.rect.x);
-      this._scheduleRender();
+      this.raf();
       event.stopPropagation();
       event.preventDefault();
       return;
@@ -255,7 +255,7 @@ export class Renderer {
         this._canvas.style.setProperty('cursor', 'text');
       else
         this._canvas.style.setProperty('cursor', 'default' || gutterHovered);
-      this._scheduleRender();
+      this.raf();
     } else if (this._mouseDownState.name === MouseDownStates.VSCROLL_DRAG) {
       let scrollbarOffset = canvasPosition.y - this._vScrollbar.rect.y + this._mouseDownState.insideThumb;
       this._viewport.vScrollbar.setThumbOffset(scrollbarOffset);
@@ -276,7 +276,7 @@ export class Renderer {
     this._hScrollbar.dragged = false;
     this._vScrollbar.hovered = rectHasPoint(this._vScrollbar.thumbRect, canvasPosition.x, canvasPosition.y);
     this._hScrollbar.hovered = rectHasPoint(this._hScrollbar.thumbRect, canvasPosition.x, canvasPosition.y);
-    this._scheduleRender();
+    this.raf();
   }
 
   _onMouseOut(event) {
@@ -288,7 +288,7 @@ export class Renderer {
     this._hScrollbar.dragged = false;
     this._vScrollbar.hovered = false;
     this._hScrollbar.hovered = false;
-    this._scheduleRender();
+    this.raf();
   }
 
   invalidate() {
@@ -342,10 +342,10 @@ export class Renderer {
       this._hScrollbar.thumbRect.width = MIN_THUMB_SIZE;
     }
 
-    this._scheduleRender();
+    this.raf();
   }
 
-  _scheduleRender() {
+  raf() {
     if (!this._animationFrameId)
       this._animationFrameId = requestAnimationFrame(this._render);
   }
