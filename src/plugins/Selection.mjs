@@ -563,7 +563,7 @@ export class Selection {
       let nextTo = Math.max(next.anchor, next.focus);
       if (nextTo < lastTo)
         throw 'Inconsistent';
-      if (nextFrom <= lastTo) {
+      if (nextFrom < lastTo || lastTo === nextTo) {
         if (last.anchor > last.focus)
           last.anchor = nextTo;
         else
