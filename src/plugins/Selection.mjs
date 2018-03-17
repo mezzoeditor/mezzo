@@ -99,6 +99,8 @@ export class Selection {
    * @param {!Range} range
    */
   setLastRange(range) {
+    if (this._frozen)
+      throw 'Cannot change selection while frozen';
     let maxRange = this._maxRange();
     if (!maxRange) {
       this._ranges = [{
@@ -120,6 +122,8 @@ export class Selection {
    * @param {!Range} range
    */
   addRange(range) {
+    if (this._frozen)
+      throw 'Cannot change selection while frozen';
     this._ranges.push({
       id: ++this._lastId,
       upDownX: -1,
