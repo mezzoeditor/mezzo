@@ -113,7 +113,7 @@ export class Metrics {
     while (true) {
       let lineBreakOffset = s.indexOf('\n', offset);
       let lineEndOffset = lineBreakOffset === -1 ? s.length : lineBreakOffset;
-      let {width, columns} = this.measureString(s, offset, lineEndOffset);
+      let {width, columns} = this._measureString(s, offset, lineEndOffset);
       let fullWidth = width || (columns * this.defaultWidth);
 
       if (offset === 0) {
@@ -180,7 +180,7 @@ export class Metrics {
     if (lineEndOffset === -1)
       lineEndOffset = s.length;
 
-    let {offset, columns, width} = this.locateByColumn(s, lineStartOffset, lineEndOffset, position.column - column);
+    let {offset, columns, width} = this._locateByColumn(s, lineStartOffset, lineEndOffset, position.column - column);
     if (offset === -1) {
       if (strict)
         throw 'Position is out of bounds';
@@ -239,7 +239,7 @@ export class Metrics {
     if (lineEndOffset === -1)
       lineEndOffset = s.length;
 
-    let {offset, columns, width} = this.locateByWidth(s, lineStartOffset, lineEndOffset, point.x - x, roundMode);
+    let {offset, columns, width} = this._locateByWidth(s, lineStartOffset, lineEndOffset, point.x - x, roundMode);
     if (offset === -1) {
       if (strict)
         throw 'Point is out of bounds';
@@ -295,7 +295,7 @@ export class Metrics {
       lineBreakOffset = s.indexOf('\n', lineStartOffset);
     }
 
-    let {width, columns} = this.measureString(s, lineStartOffset, offset);
+    let {width, columns} = this._measureString(s, lineStartOffset, offset);
     if (!width)
       width = columns * this.defaultWidth;
     return {
@@ -348,6 +348,37 @@ export class Metrics {
   }
 
   /**
+   * Returns the width of a single code point from the Unicode Basic Multilingual Plane.
+   * This method does not return zero even for default width.
+   * Note that |codePoint| should always be less than 0x10000.
+   *
+   * @param {number} codePoint
+   * @return {number}
+   */
+  measureBMPCodePoint(codePoint) {
+    if (this._bmpDefault[codePoint] === 2) {
+      let width = this._measureBMP(String.fromCharCode(codePoint));
+      this._bmp[codePoint] = width;
+      this._bmpDefault[codePoint] = width === this.defaultWidth ? 1 : 0;
+    }
+    return this._bmp[codePoint];
+  }
+
+  /**
+   * Returns the width of a single code point from a Supplemetary Plane.
+   * This method does not return zero even for default width.
+   * Note that |codePoint| should always be greater or equal than 0x10000.
+   *
+   * @param {number} codePoint
+   * @return {number}
+   */
+  measureSupplementaryCodePoint(codePoint) {
+    if (this._supplementary[codePoint] === undefined)
+      this._supplementary[codePoint] = this._measureSupplementary(String.fromCodePoint(codePoint));
+    return this._supplementary[codePoint];
+  }
+
+  /**
    * Returns the total width of a substring and the number of columns (code points) inside.
    * It should be guaranteed that string does not contain line breaks.
    *
@@ -361,7 +392,7 @@ export class Metrics {
    * @param {number} to
    * @return {!{columns: number, width: number}}
    */
-  measureString(s, from, to) {
+  _measureString(s, from, to) {
     if (from === to)
       return {width: 0, columns: 0};
 
@@ -401,37 +432,6 @@ export class Metrics {
   }
 
   /**
-   * Returns the width of a single code point from the Unicode Basic Multilingual Plane.
-   * This method does not return zero even for default width.
-   * Note that |codePoint| should always be less than 0x10000.
-   *
-   * @param {number} codePoint
-   * @return {number}
-   */
-  measureBMPCodePoint(codePoint) {
-    if (this._bmpDefault[codePoint] === 2) {
-      let width = this._measureBMP(String.fromCharCode(codePoint));
-      this._bmp[codePoint] = width;
-      this._bmpDefault[codePoint] = width === this.defaultWidth ? 1 : 0;
-    }
-    return this._bmp[codePoint];
-  }
-
-  /**
-   * Returns the width of a single code point from a Supplemetary Plane.
-   * This method does not return zero even for default width.
-   * Note that |codePoint| should always be greater or equal than 0x10000.
-   *
-   * @param {number} codePoint
-   * @return {number}
-   */
-  measureSupplementaryCodePoint(codePoint) {
-    if (this._supplementary[codePoint] === undefined)
-      this._supplementary[codePoint] = this._measureSupplementary(String.fromCodePoint(codePoint));
-    return this._supplementary[codePoint];
-  }
-
-  /**
    * Returns measurements for a particular column (code point) in a given substring.
    *
    * Returned |offset| does belong to [from, to], and |column| and |width| measure the
@@ -447,7 +447,7 @@ export class Metrics {
    * @param {number} column
    * @return {!{offset: number, columns: number, width: number}}
    */
-  locateByColumn(s, from, to, column) {
+  _locateByColumn(s, from, to, column) {
     if (!column)
       return {offset: from, columns: column, width: 0};
 
@@ -508,7 +508,7 @@ export class Metrics {
    * @param {!RoundMode} roundMode
    * @return {!{offset: number, columns: number, width: number}}
    */
-  locateByWidth(s, from, to, width, roundMode) {
+  _locateByWidth(s, from, to, width, roundMode) {
     if (!width)
       return {offset: from, columns: 0, width: 0};
 
@@ -572,4 +572,3 @@ Metrics.whitespaceRegex = /\s/u;
 Metrics.anythingRegex = /.*/u;
 
 Metrics._lineBreakCharCode = '\n'.charCodeAt(0);
-
