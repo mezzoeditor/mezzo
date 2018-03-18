@@ -19,7 +19,7 @@ const {expect} = new Matchers();
 function createTestMeasurer() {
   return {
     defaultWidth: () => 1,
-    defaultHeight: () => 3,
+    lineHeight: () => 3,
     defaultRegex: () => null,
     measureBMP: s => s.charCodeAt(0) - 'a'.charCodeAt(0) + 1,
     measureSupplementary: s => 100
@@ -33,7 +33,6 @@ function createTestMetrics() {
 function createDefaultMetrics() {
   return new Metrics({
     defaultWidth: () => 1,
-    defaultHeight: () => 1,
     defaultRegex: () => Metrics.bmpRegex,
     measureBMP: s => 1,
     measureSupplementary: s => 1
@@ -410,7 +409,7 @@ describe('Viewport.Scrollbars', () => {
     let document = new Document(() => {});
     let measurer = {
       defaultWidth: () => 10,
-      defaultHeight: () => 10,
+      lineHeight: () => 10,
       defaultRegex: () => null,
       measureBMP: s => 10,
       measureSupplementary: s => 10
@@ -888,9 +887,9 @@ describe('Metrics', () => {
     let tests = [
       {chunk: 'abc', before: {offset: 15, x: 5, y: 10}, location: {offset: 18, x: 11, y: 10}},
       {chunk: 'abc\na😀b𐀀c', before: {offset: 15, x: 5, y: 10}, location: {offset: 18, x: 11, y: 10}},
-      {chunk: 'abc\na😀b𐀀c', before: {offset: 15, x: 5, y: 10}, location: {offset: 19, x: 0, y: 13}},
-      {chunk: 'abc\na😀b𐀀c', before: {offset: 15, x: 5, y: 10}, location: {offset: 25, x: 203, y: 13}},
-      {chunk: 'a\n😀b\n𐀀ca\n𐀀𐀀\n😀\n0', before: {offset: 15, x: 5, y: 10}, location: {offset: 33, x: 100, y: 22}},
+      {chunk: 'abc\na😀b𐀀c', before: {offset: 15, x: 5, y: 10}, location: {offset: 19, x: 0, y: 11}},
+      {chunk: 'abc\na😀b𐀀c', before: {offset: 15, x: 5, y: 10}, location: {offset: 25, x: 203, y: 11}},
+      {chunk: 'a\n😀b\n𐀀ca\n𐀀𐀀\n😀\n0', before: {offset: 15, x: 5, y: 10}, location: {offset: 33, x: 100, y: 14}},
     ];
     for (let test of tests) {
       expect(metrics.locateByOffset(test.chunk, test.before, test.location.offset)).toEqual(test.location);
@@ -901,8 +900,8 @@ describe('Metrics', () => {
     let nonStrict = [
       {chunk: 'abc', before: {offset: 15, x: 5, y: 10}, point: {x: 15, y: 10}, result: {offset: 18, x: 11, y: 10}},
       {chunk: 'abc\na😀b𐀀c', before: {offset: 15, x: 5, y: 10}, point: {x: 15, y: 10}, result: {offset: 18, x: 11, y: 10}},
-      {chunk: 'abc\na😀b𐀀c', before: {offset: 15, x: 5, y: 10}, point: {x: 220, y: 14}, result: {offset: 26, x: 206, y: 13}},
-      {chunk: 'a\n😀b\n𐀀ca\n𐀀𐀀\n😀\n0', before: {offset: 15, x: 5, y: 10}, point: {x: 420, y: 24}, result: {offset: 33, x: 100, y: 22}},
+      {chunk: 'abc\na😀b𐀀c', before: {offset: 15, x: 5, y: 10}, point: {x: 220, y: 11.5}, result: {offset: 26, x: 206, y: 11}},
+      {chunk: 'a\n😀b\n𐀀ca\n𐀀𐀀\n😀\n0', before: {offset: 15, x: 5, y: 10}, point: {x: 420, y: 14.5}, result: {offset: 33, x: 100, y: 14}},
     ];
     for (let test of nonStrict)
       expect(metrics.locateByPoint(test.chunk, test.before, test.point, RoundMode.Floor)).toEqual(test.result);
@@ -921,24 +920,24 @@ describe('Metrics', () => {
       {point: {x: 5, y: 10}, location: {offset: 15, x: 5, y: 10}, strict: true},
       {point: {x: 6, y: 10}, location: {offset: 16, x: 6, y: 10}, strict: true},
       {point: {x: 7, y: 10}, location: {offset: 16, x: 6, y: 10}},
-      {point: {x: 5, y: 11}, location: {offset: 15, x: 5, y: 10}, strict: true},
-      {point: {x: 0, y: 13}, location: {offset: 17, x: 0, y: 13}, strict: true},
-      {point: {x: 1, y: 13}, location: {offset: 17, x: 0, y: 13}, strict: true},
-      {point: {x: 0.9, y: 13}, location: {offset: 17, x: 0, y: 13}, roundMode: RoundMode.Round, strict: true},
-      {point: {x: 1.0, y: 13}, location: {offset: 17, x: 0, y: 13}, roundMode: RoundMode.Round, strict: true},
-      {point: {x: 1.1, y: 13}, location: {offset: 18, x: 2, y: 13}, roundMode: RoundMode.Round, strict: true},
-      {point: {x: 0, y: 13}, location: {offset: 17, x: 0, y: 13}, roundMode: RoundMode.Ceil, strict: true},
-      {point: {x: 1.0, y: 13}, location: {offset: 18, x: 2, y: 13}, roundMode: RoundMode.Ceil, strict: true},
-      {point: {x: 1.1, y: 13}, location: {offset: 18, x: 2, y: 13}, roundMode: RoundMode.Ceil, strict: true},
-      {point: {x: 2, y: 13}, location: {offset: 18, x: 2, y: 13}, strict: true},
-      {point: {x: 42, y: 15}, location: {offset: 18, x: 2, y: 13}},
-      {point: {x: 0, y: 16}, location: {offset: 19, x: 0, y: 16}, strict: true},
-      {point: {x: 1, y: 16}, location: {offset: 20, x: 1, y: 16}, strict: true},
-      {point: {x: 2, y: 16}, location: {offset: 21, x: 2, y: 16}, strict: true},
-      {point: {x: 3, y: 17}, location: {offset: 22, x: 3, y: 16}, strict: true},
-      {point: {x: 4, y: 18}, location: {offset: 23, x: 4, y: 16}, strict: true},
-      {point: {x: 3, y: 19}, location: {offset: 26, x: 3, y: 19}, strict: true},
-      {point: {x: 42, y: 19}, location: {offset: 27, x: 6, y: 19}},
+      {point: {x: 5, y: 10.5}, location: {offset: 15, x: 5, y: 10}, strict: true},
+      {point: {x: 0, y: 11}, location: {offset: 17, x: 0, y: 11}, strict: true},
+      {point: {x: 1, y: 11}, location: {offset: 17, x: 0, y: 11}, strict: true},
+      {point: {x: 0.9, y: 11}, location: {offset: 17, x: 0, y: 11}, roundMode: RoundMode.Round, strict: true},
+      {point: {x: 1.0, y: 11}, location: {offset: 17, x: 0, y: 11}, roundMode: RoundMode.Round, strict: true},
+      {point: {x: 1.1, y: 11}, location: {offset: 18, x: 2, y: 11}, roundMode: RoundMode.Round, strict: true},
+      {point: {x: 0, y: 11}, location: {offset: 17, x: 0, y: 11}, roundMode: RoundMode.Ceil, strict: true},
+      {point: {x: 1.0, y: 11}, location: {offset: 18, x: 2, y: 11}, roundMode: RoundMode.Ceil, strict: true},
+      {point: {x: 1.1, y: 11}, location: {offset: 18, x: 2, y: 11}, roundMode: RoundMode.Ceil, strict: true},
+      {point: {x: 2, y: 11}, location: {offset: 18, x: 2, y: 11}, strict: true},
+      {point: {x: 42, y: 11.5}, location: {offset: 18, x: 2, y: 11}},
+      {point: {x: 0, y: 12}, location: {offset: 19, x: 0, y: 12}, strict: true},
+      {point: {x: 1, y: 12}, location: {offset: 20, x: 1, y: 12}, strict: true},
+      {point: {x: 2, y: 12}, location: {offset: 21, x: 2, y: 12}, strict: true},
+      {point: {x: 3, y: 12.1}, location: {offset: 22, x: 3, y: 12}, strict: true},
+      {point: {x: 4, y: 12.7}, location: {offset: 23, x: 4, y: 12}, strict: true},
+      {point: {x: 3, y: 13}, location: {offset: 26, x: 3, y: 13}, strict: true},
+      {point: {x: 42, y: 13}, location: {offset: 27, x: 6, y: 13}},
     ];
     for (let test of tests)
       expect(testMetrics.locateByPoint(chunk, before, test.point, test.roundMode || RoundMode.Floor, !!test.strict)).toEqual(test.location);
@@ -964,5 +963,5 @@ runner.run();
 
 // TODO:
 //   - scale viewport's metrics by defaultWidth to get integers;
-//   - move lineHeight out of metrics and tree;
 //   - simplify lines calculation in Viewport.decorate;
+//   - cleanup Viewport.aToB conversion methods;

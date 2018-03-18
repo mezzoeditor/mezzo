@@ -98,6 +98,7 @@ export class Viewport {
   constructor(document, measurer) {
     this._document = document;
     this._metrics = new Metrics(measurer);
+    this._lineHeight = measurer.lineHeight();
     this._document.addReplaceCallback(this._onReplace.bind(this));
 
     this._width = 0;
@@ -116,7 +117,7 @@ export class Viewport {
     this._revealCallback = () => {};
 
     let nodes = this._wrapChunks(this._createChunks(0, document.length(), kDefaultChunkSize));
-    this._setTree(Tree.build(nodes, this._metrics.defaultHeight, this._metrics.defaultWidth));
+    this._setTree(Tree.build(nodes, this._metrics.defaultWidth));
   }
 
   /**
@@ -137,10 +138,10 @@ export class Viewport {
    * @param {!Measurer} measurer
    */
   setMeasurer(measurer) {
+    this._lineHeight = measurer.lineHeight();
     this._metrics = new Metrics(measurer);
-    let nodes = this._wrapChunks(this._createChunks(0, document.length(), kDefaultChunkSize));
-    this._setTree(Tree.build(nodes, this._metrics.defaultHeight, this._metrics.defaultWidth));
-    this.invalidate();
+    let nodes = this._wrapChunks(this._createChunks(0, this._document.length(), kDefaultChunkSize));
+    this._setTree(Tree.build(nodes, this._metrics.defaultWidth));
   }
 
   /**
@@ -148,6 +149,13 @@ export class Viewport {
    */
   metrics() {
     return this._metrics;
+  }
+
+  /**
+   * @return {number}
+   */
+  lineHeight() {
+    return this._lineHeight;
   }
 
   /**
@@ -265,11 +273,11 @@ export class Viewport {
     if (found.location === null)
       return null;
     if (found.data === null)
-      return {x: found.location.x, y: found.location.y};
+      return {x: found.location.x, y: found.location.y * this._lineHeight};
     let from = found.location.offset;
     let chunk = this._document.content(from, from + found.data.metrics.length);
     let location = this._metrics.locateByOffset(chunk, found.location, offset);
-    return {x: location.x, y: location.y};
+    return {x: location.x, y: location.y * this._lineHeight};
   }
 
   /**
@@ -279,6 +287,7 @@ export class Viewport {
    * @return {number}
    */
   pointToOffset(point, roundMode = RoundMode.Floor, strict) {
+    point = {x: point.x, y: point.y / this._lineHeight};
     let found = this._tree.findByPoint(point, !!strict);
     if (found.data === null)
       return found.location.offset;
@@ -329,7 +338,7 @@ export class Viewport {
 
     let from = this.documentPointToViewPoint(this.offsetToPoint(range.from));
     let to = this.documentPointToViewPoint(this.offsetToPoint(range.to));
-    to.y += this._metrics.defaultHeight;
+    to.y += this._lineHeight;
 
     if (this._scrollTop > from.y) {
       this._scrollTop = Math.max(from.y - rangePadding.top, 0);
@@ -513,7 +522,7 @@ export class Viewport {
   }
 
   _buildScrollbar(scrollbarDecorators) {
-    const defaultHeight = this._metrics.defaultHeight;
+    const lineHeight = this._lineHeight;
     let scrollbar = [];
     for (let decorator of scrollbarDecorators) {
       let lastTop = -1;
@@ -524,7 +533,7 @@ export class Viewport {
         const to = this.offsetToPoint(decoration.to);
 
         let top = this.vScrollbar.contentOffsetToScrollbarOffset(from.y + this._padding.top);
-        let bottom = this.vScrollbar.contentOffsetToScrollbarOffset(to.y + defaultHeight + this._padding.top);
+        let bottom = this.vScrollbar.contentOffsetToScrollbarOffset(to.y + lineHeight + this._padding.top);
         bottom = Math.max(bottom, top + kMinScrollbarDecorationHeight);
 
         if (top <= lastBottom) {
@@ -537,7 +546,7 @@ export class Viewport {
         }
 
         let nextY = this.vScrollbar.scrollbarOffsetToContentOffset(bottom) - this._padding.top;
-        let nextOffset = this.pointToOffset({x: 0, y: nextY + this._metrics.defaultHeight});
+        let nextOffset = this.pointToOffset({x: 0, y: nextY + lineHeight});
         return Math.max(decoration.to, nextOffset);
       });
       if (lastTop >= 0)
@@ -567,7 +576,7 @@ export class Viewport {
     this._tree = tree;
     let metrics = tree.metrics();
     this._contentWidth = metrics.longestWidth;
-    this._contentHeight = (1 + (metrics.lineBreaks || 0)) * this._metrics.defaultHeight;
+    this._contentHeight = (1 + (metrics.lineBreaks || 0)) * this._lineHeight;
   }
 
   /**
@@ -623,7 +632,7 @@ export class Viewport {
     }
 
     let nodes = this._wrapChunks(chunks);
-    this._setTree(Tree.build(nodes, this._metrics.defaultHeight, this._metrics.defaultWidth, split.left, split.right));
+    this._setTree(Tree.build(nodes, this._metrics.defaultWidth, split.left, split.right));
   }
 }
 
@@ -787,5 +796,5 @@ Viewport.test = {};
  */
 Viewport.test.rechunk = function(viewport, chunkSize) {
   let nodes = viewport._wrapChunks(viewport._createChunks(0, viewport._document.length(), chunkSize));
-  viewport._setTree(Tree.build(nodes, viewport._metrics.defaultHeight, viewport._metrics.defaultWidth));
+  viewport._setTree(Tree.build(nodes, viewport._metrics.defaultWidth));
 };

@@ -16,13 +16,12 @@ class ContextBasedMeasurer {
     ctx.textBaseline = 'top';
 
     this.textOffset = fontHeight - (3 + charHeight);
-    this.lineHeight = fontHeight;
 
     this.width9 = ctx.measureText('9').width;
     this.widthM = ctx.measureText('M').width;
 
     this._defaultWidth = monospace ? ctx.measureText('M').width : 0;
-    this._defaultHeight = fontHeight;
+    this._lineHeight = fontHeight;
     this._defaultRegex = monospace ? Metrics.asciiRegex : null;
     this._ctx = ctx;
   }
@@ -31,8 +30,8 @@ class ContextBasedMeasurer {
     return this._defaultWidth;
   }
 
-  defaultHeight() {
-    return this._defaultHeight;
+  lineHeight() {
+    return this._lineHeight;
   }
 
   defaultRegex() {
@@ -328,7 +327,7 @@ export class Renderer {
       left: 4,
       right: 4,
       top: 4,
-      bottom: this._editorRect.height - this._measurer.lineHeight - 4
+      bottom: this._editorRect.height - this._measurer.lineHeight() - 4
     });
 
     this._vScrollbar.rect.x = this._cssWidth - SCROLLBAR_WIDTH;
@@ -439,7 +438,7 @@ export class Renderer {
   }
 
   _drawTextAndBackground(ctx, text, background) {
-    const lineHeight = this._measurer.lineHeight;
+    const lineHeight = this._measurer.lineHeight();
 
     for (let {x, y, width, style} of background) {
       const theme = this._theme[style];

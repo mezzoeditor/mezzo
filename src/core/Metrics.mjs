@@ -17,6 +17,7 @@ export let RoundMode = {
 /**
  * Measurer converts code points to widths (and default height).
  * It is designed to work exclusively with an additive metric.
+ * Note that we only support fixed height equal to one.
  *
  * @interface
  */
@@ -30,15 +31,6 @@ export class Measurer {
    * @return {number}
    */
   defaultWidth() {
-  }
-
-  /**
-   * The default height of a code point. Note that we only support fixed height,
-   * so any code point height equals to default.
-   *
-   * @type {number}
-   */
-  defaultHeight() {
   }
 
   /**
@@ -79,7 +71,6 @@ export class Metrics {
    */
   constructor(measurer) {
     this.defaultWidth = measurer.defaultWidth();
-    this.defaultHeight = measurer.defaultHeight();
     this._defaultRegex = measurer.defaultRegex();
     this._measureBMP = measurer.measureBMP.bind(measurer);
     this._measureSupplementary = measurer.measureSupplementary.bind(measurer);
@@ -151,15 +142,15 @@ export class Metrics {
   locateByPoint(s, before, point, roundMode, strict) {
     let {x, y} = before;
 
-    if (point.y < y || (point.y < y + this.defaultHeight && point.x < x))
+    if (point.y < y || (point.y < y + 1 && point.x < x))
       throw 'Inconsistent';
 
     let lineStartOffset = 0;
-    while (y + this.defaultHeight <= point.y) {
+    while (y + 1 <= point.y) {
       let lineBreakOffset = s.indexOf('\n', lineStartOffset);
       if (lineBreakOffset === -1)
         throw 'Inconsistent';
-      y += this.defaultHeight;
+      y += 1;
       x = 0;
       lineStartOffset = lineBreakOffset + 1;
     }
@@ -213,7 +204,7 @@ export class Metrics {
     let lineStartOffset = 0;
     let lineBreakOffset = s.indexOf('\n', lineStartOffset);
     while (lineBreakOffset !== -1 && lineBreakOffset < offset) {
-      y += this.defaultHeight;
+      y += 1;
       x = 0;
       lineStartOffset = lineBreakOffset + 1;
       lineBreakOffset = s.indexOf('\n', lineStartOffset);

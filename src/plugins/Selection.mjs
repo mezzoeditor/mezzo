@@ -726,7 +726,7 @@ export class Selection {
     let point = this._viewport.offsetToPoint(offset);
     if (upDownX === -1)
       upDownX = point.x;
-    offset = this._viewport.pointToOffset({x: upDownX, y: point.y - this._viewport.metrics().defaultHeight}, RoundMode.Round);
+    offset = this._viewport.pointToOffset({x: upDownX, y: point.y - this._viewport.lineHeight()}, RoundMode.Round);
     return {offset, upDownX};
   }
 
@@ -739,7 +739,7 @@ export class Selection {
     let point = this._viewport.offsetToPoint(offset);
     if (upDownX === -1)
       upDownX = point.x;
-    offset = this._viewport.pointToOffset({x: upDownX, y: point.y + this._viewport.metrics().defaultHeight}, RoundMode.Round);
+    offset = this._viewport.pointToOffset({x: upDownX, y: point.y + this._viewport.lineHeight()}, RoundMode.Round);
     return {offset, upDownX};
   }
 

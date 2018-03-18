@@ -23,10 +23,6 @@ class CharactersMeasurer {
     return 1;
   }
 
-  defaultHeight() {
-    return 1;
-  }
-
   defaultRegex() {
     return Metrics.bmpRegex;
   }
@@ -218,7 +214,7 @@ export class Document {
    */
   _treeWithContent(content) {
     let chunks = this._metrics.chunkString(kDefaultChunkSize, content);
-    return Tree.build(chunks, this._metrics.defaultHeight, this._metrics.defaultWidth);
+    return Tree.build(chunks, this._metrics.defaultWidth);
   }
 
   /**
@@ -259,7 +255,7 @@ export class Document {
       chunks = this._metrics.chunkString(kDefaultChunkSize, first + insertion + last);
     }
 
-    this._setTree(Tree.build(chunks, this._metrics.defaultHeight, this._metrics.defaultWidth, split.left, split.right));
+    this._setTree(Tree.build(chunks, this._metrics.defaultWidth, split.left, split.right));
     return removed;
   }
 
@@ -294,10 +290,10 @@ Document.test = {};
  */
 Document.test.setChunks = function(document, chunks) {
   let nodes = chunks.map(chunk => ({data: chunk, metrics: document._metrics.forString(chunk)}));
-  document._setTree(Tree.build(nodes, document._metrics.defaultHeight, document._metrics.defaultWidth));
+  document._setTree(Tree.build(nodes, document._metrics.defaultWidth));
 };
 
 Document.test.setContent = function(document, content, chunkSize) {
   let chunks = document._metrics.chunkString(chunkSize, content);
-  document._setTree(Tree.build(chunks, document._metrics.defaultHeight, document._metrics.defaultWidth));
+  document._setTree(Tree.build(chunks, document._metrics.defaultWidth));
 };

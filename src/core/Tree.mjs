@@ -61,8 +61,7 @@ const kSplitIntersectionToRight = false;
  * The tree manages an ordered sequence of nodes and supports efficient
  * constructin, lookup by different metrics, merging and splitting.
  *
- * Tree needs |lineHeight| and |defaultWidth| values to work with metrics:
- * - lineHeight defines conversion between lines and y-coordinate;
+ * Tree needs |defaultWidth| value to work with metrics:
  * - defaultWidth defines conversion between columns and missing x-coordinate;
  *   useful for monospace text to save memory.
  *
@@ -71,11 +70,9 @@ const kSplitIntersectionToRight = false;
 export class Tree {
   /**
    * Constructs an empty tree.
-   * @param {number} lineHeight
    * @param {number} defaultWidth
    */
-  constructor(lineHeight, defaultWidth) {
-    this._lineHeight = lineHeight;
+  constructor(defaultWidth) {
     this._defaultWidth = defaultWidth;
     this._root = undefined;
     this._endLocation = Metrics.origin;
@@ -91,22 +88,21 @@ export class Tree {
    * which cannot be used afterwards.
    *
    * @param {!Array<!{data: T, metrics: !TextMetrics}>} nodes
-   * @param {number} lineHeight
    * @param {number} defaultWidth
    * @param {!Tree<T>=} left
    * @param {!Tree<T>=} right
    * @return {!Tree<T>}
    */
-  static build(nodes, lineHeight, defaultWidth, left, right) {
-    let tree = new Tree(lineHeight, defaultWidth);
+  static build(nodes, defaultWidth, left, right) {
+    let tree = new Tree(defaultWidth);
     let root = tree._build(nodes);
     if (left) {
-      if (left._lineHeight !== lineHeight || left._defaultWidth !== defaultWidth)
+      if (left._defaultWidth !== defaultWidth)
         throw 'Cannot merge trees with different metrics';
       root = tree._merge(left._root, root);
     }
     if (right) {
-      if (right._lineHeight !== lineHeight || right._defaultWidth !== defaultWidth)
+      if (right._defaultWidth !== defaultWidth)
         throw 'Cannot merge trees with different metrics';
       root = tree._merge(root, right._root);
     }
@@ -185,7 +181,7 @@ export class Tree {
     }
 
     let outside = false;
-    if (point.y >= this._endLocation.y + this._lineHeight) {
+    if (point.y >= this._endLocation.y + 1) {
       outside = true;
     } else if (point.y >= this._endLocation.y && point.x > this._endLocation.x) {
       outside = true;
@@ -261,7 +257,7 @@ export class Tree {
   _locationIsGreater(location, key) {
     if (key.offset !== undefined)
       return location.offset > key.offset;
-    return location.y > key.y || (location.y + this._lineHeight > key.y && location.x > key.x);
+    return location.y > key.y || (location.y + 1 > key.y && location.x > key.x);
   }
 
   /**
@@ -272,7 +268,7 @@ export class Tree {
   _advanceLocation(location, metrics) {
     let result = {
       offset: location.offset + metrics.length,
-      y: location.y + (metrics.lineBreaks || 0) * this._lineHeight,
+      y: location.y + (metrics.lineBreaks || 0),
       x: metrics.lastWidth + (metrics.lineBreaks ? 0 : location.x),
     };
     return result;
@@ -313,7 +309,7 @@ export class Tree {
       this._endLocation = {
         offset: root.metrics.length,
         x: root.metrics.lastWidth,
-        y: (root.metrics.lineBreaks || 0) * this._lineHeight
+        y: root.metrics.lineBreaks || 0
       };
     }
   }
@@ -509,7 +505,7 @@ export class Tree {
    * @return {!Tree<T>}
    */
   _wrap(root) {
-    let tree = new Tree(this._lineHeight, this._defaultWidth);
+    let tree = new Tree(this._defaultWidth);
     tree._setRoot(root);
     return tree;
   }
