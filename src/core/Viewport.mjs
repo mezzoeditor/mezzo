@@ -368,7 +368,7 @@ export class Viewport {
     for (let line = endPosition.line; line >= startPosition.line; line--) {
       let lineStartOffset = this._document.positionToOffset({line, column: 0});
       let y = this.offsetToPoint(lineStartOffset).y;
-      let lineEndOffset = this._lastLocation.offset;
+      let lineEndOffset = this._document.length();
       if (line + 1 < this._document.lineCount()) {
         let nextStartOffset = lines.length
             ? lines[lines.length - 1].start
@@ -565,10 +565,9 @@ export class Viewport {
    */
   _setTree(tree) {
     this._tree = tree;
-    this._lastLocation = tree.endLocation();
     let metrics = tree.metrics();
     this._contentWidth = metrics.longestWidth;
-    this._contentHeight = this._lastLocation.y + this._metrics.defaultHeight;
+    this._contentHeight = (1 + (metrics.lineBreaks || 0)) * this._metrics.defaultHeight;
   }
 
   /**

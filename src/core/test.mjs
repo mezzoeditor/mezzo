@@ -966,4 +966,3 @@ runner.run();
 //   - scale viewport's metrics by defaultWidth to get integers;
 //   - move lineHeight out of metrics and tree;
 //   - simplify lines calculation in Viewport.decorate;
-//   - remove Tree.endLocation().

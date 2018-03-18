@@ -123,14 +123,6 @@ export class Tree {
   }
 
   /**
-   * The location of the last node's end.
-   * @return {!Location}
-   */
-  endLocation() {
-    return this._endLocation;
-  }
-
-  /**
    * Creates an iterator starting at |offset|, constrained to the range
    * [from, to). All numbers are offsets (as opposite to positions or points).
    * @param {number} offset
