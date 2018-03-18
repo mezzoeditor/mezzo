@@ -1,16 +1,10 @@
 import { Random } from './Random.mjs';
+import { Metrics } from './Metrics.mjs';
 
 let random = Random(42);
 
 /**
  * @typedef {number} Offset;
- */
-
-/**
- * @typedef {{
- *   line: number,
- *   column: number,
- * }} Position;
  */
 
 /**
@@ -23,8 +17,6 @@ let random = Random(42);
  /**
  * @typedef {{
  *   offset: number,
- *   line: number,
- *   column: number,
  *   x: number,
  *   y: number,
  * }} Location;
@@ -52,17 +44,10 @@ let random = Random(42);
 /**
  * @typedef {{
  *   offset: number|undefined,
- *   line: number|undefined,
- *   column: number|undefined,
  *   x: number|undefined,
  *   y: number|undefined,
  * }} FindKey;
  */
-
-/** @type {!TextMetrics} */
-let zeroMetrics = { length: 0, firstColumns: 0, lastColumns: 0, longestColumns: 0 };
-/** @type {!Location} */
-let origin = { offset: 0, line: 0, column: 0, x: 0, y: 0 };
 
 const kClone = true;
 const kNoClone = false;
@@ -93,7 +78,7 @@ export class Tree {
     this._lineHeight = lineHeight;
     this._defaultWidth = defaultWidth;
     this._root = undefined;
-    this._endLocation = origin;
+    this._endLocation = Metrics.origin;
   }
 
   /**
@@ -134,7 +119,7 @@ export class Tree {
    * @return {!TextMetrics}
    */
   metrics() {
-    return this._root ? this._root.metrics : zeroMetrics;
+    return this._root ? this._root.metrics : Metrics.zero;
   }
 
   /**
@@ -163,8 +148,10 @@ export class Tree {
    * Returns a node containing |offset| (start included, end excluded).
    * Returns it's data and exact location of the node's start.
    * Returns nulls if the offset is out of range.
+   *
    * When the offset is at the end of the tree, does not return |data|, as
    * this offset does not effectively belong to any node.
+   *
    * @param {number} offset
    * @return {!{data: ?T, location: ?Location}}
    */
@@ -180,45 +167,6 @@ export class Tree {
   }
 
   /**
-   * Returns a node containing |position| (start included, end excluded).
-   * Returns it's data and exact location of the node's start.
-   *
-   * If |strict| is false, |position| is clamped to nearest position which
-   * belongs to the tree. This position is returned as |clampedPosition|.
-   *
-   * When the position is at the end of the tree, does not return |data|, as
-   * this position does not effectively belong to any node.
-   * @param {!Position} position
-   * @param {boolean} strict
-   * @return {!{data: ?T, location: !Location, clampedPosition: !Position}}
-   */
-  findByPosition(position, strict) {
-    if (position.line < 0) {
-      if (strict)
-        throw 'Position does not belong to the tree';
-      position = {line: 0, column: 0};
-    }
-    if (position.column < 0) {
-      if (strict)
-        throw 'Position does not belong to the tree';
-      position = {line: position.line, column: 0};
-    }
-    let compare = (position.line - this._endLocation.line) || (position.column - this._endLocation.column);
-    if (compare >= 0) {
-      if (!strict || compare === 0)
-        return {data: null, location: this._endLocation, clampedPosition: position};
-      throw 'Position does not belong to the tree';
-    }
-    let found = this._findNode(this._root, {line: position.line, column: position.column});
-    if (!found) {
-      if (!strict)
-        return {data: null, location: this._endLocation, clampedPosition: position};
-      throw 'Position does not belong to the tree';
-    }
-    return {data: found.node.data, location: found.location, clampedPosition: position};
-  }
-
-  /**
    * Returns a node containing |point| (start included, end excluded).
    * Returns it's data and exact location of the node's start.
    *
@@ -227,6 +175,7 @@ export class Tree {
    *
    * When the point is at the end of the tree, does not return |data|, as
    * this point does not effectively belong to any node.
+   *
    * @param {!Point} point
    * @param {boolean} strict
    * @return {!{data: ?T, location: !Location, clampedPoint: !Point}}
@@ -275,9 +224,9 @@ export class Tree {
    * @return {!{left: !Tree<T>, right: !Tree<T>, middle: !Tree<T>}}
    */
   split(from, to) {
-    let tmp = this._split(this._root, {offset: to}, kSplitIntersectionToLeft);
+    let tmp = this._split(this._root, to, kSplitIntersectionToLeft);
     let right = this._wrap(tmp.right);
-    tmp = this._split(tmp.left, {offset: from}, kSplitIntersectionToRight);
+    tmp = this._split(tmp.left, from, kSplitIntersectionToRight);
     let left = this._wrap(tmp.left);
     let middle = this._wrap(tmp.right);
     return {left, right, middle};
@@ -313,43 +262,6 @@ export class Tree {
   }
 
   /**
-   * Combines two additive metrics in the left->right order.
-   * @param {!TextMetrics} left
-   * @param {!TextMetrics} right
-   * @return {!TextMetrics}
-   */
-  combineMetrics(left, right) {
-    let defaultWidth = this._defaultWidth;
-    let result = {
-      longestColumns: Math.max(Math.max(left.longestColumns, left.lastColumns + right.firstColumns), right.longestColumns),
-      firstColumns: left.firstColumns + (left.lineBreaks ? 0 : right.firstColumns),
-      lastColumns: right.lastColumns + (right.lineBreaks ? 0 : left.lastColumns),
-      length: left.length + right.length
-    }
-    if (left.lineBreaks || right.lineBreaks)
-      result.lineBreaks = (left.lineBreaks || 0) + (right.lineBreaks || 0);
-    if (left.firstWidth || (!left.lineBreaks && right.firstWidth)) {
-      result.firstWidth =
-          (left.firstWidth || left.firstColumns * defaultWidth) +
-          (left.lineBreaks ? 0 : (right.firstWidth || right.firstColumns * defaultWidth));
-    }
-    if (right.lastWidth || (!right.lineBreaks && left.lastWidth)) {
-      result.lastWidth =
-          (right.lastWidth || right.lastColumns * defaultWidth) +
-          (right.lineBreaks ? 0 : (left.lastWidth || left.lastColumns * defaultWidth));
-    }
-    if (left.longestWidth || right.longestWidth || left.lastWidth || right.firstWidth) {
-      result.longestWidth = Math.max(
-          left.longestWidth || left.longestColumns * defaultWidth,
-          right.longestWidth || right.longestColumns * defaultWidth);
-      result.longestWidth = Math.max(
-          result.longestWidth,
-          (left.lastWidth || left.lastColumns * defaultWidth) + (right.firstWidth || right.firstColumns * defaultWidth));
-    }
-    return result;
-  }
-
-  /**
    * @param {!Location} location
    * @param {!FindKey} key
    * @return {boolean}
@@ -357,22 +269,7 @@ export class Tree {
   _locationIsGreater(location, key) {
     if (key.offset !== undefined)
       return location.offset > key.offset;
-    if (key.line !== undefined)
-      return location.line > key.line || (location.line === key.line && location.column > key.column);
     return location.y > key.y || (location.y + this._lineHeight > key.y && location.x > key.x);
-  }
-
-  /**
-   * @param {!Location} location
-   * @param {!FindKey} key
-   * @return {boolean}
-   */
-  _locationIsGreaterOrEqual(location, key) {
-    if (key.offset !== undefined)
-      return location.offset >= key.offset;
-    if (key.line !== undefined)
-      return location.line > key.line || (location.line === key.line && location.column >= key.column);
-    throw 'locationIsGreaterOrEqual cannot be used for points';
   }
 
   /**
@@ -383,11 +280,9 @@ export class Tree {
   _advanceLocation(location, metrics) {
     let result = {
       offset: location.offset + metrics.length,
-      line: location.line + (metrics.lineBreaks || 0),
-      column: metrics.lastColumns + (metrics.lineBreaks ? 0 : location.column),
-      x: (metrics.lastWidth || metrics.lastColumns * this._defaultWidth) + (metrics.lineBreaks ? 0 : location.x)
+      y: location.y + (metrics.lineBreaks || 0) * this._lineHeight,
+      x: metrics.lastWidth + (metrics.lineBreaks ? 0 : location.x),
     };
-    result.y = result.line * this._lineHeight;
     return result;
   }
 
@@ -408,11 +303,11 @@ export class Tree {
       node.selfMetrics = node.metrics;
     if (left) {
       node.left = left;
-      node.metrics = this.combineMetrics(left.metrics, node.metrics);
+      node.metrics = Metrics.combine(left.metrics, node.metrics);
     }
     if (right) {
       node.right = right;
-      node.metrics = this.combineMetrics(node.metrics, right.metrics);
+      node.metrics = Metrics.combine(node.metrics, right.metrics);
     }
     return node;
   }
@@ -424,10 +319,8 @@ export class Tree {
     this._root = root;
     if (root) {
       this._endLocation = {
-        line: root.metrics.lineBreaks || 0,
-        column: root.metrics.lastColumns,
         offset: root.metrics.length,
-        x: root.metrics.lastWidth || root.metrics.lastColumns * this._defaultWidth,
+        x: root.metrics.lastWidth,
         y: (root.metrics.lineBreaks || 0) * this._lineHeight
       };
     }
@@ -494,43 +387,43 @@ export class Tree {
    * If node contains a key location inside, it will be returned in right part,
    * unless |intersectionToLeft| is true.
    * @param {!TreeNode<T>|undefined} root
-   * @param {!FindKey} key
+   * @param {number} offset
    * @param {boolean} intersectionToLeft
    * @param {!Location=} current
    * @return {{left: !TreeNode<T>|undefined, right: !TreeNode<T>|undefined}}
    */
-  _split(root, key, intersectionToLeft, current) {
+  _split(root, offset, intersectionToLeft, current) {
     if (!root)
       return {};
     if (!current)
-      current = origin;
-    if (this._locationIsGreaterOrEqual(current, key))
+      current = Metrics.origin;
+    if (current.offset >= offset)
       return {right: root};
-    if (!this._locationIsGreater(this._advanceLocation(current, root.metrics), key))
+    if (current.offset + root.metrics.length <= offset)
       return {left: root};
 
     // intersection to left:
-    //   key a b  ->  root to right
-    //   a key b  ->  root to left
-    //   a b key  ->  root to left
-    //   rootToLeft = (key > a) == (a < key) == !(a >= key)
+    //   offset a b  ->  root to right
+    //   a offset b  ->  root to left
+    //   a b offset  ->  root to left
+    //   rootToLeft = (offset > a) == (a < offset) == !(a >= offset)
 
     // intersection to right:
-    //   key a b  ->  root to right
-    //   a key b  ->  root to right
-    //   a b key  ->  root to left
-    //   rootToLeft = (key >= b) == (b <= key) == !(b > key)
+    //   offset a b  ->  root to right
+    //   a offset b  ->  root to right
+    //   a b offset  ->  root to left
+    //   rootToLeft = (offset >= b) == (b <= offset) == !(b > offset)
 
     let next = root.left ? this._advanceLocation(current, root.left.metrics) : current;
-    let rootToLeft = !this._locationIsGreaterOrEqual(next, key);
+    let rootToLeft = next.offset < offset;
     next = this._advanceLocation(next, root.selfMetrics || root.metrics);
     if (intersectionToLeft === kSplitIntersectionToRight)
-      rootToLeft = !this._locationIsGreater(next, key);
+      rootToLeft = next.offset <= offset;
     if (rootToLeft) {
-      let tmp = this._split(root.right, key, intersectionToLeft, next);
+      let tmp = this._split(root.right, offset, intersectionToLeft, next);
       return {left: this._setChildren(root, root.left, tmp.left, kClone), right: tmp.right};
     } else {
-      let tmp = this._split(root.left, key, intersectionToLeft, current);
+      let tmp = this._split(root.left, offset, intersectionToLeft, current);
       return {left: tmp.left, right: this._setChildren(root, tmp.right, root.right, kClone)};
     }
   }
@@ -587,7 +480,7 @@ export class Tree {
    * @return {{node: !TreeNode<T>, location: !Location}|undefined}
    */
   _findNode(node, key) {
-    let current = origin;
+    let current = Metrics.origin;
     while (true) {
       if (node.left) {
         let next = this._advanceLocation(current, node.left.metrics);

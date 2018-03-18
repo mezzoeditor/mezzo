@@ -98,7 +98,6 @@ export class Viewport {
   constructor(document, measurer) {
     this._document = document;
     this._metrics = new Metrics(measurer);
-    this._document.setMetrics(this._metrics);
     this._document.addReplaceCallback(this._onReplace.bind(this));
 
     this._width = 0;
@@ -116,7 +115,7 @@ export class Viewport {
 
     this._revealCallback = () => {};
 
-    let nodes = this._wrapChunks(this._createChunks(0, document.length()));
+    let nodes = this._wrapChunks(this._createChunks(0, document.length(), kDefaultChunkSize));
     this._setTree(Tree.build(nodes, this._metrics.defaultHeight, this._metrics.defaultWidth));
   }
 
@@ -139,7 +138,9 @@ export class Viewport {
    */
   setMeasurer(measurer) {
     this._metrics = new Metrics(measurer);
-    this._document.setMetrics(metrics);
+    let nodes = this._wrapChunks(this._createChunks(0, document.length(), kDefaultChunkSize));
+    this._setTree(Tree.build(nodes, this._metrics.defaultHeight, this._metrics.defaultWidth));
+    this.invalidate();
   }
 
   /**
@@ -261,11 +262,14 @@ export class Viewport {
    */
   offsetToPoint(offset) {
     let found = this._tree.findByOffset(offset);
-    if (found.location === null || found.data === null)
-      return found.location;
+    if (found.location === null)
+      return null;
+    if (found.data === null)
+      return {x: found.location.x, y: found.location.y};
     let from = found.location.offset;
     let chunk = this._document.content(from, from + found.data.metrics.length);
-    return this._metrics.locateByOffset(chunk, found.location, offset);
+    let location = this._metrics.locateByOffset(chunk, found.location, offset);
+    return {x: location.x, y: location.y};
   }
 
   /**
@@ -563,22 +567,23 @@ export class Viewport {
     this._tree = tree;
     this._lastLocation = tree.endLocation();
     let metrics = tree.metrics();
-    this._contentWidth = metrics.longestWidth || (metrics.longestColumns * this._metrics.defaultWidth);
+    this._contentWidth = metrics.longestWidth;
     this._contentHeight = this._lastLocation.y + this._metrics.defaultHeight;
   }
 
   /**
    * @param {number} from
    * @param {number} to
+   * @param {number} chunkSize
    * @param {number=} firstChunk
    * @return {!Array<!TextChunk>}
    */
-  _createChunks(from, to, firstChunk) {
+  _createChunks(from, to, chunkSize, firstChunk) {
     let iterator = this._document.iterator(from);
     let chunks = [];
     while (iterator.offset < to) {
       let offset = iterator.offset;
-      let size = Math.min(to - iterator.offset, kDefaultChunkSize);
+      let size = Math.min(to - iterator.offset, chunkSize);
       if (offset === from && firstChunk != undefined)
         size = firstChunk;
       let chunk = iterator.read(size);
@@ -613,9 +618,9 @@ export class Viewport {
         newFrom - from + inserted <= kDefaultChunkSize) {
       // For typical editing scenarios, we are most likely to replace at the
       // end of |insertion| next time.
-      chunks = this._createChunks(newFrom, newTo, newFrom - from + inserted);
+      chunks = this._createChunks(newFrom, newTo, kDefaultChunkSize, newFrom - from + inserted);
     } else {
-      chunks = this._createChunks(newFrom, newTo);
+      chunks = this._createChunks(newFrom, newTo, kDefaultChunkSize);
     }
 
     let nodes = this._wrapChunks(chunks);
@@ -774,3 +779,14 @@ function cachedContent(document, from, to, cache, left, right) {
 Viewport._decorateFreeze = Symbol('Viewport.decorate');
 
 let kDefaultChunkSize = 1000;
+
+Viewport.test = {};
+
+/**
+ * @param {!Viewport} viewport
+ * @param {number} chunkSize
+ */
+Viewport.test.rechunk = function(viewport, chunkSize) {
+  let nodes = viewport._wrapChunks(viewport._createChunks(0, viewport._document.length(), chunkSize));
+  viewport._setTree(Tree.build(nodes, viewport._metrics.defaultHeight, viewport._metrics.defaultWidth));
+};

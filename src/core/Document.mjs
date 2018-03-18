@@ -11,6 +11,13 @@ import { TextIterator } from './TextIterator.mjs';
  * }} Replacement;
  */
 
+/**
+ * @typedef {{
+ *   line: number,
+ *   column: number,
+ * }} Position;
+ */
+
 class CharactersMeasurer {
   defaultWidth() {
     return 1;
@@ -58,16 +65,6 @@ export class Document {
    */
   setTokenizer(tokenizer) {
     this._tokenizer = tokenizer;
-  }
-
-  /**
-   * @param {!Metrics} metrics
-   */
-  setMetrics(metrics) {
-    let content = this.content();
-    this._metrics = metrics;
-    this._setTree(this._treeWithContent(content));
-    this.invalidate();
   }
 
   /**
@@ -185,9 +182,12 @@ export class Document {
    */
   offsetToPosition(offset) {
     let found = this._tree.findByOffset(offset);
-    if (found.location === null || found.data === null)
-      return found.location;
-    return this._metrics.locateByOffset(found.data, found.location, offset);
+    if (found.location === null)
+      return null;
+    if (found.data === null)
+      return {line: found.location.y, column: found.location.x};
+    let location = this._metrics.locateByOffset(found.data, found.location, offset);
+    return {line: location.y, column: location.x};
   }
 
   /**
@@ -196,37 +196,10 @@ export class Document {
    * @return {number}
    */
   positionToOffset(position, strict) {
-    let found = this._tree.findByPosition(position, !!strict);
+    let found = this._tree.findByPoint({x: position.column, y: position.line}, !!strict);
     if (found.data === null)
       return found.location.offset;
-    return this._metrics.locateByPosition(found.data, found.location, found.clampedPosition, strict).offset;
-  }
-
-  /**
-   * @param {number=} fromOffset
-   * @param {number=} toOffset
-   * @return {!TextMetrics}
-   */
-  rangeMetrics(fromOffset, toOffset) {
-    let {from, to} = this._clamp(fromOffset, toOffset);
-    let split = this._tree.split(from, to);
-    let skipLeft = from - split.left.metrics().length;
-    let skipRight = this._length - split.right.metrics().length - to;
-    let tmp = split.middle.splitFirst();
-    if (!tmp.first)
-      return { length: 0, firstColumns: 0, lastColumns: 0, longestColumns: 0 };
-    let left = tmp.first;
-    tmp = tmp.rest.splitLast();
-    if (!tmp.last) {
-      if (skipLeft + skipRight > left.length)
-        throw 'Inconsistent';
-      return this._metrics.forString(left.substring(skipLeft, left.length - skipRight));
-    }
-    let right = tmp.last;
-    let middle = tmp.rest;
-    let leftMetrics = this._metrics.forString(left.substring(skipLeft));
-    let rightMetrics = this._metrics.forString(right.substring(0, right.length - skipRight));
-    return middle.combineMetrics(leftMetrics, middle.combineMetrics(middle.metrics(), rightMetrics));
+    return this._metrics.locateByPoint(found.data, found.location, found.clampedPoint, strict).offset;
   }
 
   /**
@@ -237,8 +210,6 @@ export class Document {
     let metrics = tree.metrics();
     this._lineCount = (metrics.lineBreaks || 0) + 1;
     this._length = metrics.length;
-    this._lastLocation = tree.endLocation();
-    this._width = metrics.longestWidth || (metrics.longestColumns * this._metrics.defaultWidth);
   }
 
   /**

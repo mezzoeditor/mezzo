@@ -8,16 +8,13 @@ export let RoundMode = {
  * @typedef {{
  *   length: number,
  *   lineBreaks: number|undefined,
- *   firstColumns: number,
- *   firstWidth: number|undefined,
- *   lastColumns: number,
- *   lastWidth: number|undefined,
- *   longestColumns: number,
- *   longestWidth: number|undefined,
+ *   firstWidth: number,
+ *   lastWidth: number,
+ *   longestWidth: number,
  * }} TextMetrics;
  */
 
- /**
+/**
  * Measurer converts code points to widths (and default height).
  * It is designed to work exclusively with an additive metric.
  *
@@ -88,8 +85,7 @@ export class Metrics {
     this._measureSupplementary = measurer.measureSupplementary.bind(measurer);
 
     this._bmp = new Float32Array(65536);
-    this._bmpDefault = new Uint8Array(65536);
-    this._bmpDefault.fill(2);
+    this._bmp.fill(-1);
     this._supplementary = {};
   }
 
@@ -101,98 +97,33 @@ export class Metrics {
   forString(s) {
     let metrics = {
       length: s.length,
-      firstColumns: 0,
-      lastColumns: 0,
-      longestColumns: 0
+      firstWidth: 0,
+      lastWidth: 0,
+      longestWidth: 0
     };
 
     let lineBreaks = 0;
     let offset = 0;
-    let longestWidth = 0;
-
     while (true) {
       let lineBreakOffset = s.indexOf('\n', offset);
       let lineEndOffset = lineBreakOffset === -1 ? s.length : lineBreakOffset;
-      let {width, columns} = this._measureString(s, offset, lineEndOffset);
-      let fullWidth = width || (columns * this.defaultWidth);
+      let width = this._measureString(s, offset, lineEndOffset);
 
-      if (offset === 0) {
-        metrics.firstColumns = columns;
-        if (width)
-          metrics.firstWidth = width;
-      }
+      if (offset === 0)
+        metrics.firstWidth = width;
+      if (lineBreakOffset === -1)
+        metrics.lastWidth = width;
 
-      if (lineBreakOffset === -1) {
-        metrics.lastColumns = columns;
-        if (width)
-          metrics.lastWidth = width;
-      }
-
-      metrics.longestColumns = Math.max(metrics.longestColumns, columns);
-      longestWidth = Math.max(longestWidth, fullWidth);
+      metrics.longestWidth = Math.max(metrics.longestWidth, width);
       if (lineBreakOffset === -1)
         break;
 
       lineBreaks++;
       offset = lineEndOffset + 1;
     }
-
     if (lineBreaks)
       metrics.lineBreaks = lineBreaks;
-    if (longestWidth !== metrics.longestColumns * this.defaultWidth)
-      metrics.longestWidth = longestWidth;
     return metrics;
-  }
-
-  /**
-   * Returns location of a specific position in a string.
-   *
-   * |before| is a location at the start of a string, and |position| is the one
-   * we are locating. Returned location is absolute, not relative to |before|.
-   *
-   * If |strict|, throws on out-of-bounds positions.
-   *
-   * @param {string} s
-   * @param {!Location} before
-   * @param {!Position} position
-   * @param {boolean=} strict
-   * @return {!Location}
-   */
-  locateByPosition(s, before, position, strict) {
-    let {line, column, x, y} = before;
-
-    if (position.line < line || (position.line === line && position.column < column))
-      throw 'Inconsistent';
-
-    let lineStartOffset = 0;
-    while (line < position.line) {
-      let lineBreakOffset = s.indexOf('\n', lineStartOffset);
-      if (lineBreakOffset === -1)
-        throw 'Inconsistent';
-      lineStartOffset = lineBreakOffset + 1;
-      line++;
-      y += this.defaultHeight;
-      column = 0;
-      x = 0;
-    }
-
-    let lineEndOffset = s.indexOf('\n', lineStartOffset);
-    if (lineEndOffset === -1)
-      lineEndOffset = s.length;
-
-    let {offset, columns, width} = this._locateByColumn(s, lineStartOffset, lineEndOffset, position.column - column);
-    if (offset === -1) {
-      if (strict)
-        throw 'Position is out of bounds';
-      offset = lineEndOffset;
-    }
-    return {
-      offset: before.offset + offset,
-      line: line,
-      column: column + columns,
-      x: x + width,
-      y: y
-    };
   }
 
   /**
@@ -218,7 +149,7 @@ export class Metrics {
    * @return {!Location}
    */
   locateByPoint(s, before, point, roundMode, strict) {
-    let {line, column, x, y} = before;
+    let {x, y} = before;
 
     if (point.y < y || (point.y < y + this.defaultHeight && point.x < x))
       throw 'Inconsistent';
@@ -228,9 +159,7 @@ export class Metrics {
       let lineBreakOffset = s.indexOf('\n', lineStartOffset);
       if (lineBreakOffset === -1)
         throw 'Inconsistent';
-      line++;
       y += this.defaultHeight;
-      column = 0;
       x = 0;
       lineStartOffset = lineBreakOffset + 1;
     }
@@ -239,7 +168,7 @@ export class Metrics {
     if (lineEndOffset === -1)
       lineEndOffset = s.length;
 
-    let {offset, columns, width} = this._locateByWidth(s, lineStartOffset, lineEndOffset, point.x - x, roundMode);
+    let {offset, width} = this._locateByWidth(s, lineStartOffset, lineEndOffset, point.x - x, roundMode);
     if (offset === -1) {
       if (strict)
         throw 'Point is out of bounds';
@@ -247,8 +176,6 @@ export class Metrics {
     }
     return {
       offset: before.offset + offset,
-      line: line,
-      column: column + columns,
       x: x + width,
       y: y
     };
@@ -265,7 +192,6 @@ export class Metrics {
    * @param {string} s
    * @param {!Location} before
    * @param {number} offset
-   * @param {!Measurer} measurer
    * @param {boolean=} strict
    * @return {!Location}
    */
@@ -281,27 +207,21 @@ export class Metrics {
         throw 'Inconsistent';
     }
 
-    let {line, column, x, y} = before;
+    let {x, y} = before;
     offset -= before.offset;
 
     let lineStartOffset = 0;
     let lineBreakOffset = s.indexOf('\n', lineStartOffset);
     while (lineBreakOffset !== -1 && lineBreakOffset < offset) {
-      line++;
       y += this.defaultHeight;
-      column = 0;
       x = 0;
       lineStartOffset = lineBreakOffset + 1;
       lineBreakOffset = s.indexOf('\n', lineStartOffset);
     }
 
-    let {width, columns} = this._measureString(s, lineStartOffset, offset);
-    if (!width)
-      width = columns * this.defaultWidth;
+    let width = this._measureString(s, lineStartOffset, offset);
     return {
       offset: offset + before.offset,
-      line: line,
-      column: column + columns,
       x: x + width,
       y: y
     };
@@ -358,6 +278,25 @@ export class Metrics {
   }
 
   /**
+   * Combines two additive text metrics in the left->right order.
+   *
+   * @param {!TextMetrics} left
+   * @param {!TextMetrics} right
+   * @return {!TextMetrics}
+   */
+  static combine(left, right) {
+    let result = {
+      longestWidth: Math.max(Math.max(left.longestWidth, left.lastWidth + right.firstWidth), right.longestWidth),
+      firstWidth: left.firstWidth + (left.lineBreaks ? 0 : right.firstWidth),
+      lastWidth: right.lastWidth + (right.lineBreaks ? 0 : left.lastWidth),
+      length: left.length + right.length
+    }
+    if (left.lineBreaks || right.lineBreaks)
+      result.lineBreaks = (left.lineBreaks || 0) + (right.lineBreaks || 0);
+    return result;
+  }
+
+  /**
    * Returns the width of a single code point from the Unicode Basic Multilingual Plane.
    * This method does not return zero even for default width.
    * Note that |codePoint| should always be less than 0x10000.
@@ -366,11 +305,8 @@ export class Metrics {
    * @return {number}
    */
   measureBMPCodePoint(codePoint) {
-    if (this._bmpDefault[codePoint] === 2) {
-      let width = this._measureBMP(String.fromCharCode(codePoint));
-      this._bmp[codePoint] = width;
-      this._bmpDefault[codePoint] = width === this.defaultWidth ? 1 : 0;
-    }
+    if (this._bmp[codePoint] === -1)
+      this._bmp[codePoint] = this._measureBMP(String.fromCharCode(codePoint));
     return this._bmp[codePoint];
   }
 
@@ -389,29 +325,21 @@ export class Metrics {
   }
 
   /**
-   * Returns the total width of a substring and the number of columns (code points) inside.
-   * It should be guaranteed that string does not contain line breaks.
-   *
-   * Returns zero instead of width when it is equal to |defaultWidth * columns|
-   * to save some memory and computation.
-   * Does not ever return zero if the substring contains any code points
-   * from Supplementary Planes.
+   * Returns the total width of a substring, which must not contain line breaks.
    *
    * @param {string} s
    * @param {number} from
    * @param {number} to
-   * @return {!{columns: number, width: number}}
+   * @return {number}
    */
   _measureString(s, from, to) {
     if (from === to)
-      return {width: 0, columns: 0};
+      return 0;
 
     if (this._defaultRegex && this._defaultRegex.test(s))
-      return {width: 0, columns: to - from};
+      return (to - from) * this.defaultWidth;
 
-    let defaults = 0;
     let result = 0;
-    let columns = 0;
     for (let i = from; i < to; ) {
       let charCode = s.charCodeAt(i);
       if (charCode === Metrics._lineBreakCharCode)
@@ -422,87 +350,22 @@ export class Metrics {
           this._supplementary[codePoint] = this._measureSupplementary(s.substring(i, i + 2));
         result += this._supplementary[codePoint];
         i += 2;
-        columns++;
       } else {
-        if (this._bmpDefault[charCode] === 2) {
-          let width = this._measureBMP(s[i]);
-          this._bmp[charCode] = width;
-          this._bmpDefault[charCode] = width === this.defaultWidth ? 1 : 0;
-        }
-        if (this._bmpDefault[charCode] === 1)
-          defaults++;
-        else
-          result += this._bmp[charCode];
+        if (this._bmp[charCode] === -1)
+          this._bmp[charCode] = this._measureBMP(s[i]);
+        result += this._bmp[charCode];
         i++;
-        columns++;
       }
     }
-    let width = defaults === to - from ? 0 : result + defaults * this.defaultWidth;
-    return {width, columns};
-  }
-
-  /**
-   * Returns measurements for a particular column (code point) in a given substring.
-   *
-   * Returned |offset| does belong to [from, to], and |column| and |width| measure the
-   * [from, offset] substring.
-   * If there is not enough columns in the substring, returns |offset === -1| instead,
-   * and measures [from, to] into |column| and |width|.
-   *
-   * Does not return zero width even if it is default.
-   *
-   * @param {string} s
-   * @param {number} from
-   * @param {number} to
-   * @param {number} column
-   * @return {!{offset: number, columns: number, width: number}}
-   */
-  _locateByColumn(s, from, to, column) {
-    if (!column)
-      return {offset: from, columns: column, width: 0};
-
-    if (this._defaultRegex && this._defaultRegex.test(s)) {
-      if (column > to - from)
-        return {offset: -1, columns: to - from, width: (to - from) * this.defaultWidth};
-      return {offset: from + column, columns: column, width: column * this.defaultWidth};
-    }
-
-    let columns = 0;
-    let width = 0;
-    for (let offset = from; offset < to; ) {
-      let charCode = s.charCodeAt(offset);
-      if (charCode >= 0xD800 && charCode <= 0xDBFF && offset + 1 < to) {
-        let codePoint = s.codePointAt(offset);
-        if (this._supplementary[codePoint] === undefined)
-          this._supplementary[codePoint] = this._measureSupplementary(s.substring(offset, offset + 2));
-        width += this._supplementary[codePoint];
-        columns++;
-        offset += 2;
-      } else {
-        if (this._bmpDefault[charCode] === 2) {
-          let charCodeWidth = this._measureBMP(s[offset]);
-          this._bmp[charCode] = charCodeWidth;
-          this._bmpDefault[charCode] = charCodeWidth === this.defaultWidth ? 1 : 0;
-        }
-        width += this._bmp[charCode];
-        columns++;
-        offset++;
-      }
-      if (columns === column)
-        return {offset, columns, width};
-    }
-    return {offset: -1, columns, width};
+    return result;
   }
 
   /**
    * Returns measurements for a particular code point at given width in a given substring.
    *
-   * Returned |offset| does belong to [from, to], and |column| and |width| measure the
-   * [from, offset] substring.
+   * Returned |offset| does belong to [from, to], and measures the [from, offset] substring.
    * If the substrig is not wide enough, returns |offset === -1| instead,
-   * and measures [from, to] into |column| and |width|.
-   *
-   * Does not return zero width even if it is default.
+   * and measures width of [from, to].
    *
    * When the width does not point exaclty between two code points, |roundMode| controls
    * which code point to snap to:
@@ -516,26 +379,25 @@ export class Metrics {
    * @param {number} to
    * @param {number} width
    * @param {!RoundMode} roundMode
-   * @return {!{offset: number, columns: number, width: number}}
+   * @return {!{offset: number, width: number}}
    */
   _locateByWidth(s, from, to, width, roundMode) {
     if (!width)
-      return {offset: from, columns: 0, width: 0};
+      return {offset: from, width: 0};
 
     if (this._defaultRegex && this._defaultRegex.test(s)) {
       if (width > (to - from) * this.defaultWidth)
-        return {offset: -1, columns: to - from, width: (to - from) * this.defaultWidth};
+        return {offset: -1, width: (to - from) * this.defaultWidth};
       let offset = Math.floor(width / this.defaultWidth);
       let left = offset * this.defaultWidth;
       if (left === width || roundMode === RoundMode.Floor)
-        return {offset: from + offset, columns: offset, width: left};
+        return {offset: from + offset, width: left};
       let right = left + this.defaultWidth;
       if (roundMode === RoundMode.Ceil || width - left > right - width)
-        return {offset: from + offset + 1, columns: offset + 1, width: right};
-      return {offset: from + offset, columns: offset, width: left};
+        return {offset: from + offset + 1, width: right};
+      return {offset: from + offset, width: left};
     }
 
-    let columns = 0;
     let w = 0;
     for (let offset = from; offset < to; ) {
       let charCode = s.charCodeAt(offset);
@@ -548,31 +410,27 @@ export class Metrics {
         nextW = w + this._supplementary[codePoint];
         nextOffset = offset + 2;
       } else {
-        if (this._bmpDefault[charCode] === 2) {
-          let charCodeWidth = this._measureBMP(s[offset]);
-          this._bmp[charCode] = charCodeWidth;
-          this._bmpDefault[charCode] = charCodeWidth === this.defaultWidth ? 1 : 0;
-        }
+        if (this._bmp[charCode] === -1)
+          this._bmp[charCode] = this._measureBMP(s[offset]);
         nextW = w + this._bmp[charCode];
         nextOffset = offset + 1;
       }
 
       if (nextW > width) {
         if (w === width || roundMode === RoundMode.Floor)
-          return {offset: offset, columns: columns, width: w};
+          return {offset: offset, width: w};
         if (roundMode === RoundMode.Ceil || width - w > nextW - width)
-          return {offset: nextOffset, columns: columns + 1, width: nextW};
-        return {offset: offset, columns: columns, width: w};
+          return {offset: nextOffset, width: nextW};
+        return {offset: offset, width: w};
       }
 
-      columns++;
       offset = nextOffset;
       w = nextW;
     }
 
     if (w < width)
-      return {offset: -1, columns: columns, width: w};
-    return {offset: to, columns: columns, width: w};
+      return {offset: -1, width: w};
+    return {offset: to, width: w};
   }
 };
 
@@ -580,5 +438,11 @@ Metrics.bmpRegex = /^[\u{0000}-\u{d7ff}]*$/u;
 Metrics.asciiRegex = /^[\u{0020}-\u{007e}]*$/u;
 Metrics.whitespaceRegex = /\s/u;
 Metrics.anythingRegex = /.*/u;
+
+/** @type {!TextMetrics} */
+Metrics.zero = { length: 0, firstWidth: 0, lastWidth: 0, longestWidth: 0 };
+
+/** @type {!Location} */
+Metrics.origin = { offset: 0, x: 0, y: 0 };
 
 Metrics._lineBreakCharCode = '\n'.charCodeAt(0);

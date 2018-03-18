@@ -27,12 +27,7 @@ function createTestMeasurer() {
 }
 
 function createTestMetrics() {
-  let metrics = new Metrics(createTestMeasurer());
-  metrics.__measureString = (s, from, to) => {
-    let result = metrics._measureString(s, from, to);
-    return result.width || result.columns * metrics.defaultWidth;
-  };
-  return metrics;
+  return new Metrics(createTestMeasurer());
 }
 
 function createDefaultMetrics() {
@@ -50,7 +45,6 @@ describe('Document', () => {
     let chunks = ['ab\ncd', 'def', '\n', '', 'a\n\n\nbbbc', 'xy', 'za\nh', 'pp', '\n', ''];
     let content = chunks.join('');
     let document = new Document(() => {});
-    document.setMetrics(createDefaultMetrics());
     Document.test.setChunks(document, chunks);
     expect(document.lineCount()).toBe(8);
     expect(document.length()).toBe(content.length);
@@ -61,32 +55,28 @@ describe('Document', () => {
   });
 
   it('Document text API all chunk sizes', () => {
-    let testMetrics = createTestMetrics();
     let random = Random(143);
     let lineCount = 200;
     let chunks = [];
-    let longest = 0;
     let locationQueries = [];
     let offset = 0;
     for (let i = 0; i < lineCount; i++) {
       let s = 'abcdefghijklmnopqrstuvwxyz';
       let length = 1 + (random() % (s.length - 1));
       let chunk = s.substring(0, length);
-      let width = testMetrics.__measureString(chunk, 0, length);
-      longest = Math.max(longest, width);
       chunks.push(chunk + '\n');
-      locationQueries.push({line: i, column: 0, offset: offset, x: 0, y: i * 3, rounded: true});
-      locationQueries.push({line: i, column: 1, offset: offset + 1, x: 1, y: i * 3});
-      locationQueries.push({line: i, column: length, offset: offset + length, x: width, y: i * 3});
-      locationQueries.push({line: i, column: length, offset: offset + length, x: width, y: i * 3, nonStrict: {column: length + 1, x: width + 3}});
-      locationQueries.push({line: i, column: length, offset: offset + length, x: width, y: i * 3, nonStrict: {column: length + 100, x: width + 100}});
+      locationQueries.push({line: i, column: 0, offset: offset});
+      locationQueries.push({line: i, column: 1, offset: offset + 1});
+      locationQueries.push({line: i, column: length, offset: offset + length});
+      locationQueries.push({line: i, column: length, offset: offset + length, nonStrict: {column: length + 1}});
+      locationQueries.push({line: i, column: length, offset: offset + length, nonStrict: {column: length + 100}});
       let column = random() % length;
-      locationQueries.push({line: i, column: column, offset: offset + column, x: testMetrics.__measureString(chunk, 0, column), y: i * 3});
+      locationQueries.push({line: i, column: column, offset: offset + column});
       offset += length + 1;
     }
     let content = chunks.join('');
-    locationQueries.push({line: lineCount, column: 0, offset: content.length, x: 0, y: lineCount * 3});
-    locationQueries.push({line: lineCount, column: 0, offset: content.length, x: 0, y: lineCount * 3, nonStrict: {column: 3, x: 15}});
+    locationQueries.push({line: lineCount, column: 0, offset: content.length});
+    locationQueries.push({line: lineCount, column: 0, offset: content.length, nonStrict: {column: 3}});
 
     let contentQueries = [];
     for (let i = 0; i < 1000; i++) {
@@ -97,36 +87,21 @@ describe('Document', () => {
 
     for (let chunkSize = 1; chunkSize <= 100; chunkSize++) {
       let document = new Document(() => {});
-      document.setMetrics(testMetrics);
       Document.test.setContent(document, content, chunkSize);
       expect(document.lineCount()).toBe(lineCount + 1);
-      //expect(viewport.contentWidth()).toBe(longest);
-      //expect(viewport.contentHeight()).toBe((lineCount + 1) * 3);
       expect(document.length()).toBe(content.length);
       for (let {from, to} of contentQueries)
         expect(document.content(from, to)).toBe(content.substring(from, to));
-      expect(document.offsetToPosition(0)).toEqual({line: 0, column: 0, offset: 0, x: 0, y: 0});
-      expect(document.offsetToPosition(content.length)).toEqual({line: lineCount, column: 0, offset: content.length, x: 0, y: lineCount * 3});
+      expect(document.offsetToPosition(0)).toEqual({line: 0, column: 0});
+      expect(document.offsetToPosition(content.length)).toEqual({line: lineCount, column: 0});
       expect(document.offsetToPosition(content.length + 1)).toBe(null);
-      for (let {line, column, offset, x, y, nonStrict, rounded} of locationQueries) {
+      for (let {line, column, offset, nonStrict} of locationQueries) {
         if (nonStrict) {
           expect(document.positionToOffset({line, column: nonStrict.column})).toBe(offset);
-          // expect(viewport.pointToOffset({x: nonStrict.x, y}, RoundMode.Floor)).toBe(offset);
         } else {
-          expect(document.offsetToPosition(offset)).toEqual({line, column, offset, x, y});
+          expect(document.offsetToPosition(offset)).toEqual({line, column});
           expect(document.positionToOffset({line, column})).toBe(offset);
           expect(document.positionToOffset({line, column}, true)).toBe(offset);
-          // expect(viewport.pointToOffset({x, y}, RoundMode.Floor)).toBe(offset);
-          // expect(viewport.pointToOffset({x: x + 0.5, y: y + 0.5}, RoundMode.Floor, false /* strict */)).toBe(offset);
-          // expect(viewport.pointToOffset({x, y}, RoundMode.Floor, true /* strict */)).toBe(offset);
-          // if (rounded) {
-          //   expect(viewport.pointToOffset({x: x + 0.4, y}, RoundMode.Round, true /* strict */)).toBe(offset);
-          //   expect(viewport.pointToOffset({x: x + 0.5, y}, RoundMode.Round, true /* strict */)).toBe(offset);
-          //   expect(viewport.pointToOffset({x: x + 0.6, y}, RoundMode.Round, true /* strict */)).toBe(offset + 1);
-          //   expect(viewport.pointToOffset({x, y}, RoundMode.Ceil, true /* strict */)).toBe(offset);
-          //   expect(viewport.pointToOffset({x: x + 0.5, y}, RoundMode.Ceil, true /* strict */)).toBe(offset + 1);
-          //   expect(viewport.pointToOffset({x: x + 1, y}, RoundMode.Ceil, true /* strict */)).toBe(offset + 1);
-          // }
         }
       }
     }
@@ -157,7 +132,6 @@ describe('Document', () => {
     for (let chunkSize = 1; chunkSize <= 100; chunkSize++) {
       content = chunks.join('');
       let document = new Document(() => {});
-      document.setMetrics(createDefaultMetrics());
       Document.test.setContent(document, content, chunkSize);
       for (let {from, to, insertion} of editQueries) {
         let removed = document.replace(from, to, insertion);
@@ -171,39 +145,11 @@ describe('Document', () => {
       }
     }
   });
-
-  it('Document.rangeMetrics all chunk sizes', () => {
-    let defaultMetrics = createDefaultMetrics();
-    let random = Random(153);
-    let lineCount = 20;
-    let chunks = [];
-    for (let i = 0; i < lineCount; i++) {
-      let s = 'abcdefghuijklmnopqrstuvwxyz';
-      let length = 1 + (random() % (s.length - 1));
-      chunks.push(s.substring(0, length) + '\n');
-    }
-    let content = chunks.join('');
-
-    for (let chunkSize = 1; chunkSize <= 50; chunkSize += 7) {
-      content = chunks.join('');
-      let document = new Document(() => {});
-      document.setMetrics(defaultMetrics);
-      Document.test.setContent(document, content, chunkSize);
-      for (let from = 0; from <= content.length; from++) {
-        for (let to = from; to <= content.length; to++) {
-          let got = document.rangeMetrics(from, to);
-          let expected = defaultMetrics.forString(content.substring(from, to));
-          expect(got).toEqual(expected);
-        }
-      }
-    }
-  });
 });
 
 describe('TextIterator', () => {
   it('TextIterator basics', () => {
     let document = new Document(() => {});
-    document.setMetrics(createDefaultMetrics());
     document.reset('world');
     let iterator = document.iterator(0);
     expect(iterator.current).toBe('w');
@@ -218,7 +164,6 @@ describe('TextIterator', () => {
 
   it('TextIterator.advance', () => {
     let document = new Document(() => {});
-    document.setMetrics(createDefaultMetrics());
     document.reset('world');
     let iterator = document.iterator(0);
     iterator.advance(4);
@@ -229,7 +174,6 @@ describe('TextIterator', () => {
 
   it('TextIterator.read', () => {
     let document = new Document(() => {});
-    document.setMetrics(createDefaultMetrics());
     document.reset('world');
     let iterator = document.iterator(0);
     expect(iterator.read(4)).toBe('worl');
@@ -240,7 +184,6 @@ describe('TextIterator', () => {
 
   it('TextIterator.charAt', () => {
     let document = new Document(() => {});
-    document.setMetrics(createDefaultMetrics());
     document.reset('world');
     let iterator = document.iterator(2);
     expect(iterator.charAt(0)).toBe('r');
@@ -265,7 +208,6 @@ describe('TextIterator', () => {
 
   it('TextIterator.find successful', () => {
     let document = new Document(() => {});
-    document.setMetrics(createDefaultMetrics());
     document.reset('hello, world');
     let iterator = document.iterator(0);
     expect(iterator.find('world')).toBe(true);
@@ -275,7 +217,6 @@ describe('TextIterator', () => {
 
   it('TextIterator.find manual chunks 1', () => {
     let document = new Document(() => {});
-    document.setMetrics(createDefaultMetrics());
     Document.test.setChunks(document, ['hello, w', 'o', 'r', 'ld!!!']);
     let iterator = document.iterator(0);
     expect(iterator.find('world')).toBe(true);
@@ -285,7 +226,6 @@ describe('TextIterator', () => {
 
   it('TextIterator.find manual chunks 2', () => {
     let document = new Document(() => {});
-    document.setMetrics(createDefaultMetrics());
     Document.test.setChunks(document, ['hello', ',', ' ', 'w', 'orl', 'd!!!']);
     let iterator = document.iterator(0);
     expect(iterator.find('world')).toBe(true);
@@ -295,7 +235,6 @@ describe('TextIterator', () => {
 
   it('TextIterator.find manual chunks 3', () => {
     let document = new Document(() => {});
-    document.setMetrics(createDefaultMetrics());
     Document.test.setChunks(document, ['hello, w', 'or', 'ld', '!!!']);
     let iterator = document.iterator(0);
     expect(iterator.find('world')).toBe(true);
@@ -305,7 +244,6 @@ describe('TextIterator', () => {
 
   it('TextIterator.find unsuccessful', () => {
     let document = new Document(() => {});
-    document.setMetrics(createDefaultMetrics());
     document.reset('hello, world');
     let iterator = document.iterator(0);
     expect(iterator.find('eee')).toBe(false);
@@ -320,7 +258,6 @@ describe('TextIterator', () => {
 
   it('TextIteratof.find unsuccessful across chunks', () => {
     let document = new Document(() => {});
-    document.setMetrics(createDefaultMetrics());
     Document.test.setContent(document, '/*abcdefghijklmonpqrsuvwxyz0123456789@!*/', 5);
     let iterator = document.iterator(0, 0, 8);
     expect(iterator.find('*/')).toBe(false);
@@ -335,7 +272,6 @@ describe('TextIterator', () => {
 
   it('TextIterator constraints', () => {
     let document = new Document(() => {});
-    document.setMetrics(createDefaultMetrics());
     document.reset('hello');
     let iterator = document.iterator(0, 0, 2);
     expect(iterator.offset).toBe(0);
@@ -372,7 +308,6 @@ describe('TextIterator', () => {
 
   it('TextIterator out-of-bounds API', () => {
     let document = new Document(() => {});
-    document.setMetrics(createDefaultMetrics());
     document.reset('abcdefg');
     let iterator = document.iterator(4, 2, 4);
     expect(iterator.offset).toBe(4);
@@ -384,7 +319,6 @@ describe('TextIterator', () => {
 
   it('TextIterator.setConstraints', () => {
     let document = new Document(() => {});
-    document.setMetrics(createDefaultMetrics());
     document.reset('012');
     let iterator = document.iterator(0, 0, 1);
     expect(iterator.outOfBounds()).toBe(false);
@@ -430,7 +364,6 @@ describe('TextIterator', () => {
 
     for (let chunkSize = 1; chunkSize <= 101; chunkSize += 10) {
       let document = new Document(() => {});
-      document.setMetrics(createDefaultMetrics());
       Document.test.setContent(document, content, chunkSize);
       for (let from = 0; from <= content.length; from++) {
         let iterator = document.iterator(from, from, content.length);
@@ -472,7 +405,7 @@ describe('TextIterator', () => {
   });
 });
 
-describe('Viewport', () => {
+describe('Viewport.Scrollbars', () => {
   beforeEach(state => {
     let document = new Document(() => {});
     let measurer = {
@@ -488,36 +421,103 @@ describe('Viewport', () => {
     state.viewport.vScrollbar.setSize(100);
   });
 
-  describe('Viewport.Scrollbars', () => {
-    it('should update thumb', ({viewport}) => {
-      expect(viewport.vScrollbar.thumbOffset()).toBe(0);
-      expect(viewport.vScrollbar.thumbSize()).toBe(100);
+  it('should update thumb', ({viewport}) => {
+    expect(viewport.vScrollbar.thumbOffset()).toBe(0);
+    expect(viewport.vScrollbar.thumbSize()).toBe(100);
 
-      viewport.setPadding({ top: 100 });
-      expect(viewport.vScrollbar.thumbOffset()).toBe(0);
-      expect(viewport.vScrollbar.thumbSize()).toBe(50);
-      expect(viewport._maxScrollTop).toBe(100);
+    viewport.setPadding({ top: 100 });
+    expect(viewport.vScrollbar.thumbOffset()).toBe(0);
+    expect(viewport.vScrollbar.thumbSize()).toBe(50);
+    expect(viewport._maxScrollTop).toBe(100);
 
-      viewport.advanceScroll(50, 50);
-      expect(viewport._scrollLeft).toBe(0);
-      expect(viewport.vScrollbar.thumbOffset()).toBe(25);
-      expect(viewport.vScrollbar.thumbSize()).toBe(50);
-    });
-    it('Scrollbar coordinate conversion', ({viewport}) => {
-      let scrollbar = viewport.vScrollbar;
+    viewport.advanceScroll(50, 50);
+    expect(viewport._scrollLeft).toBe(0);
+    expect(viewport.vScrollbar.thumbOffset()).toBe(25);
+    expect(viewport.vScrollbar.thumbSize()).toBe(50);
+  });
 
-      viewport.setPadding({ top: 100 });
-      expect(scrollbar.thumbOffset()).toBe(0);
-      expect(scrollbar.thumbSize()).toBe(50);
-      expect(scrollbar.contentOffsetToScrollbarOffset(50)).toBe(25);
-      expect(scrollbar.scrollbarOffsetToContentOffset(25)).toBe(50);
+  it('Scrollbar coordinate conversion', ({viewport}) => {
+    let scrollbar = viewport.vScrollbar;
 
-      scrollbar.setSize(200);
-      expect(scrollbar.thumbOffset()).toBe(0);
-      expect(scrollbar.thumbSize()).toBe(100);
-      expect(scrollbar.contentOffsetToScrollbarOffset(50)).toBe(50);
-      expect(scrollbar.scrollbarOffsetToContentOffset(50)).toBe(50);
-    });
+    viewport.setPadding({ top: 100 });
+    expect(scrollbar.thumbOffset()).toBe(0);
+    expect(scrollbar.thumbSize()).toBe(50);
+    expect(scrollbar.contentOffsetToScrollbarOffset(50)).toBe(25);
+    expect(scrollbar.scrollbarOffsetToContentOffset(25)).toBe(50);
+
+    scrollbar.setSize(200);
+    expect(scrollbar.thumbOffset()).toBe(0);
+    expect(scrollbar.thumbSize()).toBe(100);
+    expect(scrollbar.contentOffsetToScrollbarOffset(50)).toBe(50);
+    expect(scrollbar.scrollbarOffsetToContentOffset(50)).toBe(50);
+  });
+});
+
+describe('Viewport', () => {
+  it('Viewport points API all chunk sizes', () => {
+    let testMetrics = createTestMetrics();
+    let random = Random(143);
+    let lineCount = 200;
+    let chunks = [];
+    let longest = 0;
+    let locationQueries = [];
+    let offset = 0;
+    for (let i = 0; i < lineCount; i++) {
+      let s = 'abcdefghijklmnopqrstuvwxyz';
+      let length = 1 + (random() % (s.length - 1));
+      let chunk = s.substring(0, length);
+      let width = testMetrics._measureString(chunk, 0, length);
+      longest = Math.max(longest, width);
+      chunks.push(chunk + '\n');
+      locationQueries.push({offset: offset, x: 0, y: i * 3, rounded: true});
+      locationQueries.push({offset: offset + 1, x: 1, y: i * 3});
+      locationQueries.push({offset: offset + length, x: width, y: i * 3});
+      locationQueries.push({offset: offset + length, x: width, y: i * 3, nonStrict: {x: width + 3}});
+      locationQueries.push({offset: offset + length, x: width, y: i * 3, nonStrict: {x: width + 100}});
+      let column = random() % length;
+      locationQueries.push({offset: offset + column, x: testMetrics._measureString(chunk, 0, column), y: i * 3});
+      offset += length + 1;
+    }
+    let content = chunks.join('');
+    locationQueries.push({offset: content.length, x: 0, y: lineCount * 3});
+    locationQueries.push({offset: content.length, x: 0, y: lineCount * 3, nonStrict: {x: 15}});
+
+    let contentQueries = [];
+    for (let i = 0; i < 1000; i++) {
+      let from = random() % content.length;
+      let to = from + (random() % (content.length - from));
+      contentQueries.push({from, to});
+    }
+
+    for (let chunkSize = 1; chunkSize <= 100; chunkSize++) {
+      let document = new Document(() => {});
+      document.reset(content);
+      let viewport = new Viewport(document, createTestMeasurer());
+      Viewport.test.rechunk(viewport, chunkSize);
+      expect(viewport.contentWidth()).toBe(longest);
+      expect(viewport.contentHeight()).toBe((lineCount + 1) * 3);
+      expect(viewport.offsetToPoint(0)).toEqual({x: 0, y: 0});
+      expect(viewport.offsetToPoint(content.length)).toEqual({x: 0, y: lineCount * 3});
+      expect(viewport.offsetToPoint(content.length + 1)).toBe(null);
+      for (let {offset, x, y, nonStrict, rounded} of locationQueries) {
+        if (nonStrict) {
+          expect(viewport.pointToOffset({x: nonStrict.x, y}, RoundMode.Floor)).toBe(offset);
+        } else {
+          expect(viewport.offsetToPoint(offset)).toEqual({x, y});
+          expect(viewport.pointToOffset({x, y}, RoundMode.Floor)).toBe(offset);
+          expect(viewport.pointToOffset({x: x + 0.5, y: y + 0.5}, RoundMode.Floor, false /* strict */)).toBe(offset);
+          expect(viewport.pointToOffset({x, y}, RoundMode.Floor, true /* strict */)).toBe(offset);
+          if (rounded) {
+            expect(viewport.pointToOffset({x: x + 0.4, y}, RoundMode.Round, true /* strict */)).toBe(offset);
+            expect(viewport.pointToOffset({x: x + 0.5, y}, RoundMode.Round, true /* strict */)).toBe(offset);
+            expect(viewport.pointToOffset({x: x + 0.6, y}, RoundMode.Round, true /* strict */)).toBe(offset + 1);
+            expect(viewport.pointToOffset({x, y}, RoundMode.Ceil, true /* strict */)).toBe(offset);
+            expect(viewport.pointToOffset({x: x + 0.5, y}, RoundMode.Ceil, true /* strict */)).toBe(offset + 1);
+            expect(viewport.pointToOffset({x: x + 1, y}, RoundMode.Ceil, true /* strict */)).toBe(offset + 1);
+          }
+        }
+      }
+    }
   });
 });
 
@@ -782,7 +782,7 @@ describe('Metrics', () => {
     expect(Metrics.isValidOffset('𐀀𐀀', 5)).toBe(true);
   });
 
-  it('Metrics', () => {
+  it('Metrics internals', () => {
     let metrics = createTestMetrics();
 
     expect(metrics.measureBMPCodePoint('a'.charCodeAt(0))).toBe(1);
@@ -795,172 +795,150 @@ describe('Metrics', () => {
     expect(metrics.measureSupplementaryCodePoint('𐀀'.codePointAt(0))).toBe(100);
     expect(metrics.measureSupplementaryCodePoint('😀'.codePointAt(0))).toBe(100);
 
-    expect(metrics._measureString('abc', 1, 2)).toEqual({columns: 1, width: 2});
-    expect(metrics._measureString('abc', 0, 3)).toEqual({columns: 3, width: 6});
-    expect(metrics._measureString('abc', 2, 2)).toEqual({columns: 0, width: 0});
-    expect(metrics._measureString('abc𐀀𐀀', 2, 5)).toEqual({columns: 2, width: 103});
-    expect(metrics._measureString('abc𐀀𐀀', 5, 7)).toEqual({columns: 1, width: 100});
-    expect(metrics._measureString('abc𐀀𐀀', 0, 7)).toEqual({columns: 5, width: 206});
-    expect(metrics._measureString('a😀b𐀀c', 1, 6)).toEqual({columns: 3, width: 202});
-    expect(metrics._measureString('😀', 0, 2)).toEqual({columns: 1, width: 100});
-    expect(metrics._measureString('😀', 1, 1)).toEqual({columns: 0, width: 0});
-    expect(metrics._measureString('😀', 0, 0)).toEqual({columns: 0, width: 0});
+    expect(metrics._measureString('abc', 1, 2)).toBe(2);
+    expect(metrics._measureString('abc', 0, 3)).toBe(6);
+    expect(metrics._measureString('abc', 2, 2)).toBe(0);
+    expect(metrics._measureString('abc𐀀𐀀', 2, 5)).toBe(103);
+    expect(metrics._measureString('abc𐀀𐀀', 5, 7)).toBe(100);
+    expect(metrics._measureString('abc𐀀𐀀', 0, 7)).toBe(206);
+    expect(metrics._measureString('a😀b𐀀c', 1, 6)).toBe(202);
+    expect(metrics._measureString('😀', 0, 2)).toBe(100);
+    expect(metrics._measureString('😀', 1, 1)).toBe(0);
+    expect(metrics._measureString('😀', 0, 0)).toBe(0);
 
-    expect(metrics._locateByColumn('abc', 0, 3, 2)).toEqual({offset: 2, columns: 2, width: 3});
-    expect(metrics._locateByColumn('abc', 0, 1, 3)).toEqual({offset: -1, columns: 1, width: 1});
-    expect(metrics._locateByColumn('abc', 0, 2, 1)).toEqual({offset: 1, columns: 1, width: 1});
-    expect(metrics._locateByColumn('abc', 1, 3, 0)).toEqual({offset: 1, columns: 0, width: 0});
-    expect(metrics._locateByColumn('abc𐀀𐀀', 2, 7, 2)).toEqual({offset: 5, columns: 2, width: 103});
-    expect(metrics._locateByColumn('abc𐀀𐀀', 2, 7, 3)).toEqual({offset: 7, columns: 3, width: 203});
-    expect(metrics._locateByColumn('abc𐀀𐀀', 2, 7, 4)).toEqual({offset: -1, columns: 3, width: 203});
-    expect(metrics._locateByColumn('a😀b𐀀c', 0, 6, 2)).toEqual({offset: 3, columns: 2, width: 101});
-    expect(metrics._locateByColumn('a😀b𐀀c', 0, 6, 4)).toEqual({offset: 6, columns: 4, width: 203});
-    expect(metrics._locateByColumn('a😀b𐀀c', 0, 6, 5)).toEqual({offset: -1, columns: 4, width: 203});
-    expect(metrics._locateByColumn('', 0, 0, 0)).toEqual({offset: 0, columns: 0, width: 0});
-    expect(metrics._locateByColumn('', 0, 0, 5)).toEqual({offset: -1, columns: 0, width: 0});
-
-    expect(metrics._locateByWidth('abc', 0, 3, 3, RoundMode.Floor)).toEqual({offset: 2, columns: 2, width: 3});
-    expect(metrics._locateByWidth('abc', 0, 3, 3, RoundMode.Round)).toEqual({offset: 2, columns: 2, width: 3});
-    expect(metrics._locateByWidth('abc', 0, 3, 3, RoundMode.Ceil)).toEqual({offset: 2, columns: 2, width: 3});
-    expect(metrics._locateByWidth('abc', 0, 3, 4.5, RoundMode.Floor)).toEqual({offset: 2, columns: 2, width: 3});
-    expect(metrics._locateByWidth('abc', 0, 3, 4.5, RoundMode.Round)).toEqual({offset: 2, columns: 2, width: 3});
-    expect(metrics._locateByWidth('abc', 0, 3, 4.5, RoundMode.Ceil)).toEqual({offset: 3, columns: 3, width: 6});
-    expect(metrics._locateByWidth('abc', 0, 3, 4.6, RoundMode.Floor)).toEqual({offset: 2, columns: 2, width: 3});
-    expect(metrics._locateByWidth('abc', 0, 3, 4.6, RoundMode.Round)).toEqual({offset: 3, columns: 3, width: 6});
-    expect(metrics._locateByWidth('abc', 0, 3, 4.6, RoundMode.Ceil)).toEqual({offset: 3, columns: 3, width: 6});
-    expect(metrics._locateByWidth('abc𐀀𐀀', 2, 7, 103, RoundMode.Floor)).toEqual({offset: 5, columns: 2, width: 103});
-    expect(metrics._locateByWidth('abc𐀀𐀀', 2, 7, 103, RoundMode.Round)).toEqual({offset: 5, columns: 2, width: 103});
-    expect(metrics._locateByWidth('abc𐀀𐀀', 2, 7, 103, RoundMode.Ceil)).toEqual({offset: 5, columns: 2, width: 103});
-    expect(metrics._locateByWidth('abc𐀀𐀀', 2, 7, 153, RoundMode.Floor)).toEqual({offset: 5, columns: 2, width: 103});
-    expect(metrics._locateByWidth('abc𐀀𐀀', 2, 7, 153, RoundMode.Round)).toEqual({offset: 5, columns: 2, width: 103});
-    expect(metrics._locateByWidth('abc𐀀𐀀', 2, 7, 153, RoundMode.Ceil)).toEqual({offset: 7, columns: 3, width: 203});
-    expect(metrics._locateByWidth('abc𐀀𐀀', 2, 7, 154, RoundMode.Floor)).toEqual({offset: 5, columns: 2, width: 103});
-    expect(metrics._locateByWidth('abc𐀀𐀀', 2, 7, 154, RoundMode.Round)).toEqual({offset: 7, columns: 3, width: 203});
-    expect(metrics._locateByWidth('abc𐀀𐀀', 2, 7, 154, RoundMode.Ceil)).toEqual({offset: 7, columns: 3, width: 203});
-    expect(metrics._locateByWidth('a😀b𐀀c', 0, 6, 204, RoundMode.Round)).toEqual({offset: -1, columns: 4, width: 203});
-    expect(metrics._locateByWidth('a😀b𐀀c', 0, 6, 203, RoundMode.Round)).toEqual({offset: 6, columns: 4, width: 203});
-    expect(metrics._locateByColumn('', 0, 0, 0, RoundMode.Ceil)).toEqual({offset: 0, columns: 0, width: 0});
-    expect(metrics._locateByColumn('', 0, 0, 5, RoundMode.Floor)).toEqual({offset: -1, columns: 0, width: 0});
+    expect(metrics._locateByWidth('abc', 0, 3, 3, RoundMode.Floor)).toEqual({offset: 2, width: 3});
+    expect(metrics._locateByWidth('abc', 0, 3, 3, RoundMode.Round)).toEqual({offset: 2, width: 3});
+    expect(metrics._locateByWidth('abc', 0, 3, 3, RoundMode.Ceil)).toEqual({offset: 2, width: 3});
+    expect(metrics._locateByWidth('abc', 0, 3, 4.5, RoundMode.Floor)).toEqual({offset: 2, width: 3});
+    expect(metrics._locateByWidth('abc', 0, 3, 4.5, RoundMode.Round)).toEqual({offset: 2, width: 3});
+    expect(metrics._locateByWidth('abc', 0, 3, 4.5, RoundMode.Ceil)).toEqual({offset: 3, width: 6});
+    expect(metrics._locateByWidth('abc', 0, 3, 4.6, RoundMode.Floor)).toEqual({offset: 2, width: 3});
+    expect(metrics._locateByWidth('abc', 0, 3, 4.6, RoundMode.Round)).toEqual({offset: 3, width: 6});
+    expect(metrics._locateByWidth('abc', 0, 3, 4.6, RoundMode.Ceil)).toEqual({offset: 3, width: 6});
+    expect(metrics._locateByWidth('abc𐀀𐀀', 2, 7, 103, RoundMode.Floor)).toEqual({offset: 5, width: 103});
+    expect(metrics._locateByWidth('abc𐀀𐀀', 2, 7, 103, RoundMode.Round)).toEqual({offset: 5, width: 103});
+    expect(metrics._locateByWidth('abc𐀀𐀀', 2, 7, 103, RoundMode.Ceil)).toEqual({offset: 5, width: 103});
+    expect(metrics._locateByWidth('abc𐀀𐀀', 2, 7, 153, RoundMode.Floor)).toEqual({offset: 5, width: 103});
+    expect(metrics._locateByWidth('abc𐀀𐀀', 2, 7, 153, RoundMode.Round)).toEqual({offset: 5, width: 103});
+    expect(metrics._locateByWidth('abc𐀀𐀀', 2, 7, 153, RoundMode.Ceil)).toEqual({offset: 7, width: 203});
+    expect(metrics._locateByWidth('abc𐀀𐀀', 2, 7, 154, RoundMode.Floor)).toEqual({offset: 5, width: 103});
+    expect(metrics._locateByWidth('abc𐀀𐀀', 2, 7, 154, RoundMode.Round)).toEqual({offset: 7, width: 203});
+    expect(metrics._locateByWidth('abc𐀀𐀀', 2, 7, 154, RoundMode.Ceil)).toEqual({offset: 7, width: 203});
+    expect(metrics._locateByWidth('a😀b𐀀c', 0, 6, 204, RoundMode.Round)).toEqual({offset: -1, width: 203});
+    expect(metrics._locateByWidth('a😀b𐀀c', 0, 6, 203, RoundMode.Round)).toEqual({offset: 6, width: 203});
+    expect(metrics._locateByWidth('', 0, 0, 0, RoundMode.Ceil)).toEqual({offset: 0, width: 0});
+    expect(metrics._locateByWidth('', 0, 0, 5, RoundMode.Floor)).toEqual({offset: -1, width: 0});
 
     let defaultMetrics = createDefaultMetrics();
-    expect(defaultMetrics._locateByWidth('abc', 0, 3, 0.5, RoundMode.Floor)).toEqual({offset: 0, columns: 0, width: 0});
-    expect(defaultMetrics._locateByWidth('abc', 0, 3, 0.5, RoundMode.Round)).toEqual({offset: 0, columns: 0, width: 0});
-    expect(defaultMetrics._locateByWidth('abc', 0, 3, 0.6, RoundMode.Round)).toEqual({offset: 1, columns: 1, width: 1});
-    expect(defaultMetrics._locateByWidth('abc', 0, 3, 0.5, RoundMode.Ceil)).toEqual({offset: 1, columns: 1, width: 1});
+    expect(defaultMetrics._locateByWidth('abc', 0, 3, 0.5, RoundMode.Floor)).toEqual({offset: 0, width: 0});
+    expect(defaultMetrics._locateByWidth('abc', 0, 3, 0.5, RoundMode.Round)).toEqual({offset: 0, width: 0});
+    expect(defaultMetrics._locateByWidth('abc', 0, 3, 0.6, RoundMode.Round)).toEqual({offset: 1, width: 1});
+    expect(defaultMetrics._locateByWidth('abc', 0, 3, 0.5, RoundMode.Ceil)).toEqual({offset: 1, width: 1});
   });
 
   it('Metrics.forString', () => {
     let defaultMetrics = createDefaultMetrics();
-    expect(defaultMetrics.forString('one line')).toEqual({length: 8, firstColumns: 8, lastColumns: 8, longestColumns: 8});
-    expect(defaultMetrics.forString('\none line')).toEqual({length: 9, firstColumns: 0, lastColumns: 8, longestColumns: 8, lineBreaks: 1});
-    expect(defaultMetrics.forString('one line\n')).toEqual({length: 9, firstColumns: 8, lastColumns: 0, longestColumns: 8, lineBreaks: 1});
-    expect(defaultMetrics.forString('\none line\n')).toEqual({length: 10, firstColumns: 0, lastColumns: 0, longestColumns: 8, lineBreaks: 2});
-    expect(defaultMetrics.forString('short\nlongest\nlonger\ntiny')).toEqual({length: 25, firstColumns: 5, lastColumns: 4, longestColumns: 7, lineBreaks: 3});
+    expect(defaultMetrics.forString('one line')).toEqual({length: 8, firstWidth: 8, lastWidth: 8, longestWidth: 8});
+    expect(defaultMetrics.forString('\none line')).toEqual({length: 9, firstWidth: 0, lastWidth: 8, longestWidth: 8, lineBreaks: 1});
+    expect(defaultMetrics.forString('one line\n')).toEqual({length: 9, firstWidth: 8, lastWidth: 0, longestWidth: 8, lineBreaks: 1});
+    expect(defaultMetrics.forString('\none line\n')).toEqual({length: 10, firstWidth: 0, lastWidth: 0, longestWidth: 8, lineBreaks: 2});
+    expect(defaultMetrics.forString('short\nlongest\nlonger\ntiny')).toEqual({length: 25, firstWidth: 5, lastWidth: 4, longestWidth: 7, lineBreaks: 3});
 
     let testMetrics = createTestMetrics();
-    expect(testMetrics.forString('a')).toEqual({length: 1, firstColumns: 1, lastColumns: 1, longestColumns: 1});
-    expect(testMetrics.forString('a\nb')).toEqual({length: 3, firstColumns: 1, lastColumns: 1, longestColumns: 1, lineBreaks: 1, lastWidth: 2, longestWidth: 2});
-    expect(testMetrics.forString('b\na')).toEqual({length: 3, firstColumns: 1, lastColumns: 1, longestColumns: 1, lineBreaks: 1, firstWidth: 2, longestWidth: 2});
-    expect(testMetrics.forString('bac')).toEqual({length: 3, firstColumns: 3, lastColumns: 3, longestColumns: 3, firstWidth: 6, lastWidth: 6, longestWidth: 6});
-    expect(testMetrics.forString('b\na\nc')).toEqual({length: 5, firstColumns: 1, lastColumns: 1, longestColumns: 1, lineBreaks: 2, firstWidth: 2, lastWidth: 3, longestWidth: 3});
-    expect(testMetrics.forString('b\naaaa\nc')).toEqual({length: 8, firstColumns: 1, lastColumns: 1, longestColumns: 4, lineBreaks: 2, firstWidth: 2, lastWidth: 3});
-    expect(testMetrics.forString('b😀😀')).toEqual({length: 5, firstColumns: 3, lastColumns: 3, longestColumns: 3, firstWidth: 202, lastWidth: 202, longestWidth: 202});
-    expect(testMetrics.forString('😀\n𐀀😀\n𐀀a')).toEqual({length: 11, lineBreaks: 2, firstColumns: 1, lastColumns: 2, longestColumns: 2, firstWidth: 100, lastWidth: 101, longestWidth: 200});
-    expect(testMetrics.forString('\n𐀀')).toEqual({length: 3, lineBreaks: 1, firstColumns: 0, lastColumns: 1, longestColumns: 1, lastWidth: 100, longestWidth: 100});
+    expect(testMetrics.forString('a')).toEqual({length: 1, firstWidth: 1, lastWidth: 1, longestWidth: 1});
+    expect(testMetrics.forString('a\nb')).toEqual({length: 3, lineBreaks: 1, firstWidth: 1, lastWidth: 2, longestWidth: 2});
+    expect(testMetrics.forString('b\na')).toEqual({length: 3, lineBreaks: 1, firstWidth: 2, lastWidth: 1, longestWidth: 2});
+    expect(testMetrics.forString('bac')).toEqual({length: 3, firstWidth: 6, lastWidth: 6, longestWidth: 6});
+    expect(testMetrics.forString('b\na\nc')).toEqual({length: 5, lineBreaks: 2, firstWidth: 2, lastWidth: 3, longestWidth: 3});
+    expect(testMetrics.forString('b\naaaa\nc')).toEqual({length: 8, lineBreaks: 2, firstWidth: 2, lastWidth: 3, longestWidth: 4});
+    expect(testMetrics.forString('b😀😀')).toEqual({length: 5, firstWidth: 202, lastWidth: 202, longestWidth: 202});
+    expect(testMetrics.forString('😀\n𐀀😀\n𐀀a')).toEqual({length: 11, lineBreaks: 2, firstWidth: 100, lastWidth: 101, longestWidth: 200});
+    expect(testMetrics.forString('\n𐀀')).toEqual({length: 3, lineBreaks: 1, firstWidth: 0, lastWidth: 100, longestWidth: 100});
   });
 
   it('Metrics.locateBy*', () => {
     let defaultMetrics = createDefaultMetrics();
 
     let tests = [
-      {chunk: 'short', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 3, column: 11, offset: 18, x: 8, y: 10}},
-      {chunk: 'short\nlonger', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 3, column: 11, offset: 18, x: 8, y: 10}},
-      {chunk: 'short\nlonger', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 3, column: 13, offset: 20, x: 10, y: 10}},
-      {chunk: 'short\nlonger', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 4, column: 0, offset: 21, x: 0, y: 11}},
-      {chunk: '1\n23\n456\n78\n9\n0', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 7, column: 1, offset: 28, x: 1, y: 14}},
+      {chunk: 'short', before: {offset: 15, x: 5, y: 10}, location: {offset: 18, x: 8, y: 10}},
+      {chunk: 'short\nlonger', before: {offset: 15, x: 5, y: 10}, location: {offset: 18, x: 8, y: 10}},
+      {chunk: 'short\nlonger', before: {offset: 15, x: 5, y: 10}, location: {offset: 20, x: 10, y: 10}},
+      {chunk: 'short\nlonger', before: {offset: 15, x: 5, y: 10}, location: {offset: 21, x: 0, y: 11}},
+      {chunk: '1\n23\n456\n78\n9\n0', before: {offset: 15, x: 5, y: 10}, location: {offset: 28, x: 1, y: 14}},
     ];
     for (let test of tests) {
       expect(defaultMetrics.locateByOffset(test.chunk, test.before, test.location.offset)).toEqual(test.location);
       expect(defaultMetrics.locateByOffset(test.chunk, test.before, test.location.offset, true /* strict */)).toEqual(test.location);
-      expect(defaultMetrics.locateByPosition(test.chunk, test.before, test.location)).toEqual(test.location);
-      expect(defaultMetrics.locateByPosition(test.chunk, test.before, test.location, true /* strict */)).toEqual(test.location);
       expect(defaultMetrics.locateByPoint(test.chunk, test.before, test.location, RoundMode.Floor, true /* strict */)).toEqual(test.location);
     }
 
     let nonStrict = [
-      {chunk: 'short', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, position: {line: 3, column: 22}, point: {x: 15, y: 10}, result: {line: 3, column: 13, offset: 20, x: 10, y: 10}},
-      {chunk: 'short\nlonger', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, position: {line: 3, column: 22}, point: {x: 15, y: 10}, result: {line: 3, column: 13, offset: 20, x: 10, y: 10}},
-      {chunk: 'short\nlonger', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, position: {line: 4, column: 22}, point: {x: 22, y: 11}, result: {line: 4, column: 6, offset: 27, x: 6, y: 11}},
-      {chunk: '1\n23\n456\n78\n9\n0', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, position: {line: 7, column: 22}, point: {x: 42, y: 14}, result: {line: 7, column: 1, offset: 28, x: 1, y: 14}},
+      {chunk: 'short', before: {offset: 15, x: 5, y: 10}, point: {x: 15, y: 10}, result: {offset: 20, x: 10, y: 10}},
+      {chunk: 'short\nlonger', before: {offset: 15, x: 5, y: 10}, point: {x: 15, y: 10}, result: {offset: 20, x: 10, y: 10}},
+      {chunk: 'short\nlonger', before: {offset: 15, x: 5, y: 10}, point: {x: 22, y: 11}, result: {offset: 27, x: 6, y: 11}},
+      {chunk: '1\n23\n456\n78\n9\n0', before: {offset: 15, x: 5, y: 10}, point: {x: 42, y: 14}, result: {offset: 28, x: 1, y: 14}},
     ];
-    for (let test of nonStrict) {
-      expect(defaultMetrics.locateByPosition(test.chunk, test.before, test.position)).toEqual(test.result);
+    for (let test of nonStrict)
       expect(defaultMetrics.locateByPoint(test.chunk, test.before, test.point, RoundMode.Floor)).toEqual(test.result);
-    }
   });
 
   it('Metrics.locateBy* with non-bmp', () => {
     let metrics = createTestMetrics();
 
     let tests = [
-      {chunk: 'abc', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 3, column: 11, offset: 18, x: 11, y: 10}},
-      {chunk: 'abc\na😀b𐀀c', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 3, column: 11, offset: 18, x: 11, y: 10}},
-      {chunk: 'abc\na😀b𐀀c', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 4, column: 0, offset: 19, x: 0, y: 13}},
-      {chunk: 'abc\na😀b𐀀c', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 4, column: 4, offset: 25, x: 203, y: 13}},
-      {chunk: 'a\n😀b\n𐀀ca\n𐀀𐀀\n😀\n0', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, location: {line: 7, column: 1, offset: 33, x: 100, y: 22}},
+      {chunk: 'abc', before: {offset: 15, x: 5, y: 10}, location: {offset: 18, x: 11, y: 10}},
+      {chunk: 'abc\na😀b𐀀c', before: {offset: 15, x: 5, y: 10}, location: {offset: 18, x: 11, y: 10}},
+      {chunk: 'abc\na😀b𐀀c', before: {offset: 15, x: 5, y: 10}, location: {offset: 19, x: 0, y: 13}},
+      {chunk: 'abc\na😀b𐀀c', before: {offset: 15, x: 5, y: 10}, location: {offset: 25, x: 203, y: 13}},
+      {chunk: 'a\n😀b\n𐀀ca\n𐀀𐀀\n😀\n0', before: {offset: 15, x: 5, y: 10}, location: {offset: 33, x: 100, y: 22}},
     ];
     for (let test of tests) {
       expect(metrics.locateByOffset(test.chunk, test.before, test.location.offset)).toEqual(test.location);
       expect(metrics.locateByOffset(test.chunk, test.before, test.location.offset, true /* strict */)).toEqual(test.location);
-      expect(metrics.locateByPosition(test.chunk, test.before, test.location)).toEqual(test.location);
-      expect(metrics.locateByPosition(test.chunk, test.before, test.location, true /* strict */)).toEqual(test.location);
       expect(metrics.locateByPoint(test.chunk, test.before, test.location, RoundMode.Floor, true /* strict */)).toEqual(test.location);
     }
 
     let nonStrict = [
-      {chunk: 'abc', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, position: {line: 3, column: 22}, point: {x: 15, y: 10}, result: {line: 3, column: 11, offset: 18, x: 11, y: 10}},
-      {chunk: 'abc\na😀b𐀀c', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, position: {line: 3, column: 22}, point: {x: 15, y: 10}, result: {line: 3, column: 11, offset: 18, x: 11, y: 10}},
-      {chunk: 'abc\na😀b𐀀c', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, position: {line: 4, column: 22}, point: {x: 220, y: 14}, result: {line: 4, column: 5, offset: 26, x: 206, y: 13}},
-      {chunk: 'a\n😀b\n𐀀ca\n𐀀𐀀\n😀\n0', before: {offset: 15, line: 3, column: 8, x: 5, y: 10}, position: {line: 7, column: 22}, point: {x: 420, y: 24}, result: {line: 7, column: 1, offset: 33, x: 100, y: 22}},
+      {chunk: 'abc', before: {offset: 15, x: 5, y: 10}, point: {x: 15, y: 10}, result: {offset: 18, x: 11, y: 10}},
+      {chunk: 'abc\na😀b𐀀c', before: {offset: 15, x: 5, y: 10}, point: {x: 15, y: 10}, result: {offset: 18, x: 11, y: 10}},
+      {chunk: 'abc\na😀b𐀀c', before: {offset: 15, x: 5, y: 10}, point: {x: 220, y: 14}, result: {offset: 26, x: 206, y: 13}},
+      {chunk: 'a\n😀b\n𐀀ca\n𐀀𐀀\n😀\n0', before: {offset: 15, x: 5, y: 10}, point: {x: 420, y: 24}, result: {offset: 33, x: 100, y: 22}},
     ];
-    for (let test of nonStrict) {
-      expect(metrics.locateByPosition(test.chunk, test.before, test.position)).toEqual(test.result);
+    for (let test of nonStrict)
       expect(metrics.locateByPoint(test.chunk, test.before, test.point, RoundMode.Floor)).toEqual(test.result);
-    }
   });
 
   it('Metrics.locateByOffset non-strict', () => {
     let metrics = createTestMetrics();
-    expect(metrics.locateByOffset('😀😀', {offset: 3, line: 3, column: 3, x: 3, y: 3}, 6))
-        .toEqual({offset: 5, line: 3, column: 4, x: 103, y: 3});
+    expect(metrics.locateByOffset('😀😀', {offset: 3, x: 3, y: 3}, 6)).toEqual({offset: 5, x: 103, y: 3});
   });
 
   it('Metrics.locateByPoint with round modes', () => {
     let testMetrics = createTestMetrics();
     let chunk = 'a\nb\naaaa\nbac\nc';
-    let before = {offset: 15, line: 3, column: 8, x: 5, y: 10};
+    let before = {offset: 15, x: 5, y: 10};
     let tests = [
-      {point: {x: 5, y: 10}, location: {offset: 15, line: 3, column: 8, x: 5, y: 10}, strict: true},
-      {point: {x: 6, y: 10}, location: {offset: 16, line: 3, column: 9, x: 6, y: 10}, strict: true},
-      {point: {x: 7, y: 10}, location: {offset: 16, line: 3, column: 9, x: 6, y: 10}},
-      {point: {x: 5, y: 11}, location: {offset: 15, line: 3, column: 8, x: 5, y: 10}, strict: true},
-      {point: {x: 0, y: 13}, location: {offset: 17, line: 4, column: 0, x: 0, y: 13}, strict: true},
-      {point: {x: 1, y: 13}, location: {offset: 17, line: 4, column: 0, x: 0, y: 13}, strict: true},
-      {point: {x: 0.9, y: 13}, location: {offset: 17, line: 4, column: 0, x: 0, y: 13}, roundMode: RoundMode.Round, strict: true},
-      {point: {x: 1.0, y: 13}, location: {offset: 17, line: 4, column: 0, x: 0, y: 13}, roundMode: RoundMode.Round, strict: true},
-      {point: {x: 1.1, y: 13}, location: {offset: 18, line: 4, column: 1, x: 2, y: 13}, roundMode: RoundMode.Round, strict: true},
-      {point: {x: 0, y: 13}, location: {offset: 17, line: 4, column: 0, x: 0, y: 13}, roundMode: RoundMode.Ceil, strict: true},
-      {point: {x: 1.0, y: 13}, location: {offset: 18, line: 4, column: 1, x: 2, y: 13}, roundMode: RoundMode.Ceil, strict: true},
-      {point: {x: 1.1, y: 13}, location: {offset: 18, line: 4, column: 1, x: 2, y: 13}, roundMode: RoundMode.Ceil, strict: true},
-      {point: {x: 2, y: 13}, location: {offset: 18, line: 4, column: 1, x: 2, y: 13}, strict: true},
-      {point: {x: 42, y: 15}, location: {offset: 18, line: 4, column: 1, x: 2, y: 13}},
-      {point: {x: 0, y: 16}, location: {offset: 19, line: 5, column: 0, x: 0, y: 16}, strict: true},
-      {point: {x: 1, y: 16}, location: {offset: 20, line: 5, column: 1, x: 1, y: 16}, strict: true},
-      {point: {x: 2, y: 16}, location: {offset: 21, line: 5, column: 2, x: 2, y: 16}, strict: true},
-      {point: {x: 3, y: 17}, location: {offset: 22, line: 5, column: 3, x: 3, y: 16}, strict: true},
-      {point: {x: 4, y: 18}, location: {offset: 23, line: 5, column: 4, x: 4, y: 16}, strict: true},
-      {point: {x: 3, y: 19}, location: {offset: 26, line: 6, column: 2, x: 3, y: 19}, strict: true},
-      {point: {x: 42, y: 19}, location: {offset: 27, line: 6, column: 3, x: 6, y: 19}},
+      {point: {x: 5, y: 10}, location: {offset: 15, x: 5, y: 10}, strict: true},
+      {point: {x: 6, y: 10}, location: {offset: 16, x: 6, y: 10}, strict: true},
+      {point: {x: 7, y: 10}, location: {offset: 16, x: 6, y: 10}},
+      {point: {x: 5, y: 11}, location: {offset: 15, x: 5, y: 10}, strict: true},
+      {point: {x: 0, y: 13}, location: {offset: 17, x: 0, y: 13}, strict: true},
+      {point: {x: 1, y: 13}, location: {offset: 17, x: 0, y: 13}, strict: true},
+      {point: {x: 0.9, y: 13}, location: {offset: 17, x: 0, y: 13}, roundMode: RoundMode.Round, strict: true},
+      {point: {x: 1.0, y: 13}, location: {offset: 17, x: 0, y: 13}, roundMode: RoundMode.Round, strict: true},
+      {point: {x: 1.1, y: 13}, location: {offset: 18, x: 2, y: 13}, roundMode: RoundMode.Round, strict: true},
+      {point: {x: 0, y: 13}, location: {offset: 17, x: 0, y: 13}, roundMode: RoundMode.Ceil, strict: true},
+      {point: {x: 1.0, y: 13}, location: {offset: 18, x: 2, y: 13}, roundMode: RoundMode.Ceil, strict: true},
+      {point: {x: 1.1, y: 13}, location: {offset: 18, x: 2, y: 13}, roundMode: RoundMode.Ceil, strict: true},
+      {point: {x: 2, y: 13}, location: {offset: 18, x: 2, y: 13}, strict: true},
+      {point: {x: 42, y: 15}, location: {offset: 18, x: 2, y: 13}},
+      {point: {x: 0, y: 16}, location: {offset: 19, x: 0, y: 16}, strict: true},
+      {point: {x: 1, y: 16}, location: {offset: 20, x: 1, y: 16}, strict: true},
+      {point: {x: 2, y: 16}, location: {offset: 21, x: 2, y: 16}, strict: true},
+      {point: {x: 3, y: 17}, location: {offset: 22, x: 3, y: 16}, strict: true},
+      {point: {x: 4, y: 18}, location: {offset: 23, x: 4, y: 16}, strict: true},
+      {point: {x: 3, y: 19}, location: {offset: 26, x: 3, y: 19}, strict: true},
+      {point: {x: 42, y: 19}, location: {offset: 27, x: 6, y: 19}},
     ];
     for (let test of tests)
       expect(testMetrics.locateByPoint(chunk, before, test.point, test.roundMode || RoundMode.Floor, !!test.strict)).toEqual(test.location);
@@ -969,14 +947,14 @@ describe('Metrics', () => {
   it('Metrics.chunkString', () => {
     let metrics = createTestMetrics();
     expect(metrics.chunkString(5, '')).toEqual([
-      {data: '', metrics: {length: 0, firstColumns: 0, lastColumns: 0, longestColumns: 0}}
+      {data: '', metrics: {length: 0, firstWidth: 0, lastWidth: 0, longestWidth: 0}}
     ]);
     expect(metrics.chunkString(1, '😀')).toEqual([
-      {data: '😀', metrics: {length: 2, firstColumns: 1, firstWidth: 100, lastColumns: 1, lastWidth: 100, longestColumns: 1, longestWidth: 100}}
+      {data: '😀', metrics: {length: 2, firstWidth: 100, lastWidth: 100, longestWidth: 100}}
     ]);
     expect(metrics.chunkString(2, 'a', 'b')).toEqual([
-      {data: 'b', metrics: {length: 1, firstColumns: 1, firstWidth: 2, lastColumns: 1, lastWidth: 2, longestColumns: 1, longestWidth: 2}},
-      {data: 'a', metrics: {length: 1, firstColumns: 1, lastColumns: 1, longestColumns: 1}}
+      {data: 'b', metrics: {length: 1, firstWidth: 2, lastWidth: 2, longestWidth: 2}},
+      {data: 'a', metrics: {length: 1, firstWidth: 1, lastWidth: 1, longestWidth: 1}}
     ]);
   });
 });
@@ -984,3 +962,8 @@ describe('Metrics', () => {
 new Reporter(runner);
 runner.run();
 
+// TODO:
+//   - scale viewport's metrics by defaultWidth to get integers;
+//   - move lineHeight out of metrics and tree;
+//   - simplify lines calculation in Viewport.decorate;
+//   - remove Tree.endLocation().
