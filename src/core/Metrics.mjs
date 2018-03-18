@@ -15,66 +15,29 @@ export let RoundMode = {
  */
 
 /**
- * Measurer converts code points to widths (and default height).
- * It is designed to work exclusively with an additive metric.
- * Note that we only support fixed height equal to one.
+ * This class calculates metrics for string chunks. It is designed to work
+ * exclusively with an additive metric. Note that we only support fixed height equal to one.
  *
- * @interface
- */
-export class Measurer {
-  /**
-   * The default width of a code point. Note that code points from Supplementary Planes
-   * cannot be given default width.
-   * Total width of a |string| with all default width code points will be
-   * |string.length * measurer.defaultWidth|.
-   *
-   * @return {number}
-   */
-  defaultWidth() {
-  }
-
-  /**
-   * Regex for strings which consist only of characters with default width and height.
-   * Used for fast-path calculations.
-   *
-   * @return {?RegExp}
-   */
-  defaultRegex() {
-  }
-
-  /**
-   * Measures the width of a single BMP character.
-   * Note that char.length === 1, meaning it has a single code unit and code point.
-   *
-   * @param {string} char
-   */
-  measureBMP(char) {
-  }
-
-  /**
-   * Measures the width of a single Supplementary character.
-   * Note that char.length === 2, meaning it has two code units, but still a single code point.
-   *
-   * @param {string} char
-   */
-  measureSupplementary(char) {
-  }
-};
-
-/**
- * This class calculates metrics for string chunks.
  * Internally it always measures a single code point and caches the result.
  */
 export class Metrics {
   /**
-   * @param {!Measurer} measurer
+   * Regex for strings which consist only of characters of width equal to one.
+   * Used for fast-path calculations.
+   * @param {?RegExp} widthOneRegex
+   *
+   * Measures the width of a single BMP character.
+   * Note that char.length === 1, meaning it has a single code unit and code point.
+   * @param {function(string):number} measureBMP
+   *
+   * Measures the width of a single Supplementary character.
+   * Note that char.length === 2, meaning it has two code units, but still a single code point.
+   * @param {function(string):number} measureSupplementary
    */
-  constructor(measurer) {
-    this.defaultWidth = measurer.defaultWidth();
-    this._defaultRegex = measurer.defaultRegex();
-    this._measureBMP = measurer.measureBMP.bind(measurer);
-    this._measureSupplementary = measurer.measureSupplementary.bind(measurer);
-
+  constructor(widthOneRegex, measureBMP, measureSupplementary) {
+    this._widthOneRegex = widthOneRegex;
+    this._measureBMP = measureBMP;
+    this._measureSupplementary = measureSupplementary;
     this._bmp = new Float32Array(65536);
     this._bmp.fill(-1);
     this._supplementary = {};
@@ -327,8 +290,8 @@ export class Metrics {
     if (from === to)
       return 0;
 
-    if (this._defaultRegex && this._defaultRegex.test(s))
-      return (to - from) * this.defaultWidth;
+    if (this._widthOneRegex && this._widthOneRegex.test(s))
+      return to - from;
 
     let result = 0;
     for (let i = from; i < to; ) {
@@ -376,17 +339,15 @@ export class Metrics {
     if (!width)
       return {offset: from, width: 0};
 
-    if (this._defaultRegex && this._defaultRegex.test(s)) {
-      if (width > (to - from) * this.defaultWidth)
-        return {offset: -1, width: (to - from) * this.defaultWidth};
-      let offset = Math.floor(width / this.defaultWidth);
-      let left = offset * this.defaultWidth;
-      if (left === width || roundMode === RoundMode.Floor)
-        return {offset: from + offset, width: left};
-      let right = left + this.defaultWidth;
-      if (roundMode === RoundMode.Ceil || width - left > right - width)
-        return {offset: from + offset + 1, width: right};
-      return {offset: from + offset, width: left};
+    if (this._widthOneRegex && this._widthOneRegex.test(s)) {
+      if (width > to - from)
+        return {offset: -1, width: to - from};
+      let offset = Math.floor(width);
+      if (offset === width || roundMode === RoundMode.Floor)
+        return {offset: from + offset, width: offset};
+      if (roundMode === RoundMode.Ceil || width - offset > offset + 1 - width)
+        return {offset: from + offset + 1, width: offset + 1};
+      return {offset: from + offset, width: offset};
     }
 
     let w = 0;

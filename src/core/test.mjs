@@ -20,23 +20,17 @@ function createTestMeasurer() {
   return {
     defaultWidth: () => 1,
     lineHeight: () => 3,
-    defaultRegex: () => null,
-    measureBMP: s => s.charCodeAt(0) - 'a'.charCodeAt(0) + 1,
-    measureSupplementary: s => 100
+    defaultWidthRegex: () => null,
+    measureString: s => s[0] <= 'z' ? s.charCodeAt(0) - 'a'.charCodeAt(0) + 1 : 100
   };
 }
 
 function createTestMetrics() {
-  return new Metrics(createTestMeasurer());
+  return new Metrics(null, s => s.charCodeAt(0) - 'a'.charCodeAt(0) + 1, s => 100);
 }
 
 function createDefaultMetrics() {
-  return new Metrics({
-    defaultWidth: () => 1,
-    defaultRegex: () => Metrics.bmpRegex,
-    measureBMP: s => 1,
-    measureSupplementary: s => 1
-  });
+  return new Metrics(Metrics.bmpRegex, s => 1, s => 1);
 }
 
 describe('Document', () => {
@@ -410,9 +404,8 @@ describe('Viewport.Scrollbars', () => {
     let measurer = {
       defaultWidth: () => 10,
       lineHeight: () => 10,
-      defaultRegex: () => null,
-      measureBMP: s => 10,
-      measureSupplementary: s => 10
+      defaultWidthRegex: () => null,
+      measureString: s => 10,
     };
     state.viewport = new Viewport(document, measurer);
     document.reset(new Array(10).fill('').join('\n'));
@@ -962,6 +955,5 @@ new Reporter(runner);
 runner.run();
 
 // TODO:
-//   - scale viewport's metrics by defaultWidth to get integers;
 //   - simplify lines calculation in Viewport.decorate;
 //   - cleanup Viewport.aToB conversion methods;

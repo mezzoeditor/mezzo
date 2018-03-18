@@ -59,7 +59,39 @@ import {trace} from './Trace.mjs';
  * }} TextChunk
  */
 
-const kMinScrollbarDecorationHeight = 5;
+/**
+ * Measurer converts strings to widths and provides line height.
+ *
+ * @interface
+ */
+export class Measurer {
+  /**
+   * The default width of a code point. Note that code points from Supplementary Planes
+   * cannot be given default width.
+   * Total width of a |string| with all default width code points will be
+   * |string.length * defaultWidth|.
+   *
+   * @return {number}
+   */
+  defaultWidth() {
+  }
+
+  /**
+   * Regex for strings which consist only of characters with default width and height.
+   * Used for fast-path calculations.
+   *
+   * @return {?RegExp}
+   */
+  defaultRegex() {
+  }
+
+  /**
+   * Measures the width of a string.
+   * @param {string} s
+   */
+  measureString(s) {
+  }
+};
 
 /**
  * Viewport class abstracts the window that peeks onto a part of the
@@ -97,8 +129,6 @@ export class Viewport {
    */
   constructor(document, measurer) {
     this._document = document;
-    this._metrics = new Metrics(measurer);
-    this._lineHeight = measurer.lineHeight();
     this._document.addReplaceCallback(this._onReplace.bind(this));
 
     this._width = 0;
@@ -116,8 +146,7 @@ export class Viewport {
 
     this._revealCallback = () => {};
 
-    let nodes = this._wrapChunks(this._createChunks(0, document.length(), kDefaultChunkSize));
-    this._setTree(Tree.build(nodes, this._metrics.defaultWidth));
+    this.setMeasurer(measurer);
   }
 
   /**
@@ -139,9 +168,11 @@ export class Viewport {
    */
   setMeasurer(measurer) {
     this._lineHeight = measurer.lineHeight();
-    this._metrics = new Metrics(measurer);
+    this._defaultWidth = measurer.defaultWidth();
+    let measure = s => measurer.measureString(s) / this._defaultWidth;
+    this._metrics = new Metrics(measurer.defaultWidthRegex(), measure, measure);
     let nodes = this._wrapChunks(this._createChunks(0, this._document.length(), kDefaultChunkSize));
-    this._setTree(Tree.build(nodes, this._metrics.defaultWidth));
+    this._setTree(Tree.build(nodes));
   }
 
   /**
@@ -273,11 +304,11 @@ export class Viewport {
     if (found.location === null)
       return null;
     if (found.data === null)
-      return {x: found.location.x, y: found.location.y * this._lineHeight};
+      return {x: found.location.x * this._defaultWidth, y: found.location.y * this._lineHeight};
     let from = found.location.offset;
     let chunk = this._document.content(from, from + found.data.metrics.length);
     let location = this._metrics.locateByOffset(chunk, found.location, offset);
-    return {x: location.x, y: location.y * this._lineHeight};
+    return {x: location.x * this._defaultWidth, y: location.y * this._lineHeight};
   }
 
   /**
@@ -287,7 +318,7 @@ export class Viewport {
    * @return {number}
    */
   pointToOffset(point, roundMode = RoundMode.Floor, strict) {
-    point = {x: point.x, y: point.y / this._lineHeight};
+    point = {x: point.x / this._defaultWidth, y: point.y / this._lineHeight};
     let found = this._tree.findByPoint(point, !!strict);
     if (found.data === null)
       return found.location.offset;
@@ -459,7 +490,7 @@ export class Viewport {
 
   _buildTextAndBackground(origin, lines, textDecorators, backgroundDecorators) {
     const viewportRight = origin.x + this._width;
-    const decorationMaxRight = Math.min(viewportRight + 10, this._maxScrollLeft + this._width - this._padding.right);
+    const decorationMaxRight = Math.min(viewportRight + 10, this._contentWidth);
     const text = [];
     const background = [];
     const dx = -this._scrollLeft + this._padding.left;
@@ -473,10 +504,10 @@ export class Viewport {
           let charCode = lineContent.charCodeAt(i);
           if (charCode >= 0xD800 && charCode <= 0xDBFF && i + 1 < lineContent.length) {
             offsetToX[i + 1] = x;
-            x += this._metrics.measureSupplementaryCodePoint(lineContent.codePointAt(i));
+            x += this._metrics.measureSupplementaryCodePoint(lineContent.codePointAt(i)) * this._defaultWidth;
             i += 2;
           } else {
-            x += this._metrics.measureBMPCodePoint(charCode);
+            x += this._metrics.measureBMPCodePoint(charCode) * this._defaultWidth;
             i++;
           }
         } else {
@@ -575,7 +606,7 @@ export class Viewport {
   _setTree(tree) {
     this._tree = tree;
     let metrics = tree.metrics();
-    this._contentWidth = metrics.longestWidth;
+    this._contentWidth = metrics.longestWidth * this._defaultWidth;
     this._contentHeight = (1 + (metrics.lineBreaks || 0)) * this._lineHeight;
   }
 
@@ -632,7 +663,7 @@ export class Viewport {
     }
 
     let nodes = this._wrapChunks(chunks);
-    this._setTree(Tree.build(nodes, this._metrics.defaultWidth, split.left, split.right));
+    this._setTree(Tree.build(nodes, split.left, split.right));
   }
 }
 
@@ -787,6 +818,7 @@ function cachedContent(document, from, to, cache, left, right) {
 Viewport._decorateFreeze = Symbol('Viewport.decorate');
 
 let kDefaultChunkSize = 1000;
+const kMinScrollbarDecorationHeight = 5;
 
 Viewport.test = {};
 
@@ -796,5 +828,5 @@ Viewport.test = {};
  */
 Viewport.test.rechunk = function(viewport, chunkSize) {
   let nodes = viewport._wrapChunks(viewport._createChunks(0, viewport._document.length(), chunkSize));
-  viewport._setTree(Tree.build(nodes, viewport._metrics.defaultWidth));
+  viewport._setTree(Tree.build(nodes));
 };

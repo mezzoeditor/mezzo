@@ -61,19 +61,13 @@ const kSplitIntersectionToRight = false;
  * The tree manages an ordered sequence of nodes and supports efficient
  * constructin, lookup by different metrics, merging and splitting.
  *
- * Tree needs |defaultWidth| value to work with metrics:
- * - defaultWidth defines conversion between columns and missing x-coordinate;
- *   useful for monospace text to save memory.
- *
  * @template T
  */
 export class Tree {
   /**
    * Constructs an empty tree.
-   * @param {number} defaultWidth
    */
-  constructor(defaultWidth) {
-    this._defaultWidth = defaultWidth;
+  constructor() {
     this._root = undefined;
     this._endLocation = Metrics.origin;
   }
@@ -88,24 +82,17 @@ export class Tree {
    * which cannot be used afterwards.
    *
    * @param {!Array<!{data: T, metrics: !TextMetrics}>} nodes
-   * @param {number} defaultWidth
    * @param {!Tree<T>=} left
    * @param {!Tree<T>=} right
    * @return {!Tree<T>}
    */
-  static build(nodes, defaultWidth, left, right) {
-    let tree = new Tree(defaultWidth);
+  static build(nodes, left, right) {
+    let tree = new Tree();
     let root = tree._build(nodes);
-    if (left) {
-      if (left._defaultWidth !== defaultWidth)
-        throw 'Cannot merge trees with different metrics';
+    if (left)
       root = tree._merge(left._root, root);
-    }
-    if (right) {
-      if (right._defaultWidth !== defaultWidth)
-        throw 'Cannot merge trees with different metrics';
+    if (right)
       root = tree._merge(root, right._root);
-    }
     tree._setRoot(root);
     return tree;
   }
@@ -505,7 +492,7 @@ export class Tree {
    * @return {!Tree<T>}
    */
   _wrap(root) {
-    let tree = new Tree(this._defaultWidth);
+    let tree = new Tree();
     tree._setRoot(root);
     return tree;
   }

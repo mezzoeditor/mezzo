@@ -1,5 +1,5 @@
 import { RoundMode, Metrics } from '../core/Metrics.mjs';
-import { Viewport } from '../core/Viewport.mjs';
+import { Viewport, Measurer } from '../core/Viewport.mjs';
 import { trace } from '../core/Trace.mjs';
 
 /**
@@ -21,8 +21,8 @@ class ContextBasedMeasurer {
     this.widthM = ctx.measureText('M').width;
 
     this._defaultWidth = monospace ? ctx.measureText('M').width : 0;
-    this._lineHeight = fontHeight;
     this._defaultRegex = monospace ? Metrics.asciiRegex : null;
+    this._lineHeight = fontHeight;
     this._ctx = ctx;
   }
 
@@ -34,16 +34,12 @@ class ContextBasedMeasurer {
     return this._lineHeight;
   }
 
-  defaultRegex() {
+  defaultWidthRegex() {
     return this._defaultRegex;
   }
 
-  measureBMP(char) {
-    return this._ctx.measureText(char).width;
-  }
-
-  measureSupplementary(char) {
-    return this._ctx.measureText(char).width;
+  measureString(s) {
+    return this._ctx.measureText(s).width;
   }
 };
 

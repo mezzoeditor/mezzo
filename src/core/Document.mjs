@@ -18,31 +18,13 @@ import { TextIterator } from './TextIterator.mjs';
  * }} Position;
  */
 
-class CharactersMeasurer {
-  defaultWidth() {
-    return 1;
-  }
-
-  defaultRegex() {
-    return Metrics.bmpRegex;
-  }
-
-  measureBMP(char) {
-    return 1;
-  }
-
-  measureSupplementary(char) {
-    return 1;
-  }
-};
-
 export class Document {
   /**
    * @param {function()} invalidateCallback
    */
   constructor(invalidateCallback) {
     this._invalidateCallback = invalidateCallback;
-    this._metrics = new Metrics(new CharactersMeasurer());
+    this._metrics = new Metrics(Metrics.bmpRegex, char => 1, char => 1);
     this._setTree(this._treeWithContent(''));
     this._frozenSymbols = [];
     this._tokenizer = null;
@@ -214,7 +196,7 @@ export class Document {
    */
   _treeWithContent(content) {
     let chunks = this._metrics.chunkString(kDefaultChunkSize, content);
-    return Tree.build(chunks, this._metrics.defaultWidth);
+    return Tree.build(chunks);
   }
 
   /**
@@ -255,7 +237,7 @@ export class Document {
       chunks = this._metrics.chunkString(kDefaultChunkSize, first + insertion + last);
     }
 
-    this._setTree(Tree.build(chunks, this._metrics.defaultWidth, split.left, split.right));
+    this._setTree(Tree.build(chunks, split.left, split.right));
     return removed;
   }
 
@@ -290,10 +272,10 @@ Document.test = {};
  */
 Document.test.setChunks = function(document, chunks) {
   let nodes = chunks.map(chunk => ({data: chunk, metrics: document._metrics.forString(chunk)}));
-  document._setTree(Tree.build(nodes, document._metrics.defaultWidth));
+  document._setTree(Tree.build(nodes));
 };
 
 Document.test.setContent = function(document, content, chunkSize) {
   let chunks = document._metrics.chunkString(chunkSize, content);
-  document._setTree(Tree.build(chunks, document._metrics.defaultWidth));
+  document._setTree(Tree.build(chunks));
 };
