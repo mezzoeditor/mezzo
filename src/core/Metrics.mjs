@@ -348,6 +348,16 @@ export class Metrics {
   }
 
   /**
+   * Returns whether a specific char code is a surrogate.
+   *
+   * @param {number} charCode
+   * @return {boolean}
+   */
+  static isSurrogate(charCode) {
+    return charCode >= 0xD800 && charCode <= 0xDBFF;
+  }
+
+  /**
    * Returns the width of a single code point from the Unicode Basic Multilingual Plane.
    * This method does not return zero even for default width.
    * Note that |codePoint| should always be less than 0x10000.

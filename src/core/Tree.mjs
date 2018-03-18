@@ -169,10 +169,10 @@ export class Tree {
    * @return {!{data: ?T, location: ?Location}}
    */
   findByOffset(offset) {
+    if (offset === this._endLocation.offset)
+      return {data: null, location: this._endLocation};
     if (!this._root || offset < 0 || offset > this._root.metrics.length)
       return {data: null, location: null};
-    if (offset === this._root.metrics.length)
-      return {data: null, location: this._endLocation};
     let found = this._findNode(this._root, {offset});
     if (!found)
       throw 'Inconsistency';

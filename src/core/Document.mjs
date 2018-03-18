@@ -180,47 +180,10 @@ export class Document {
   }
 
   /**
-   * @return {!Location}
-   */
-  lastLocation() {
-    return this._lastLocation;
-  }
-
-  /**
-   * @return {number}
-   */
-  height() {
-    return this._lastLocation.y + this._metrics.defaultHeight;
-  }
-
-  /**
-   * @return {number}
-   */
-  width() {
-    return this._width;
-  }
-
-  /**
    * @param {number} offset
    * @return {?Position}
    */
   offsetToPosition(offset) {
-    return this.offsetToLocation(offset);
-  }
-
-  /**
-   * @param {number} offset
-   * @return {?Point}
-   */
-  offsetToPoint(offset) {
-    return this.offsetToLocation(offset);
-  }
-
-  /**
-   * @param {number} offset
-   * @return {?Location}
-   */
-  offsetToLocation(offset) {
     let found = this._tree.findByOffset(offset);
     if (found.location === null || found.data === null)
       return found.location;
@@ -233,61 +196,10 @@ export class Document {
    * @return {number}
    */
   positionToOffset(position, strict) {
-    return this.positionToLocation(position, strict).offset;
-  }
-
-  /**
-   * @param {!Position} position
-   * @param {boolean=} strict
-   * @return {!Point}
-   */
-  positionToPoint(position, strict) {
-    return this.positionToLocation(position, strict);
-  }
-
-  /**
-   * @param {!Position} position
-   * @param {boolean=} strict
-   * @return {!Location}
-   */
-  positionToLocation(position, strict) {
     let found = this._tree.findByPosition(position, !!strict);
     if (found.data === null)
-      return found.location;
-    return this._metrics.locateByPosition(found.data, found.location, found.clampedPosition, strict);
-  }
-
-  /**
-   * @param {!Point} point
-   * @param {!RoundMode=} roundMode
-   * @param {boolean=} strict
-   * @return {!Position}
-   */
-  pointToPosition(point, roundMode = RoundMode.Floor, strict) {
-    return this.pointToLocation(point, roundMode, strict);
-  }
-
-  /**
-   * @param {!Point} point
-   * @param {RoundMode=} roundMode
-   * @param {boolean=} strict
-   * @return {number}
-   */
-  pointToOffset(point, roundMode = RoundMode.Floor, strict) {
-    return this.pointToLocation(point, roundMode, strict).offset;
-  }
-
-  /**
-   * @param {!Point} point
-   * @param {RoundMode=} roundMode
-   * @param {boolean=} strict
-   * @return {!Location}
-   */
-  pointToLocation(point, roundMode = RoundMode.Floor, strict) {
-    let found = this._tree.findByPoint(point, !!strict);
-    if (found.data === null)
-      return found.location;
-    return this._metrics.locateByPoint(found.data, found.location, found.clampedPoint, roundMode, strict);
+      return found.location.offset;
+    return this._metrics.locateByPosition(found.data, found.location, found.clampedPosition, strict).offset;
   }
 
   /**

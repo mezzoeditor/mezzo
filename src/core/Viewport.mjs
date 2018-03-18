@@ -1,4 +1,5 @@
 import {RoundMode, Metrics} from './Metrics.mjs';
+import { Tree } from './Tree.mjs';
 import {trace} from './Trace.mjs';
 
 /**
@@ -54,28 +55,11 @@ import {trace} from './Trace.mjs';
 
 /**
  * @typedef {{
- *   from: number,
- *   to: number,
  *   metrics: !TextMetrics
  * }} TextChunk
  */
 
-/**
- * @typedef {{
- *   from: number,
- *   to: number,
- *   metrics: !TextMetrics
- * }} TextGap
- */
-
-/**
- * @typedef {{
- *   gap: !TextGap|undefined,
- *   chunk: !TextChunk|undefined
- * }} TextItem
- */
-
- const kMinScrollbarDecorationHeight = 5;
+const kMinScrollbarDecorationHeight = 5;
 
 /**
  * Viewport class abstracts the window that peeks onto a part of the
@@ -115,6 +99,8 @@ export class Viewport {
     this._document = document;
     this._metrics = new Metrics(measurer);
     this._document.setMetrics(this._metrics);
+    this._document.addReplaceCallback(this._onReplace.bind(this));
+
     this._width = 0;
     this._height = 0;
     this._scrollTop = 0;
@@ -129,6 +115,9 @@ export class Viewport {
     this.vScrollbar = new Viewport.Scrollbar(offset => this.setScrollTop(offset));
 
     this._revealCallback = () => {};
+
+    let nodes = this._wrapChunks(this._createChunks(0, document.length()));
+    this._setTree(Tree.build(nodes, this._metrics.defaultHeight, this._metrics.defaultWidth));
   }
 
   /**
@@ -267,6 +256,48 @@ export class Viewport {
   }
 
   /**
+   * @param {number} offset
+   * @return {?Point}
+   */
+  offsetToPoint(offset) {
+    let found = this._tree.findByOffset(offset);
+    if (found.location === null || found.data === null)
+      return found.location;
+    let from = found.location.offset;
+    let chunk = this._document.content(from, from + found.data.metrics.length);
+    return this._metrics.locateByOffset(chunk, found.location, offset);
+  }
+
+  /**
+   * @param {!Point} point
+   * @param {RoundMode=} roundMode
+   * @param {boolean=} strict
+   * @return {number}
+   */
+  pointToOffset(point, roundMode = RoundMode.Floor, strict) {
+    let found = this._tree.findByPoint(point, !!strict);
+    if (found.data === null)
+      return found.location.offset;
+    let from = found.location.offset;
+    let chunk = this._document.content(from, from + found.data.metrics.length);
+    return this._metrics.locateByPoint(chunk, found.location, found.clampedPoint, roundMode, strict).offset;
+  }
+
+  /**
+   * @return {number}
+   */
+  contentWidth() {
+    return this._contentWidth;
+  }
+
+  /**
+   * @return {number}
+   */
+  contentHeight() {
+    return this._contentHeight;
+  }
+
+  /**
    * @param {!Point} point
    * @return {!Point}
    */
@@ -292,8 +323,8 @@ export class Viewport {
       bottom: 0
     }, rangePadding);
 
-    let from = this.documentPointToViewPoint(this._document.offsetToPoint(range.from));
-    let to = this.documentPointToViewPoint(this._document.offsetToPoint(range.to));
+    let from = this.documentPointToViewPoint(this.offsetToPoint(range.from));
+    let to = this.documentPointToViewPoint(this.offsetToPoint(range.to));
     to.y += this._metrics.defaultHeight;
 
     if (this._scrollTop > from.y) {
@@ -323,30 +354,42 @@ export class Viewport {
     this._document.freeze(Viewport._decorateFreeze);
 
     let origin = this.viewportPointToDocumentPoint({x: 0, y: 0});
-    let start = this._document.pointToLocation(origin);
-    let end = this._document.pointToLocation({x: origin.x + this._width, y: origin.y + this._height}, RoundMode.Ceil);
+    let startOffset = this.pointToOffset(origin);
+    let endOffset = this.pointToOffset({x: origin.x + this._width, y: origin.y + this._height}, RoundMode.Ceil);
+    let startPosition = this._document.offsetToPosition(startOffset);
+    let endPosition = this._document.offsetToPosition(endOffset);
 
     let lines = [];
     let totalVisibleRange = 0;
-    for (let line = end.line; line >= start.line; line--) {
-      let start = this._document.positionToLocation({line, column: 0});
-      let end = this._document.lastLocation();
+    for (let line = endPosition.line; line >= startPosition.line; line--) {
+      let lineStartOffset = this._document.positionToOffset({line, column: 0});
+      let y = this.offsetToPoint(lineStartOffset).y;
+      let lineEndOffset = this._lastLocation.offset;
       if (line + 1 < this._document.lineCount()) {
         let nextStartOffset = lines.length
-            ? lines[lines.length - 1].start.offset
+            ? lines[lines.length - 1].start
             : this._document.positionToOffset({line: line + 1, column: 0});
-        end = this._document.offsetToLocation(nextStartOffset - 1);
+        lineEndOffset = nextStartOffset - 1;
       }
-      let from = this._document.pointToLocation({x: origin.x, y: start.y});
-      let to = this._document.pointToLocation({x: origin.x + this._width, y: start.y}, RoundMode.Ceil);
-      lines.push({line, start, end, from, to});
-      totalVisibleRange += to.offset - from.offset;
+      let lineFromOffset = this.pointToOffset({x: origin.x, y: y});
+      let lineToOffset = this.pointToOffset({x: origin.x + this._width, y: y}, RoundMode.Ceil);
+      let lineFromPoint = this.offsetToPoint(lineFromOffset);
+      lines.push({
+          line,
+          start: lineStartOffset,
+          end: lineEndOffset,
+          from: lineFromOffset,
+          to: lineToOffset,
+          x: lineFromPoint.x,
+          y: lineFromPoint.y,
+      });
+      totalVisibleRange += lineToOffset - lineFromOffset;
     }
     lines.reverse();
 
     let diffs = [];
     for (let i = 0; i < lines.length - 1; i++)
-      diffs[i] = {i, len: lines[i + 1].from.offset - lines[i].to.offset};
+      diffs[i] = {i, len: lines[i + 1].from - lines[i].to};
     diffs.sort((a, b) => a.len - b.len || a.i - b.i);
     let join = new Array(lines.length).fill(false);
     let remaining = totalVisibleRange * 0.5;
@@ -360,9 +403,9 @@ export class Viewport {
     let ranges = [];
     for (let i = 0; i < lines.length; i++) {
       if (i && join[i - 1])
-        ranges[ranges.length - 1].to = lines[i].to.offset;
+        ranges[ranges.length - 1].to = lines[i].to;
       else
-        ranges.push(new Viewport.VisibleRange(this._document, lines[i].from.offset, lines[i].to.offset));
+        ranges.push(new Viewport.VisibleRange(this._document, lines[i].from, lines[i].to));
     }
     let range = ranges.length ? {from: ranges[0].from, to: Math.min(this._document.length(), ranges[ranges.length - 1].to)} : {from: 0, to: 0};
 
@@ -370,8 +413,8 @@ export class Viewport {
       document: this._document,
       range: range,
       ranges: ranges,
-      firstLine: start.line,
-      lastLine: end.line
+      firstLine: startPosition.line,
+      lastLine: endPosition.line
     };
 
     let textDecorators = [];
@@ -391,7 +434,7 @@ export class Viewport {
     for (let line of lines) {
       lineInfos.push({
         line: line.line,
-        y: line.start.y - this._scrollTop + this._padding.top
+        y: line.y - this._scrollTop + this._padding.top
       });
     }
 
@@ -409,9 +452,9 @@ export class Viewport {
     const dx = -this._scrollLeft + this._padding.left;
     const dy = -this._scrollTop + this._padding.top;
     for (let line of lines) {
-      let lineContent = this._document.content(line.from.offset, line.to.offset);
-      let offsetToX = new Float32Array(line.to.offset - line.from.offset + 1);
-      for (let x = line.from.x, i = 0; i <= line.to.offset - line.from.offset; ) {
+      let lineContent = this._document.content(line.from, line.to);
+      let offsetToX = new Float32Array(line.to - line.from + 1);
+      for (let x = line.x, i = 0; i <= line.to - line.from; ) {
         offsetToX[i] = x;
         if (i < lineContent.length) {
           let charCode = lineContent.charCodeAt(i);
@@ -429,15 +472,15 @@ export class Viewport {
       }
 
       for (let decorator of textDecorators) {
-        decorator.visitTouching(line.from.offset, line.to.offset, decoration => {
+        decorator.visitTouching(line.from, line.to, decoration => {
           trace.count('decorations');
-          let from = Math.max(line.from.offset, decoration.from);
-          let to = Math.min(line.to.offset, decoration.to);
+          let from = Math.max(line.from, decoration.from);
+          let to = Math.min(line.to, decoration.to);
           if (from < to) {
             text.push({
-              x: offsetToX[from - line.from.offset] + dx,
-              y: line.start.y + dy,
-              content: lineContent.substring(from - line.from.offset, to - line.from.offset),
+              x: offsetToX[from - line.from] + dx,
+              y: line.y + dy,
+              content: lineContent.substring(from - line.from, to - line.from),
               style: decoration.data
             });
           }
@@ -445,15 +488,15 @@ export class Viewport {
       }
 
       for (let decorator of backgroundDecorators) {
-        decorator.visitTouching(line.from.offset, line.to.offset, decoration => {
+        decorator.visitTouching(line.from, line.to, decoration => {
           trace.count('decorations');
           // TODO: note that some editors only show selection up to line length. Setting?
-          let from = decoration.from < line.from.offset ? Math.max(line.from.x - 10, 0) : offsetToX[decoration.from - line.from.offset];
-          let to = decoration.to > line.to.offset ? decorationMaxRight : offsetToX[decoration.to - line.from.offset];
+          let from = decoration.from < line.from ? Math.max(line.x - 10, 0) : offsetToX[decoration.from - line.from];
+          let to = decoration.to > line.to ? decorationMaxRight : offsetToX[decoration.to - line.from];
           if (from <= to) {
             background.push({
               x: from + dx,
-              y: line.start.y + dy,
+              y: line.y + dy,
               width: to - from,
               style: decoration.data
             });
@@ -473,8 +516,8 @@ export class Viewport {
       let lastBottom = -1;
       decorator.sparseVisitAll(decoration => {
         trace.count('decorations');
-        const from = this._document.offsetToLocation(decoration.from);
-        const to = this._document.offsetToLocation(decoration.to);
+        const from = this.offsetToPoint(decoration.from);
+        const to = this.offsetToPoint(decoration.to);
 
         let top = this.vScrollbar.contentOffsetToScrollbarOffset(from.y + this._padding.top);
         let bottom = this.vScrollbar.contentOffsetToScrollbarOffset(to.y + defaultHeight + this._padding.top);
@@ -490,9 +533,8 @@ export class Viewport {
         }
 
         let nextY = this.vScrollbar.scrollbarOffsetToContentOffset(bottom) - this._padding.top;
-        let line = this._document.pointToPosition({x: 0, y: nextY}).line;
-        line = Math.max(to.line, line);
-        return Math.max(decoration.to, this._document.positionToOffset({line, column: 0}));
+        let nextOffset = this.pointToOffset({x: 0, y: nextY + this._metrics.defaultHeight});
+        return Math.max(decoration.to, nextOffset);
       });
       if (lastTop >= 0)
         scrollbar.push({y: lastTop, height: lastBottom - lastTop, style: decorator.style()});
@@ -502,8 +544,8 @@ export class Viewport {
 
   _recompute() {
     // To properly handle input events, we have to update rects synchronously.
-    this._maxScrollTop = Math.max(0, this._document.height() - this._height + this._padding.top + this._padding.bottom);
-    this._maxScrollLeft = Math.max(0, this._document.width() - this._width + this._padding.left + this._padding.right);
+    this._maxScrollTop = Math.max(0, this._contentHeight - this._height + this._padding.top + this._padding.bottom);
+    this._maxScrollLeft = Math.max(0, this._contentWidth - this._width + this._padding.left + this._padding.right);
 
     this._scrollLeft = Math.max(this._scrollLeft, 0);
     this._scrollLeft = Math.min(this._scrollLeft, this._maxScrollLeft);
@@ -512,6 +554,72 @@ export class Viewport {
 
     this.vScrollbar._setViewportMetrics(this._scrollTop, this._maxScrollTop, this._height);
     this.hScrollbar._setViewportMetrics(this._scrollLeft, this._maxScrollLeft, this._width);
+  }
+
+  /**
+   * @param {!Tree<!TreeChunk>} tree
+   */
+  _setTree(tree) {
+    this._tree = tree;
+    this._lastLocation = tree.endLocation();
+    let metrics = tree.metrics();
+    this._contentWidth = metrics.longestWidth || (metrics.longestColumns * this._metrics.defaultWidth);
+    this._contentHeight = this._lastLocation.y + this._metrics.defaultHeight;
+  }
+
+  /**
+   * @param {number} from
+   * @param {number} to
+   * @param {number=} firstChunk
+   * @return {!Array<!TextChunk>}
+   */
+  _createChunks(from, to, firstChunk) {
+    let iterator = this._document.iterator(from);
+    let chunks = [];
+    while (iterator.offset < to) {
+      let offset = iterator.offset;
+      let size = Math.min(to - iterator.offset, kDefaultChunkSize);
+      if (offset === from && firstChunk != undefined)
+        size = firstChunk;
+      let chunk = iterator.read(size);
+      if (Metrics.isSurrogate(chunk.charCodeAt(chunk.length - 1))) {
+        chunk += iterator.current;
+        iterator.next();
+      }
+      chunks.push({metrics: this._metrics.forString(chunk)});
+    }
+    return chunks;
+  }
+
+  /**
+   * @param {!Array<!TextChunk>} chunks
+   * @return {!Array<!{metrics: !TextMetrics, data: !TextChunk}>}
+   */
+  _wrapChunks(chunks) {
+    return chunks.map(chunk => ({metrics: chunk.metrics, data: chunk}));
+  }
+
+  /**
+   * @param {!Replacement} replacement
+   */
+  _onReplace(replacement) {
+    let {from, to, inserted} = replacement;
+    let split = this._tree.split(from, to);
+    let newFrom = split.left.metrics().length;
+    let newTo = this._document.length() - split.right.metrics().length;
+
+    let chunks;
+    if (newFrom - from + inserted + to - newTo > kDefaultChunkSize &&
+        newFrom - from + inserted <= kDefaultChunkSize) {
+      // For typical editing scenarios, we are most likely to replace at the
+      // end of |insertion| next time.
+      chunks = this._createChunks(newFrom, newTo, newFrom - from + inserted);
+    } else {
+      chunks = this._createChunks(newFrom, newTo);
+    }
+
+    let nodes = this._wrapChunks(chunks);
+    this._setTree(Tree.build(nodes, this._metrics.defaultHeight, this._metrics.defaultWidth, split.left, split.right));
   }
 }
 
@@ -664,3 +772,5 @@ function cachedContent(document, from, to, cache, left, right) {
 }
 
 Viewport._decorateFreeze = Symbol('Viewport.decorate');
+
+let kDefaultChunkSize = 1000;

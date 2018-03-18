@@ -16,14 +16,18 @@ const {beforeAll, beforeEach, afterAll, afterEach} = runner;
 
 const {expect} = new Matchers();
 
-function createTestMetrics() {
-  let metrics = new Metrics({
+function createTestMeasurer() {
+  return {
     defaultWidth: () => 1,
     defaultHeight: () => 3,
     defaultRegex: () => null,
     measureBMP: s => s.charCodeAt(0) - 'a'.charCodeAt(0) + 1,
     measureSupplementary: s => 100
-  });
+  };
+}
+
+function createTestMetrics() {
+  let metrics = new Metrics(createTestMeasurer());
   metrics.__measureString = (s, from, to) => {
     let result = metrics._measureString(s, from, to);
     return result.width || result.columns * metrics.defaultWidth;
@@ -49,7 +53,6 @@ describe('Document', () => {
     document.setMetrics(createDefaultMetrics());
     Document.test.setChunks(document, chunks);
     expect(document.lineCount()).toBe(8);
-    expect(document.width()).toBe(8);
     expect(document.length()).toBe(content.length);
     for (let from = 0; from <= content.length; from++) {
       for (let to = from; to <= content.length; to++)
@@ -57,7 +60,7 @@ describe('Document', () => {
     }
   });
 
-  it('Document tet API all chunk sizes', () => {
+  it('Document text API all chunk sizes', () => {
     let testMetrics = createTestMetrics();
     let random = Random(143);
     let lineCount = 200;
@@ -97,32 +100,33 @@ describe('Document', () => {
       document.setMetrics(testMetrics);
       Document.test.setContent(document, content, chunkSize);
       expect(document.lineCount()).toBe(lineCount + 1);
-      expect(document.width()).toBe(longest);
+      //expect(viewport.contentWidth()).toBe(longest);
+      //expect(viewport.contentHeight()).toBe((lineCount + 1) * 3);
       expect(document.length()).toBe(content.length);
       for (let {from, to} of contentQueries)
         expect(document.content(from, to)).toBe(content.substring(from, to));
-      expect(document.offsetToLocation(0)).toEqual({line: 0, column: 0, offset: 0, x: 0, y: 0});
-      expect(document.offsetToLocation(content.length)).toEqual({line: lineCount, column: 0, offset: content.length, x: 0, y: lineCount * 3});
-      expect(document.offsetToLocation(content.length + 1)).toBe(null);
+      expect(document.offsetToPosition(0)).toEqual({line: 0, column: 0, offset: 0, x: 0, y: 0});
+      expect(document.offsetToPosition(content.length)).toEqual({line: lineCount, column: 0, offset: content.length, x: 0, y: lineCount * 3});
+      expect(document.offsetToPosition(content.length + 1)).toBe(null);
       for (let {line, column, offset, x, y, nonStrict, rounded} of locationQueries) {
         if (nonStrict) {
-          expect(document.positionToLocation({line, column: nonStrict.column})).toEqual({line, column, offset, x, y});
-          expect(document.pointToLocation({x: nonStrict.x, y}, RoundMode.Floor)).toEqual({line, column, offset, x, y});
+          expect(document.positionToOffset({line, column: nonStrict.column})).toBe(offset);
+          // expect(viewport.pointToOffset({x: nonStrict.x, y}, RoundMode.Floor)).toBe(offset);
         } else {
-          expect(document.offsetToLocation(offset)).toEqual({line, column, offset, x, y});
-          expect(document.positionToLocation({line, column})).toEqual({line, column, offset, x, y});
-          expect(document.positionToLocation({line, column}, true)).toEqual({line, column, offset, x, y});
-          expect(document.pointToLocation({x, y}, RoundMode.Floor)).toEqual({line, column, offset, x, y});
-          expect(document.pointToLocation({x: x + 0.5, y: y + 0.5}, RoundMode.Floor, false /* strict */)).toEqual({line, column, offset, x, y});
-          expect(document.pointToLocation({x, y}, RoundMode.Floor, true /* strict */)).toEqual({line, column, offset, x, y});
-          if (rounded) {
-            expect(document.pointToLocation({x: x + 0.4, y}, RoundMode.Round, true /* strict */)).toEqual({line, column, offset, x, y});
-            expect(document.pointToLocation({x: x + 0.5, y}, RoundMode.Round, true /* strict */)).toEqual({line, column, offset, x, y});
-            expect(document.pointToLocation({x: x + 0.6, y}, RoundMode.Round, true /* strict */)).toEqual({line, column: column + 1, offset: offset + 1, x: x + 1, y});
-            expect(document.pointToLocation({x, y}, RoundMode.Ceil, true /* strict */)).toEqual({line, column, offset, x, y});
-            expect(document.pointToLocation({x: x + 0.5, y}, RoundMode.Ceil, true /* strict */)).toEqual({line, column: column + 1, offset: offset + 1, x: x + 1, y});
-            expect(document.pointToLocation({x: x + 1, y}, RoundMode.Ceil, true /* strict */)).toEqual({line, column: column + 1, offset: offset + 1, x: x + 1, y});
-          }
+          expect(document.offsetToPosition(offset)).toEqual({line, column, offset, x, y});
+          expect(document.positionToOffset({line, column})).toBe(offset);
+          expect(document.positionToOffset({line, column}, true)).toBe(offset);
+          // expect(viewport.pointToOffset({x, y}, RoundMode.Floor)).toBe(offset);
+          // expect(viewport.pointToOffset({x: x + 0.5, y: y + 0.5}, RoundMode.Floor, false /* strict */)).toBe(offset);
+          // expect(viewport.pointToOffset({x, y}, RoundMode.Floor, true /* strict */)).toBe(offset);
+          // if (rounded) {
+          //   expect(viewport.pointToOffset({x: x + 0.4, y}, RoundMode.Round, true /* strict */)).toBe(offset);
+          //   expect(viewport.pointToOffset({x: x + 0.5, y}, RoundMode.Round, true /* strict */)).toBe(offset);
+          //   expect(viewport.pointToOffset({x: x + 0.6, y}, RoundMode.Round, true /* strict */)).toBe(offset + 1);
+          //   expect(viewport.pointToOffset({x, y}, RoundMode.Ceil, true /* strict */)).toBe(offset);
+          //   expect(viewport.pointToOffset({x: x + 0.5, y}, RoundMode.Ceil, true /* strict */)).toBe(offset + 1);
+          //   expect(viewport.pointToOffset({x: x + 1, y}, RoundMode.Ceil, true /* strict */)).toBe(offset + 1);
+          // }
         }
       }
     }

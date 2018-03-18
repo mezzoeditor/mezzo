@@ -594,7 +594,12 @@ class RangeHandle {
     if (this.removed())
       throw 'Handle was removed!';
     let {from, to} = this._decorator.resolve(this._handle);
-    return {from: this._document.offsetToLocation(from), to: this._document.offsetToLocation(to)};
+    let fromPosition = this._document.offsetToPosition(from);
+    let toPosition = this._document.offsetToPosition(to);
+    return {
+        from: {line: fromPosition.line, column: fromPosition.column, offset: from},
+        to: {line: toPosition.line, column: toPosition.column, offset: to}
+    };
   }
 
   _wasRemoved() {
