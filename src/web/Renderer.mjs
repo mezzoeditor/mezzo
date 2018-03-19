@@ -210,9 +210,7 @@ export class Renderer {
   _canvasToTextOffset({x, y}) {
     x -= this._editorRect.x;
     y -= this._editorRect.y;
-    return this._viewport.pointToOffset(
-        this._viewport.viewportPointToDocumentPoint({x, y}),
-        RoundMode.Round);
+    return this._viewport.viewportPointToOffset({x, y}, RoundMode.Round);
   }
 
   /**

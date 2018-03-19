@@ -488,24 +488,24 @@ describe('Viewport', () => {
       Viewport.test.rechunk(viewport, chunkSize);
       expect(viewport.contentWidth()).toBe(longest);
       expect(viewport.contentHeight()).toBe((lineCount + 1) * 3);
-      expect(viewport.offsetToPoint(0)).toEqual({x: 0, y: 0});
-      expect(viewport.offsetToPoint(content.length)).toEqual({x: 0, y: lineCount * 3});
-      expect(viewport.offsetToPoint(content.length + 1)).toBe(null);
+      expect(viewport.offsetToContentPoint(0)).toEqual({x: 0, y: 0});
+      expect(viewport.offsetToContentPoint(content.length)).toEqual({x: 0, y: lineCount * 3});
+      expect(viewport.offsetToContentPoint(content.length + 1)).toBe(null);
       for (let {offset, x, y, nonStrict, rounded} of locationQueries) {
         if (nonStrict) {
-          expect(viewport.pointToOffset({x: nonStrict.x, y}, RoundMode.Floor)).toBe(offset);
+          expect(viewport.contentPointToOffset({x: nonStrict.x, y}, RoundMode.Floor)).toBe(offset);
         } else {
-          expect(viewport.offsetToPoint(offset)).toEqual({x, y});
-          expect(viewport.pointToOffset({x, y}, RoundMode.Floor)).toBe(offset);
-          expect(viewport.pointToOffset({x: x + 0.5, y: y + 0.5}, RoundMode.Floor, false /* strict */)).toBe(offset);
-          expect(viewport.pointToOffset({x, y}, RoundMode.Floor, true /* strict */)).toBe(offset);
+          expect(viewport.offsetToContentPoint(offset)).toEqual({x, y});
+          expect(viewport.contentPointToOffset({x, y}, RoundMode.Floor)).toBe(offset);
+          expect(viewport.contentPointToOffset({x: x + 0.5, y: y + 0.5}, RoundMode.Floor, false /* strict */)).toBe(offset);
+          expect(viewport.contentPointToOffset({x, y}, RoundMode.Floor, true /* strict */)).toBe(offset);
           if (rounded) {
-            expect(viewport.pointToOffset({x: x + 0.4, y}, RoundMode.Round, true /* strict */)).toBe(offset);
-            expect(viewport.pointToOffset({x: x + 0.5, y}, RoundMode.Round, true /* strict */)).toBe(offset);
-            expect(viewport.pointToOffset({x: x + 0.6, y}, RoundMode.Round, true /* strict */)).toBe(offset + 1);
-            expect(viewport.pointToOffset({x, y}, RoundMode.Ceil, true /* strict */)).toBe(offset);
-            expect(viewport.pointToOffset({x: x + 0.5, y}, RoundMode.Ceil, true /* strict */)).toBe(offset + 1);
-            expect(viewport.pointToOffset({x: x + 1, y}, RoundMode.Ceil, true /* strict */)).toBe(offset + 1);
+            expect(viewport.contentPointToOffset({x: x + 0.4, y}, RoundMode.Round, true /* strict */)).toBe(offset);
+            expect(viewport.contentPointToOffset({x: x + 0.5, y}, RoundMode.Round, true /* strict */)).toBe(offset);
+            expect(viewport.contentPointToOffset({x: x + 0.6, y}, RoundMode.Round, true /* strict */)).toBe(offset + 1);
+            expect(viewport.contentPointToOffset({x, y}, RoundMode.Ceil, true /* strict */)).toBe(offset);
+            expect(viewport.contentPointToOffset({x: x + 0.5, y}, RoundMode.Ceil, true /* strict */)).toBe(offset + 1);
+            expect(viewport.contentPointToOffset({x: x + 1, y}, RoundMode.Ceil, true /* strict */)).toBe(offset + 1);
           }
         }
       }
@@ -956,4 +956,3 @@ runner.run();
 
 // TODO:
 //   - simplify lines calculation in Viewport.decorate;
-//   - cleanup Viewport.aToB conversion methods;

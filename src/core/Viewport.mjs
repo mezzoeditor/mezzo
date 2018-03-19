@@ -94,33 +94,32 @@ export class Measurer {
 };
 
 /**
- * Viewport class abstracts the window that peeks onto a part of the
- * document. Viewport supports padding around text to implement overscrolling.
+ * Viewport class abstracts the window that peeks into document.
+ * It supports padding around text to implement overscrolling and
+ * requires Measurer to convert text into pixel metrics.
  *
- *          +--------------------------------------+
- *          |                                      |
- *          |  Padding                             |
- *          |                                      |
- *          |    +------------------------------+  |
- *          |    |                              |  |
- *          |    |   Text                       |  |
- *          |    |                              |  |
- *          |    |      +------------------+    |  |
- *          |    |      |                  |    |  |
- *          |    |      |  Viewport        |    |  |
- *          |    |      |                  |    |  |
- *          |    |      +------------------+    |  |
- *          |    |                              |  |
- *          |    +------------------------------+  |
- *          |                                      |
- *          +--------------------------------------+
+ * Viewport operates two coordinate systems:
+ *   - content points measured relative to text origin;
+ *   - viewport points measured relative to viewport origin.
  *
- * Viewport class operates 3 coordinate systems:
- * - viewport points, this is measured relative to viewport origin;
- * - view points, this is measured relative to padding origin, includes padding and text;
- * - document locations, this is measured relative to document origin.
+ * Internally it has a tree of chunks which store metrics in
+ * virtual cooridnate system, which is content coordinate system scaled by
+ * measurer's |defaultWidth| and |lineHeight|. This makes common
+ * case monospace metrics integer numbers.
  *
- * Viewport provides canonical scrollbars.
+ * Viewport also provides canonical scrollbars.
+ *
+ *    +------------------+
+ *    | Padding          |
+ *    |   +------------+ |
+ *    |   | Text       | |
+ *    | +-+----------+ | |
+ *    | | |          | | |
+ *    | | | Viewport | | |
+ *    | | |          | | |
+ *    | +-+----------+ | |
+ *    |   +------------+ |
+ *    +------------------+
  */
 export class Viewport {
   /**
@@ -173,13 +172,6 @@ export class Viewport {
     this._metrics = new Metrics(measurer.defaultWidthRegex(), measure, measure);
     let nodes = this._wrapChunks(this._createChunks(0, this._document.length(), kDefaultChunkSize));
     this._setTree(Tree.build(nodes));
-  }
-
-  /**
-   * @return {!Metrics}
-   */
-  metrics() {
-    return this._metrics;
   }
 
   /**
@@ -270,45 +262,27 @@ export class Viewport {
 
   /**
    * @param {!Point} point
-   * @return {!Point}
+   * @param {RoundMode=} roundMode
+   * @param {boolean=} strict
+   * @return {number}
    */
-  viewPointToDocumentPoint(point) {
-    return {x: point.x - this._padding.left, y: point.y - this._padding.top};
-  }
-
-  /**
-   * @param {!Point} point
-   * @return {!Point}
-   */
-  documentPointToViewPoint(point) {
-    return {x: point.x + this._padding.left, y: point.y + this._padding.top};
-  }
-
-  /**
-   * @param {!Point} point
-   * @return {!Point}
-   */
-  viewportPointToDocumentPoint(point) {
-    return {
-      x: point.x + this._scrollLeft - this._padding.left,
-      y: point.y + this._scrollTop - this._padding.top
-    };
+  viewportPointToOffset(point, roundMode = RoundMode.Floor, strict) {
+    return this._virtualPointToOffset({
+      x: (point.x + this._scrollLeft - this._padding.left) / this._defaultWidth,
+      y: (point.y + this._scrollTop - this._padding.top) / this._lineHeight
+    }, roundMode, !!strict);
   }
 
   /**
    * @param {number} offset
    * @return {?Point}
    */
-  offsetToPoint(offset) {
-    let found = this._tree.findByOffset(offset);
-    if (found.location === null)
-      return null;
-    if (found.data === null)
-      return {x: found.location.x * this._defaultWidth, y: found.location.y * this._lineHeight};
-    let from = found.location.offset;
-    let chunk = this._document.content(from, from + found.data.metrics.length);
-    let location = this._metrics.locateByOffset(chunk, found.location, offset);
-    return {x: location.x * this._defaultWidth, y: location.y * this._lineHeight};
+  offsetToViewportPoint(offset) {
+    let point = this._offsetToVirtualPoint(offset);
+    return point === null ? null : {
+      x: point.x * this._defaultWidth - this._scrollLeft + this._padding.left,
+      y: point.y * this._lineHeight - this._scrollTop + this._padding.top
+    };
   }
 
   /**
@@ -317,14 +291,51 @@ export class Viewport {
    * @param {boolean=} strict
    * @return {number}
    */
-  pointToOffset(point, roundMode = RoundMode.Floor, strict) {
-    point = {x: point.x / this._defaultWidth, y: point.y / this._lineHeight};
+  contentPointToOffset(point, roundMode = RoundMode.Floor, strict) {
+    return this._virtualPointToOffset({
+      x: point.x / this._defaultWidth,
+      y: point.y / this._lineHeight
+    }, roundMode, !!strict);
+  }
+
+  /**
+   * @param {number} offset
+   * @return {?Point}
+   */
+  offsetToContentPoint(offset) {
+    let point = this._offsetToVirtualPoint(offset);
+    return point === null ? null : {
+      x: point.x * this._defaultWidth,
+      y: point.y * this._lineHeight
+    };
+  }
+
+  /**
+   * @param {!Point} point
+   * @param {RoundMode} roundMode
+   * @param {boolean} strict
+   * @return {number}
+   */
+  _virtualPointToOffset(point, roundMode = RoundMode.Floor, strict) {
     let found = this._tree.findByPoint(point, !!strict);
     if (found.data === null)
       return found.location.offset;
     let from = found.location.offset;
     let chunk = this._document.content(from, from + found.data.metrics.length);
     return this._metrics.locateByPoint(chunk, found.location, found.clampedPoint, roundMode, strict).offset;
+  }
+
+  /**
+   * @param {number} offset
+   * @return {?Point}
+   */
+  _offsetToVirtualPoint(offset) {
+    let found = this._tree.findByOffset(offset);
+    if (found.location === null || found.data === null)
+      return found.location;
+    let from = found.location.offset;
+    let chunk = this._document.content(from, from + found.data.metrics.length);
+    return this._metrics.locateByOffset(chunk, found.location, offset);
   }
 
   /**
@@ -367,9 +378,12 @@ export class Viewport {
       bottom: 0
     }, rangePadding);
 
-    let from = this.documentPointToViewPoint(this.offsetToPoint(range.from));
-    let to = this.documentPointToViewPoint(this.offsetToPoint(range.to));
-    to.y += this._lineHeight;
+    let from = this.offsetToViewportPoint(range.from);
+    from.x += this._scrollLeft;
+    from.y += this._scrollTop;
+    let to = this.offsetToViewportPoint(range.to);
+    to.x += this._scrollLeft;
+    to.y += this._scrollTop + this._lineHeight;
 
     if (this._scrollTop > from.y) {
       this._scrollTop = Math.max(from.y - rangePadding.top, 0);
@@ -397,9 +411,8 @@ export class Viewport {
     this._frozen = true;
     this._document.freeze(Viewport._decorateFreeze);
 
-    let origin = this.viewportPointToDocumentPoint({x: 0, y: 0});
-    let startOffset = this.pointToOffset(origin);
-    let endOffset = this.pointToOffset({x: origin.x + this._width, y: origin.y + this._height}, RoundMode.Ceil);
+    let startOffset = this.viewportPointToOffset({x: 0, y: 0});
+    let endOffset = this.viewportPointToOffset({x: this._width, y: this._height}, RoundMode.Ceil);
     let startPosition = this._document.offsetToPosition(startOffset);
     let endPosition = this._document.offsetToPosition(endOffset);
 
@@ -407,7 +420,7 @@ export class Viewport {
     let totalVisibleRange = 0;
     for (let line = endPosition.line; line >= startPosition.line; line--) {
       let lineStartOffset = this._document.positionToOffset({line, column: 0});
-      let y = this.offsetToPoint(lineStartOffset).y;
+      let y = this.offsetToViewportPoint(lineStartOffset).y;
       let lineEndOffset = this._document.length();
       if (line + 1 < this._document.lineCount()) {
         let nextStartOffset = lines.length
@@ -415,9 +428,9 @@ export class Viewport {
             : this._document.positionToOffset({line: line + 1, column: 0});
         lineEndOffset = nextStartOffset - 1;
       }
-      let lineFromOffset = this.pointToOffset({x: origin.x, y: y});
-      let lineToOffset = this.pointToOffset({x: origin.x + this._width, y: y}, RoundMode.Ceil);
-      let lineFromPoint = this.offsetToPoint(lineFromOffset);
+      let lineFromOffset = this.viewportPointToOffset({x: 0, y: y});
+      let lineToOffset = this.viewportPointToOffset({x: this._width, y: y}, RoundMode.Ceil);
+      let lineFromPoint = this.offsetToViewportPoint(lineFromOffset);
       lines.push({
           line,
           start: lineStartOffset,
@@ -473,12 +486,12 @@ export class Viewport {
       scrollbarDecorators.push(...(result.scrollbar || []));
     }
 
-    let {text, background} = this._buildTextAndBackground(origin, lines, textDecorators, backgroundDecorators);
+    let {text, background} = this._buildTextAndBackground(lines, textDecorators, backgroundDecorators);
     let lineInfos = [];
     for (let line of lines) {
       lineInfos.push({
         line: line.line,
-        y: line.y - this._scrollTop + this._padding.top
+        y: line.y
       });
     }
 
@@ -488,13 +501,12 @@ export class Viewport {
     return {text, background, scrollbar, lines: lineInfos};
   }
 
-  _buildTextAndBackground(origin, lines, textDecorators, backgroundDecorators) {
-    const viewportRight = origin.x + this._width;
-    const decorationMaxRight = Math.min(viewportRight + 10, this._contentWidth);
+  _buildTextAndBackground(lines, textDecorators, backgroundDecorators) {
+    const decorationMinLeft = Math.max(this._padding.left - this._scrollLeft, 0);
+    const scrollRight = this._maxScrollLeft - this._scrollLeft;
+    const decorationMaxRight = this._width - Math.max(this._padding.right - scrollRight, 0);
     const text = [];
     const background = [];
-    const dx = -this._scrollLeft + this._padding.left;
-    const dy = -this._scrollTop + this._padding.top;
     for (let line of lines) {
       let lineContent = this._document.content(line.from, line.to);
       let offsetToX = new Float32Array(line.to - line.from + 1);
@@ -522,8 +534,8 @@ export class Viewport {
           let to = Math.min(line.to, decoration.to);
           if (from < to) {
             text.push({
-              x: offsetToX[from - line.from] + dx,
-              y: line.y + dy,
+              x: offsetToX[from - line.from],
+              y: line.y,
               content: lineContent.substring(from - line.from, to - line.from),
               style: decoration.data
             });
@@ -535,12 +547,12 @@ export class Viewport {
         decorator.visitTouching(line.from, line.to, decoration => {
           trace.count('decorations');
           // TODO: note that some editors only show selection up to line length. Setting?
-          let from = decoration.from < line.from ? Math.max(line.x - 10, 0) : offsetToX[decoration.from - line.from];
+          let from = decoration.from < line.from ? decorationMinLeft : offsetToX[decoration.from - line.from];
           let to = decoration.to > line.to ? decorationMaxRight : offsetToX[decoration.to - line.from];
           if (from <= to) {
             background.push({
-              x: from + dx,
-              y: line.y + dy,
+              x: from,
+              y: line.y,
               width: to - from,
               style: decoration.data
             });
@@ -560,11 +572,11 @@ export class Viewport {
       let lastBottom = -1;
       decorator.sparseVisitAll(decoration => {
         trace.count('decorations');
-        const from = this.offsetToPoint(decoration.from);
-        const to = this.offsetToPoint(decoration.to);
+        const from = this.offsetToViewportPoint(decoration.from);
+        const to = this.offsetToViewportPoint(decoration.to);
 
-        let top = this.vScrollbar.contentOffsetToScrollbarOffset(from.y + this._padding.top);
-        let bottom = this.vScrollbar.contentOffsetToScrollbarOffset(to.y + lineHeight + this._padding.top);
+        let top = this.vScrollbar.contentOffsetToScrollbarOffset(from.y);
+        let bottom = this.vScrollbar.contentOffsetToScrollbarOffset(to.y + lineHeight);
         bottom = Math.max(bottom, top + kMinScrollbarDecorationHeight);
 
         if (top <= lastBottom) {
@@ -576,8 +588,8 @@ export class Viewport {
           lastBottom = bottom;
         }
 
-        let nextY = this.vScrollbar.scrollbarOffsetToContentOffset(bottom) - this._padding.top;
-        let nextOffset = this.pointToOffset({x: 0, y: nextY + lineHeight});
+        let nextY = this.vScrollbar.scrollbarOffsetToContentOffset(bottom);
+        let nextOffset = this.viewportPointToOffset({x: 0, y: nextY + lineHeight});
         return Math.max(decoration.to, nextOffset);
       });
       if (lastTop >= 0)

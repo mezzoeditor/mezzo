@@ -723,10 +723,10 @@ export class Selection {
    * @return {!{offset: number, upDownX: number}}
    */
   _lineUp(offset, upDownX) {
-    let point = this._viewport.offsetToPoint(offset);
+    let point = this._viewport.offsetToContentPoint(offset);
     if (upDownX === -1)
       upDownX = point.x;
-    offset = this._viewport.pointToOffset({x: upDownX, y: point.y - this._viewport.lineHeight()}, RoundMode.Round);
+    offset = this._viewport.contentPointToOffset({x: upDownX, y: point.y - this._viewport.lineHeight()}, RoundMode.Round);
     return {offset, upDownX};
   }
 
@@ -736,10 +736,10 @@ export class Selection {
    * @return {!{offset: number, upDownX: number}}
    */
   _lineDown(offset, upDownX) {
-    let point = this._viewport.offsetToPoint(offset);
+    let point = this._viewport.offsetToContentPoint(offset);
     if (upDownX === -1)
       upDownX = point.x;
-    offset = this._viewport.pointToOffset({x: upDownX, y: point.y + this._viewport.lineHeight()}, RoundMode.Round);
+    offset = this._viewport.contentPointToOffset({x: upDownX, y: point.y + this._viewport.lineHeight()}, RoundMode.Round);
     return {offset, upDownX};
   }
 
