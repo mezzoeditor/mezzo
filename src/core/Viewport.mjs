@@ -125,10 +125,12 @@ export class Viewport {
   /**
    * @param {!Document} document
    * @param {!Measurer} measurer
+   * @param {function()} revealCallback
    */
-  constructor(document, measurer) {
+  constructor(document, measurer, revealCallback) {
     this._document = document;
     this._document.addReplaceCallback(this._onReplace.bind(this));
+    this._revealCallback = revealCallback;
 
     this._width = 0;
     this._height = 0;
@@ -153,13 +155,6 @@ export class Viewport {
    */
   document() {
     return this._document;
-  }
-
-  /**
-   * @param {function()} revealCallback
-   */
-  setRevealCallback(revealCallback) {
-    this._revealCallback = revealCallback;
   }
 
   /**

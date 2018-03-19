@@ -407,7 +407,7 @@ describe('Viewport.Scrollbars', () => {
       defaultWidthRegex: () => null,
       measureString: s => 10,
     };
-    state.viewport = new Viewport(document, measurer);
+    state.viewport = new Viewport(document, measurer, () => {});
     document.reset(new Array(10).fill('').join('\n'));
     state.viewport.setSize(100, 100);
     state.viewport.vScrollbar.setSize(100);
@@ -484,7 +484,7 @@ describe('Viewport', () => {
     for (let chunkSize = 1; chunkSize <= 100; chunkSize++) {
       let document = new Document(() => {});
       document.reset(content);
-      let viewport = new Viewport(document, createTestMeasurer());
+      let viewport = new Viewport(document, createTestMeasurer(), () => {});
       Viewport.test.rechunk(viewport, chunkSize);
       expect(viewport.contentWidth()).toBe(longest);
       expect(viewport.contentHeight()).toBe((lineCount + 1) * 3);
