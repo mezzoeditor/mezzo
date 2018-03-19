@@ -7,8 +7,6 @@ import {trace} from './Trace.mjs';
  *   document: !Document,
  *   range: !Range,
  *   ranges: !Array<!Viewport.VisibleRange>,
- *   firstLine: number,
- *   lastLine: number,
  * }} Viewport.VisibleContent
  */
 
@@ -348,17 +346,6 @@ export class Viewport {
   }
 
   /**
-   * @param {!Point} point
-   * @return {!Point}
-   */
-  documentPointToViewportPoint(point) {
-    return {
-      x: point.x - this._scrollLeft + this._padding.left,
-      y: point.y - this._scrollTop + this._padding.top
-    };
-  }
-
-  /**
    * @param {!Range} range
    * @param {!{left: number, right: number, top: number, bottom: number}=} rangePadding
    */
@@ -396,77 +383,38 @@ export class Viewport {
 
   /**
    * @return {!{
-   *     text: !Array<!Viewport.TextInfo>,
-   *     background: !Array<!Viewport.BackgroundInfo>,
-   *     scrollbar: !Array<!Viewport.ScrollbarInfo>,
-   *     lines: !Array<!Viewport.LineInfo>
+   *   text: !Array<!Viewport.TextInfo>,
+   *   background: !Array<!Viewport.BackgroundInfo>,
+   *   scrollbar: !Array<!Viewport.ScrollbarInfo>,
+   *   lines: !Array<!Viewport.LineInfo>
    * }}
    */
   decorate() {
     this._frozen = true;
     this._document.freeze(Viewport._decorateFreeze);
 
-    let startOffset = this.viewportPointToOffset({x: 0, y: 0});
-    let endOffset = this.viewportPointToOffset({x: this._width, y: this._height}, RoundMode.Ceil);
-    let startPosition = this._document.offsetToPosition(startOffset);
-    let endPosition = this._document.offsetToPosition(endOffset);
-
+    let y = this.offsetToViewportPoint(this.viewportPointToOffset({x: 0, y: 0})).y;
     let lines = [];
-    let totalVisibleRange = 0;
-    for (let line = endPosition.line; line >= startPosition.line; line--) {
-      let lineStartOffset = this._document.positionToOffset({line, column: 0});
-      let y = this.offsetToViewportPoint(lineStartOffset).y;
-      let lineEndOffset = this._document.length();
-      if (line + 1 < this._document.lineCount()) {
-        let nextStartOffset = lines.length
-            ? lines[lines.length - 1].start
-            : this._document.positionToOffset({line: line + 1, column: 0});
-        lineEndOffset = nextStartOffset - 1;
-      }
-      let lineFromOffset = this.viewportPointToOffset({x: 0, y: y});
-      let lineToOffset = this.viewportPointToOffset({x: this._width, y: y}, RoundMode.Ceil);
-      let lineFromPoint = this.offsetToViewportPoint(lineFromOffset);
-      lines.push({
-          line,
-          start: lineStartOffset,
-          end: lineEndOffset,
-          from: lineFromOffset,
-          to: lineToOffset,
-          x: lineFromPoint.x,
-          y: lineFromPoint.y,
-      });
-      totalVisibleRange += lineToOffset - lineFromOffset;
-    }
-    lines.reverse();
-
-    let diffs = [];
-    for (let i = 0; i < lines.length - 1; i++)
-      diffs[i] = {i, len: lines[i + 1].from - lines[i].to};
-    diffs.sort((a, b) => a.len - b.len || a.i - b.i);
-    let join = new Array(lines.length).fill(false);
-    let remaining = totalVisibleRange * 0.5;
-    for (let diff of diffs) {
-      remaining -= diff.len;
-      if (remaining < 0)
+    for (; y <= this._height; y += this._lineHeight) {
+      let from = this.viewportPointToOffset({x: 0, y: y});
+      let to = this.viewportPointToOffset({x: this._width, y: y}, RoundMode.Ceil);
+      let point = this.offsetToViewportPoint(from);
+      if (point.y < y)
         break;
-      join[diff.i] = true;
+      lines.push({
+        from: from,
+        to: to,
+        x: point.x,
+        y: point.y,
+      });
     }
 
-    let ranges = [];
-    for (let i = 0; i < lines.length; i++) {
-      if (i && join[i - 1])
-        ranges[ranges.length - 1].to = lines[i].to;
-      else
-        ranges.push(new Viewport.VisibleRange(this._document, lines[i].from, lines[i].to));
-    }
-    let range = ranges.length ? {from: ranges[0].from, to: Math.min(this._document.length(), ranges[ranges.length - 1].to)} : {from: 0, to: 0};
-
+    let ranges = this._joinRanges(lines);
+    let totalRange = ranges.length ? {from: ranges[0].from, to: ranges[ranges.length - 1].to} : {from: 0, to: 0};
     let visibleContent = {
       document: this._document,
-      range: range,
+      range: totalRange,
       ranges: ranges,
-      firstLine: startPosition.line,
-      lastLine: endPosition.line
     };
 
     let textDecorators = [];
@@ -485,17 +433,55 @@ export class Viewport {
     let lineInfos = [];
     for (let line of lines) {
       lineInfos.push({
-        line: line.line,
+        // TODO: this should be a range of lines, measured by start/end rather than from/to.
+        line: this._document.offsetToPosition(line.from).line,
         y: line.y
       });
     }
-
     let scrollbar = this._buildScrollbar(scrollbarDecorators);
+
     this._document.unfreeze(Viewport._decorateFreeze);
     this._frozen = false;
     return {text, background, scrollbar, lines: lineInfos};
   }
 
+  /**
+   * @param {!Array<!Range>} ranges
+   * @return {!Array<!Viewport.VisibleRange>}
+   */
+  _joinRanges(ranges) {
+    let totalRange = 0;
+    for (let range of ranges)
+    totalRange += range.to - range.from;
+    let diffs = [];
+    for (let i = 0; i < ranges.length - 1; i++)
+      diffs[i] = {i, len: ranges[i + 1].from - ranges[i].to};
+    diffs.sort((a, b) => a.len - b.len || a.i - b.i);
+    let join = new Array(ranges.length).fill(false);
+    let remaining = totalRange * 0.5;
+    for (let diff of diffs) {
+      remaining -= diff.len;
+      if (remaining < 0)
+        break;
+      join[diff.i] = true;
+    }
+
+    let result = [];
+    for (let i = 0; i < ranges.length; i++) {
+      if (i && join[i - 1])
+        result[result.length - 1].to = ranges[i].to;
+      else
+        result.push(new Viewport.VisibleRange(this._document, ranges[i].from, ranges[i].to));
+    }
+    return result;
+  }
+
+  /**
+   * @param {!Array<!{from: number, to: number, x: number, y: number}>} lines
+   * @param {!Array<!TextDecorator>} textDecorators
+   * @param {!Array<!TextDecorator>} backgroundDecorators
+   * @return {!{text: !Viewport.TextInfo, background: !Viewport.BackgroundInfo}}
+   */
   _buildTextAndBackground(lines, textDecorators, backgroundDecorators) {
     const decorationMinLeft = Math.max(this._padding.left - this._scrollLeft, 0);
     const scrollRight = this._maxScrollLeft - this._scrollLeft;
@@ -547,6 +533,10 @@ export class Viewport {
     return {text, background};
   }
 
+  /**
+   * @param {!Array<!ScrollbaDecorator>} scrollbarDecorators
+   * @return {!Array<!Viewport.ScrollbarInfo>}
+   */
   _buildScrollbar(scrollbarDecorators) {
     const lineHeight = this._lineHeight;
     let scrollbar = [];

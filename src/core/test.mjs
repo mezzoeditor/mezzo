@@ -945,5 +945,6 @@ new Reporter(runner);
 runner.run();
 
 // TODO:
-//   - simplify lines calculation in Viewport.decorate;
 //   - reduce API around scrollbars;
+//   - add tests for Viewport;
+//   - add tests for various Document stuff;
