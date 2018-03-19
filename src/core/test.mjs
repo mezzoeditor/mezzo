@@ -777,16 +777,6 @@ describe('Metrics', () => {
   it('Metrics internals', () => {
     let metrics = createTestMetrics();
 
-    expect(metrics.measureBMPCodePoint('a'.charCodeAt(0))).toBe(1);
-    expect(metrics.measureBMPCodePoint('d'.charCodeAt(0))).toBe(4);
-    expect(metrics.measureBMPCodePoint('a'.charCodeAt(0))).toBe(1);
-    expect(metrics.measureBMPCodePoint('d'.charCodeAt(0))).toBe(4);
-
-    expect(metrics.measureSupplementaryCodePoint('𐀀'.codePointAt(0))).toBe(100);
-    expect(metrics.measureSupplementaryCodePoint('😀'.codePointAt(0))).toBe(100);
-    expect(metrics.measureSupplementaryCodePoint('𐀀'.codePointAt(0))).toBe(100);
-    expect(metrics.measureSupplementaryCodePoint('😀'.codePointAt(0))).toBe(100);
-
     expect(metrics._measureString('abc', 1, 2)).toBe(2);
     expect(metrics._measureString('abc', 0, 3)).toBe(6);
     expect(metrics._measureString('abc', 2, 2)).toBe(0);
@@ -956,3 +946,4 @@ runner.run();
 
 // TODO:
 //   - simplify lines calculation in Viewport.decorate;
+//   - reduce API around scrollbars;

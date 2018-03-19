@@ -504,23 +504,7 @@ export class Viewport {
     const background = [];
     for (let line of lines) {
       let lineContent = this._document.content(line.from, line.to);
-      let offsetToX = new Float32Array(line.to - line.from + 1);
-      for (let x = line.x, i = 0; i <= line.to - line.from; ) {
-        offsetToX[i] = x;
-        if (i < lineContent.length) {
-          let charCode = lineContent.charCodeAt(i);
-          if (charCode >= 0xD800 && charCode <= 0xDBFF && i + 1 < lineContent.length) {
-            offsetToX[i + 1] = x;
-            x += this._metrics.measureSupplementaryCodePoint(lineContent.codePointAt(i)) * this._defaultWidth;
-            i += 2;
-          } else {
-            x += this._metrics.measureBMPCodePoint(charCode) * this._defaultWidth;
-            i++;
-          }
-        } else {
-          i++;
-        }
-      }
+      let offsetToX = this._metrics.buildXMap(lineContent, line.to - line.from + 1);
 
       for (let decorator of textDecorators) {
         decorator.visitTouching(line.from, line.to, decoration => {
@@ -529,7 +513,7 @@ export class Viewport {
           let to = Math.min(line.to, decoration.to);
           if (from < to) {
             text.push({
-              x: offsetToX[from - line.from],
+              x: line.x + offsetToX[from - line.from] * this._defaultWidth,
               y: line.y,
               content: lineContent.substring(from - line.from, to - line.from),
               style: decoration.data
@@ -542,8 +526,12 @@ export class Viewport {
         decorator.visitTouching(line.from, line.to, decoration => {
           trace.count('decorations');
           // TODO: note that some editors only show selection up to line length. Setting?
-          let from = decoration.from < line.from ? decorationMinLeft : offsetToX[decoration.from - line.from];
-          let to = decoration.to > line.to ? decorationMaxRight : offsetToX[decoration.to - line.from];
+          let from = decoration.from < line.from
+            ? decorationMinLeft
+            : line.x + offsetToX[decoration.from - line.from] * this._defaultWidth;
+          let to = decoration.to > line.to
+            ? decorationMaxRight
+            : line.x + offsetToX[decoration.to - line.from] * this._defaultWidth;
           if (from <= to) {
             background.push({
               x: from,
