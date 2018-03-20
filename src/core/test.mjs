@@ -537,7 +537,7 @@ describe('Decorator', () => {
   }
 
   it('Decorator getters', () => {
-    let dec = new Decorator();
+    let dec = new Decorator(true /* createHandles */);
     let a = {from: 0, to: 1, data: 'a'};
     let b = {from: 0, to: 0, data: 'b'};
     let c = {from: 2, to: 3, data: 'c'};
@@ -630,7 +630,7 @@ describe('Decorator', () => {
     }
   });
 
-  fit('Decorator.replace manual', () => {
+  it('Decorator.replace manual', () => {
     let before = {from: 10, to: 20};
     let cases = [
       {from: 0, to: 1, inserted: 5, expected: [{from: 14, to: 24}]},
@@ -656,7 +656,7 @@ describe('Decorator', () => {
 
     for (let test of cases) {
       let {from, to, inserted, expected} = test;
-      let dec = new Decorator();
+      let dec = new Decorator(true /* createHandles */);
       let handle = dec.add(before.from, before.to, '');
       let removed = dec.replace(from, to, inserted);
       let got = dec.listAll();
@@ -692,7 +692,7 @@ describe('Decorator', () => {
   });
 
   it('Decorator.editing', () => {
-    let dec = new Decorator();
+    let dec = new Decorator(true /* createHandles */);
     let a = {from: 0, to: 1, data: 'a'};
     let b = {from: 2, to: 3, data: 'b'};
     let c = {from: 3, to: 3, data: 'c'};
@@ -739,7 +739,7 @@ describe('Decorator', () => {
   });
 
   it('Decorator.multiple removals', () => {
-    let dec = new Decorator();
+    let dec = new Decorator(true /* createHandles */);
     let a = {from: 1, to: 2, data: 'a'};
     let b = {from: 2, to: 3, data: 'b'};
     let c = {from: 3, to: 3, data: 'c'};

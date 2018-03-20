@@ -186,8 +186,14 @@ function find(node, offset) {
  * @template T
  */
 export class Decorator {
-  constructor() {
+  /**
+   * Decorator with handles is slower on replace() operation, but keeps a handle
+   * to each decoration which can be used to resolve or remove it later.
+   * @param {boolean=} createHandles
+   */
+  constructor(createHandles) {
     this._root = undefined;
+    this._createHandles = !!createHandles;
   }
 
   /**
@@ -195,10 +201,11 @@ export class Decorator {
    *   - not degenerate (|from| <= |to|);
    *   - disjoiint (no decorations have common interior point);
    *   - different (no collapsed decorations are at the same point).
+   * Only returns a handle if asked for in constructor.
    * @param {number} from
    * @param {number} to
    * @param {T} data
-   * @return {!Decorator.Handle}
+   * @return {!Decorator.Handle|undefined}
    */
   add(from, to, data) {
     if (from > to)
@@ -210,11 +217,11 @@ export class Decorator {
       throw 'Two collapsed decorations at the same offset are not allowed';
     let node = {data, from, to, h: random(), size: 1};
     this._root = merge(merge(tmp.left, node), tmp.right);
-    return node;
+    return this._createHandles ? node : undefined;
   }
 
   /**
-   * Removes a single decoration and returns it's data if any.
+   * Removes a single decoration by handle and returns it's data if any.
    * @param {!Decorator.Handle} handle
    * @return {T|undefined}
    */
@@ -260,11 +267,11 @@ export class Decorator {
    *   - decorations covering replaced range are resized by |inserted - to + from|;
    *   - decorations covering |from| or |to| are cropped by [from, to];
    *   - decorations starting after |to| are moved by |inserted - to + from|.
-   * Returns the list of handles to removed decorations.
+   * Returns the list of handles to removed decorations if asked for in constructor.
    * @param {number} from
    * @param {number} to
    * @param {number} inserted
-   * @return {!Array<!Decorator.Handle>}
+   * @return {!Array<!Decorator.Handle>|undefined}
    */
   replace(from, to, inserted) {
     let delta = inserted - (to - from);
@@ -277,11 +284,14 @@ export class Decorator {
     tmp = split(tmp.right, to - 1, kTo);
     let crossRight = tmp.right;
 
-    let removed = [];
-    visit(tmp.left, node => {
-      node.parent = undefined;
-      removed.push(node);
-    });
+    let removed;
+    if (this._createHandles) {
+      removed = [];
+      visit(tmp.left, node => {
+        node.parent = undefined;
+        removed.push(node);
+      });
+    }
 
     let processed1 = this._process(crossLeft, from, to, inserted, removed);
     let processed2 = this._process(crossRight, from, to, inserted, removed);
@@ -608,7 +618,7 @@ export class Decorator {
    * @param {number} from
    * @param {number} to
    * @param {number} inserted
-   * @param {!Array<!Decorator.Handle>} removed
+   * @param {!Array<!Decorator.Handle>|undefined} removed
    * @return {!TreeNode}
    */
   _process(root, from, to, inserted, removed) {
@@ -621,7 +631,8 @@ export class Decorator {
       let end = node.to;
       if (from < start && to > end) {
         node.parent = undefined;
-        removed.push(node);
+        if (removed)
+          removed.push(node);
         continue;
       }
 

@@ -21,7 +21,7 @@ export class WebEditor {
    */
   constructor(domDocument) {
     this._createDOM(domDocument);
-    this._handles = new Decorator();
+    this._handles = new Decorator(true /* createHandles */);
     this._document = new Document(this.invalidate.bind(this));
     this._document.setTokenizer(new DefaultTokenizer());
     this._document.addReplaceCallback(this._onReplace.bind(this));
