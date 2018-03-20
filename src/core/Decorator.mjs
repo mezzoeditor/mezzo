@@ -258,8 +258,7 @@ export class Decorator {
    * The first of the following rules is applied to each decoration:
    *   - decorations covered by replaced range are removed;
    *   - decorations covering replaced range are resized by |inserted - to + from|;
-   *   - decorations covering |from| are cropped to |from|;
-   *   - decorations covering |to| are extended to |from + inserted];
+   *   - decorations covering |from| or |to| are cropped by [from, to];
    *   - decorations starting after |to| are moved by |inserted - to + from|.
    * Returns the list of handles to removed decorations.
    * @param {number} from
@@ -620,21 +619,23 @@ export class Decorator {
     for (let node of all) {
       let start = node.from;
       let end = node.to;
-      if (from < start && to > start) {
+      if (from < start && to > end) {
         node.parent = undefined;
         removed.push(node);
         continue;
       }
 
-      if (from <= start)
-        start = to >= start ? from : start - (to - from);
-      if (from <= end)
-        end = to >= end ? from : end - (to - from);
-
-      if (from <= start)
-        start += inserted;
-      if (from <= end)
-        end += inserted;
+      if (from >= start && to <= end) {
+        end += inserted - (to - from);
+      } else if (from <= start && to >= start) {
+        start = from + inserted;
+        end = from + inserted + (end - to);
+      } else if (from <= end && to >= end) {
+        end = from;
+      } else if (from >= end) {
+        from += inserted - (to - from);
+        end += inserted - (to - from);
+      }
 
       node.from = start;
       node.to = end;

@@ -630,7 +630,7 @@ describe('Decorator', () => {
     }
   });
 
-  it('Decorator.replace manual', () => {
+  fit('Decorator.replace manual', () => {
     let before = {from: 10, to: 20};
     let cases = [
       {from: 0, to: 1, inserted: 5, expected: [{from: 14, to: 24}]},
@@ -640,17 +640,17 @@ describe('Decorator', () => {
       {from: 5, to: 10, inserted: 0, expected: [{from: 5, to: 15}]},
       {from: 5, to: 10, inserted: 3, expected: [{from: 8, to: 18}]},
       {from: 20, to: 20, inserted: 4, expected: [{from: 10, to: 24}]},
-      {from: 20, to: 30, inserted: 3, expected: [{from: 10, to: 23}]},
+      {from: 20, to: 30, inserted: 3, expected: [{from: 10, to: 20}]},
       {from: 5, to: 25, inserted: 30, expected: []},
-      {from: 10, to: 10, inserted: 5, expected: [{from: 15, to: 25}]},
-      {from: 10, to: 20, inserted: 3, expected: [{from: 13, to: 13}]},
+      {from: 10, to: 10, inserted: 5, expected: [{from: 10, to: 25}]},
+      {from: 10, to: 20, inserted: 3, expected: [{from: 10, to: 13}]},
       {from: 12, to: 15, inserted: 0, expected: [{from: 10, to: 17}]},
       {from: 13, to: 17, inserted: 4, expected: [{from: 10, to: 20}]},
       {from: 13, to: 17, inserted: 14, expected: [{from: 10, to: 30}]},
-      {from: 8, to: 15, inserted: 0, expected: []},
-      {from: 8, to: 15, inserted: 6, expected: []},
+      {from: 8, to: 15, inserted: 0, expected: [{from: 8, to: 13}]},
+      {from: 8, to: 15, inserted: 6, expected: [{from: 14, to: 19}]},
       {from: 15, to: 25, inserted: 0, expected: [{from: 10, to: 15}]},
-      {from: 15, to: 25, inserted: 3, expected: [{from: 10, to: 18}]},
+      {from: 15, to: 25, inserted: 3, expected: [{from: 10, to: 15}]},
       {from: 15, to: 20, inserted: 4, expected: [{from: 10, to: 19}]},
     ];
 
