@@ -163,10 +163,10 @@ export class WebEditor {
     this.invalidate();
   }
 
-  addHandle(from, to, onRemoved) {
+  addHandle(from, to, onRemoved, fromAnchor, toAnchor) {
     if (to === undefined)
       to = from;
-    return new RangeHandle(this._document, this._handles, from, to, onRemoved);
+    return new RangeHandle(this._document, this._handles, from, to, onRemoved, fromAnchor, toAnchor);
   }
 
   setHighlighter(highlighter) {
@@ -573,11 +573,11 @@ function stringToHash(eventString) {
 }
 
 class RangeHandle {
-  constructor(document, decorator, from, to, onRemoved) {
+  constructor(document, decorator, from, to, onRemoved, fromAnchor, toAnchor) {
     this._document = document;
     this._decorator = decorator;
     this._onRemoved = onRemoved || function() {};
-    this._handle = decorator.add(from, to, this);
+    this._handle = decorator.add(from, to, this, fromAnchor, toAnchor);
     this._handle[RangeHandle._symbol] = this;
   }
 
@@ -592,7 +592,7 @@ class RangeHandle {
 
   resolve() {
     if (this.removed())
-      throw 'Handle was removed!';
+      throw new Error('Handle was removed');
     let {from, to} = this._decorator.resolve(this._handle);
     let fromPosition = this._document.offsetToPosition(from);
     let toPosition = this._document.offsetToPosition(to);

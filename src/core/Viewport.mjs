@@ -351,7 +351,7 @@ export class Viewport {
    */
   reveal(range, rangePadding) {
     if (this._frozen)
-      throw 'Cannot reveal while decorating';
+      throw new Error('Cannot reveal while decorating');
 
     rangePadding = Object.assign({
       left: 10,
@@ -493,7 +493,7 @@ export class Viewport {
       let offsetToX = this._metrics.buildXMap(lineContent, line.to - line.from + 1);
 
       for (let decorator of textDecorators) {
-        decorator.visitTouching(line.from, line.to, decoration => {
+        decorator.visitTouching(line.from - 1, line.to + 1, decoration => {
           trace.count('decorations');
           let from = Math.max(line.from, decoration.from);
           let to = Math.min(line.to, decoration.to);
@@ -509,7 +509,7 @@ export class Viewport {
       }
 
       for (let decorator of backgroundDecorators) {
-        decorator.visitTouching(line.from, line.to, decoration => {
+        decorator.visitTouching(line.from - 1, line.to + 1, decoration => {
           trace.count('decorations');
           // TODO: note that some editors only show selection up to line length. Setting?
           let from = decoration.from < line.from

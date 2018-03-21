@@ -106,13 +106,13 @@ export class Metrics {
     let {x, y} = before;
 
     if (point.y < y || (point.y < y + 1 && point.x < x))
-      throw 'Inconsistent';
+      throw new Error('Inconsistent');
 
     let lineStartOffset = 0;
     while (y + 1 <= point.y) {
       let lineBreakOffset = s.indexOf('\n', lineStartOffset);
       if (lineBreakOffset === -1)
-        throw 'Inconsistent';
+        throw new Error('Inconsistent');
       y += 1;
       x = 0;
       lineStartOffset = lineBreakOffset + 1;
@@ -125,7 +125,7 @@ export class Metrics {
     let {offset, width} = this._locateByWidth(s, lineStartOffset, lineEndOffset, point.x - x, roundMode);
     if (offset === -1) {
       if (strict)
-        throw 'Point is out of bounds';
+        throw new Error('Point is out of bounds');
       offset = lineEndOffset;
     }
     return {
@@ -151,14 +151,14 @@ export class Metrics {
    */
   locateByOffset(s, before, offset, strict) {
     if (s.length < offset - before.offset)
-      throw 'Inconsistent';
+      throw new Error('Inconsistent');
 
     if (!Metrics.isValidOffset(s, offset - before.offset)) {
       if (strict)
-        throw 'Offset belongs to a middle of surrogate pair';
+        throw new Error('Offset belongs to a middle of surrogate pair');
       offset--;
       if (offset < before.offset || !Metrics.isValidOffset(s, offset - before.offset))
-        throw 'Inconsistent';
+        throw new Error('Inconsistent');
     }
 
     let {x, y} = before;
@@ -303,7 +303,7 @@ export class Metrics {
     for (let i = from; i < to; ) {
       let charCode = s.charCodeAt(i);
       if (charCode === Metrics._lineBreakCharCode)
-        throw 'Cannot measure line breaks';
+        throw new Error('Cannot measure line breaks');
       if (charCode >= 0xD800 && charCode <= 0xDBFF && i + 1 < to) {
         let codePoint = s.codePointAt(i);
         if (this._supplementary[codePoint] === undefined)

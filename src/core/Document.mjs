@@ -57,7 +57,7 @@ export class Document {
    */
   unfreeze(symbol) {
     if (this._frozenSymbols.pop() !== symbol)
-      throw 'Unbalanced unfreeze';
+      throw new Error('Unbalanced unfreeze');
   }
 
   /**
@@ -65,7 +65,7 @@ export class Document {
    */
   reset(content) {
     if (this._frozenSymbols.length)
-      throw 'Cannot edit while frozen';
+      throw new Error('Cannot edit while frozen');
     let to = this._length;
     let removed = this.content();
     this._setTree(this._treeWithContent(content));
@@ -104,7 +104,7 @@ export class Document {
    */
   replace(from, to, insertion, symbol) {
     if (this._frozenSymbols.length && this._frozenSymbols[this._frozenSymbols.length - 1] !== symbol)
-      throw 'Cannot edit while frozen';
+      throw new Error('Cannot edit while frozen');
     this.freeze(Document._replaceFreeze);
     let removed = this._replaceRange(from, to, insertion);
     let replacement = {from, to, inserted: insertion.length, removed};

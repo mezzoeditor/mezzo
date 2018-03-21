@@ -2,10 +2,23 @@ import { Random } from './Random.mjs';
 let random = Random(25);
 
 /**
+ * "Start" anchor at |x| stays next to character at offset |x - 1|. When
+ * inserting text at position |x|, the anchor does not move.
+ * "End" anchor at |x| stays next to character at offset |x|. When
+ * inserting text at position |x|, the anchor moves to the right.
+ */
+export let Anchor = {
+  Start: 0,
+  End: 1,
+};
+
+/**
  * @template T
- * @typdef {{
+ * @typedef {{
  *   from: number,
+ *   fromAnchor: !Anchor,
  *   to: number,
+ *   toAnchor: !Anchor,
  *   data: T,
  * }} Decoration
  */
@@ -15,7 +28,9 @@ let random = Random(25);
  * @typedef {{
  *   data: T,
  *   from: number,
+ *   fromAnchor: !Anchor,
  *   to: number,
+ *   toAnchor: !Anchor,
  *   h: number,
  *   size: number,
  *   add: number|undefined,
@@ -56,7 +71,7 @@ function normalize(node) {
  */
 function setChildren(node, left, right) {
   if (node.add)
-    throw 'Inconsistent';
+    throw new Error('Inconsistent');
   node.size = 1;
   node.left = left;
   if (left) {
@@ -90,9 +105,10 @@ function merge(left, right) {
     return setChildren(right, merge(left, right.left), right.right);
 };
 
-const kFrom = 0;
-const kTo = 1;
-const kBetween = 2;
+const kFromLess = 0;
+const kFromLessEqual = 1;
+const kToLess = 2;
+const kToLessEqual = 3;
 
 /**
  * @template T
@@ -105,16 +121,29 @@ function split(node, offset, splitBy) {
   if (!node)
     return {};
   node = normalize(node);
-  let nodeToRight = splitBy === kFrom ? node.from >= offset :
-      (splitBy === kTo ? node.to > offset : (node.from > offset || node.to > offset));
-  if (nodeToRight) {
-    let tmp = split(node.left, offset, splitBy);
-    node.parent = undefined;
-    return {left: tmp.left, right: setChildren(node, tmp.right, node.right)};
-  } else {
+  let nodeToLeft;
+  switch (splitBy) {
+    case kFromLess:
+      nodeToLeft = more(offset, node.from, node.fromAnchor);
+      break;
+    case kFromLessEqual:
+      nodeToLeft = node.from <= offset;
+      break;
+    case kToLess:
+      nodeToLeft = more(offset, node.to, node.toAnchor);
+      break;
+    case kToLessEqual:
+      nodeToLeft = node.to <= offset;
+      break;
+  }
+  if (nodeToLeft) {
     let tmp = split(node.right, offset, splitBy);
     node.parent = undefined;
     return {left: setChildren(node, node.left, tmp.left), right: tmp.right};
+  } else {
+    let tmp = split(node.left, offset, splitBy);
+    node.parent = undefined;
+    return {left: tmp.left, right: setChildren(node, tmp.right, node.right)};
   }
 };
 
@@ -199,23 +228,38 @@ export class Decorator {
   /**
    * Adds a single decoration. Note that decorations must be:
    *   - not degenerate (|from| <= |to|);
-   *   - disjoiint (no decorations have common interior point);
-   *   - different (no collapsed decorations are at the same point).
+   *   - disjoiint (no decorations have common interior point).
    * Only returns a handle if asked for in constructor.
    * @param {number} from
    * @param {number} to
    * @param {T} data
+   * @param {!Anchor=} fromAnchor
+   * @param {!Anchor=} toAnchor
    * @return {!Decorator.Handle|undefined}
    */
-  add(from, to, data) {
+  add(from, to, data, fromAnchor, toAnchor) {
+    if (fromAnchor === undefined)
+      fromAnchor = Anchor.Start;
+    if (toAnchor === undefined)
+      toAnchor = fromAnchor;
     if (from > to)
-      throw 'Reversed decorations are not allowed';
-    let tmp = split(this._root, to, kFrom);
-    if (tmp.left && last(tmp.left).to > from)
-      throw 'Decorations must be disjoint';
-    if (from === to && tmp.right && first(tmp.right).to === to)
-      throw 'Two collapsed decorations at the same offset are not allowed';
-    let node = {data, from, to, h: random(), size: 1};
+      throw new Error('Reversed decorations are not allowed');
+    if (from === to && fromAnchor === Anchor.End && toAnchor === Anchor.Start)
+      throw new Error('Reversed anchoring for collapsed decoration is not allowed');
+    let tmp = split(this._root, to, toAnchor === Anchor.End ? kToLessEqual : kToLess);
+    if (tmp.left) {
+      let lastLeft = last(tmp.left);
+      if (lastLeft.to > from ||
+          lastLeft.to === from && lastLeft.toAnchor === Anchor.End && fromAnchor === Anchor.Start)
+        throw new Error('Decorations must be disjoint');
+    }
+    if (tmp.right) {
+      let firstRight = first(tmp.right);
+      if (firstRight.from < to ||
+          firstRight.from === to && firstRight.fromAnchor === Anchor.Start && toAnchor === Anchor.End)
+        throw new Error('Decorations must be disjoint');
+    }
+    let node = {data, from, to, fromAnchor, toAnchor, h: random(), size: 1};
     this._root = merge(merge(tmp.left, node), tmp.right);
     return this._createHandles ? node : undefined;
   }
@@ -226,15 +270,14 @@ export class Decorator {
    * @return {T|undefined}
    */
   remove(handle) {
-    let range = this.resolve(handle);
-    if (!range)
+    let decoration = this.resolve(handle);
+    if (!decoration)
       return;
-    let collapsed = range.from === range.to;
-    let tmp = split(this._root, range.from, collapsed ? kFrom : kBetween);
-    let tmp2 = split(tmp.right, range.to, collapsed ? kBetween : kFrom);
+    let tmp = split(this._root, decoration.from, decoration.fromAnchor === Anchor.Start ? kToLess : kToLessEqual);
+    let tmp2 = split(tmp.right, decoration.to, decoration.toAnchor === Anchor.Start ? kFromLess : kFromLessEqual);
     let removed = tmp2.left;
-    if (!removed || removed.from !== range.from || removed.to !== range.to || removed.left || removed.right)
-      throw 'Inconsistent';
+    if (!removed || removed.from !== decoration.from || removed.to !== decoration.to || removed.left || removed.right)
+      throw new Error('Inconsistent');
     removed.parent = undefined;
     this._root = merge(tmp.left, tmp2.right);
     return removed.data;
@@ -243,7 +286,7 @@ export class Decorator {
   /**
    * Returns the range of a single decoration if any.
    * @param {!Decorator.Handle} handle
-   * @return {!Range|undefined}
+   * @return {!Decoration|undefined}
    */
   resolve(handle) {
     let node = handle;
@@ -257,7 +300,13 @@ export class Decorator {
       return;
     for (let parent of stack)
       normalize(parent);
-    return {from: handle.from, to: handle.to};
+    return {
+      from: handle.from,
+      to: handle.to,
+      fromAnchor: handle.fromAnchor,
+      toAnchor: handle.toAnchor,
+      data: handle.data
+    };
   }
 
   /**
@@ -275,13 +324,13 @@ export class Decorator {
    */
   replace(from, to, inserted) {
     let delta = inserted - (to - from);
-    let tmp = split(this._root, from - 1, kTo);
+    let tmp = split(this._root, from, kToLess);
     let left = tmp.left;
-    tmp = split(tmp.right, to + 1, kFrom);
+    tmp = split(tmp.right, to, kFromLessEqual);
     let right = tmp.right;
-    tmp = split(tmp.left, from + 1, kFrom);
+    tmp = split(tmp.left, from, kFromLessEqual);
     let crossLeft = tmp.left;
-    tmp = split(tmp.right, to - 1, kTo);
+    tmp = split(tmp.right, to, kToLess);
     let crossRight = tmp.right;
 
     let removed;
@@ -554,7 +603,7 @@ export class Decorator {
         return;
       let next = visitor(node);
       if (next < node.from)
-        throw 'Return value of visitor must not be less than decoration.from';
+        throw new Error('Return value of visitor must not be less than decoration.from');
       from = Math.max(from + 1, Math.max(node.to, next));
     }
   }
@@ -567,7 +616,7 @@ export class Decorator {
    * @return {T}
    */
   _starting(from, to, callback) {
-    return this._handleRange(from, kFrom, to + 1, kFrom, callback);
+    return this._handleRange(from, kFromLess, to, kFromLess, callback);
   }
 
   /**
@@ -578,7 +627,7 @@ export class Decorator {
    * @return {T}
    */
   _ending(from, to, callback) {
-    return this._handleRange(from - 1, kTo, to, kTo, callback);
+    return this._handleRange(from, kToLess, to, kToLess, callback);
   }
 
   /**
@@ -589,7 +638,7 @@ export class Decorator {
    * @return {T}
    */
   _touching(from, to, callback) {
-    return this._handleRange(from - 1, kTo, to + 1, kFrom, callback);
+    return this._handleRange(from, kToLess, to, kFromLess, callback);
   }
 
   /**
@@ -629,21 +678,23 @@ export class Decorator {
     for (let node of all) {
       let start = node.from;
       let end = node.to;
-      if (from < start && to > end) {
+      let startAnchor = node.fromAnchor;
+      let endAnchor = node.toAnchor;
+      if (less(from, start, startAnchor) && more(to, end, endAnchor)) {
         node.parent = undefined;
         if (removed)
           removed.push(node);
         continue;
       }
 
-      if (from >= start && to <= end) {
+      if (!less(from, start, startAnchor) && !more(to, end, endAnchor)) {
         end += inserted - (to - from);
-      } else if (from <= start && to >= start) {
+      } else if (!more(from, start, startAnchor) && !less(to, start, startAnchor)) {
         start = from + inserted;
         end = from + inserted + (end - to);
-      } else if (from <= end && to >= end) {
+      } else if (!more(from, end, endAnchor) && !less(to, end, endAnchor)) {
         end = from;
-      } else if (from >= end) {
+      } else if (!less(from, end, endAnchor)) {
         from += inserted - (to - from);
         end += inserted - (to - from);
       }
@@ -685,12 +736,35 @@ export class ScrollbarDecorator extends TextDecorator {
   }
 
   /**
+   * @override
    * @param {number} from
    * @param {number} to
+   * @param {!Anchor=} fromAnchor
+   * @param {!Anchor=} toAnchor
    */
-  add(from, to, data) {
-    if (data !== undefined)
-      throw 'ScrollbarDecorator only supports a single style passed in constructor';
-    super.add(from, to, this._style);
+  add(from, to, fromAnchor, toAnchor) {
+    if (fromAnchor !== undefined && fromAnchor !== Anchor.Start && fromAnchor !== Anchor.End)
+      throw new Error('ScrollbarDecorator only supports a single style passed in constructor');
+    super.add(from, to, this._style, fromAnchor, toAnchor);
   }
 };
+
+/**
+ * @param {number} pos
+ * @param {number} offset
+ * @param {!Anchor} anchor
+ * @return {boolean}
+ */
+function less(pos, offset, anchor) {
+  return anchor === Anchor.Start ? pos < offset : pos <= offset;
+}
+
+/**
+ * @param {number} pos
+ * @param {number} offset
+ * @param {!Anchor} anchor
+ * @return {boolean}
+ */
+function more(pos, offset, anchor) {
+  return anchor === Anchor.End ? pos > offset : pos >= offset;
+}

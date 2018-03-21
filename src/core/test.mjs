@@ -5,7 +5,7 @@ import {RoundMode, Metrics} from './Metrics.mjs';
 import {TextIterator} from './TextIterator.mjs';
 import {Document} from './Document.mjs';
 import {Random} from './Random.mjs';
-import {Decorator} from './Decorator.mjs';
+import {Decorator, Anchor} from './Decorator.mjs';
 import {Viewport} from './Viewport.mjs';
 
 const runner = new TestRunner();
@@ -520,6 +520,8 @@ describe('Decorator', () => {
     } else {
       expect(got.from).toBe(expected.from);
       expect(got.to).toBe(expected.to);
+      expect(got.fromAnchor).toBe(expected.fromAnchor);
+      expect(got.toAnchor).toBe(expected.toAnchor);
       expect(got.data).toBe(expected.data);
     }
   }
@@ -538,95 +540,74 @@ describe('Decorator', () => {
 
   it('Decorator getters', () => {
     let dec = new Decorator(true /* createHandles */);
-    let a = {from: 0, to: 1, data: 'a'};
-    let b = {from: 0, to: 0, data: 'b'};
-    let c = {from: 2, to: 3, data: 'c'};
-    let d = {from: 15, to: 33, data: 'd'};
-    let e = {from: 8, to: 12, data: 'e'};
-    let f = {from: 8, to: 8, data: 'f'};
-    let g = {from: 12, to: 12, data: 'g'};
-    for (let x of [a, b, c, d, e, f, g])
-      x.handle = dec.add(x.from, x.to, x.data);
+    let a = {from: 0, to: 1, data: 'a', fromAnchor: Anchor.End, toAnchor: Anchor.Start};
+    let b = {from: 0, to: 0, data: 'b', fromAnchor: Anchor.Start, toAnchor: Anchor.End};
+    let c = {from: 2, to: 3, data: 'c', fromAnchor: Anchor.Start, toAnchor: Anchor.Start};
+    let d = {from: 15, to: 33, data: 'd', fromAnchor: Anchor.End, toAnchor: Anchor.Start};
+    let e = {from: 8, to: 12, data: 'e', fromAnchor: Anchor.End, toAnchor: Anchor.End};
+    let f = {from: 8, to: 8, data: 'f', fromAnchor: Anchor.Start, toAnchor: Anchor.Start};
+    let g = {from: 12, to: 12, data: 'g', fromAnchor: Anchor.End, toAnchor: Anchor.End};
+    let h = {from: 1, to: 1, data: 'h', fromAnchor: Anchor.Start, toAnchor: Anchor.Start};
+    let i = {from: 1, to: 1, data: 'i', fromAnchor: Anchor.End, toAnchor: Anchor.End};
+    for (let x of [a, b, c, d, e, f, g, h, i])
+      x.handle = dec.add(x.from, x.to, x.data, x.fromAnchor, x.toAnchor);
 
-    expect(dec.countAll()).toBe(7);
-    expect(dec.countStarting(0, 4)).toBe(3);
-    expect(dec.countStarting(1, 4)).toBe(1);
-    expect(dec.countStarting(9, 10)).toBe(0);
-    expect(dec.countStarting(12, 12)).toBe(1);
-    expect(dec.countEnding(3, 8)).toBe(2);
-    expect(dec.countEnding(0, 40)).toBe(7);
-    expect(dec.countEnding(8, 8)).toBe(1);
-    expect(dec.countEnding(2, 4)).toBe(1);
-    expect(dec.countTouching(0, 0)).toBe(2);
-    expect(dec.countTouching(0, 14)).toBe(6);
-    expect(dec.countTouching(1, 15)).toBe(6);
-    expect(dec.countTouching(9, 10)).toBe(1);
-    expect(dec.countTouching(13, 14)).toBe(0);
-
-    checkList(dec.listAll(), [b, a, c, f, e, g, d]);
-    checkList(dec.listStarting(0, 4), [b, a, c]);
-    checkList(dec.listStarting(1, 4), [c]);
-    checkList(dec.listStarting(9, 10), []);
-    checkList(dec.listStarting(12, 12), [g]);
-    checkList(dec.listEnding(3, 8), [c, f]);
-    checkList(dec.listEnding(0, 40), [b, a, c, f, e, g, d]);
-    checkList(dec.listEnding(8, 8), [f]);
-    checkList(dec.listEnding(2, 4), [c]);
-    checkList(dec.listTouching(0, 0), [b, a]);
-    checkList(dec.listTouching(0, 14), [b, a, c, f, e, g]);
-    checkList(dec.listTouching(1, 15), [a, c, f, e, g, d]);
-    checkList(dec.listTouching(9, 10), [e]);
-    checkList(dec.listTouching(13, 14), []);
-
-    checkOne(dec.firstAll(), b);
-    checkOne(dec.firstStarting(0, 4), b);
-    checkOne(dec.firstStarting(1, 4), c);
-    checkOne(dec.firstStarting(9, 10), null);
-    checkOne(dec.firstStarting(12, 12), g);
-    checkOne(dec.firstEnding(3, 8), c);
-    checkOne(dec.firstEnding(0, 40), b);
-    checkOne(dec.firstEnding(8, 8), f);
-    checkOne(dec.firstEnding(2, 4), c);
-    checkOne(dec.firstTouching(0, 0), b);
-    checkOne(dec.firstTouching(0, 14), b);
-    checkOne(dec.firstTouching(1, 15), a);
-    checkOne(dec.firstTouching(9, 10), e);
-    checkOne(dec.firstTouching(13, 14), null);
-
-    checkOne(dec.lastAll(), d);
-    checkOne(dec.lastStarting(0, 4), c);
-    checkOne(dec.lastStarting(1, 4), c);
-    checkOne(dec.lastStarting(9, 10), null);
-    checkOne(dec.lastStarting(12, 12), g);
-    checkOne(dec.lastEnding(3, 8), f);
-    checkOne(dec.lastEnding(0, 40), d);
-    checkOne(dec.lastEnding(8, 8), f);
-    checkOne(dec.lastEnding(2, 4), c);
-    checkOne(dec.lastTouching(0, 0), a);
-    checkOne(dec.lastTouching(0, 14), g);
-    checkOne(dec.lastTouching(1, 15), d);
-    checkOne(dec.lastTouching(9, 10), e);
-    checkOne(dec.lastTouching(13, 14), null);
-
-    checkVisitor(v => dec.visitAll(v), [b, a, c, f, e, g, d]);
-    checkVisitor(v => dec.visitStarting(0, 4, v), [b, a, c]);
-    checkVisitor(v => dec.visitStarting(1, 4, v), [c]);
-    checkVisitor(v => dec.visitStarting(9, 10, v), []);
-    checkVisitor(v => dec.visitStarting(12, 12, v), [g]);
-    checkVisitor(v => dec.visitEnding(3, 8, v), [c, f]);
-    checkVisitor(v => dec.visitEnding(0, 40, v), [b, a, c, f, e, g, d]);
-    checkVisitor(v => dec.visitEnding(8, 8, v), [f]);
-    checkVisitor(v => dec.visitEnding(2, 4, v), [c]);
-    checkVisitor(v => dec.visitTouching(0, 0, v), [b, a]);
-    checkVisitor(v => dec.visitTouching(0, 14, v), [b, a, c, f, e, g]);
-    checkVisitor(v => dec.visitTouching(1, 15, v), [a, c, f, e, g, d]);
-    checkVisitor(v => dec.visitTouching(9, 10, v), [e]);
-    checkVisitor(v => dec.visitTouching(13, 14, v), []);
-
-    for (let x of [a, b, c, d, e, f, g]) {
+    let all = [b, a, h, i, c, f, e, g, d];
+    checkList(dec.listAll(), all);
+    expect(dec.countAll()).toBe(all.length);
+    checkOne(dec.firstAll(), all[0]);
+    checkOne(dec.lastAll(), all[all.length - 1]);
+    checkVisitor(v => dec.visitAll(v), all);
+    for (let x of all) {
       let range = dec.resolve(x.handle);
       expect(range.from).toBe(x.from);
       expect(range.to).toBe(x.to);
+    }
+
+    let starting = [
+      {from: 0, to: 4, list: [a, h, i, c]},
+      {from: 1, to: 4, list: [i, c]},
+      {from: 9, to: 10, list: []},
+      {from: 12, to: 12, list: []},
+    ];
+    for (let {from, to, list} of starting) {
+      checkList(dec.listStarting(from, to), list);
+      expect(dec.countStarting(from, to)).toBe(list.length);
+      checkOne(dec.firstStarting(from, to), list[0] || null);
+      checkOne(dec.lastStarting(from, to), list[list.length - 1] || null);
+      checkVisitor(v => dec.visitStarting(from, to, v), list);
+    }
+
+    let ending = [
+      {from: 1, to: 1, list: []},
+      {from: 3, to: 8, list: [f]},
+      {from: 0, to: 40, list: [b, a, h, i, c, f, e, g, d]},
+      {from: 12, to: 13, list: [e, g]},
+      {from: 12, to: 12, list: []},
+    ];
+    for (let {from, to, list} of ending) {
+      checkList(dec.listEnding(from, to), list);
+      expect(dec.countEnding(from, to)).toBe(list.length);
+      checkOne(dec.firstEnding(from, to), list[0] || null);
+      checkOne(dec.lastEnding(from, to), list[list.length - 1] || null);
+      checkVisitor(v => dec.visitEnding(from, to, v), list);
+    }
+
+    let touching = [
+      {from: 0, to: 0, list: [b]},
+      {from: 0, to: 1, list: [b, a, h]},
+      {from: 0, to: 14, list: [b, a, h, i, c, f, e, g]},
+      {from: 1, to: 15, list: [i, c, f, e, g]},
+      {from: 1, to: 16, list: [i, c, f, e, g, d]},
+      {from: 9, to: 10, list: [e]},
+      {from: 13, to: 14, list: []},
+    ];
+    for (let {from, to, list} of touching) {
+      checkList(dec.listTouching(from, to), list);
+      expect(dec.countTouching(from, to)).toBe(list.length);
+      checkOne(dec.firstTouching(from, to), list[0] || null);
+      checkOne(dec.lastTouching(from, to), list[list.length - 1] || null);
+      checkVisitor(v => dec.visitTouching(from, to, v), list);
     }
   });
 
@@ -639,11 +620,12 @@ describe('Decorator', () => {
       {from: 2, to: 7, inserted: 0, expected: [{from: 5, to: 15}]},
       {from: 5, to: 10, inserted: 0, expected: [{from: 5, to: 15}]},
       {from: 5, to: 10, inserted: 3, expected: [{from: 8, to: 18}]},
-      {from: 20, to: 20, inserted: 4, expected: [{from: 10, to: 24}]},
+      {from: 20, to: 20, inserted: 4, expected: [{from: 10, to: 20}]},
       {from: 20, to: 30, inserted: 3, expected: [{from: 10, to: 20}]},
       {from: 5, to: 25, inserted: 30, expected: []},
       {from: 10, to: 10, inserted: 5, expected: [{from: 10, to: 25}]},
-      {from: 10, to: 20, inserted: 3, expected: [{from: 10, to: 13}]},
+      {from: 10, to: 20, inserted: 3, expected: [{from: 10, to: 10}]},
+      {from: 10, to: 15, inserted: 2, expected: [{from: 10, to: 17}]},
       {from: 12, to: 15, inserted: 0, expected: [{from: 10, to: 17}]},
       {from: 13, to: 17, inserted: 4, expected: [{from: 10, to: 20}]},
       {from: 13, to: 17, inserted: 14, expected: [{from: 10, to: 30}]},
@@ -651,7 +633,7 @@ describe('Decorator', () => {
       {from: 8, to: 15, inserted: 6, expected: [{from: 14, to: 19}]},
       {from: 15, to: 25, inserted: 0, expected: [{from: 10, to: 15}]},
       {from: 15, to: 25, inserted: 3, expected: [{from: 10, to: 15}]},
-      {from: 15, to: 20, inserted: 4, expected: [{from: 10, to: 19}]},
+      {from: 15, to: 20, inserted: 4, expected: [{from: 10, to: 15}]},
     ];
 
     for (let test of cases) {
@@ -693,17 +675,17 @@ describe('Decorator', () => {
 
   it('Decorator.editing', () => {
     let dec = new Decorator(true /* createHandles */);
-    let a = {from: 0, to: 1, data: 'a'};
-    let b = {from: 2, to: 3, data: 'b'};
-    let c = {from: 3, to: 3, data: 'c'};
-    let d = {from: 10, to: 20, data: 'd'};
-    let e = {from: 21, to: 100, data: 'e'};
+    let a = {from: 0, to: 1, data: 'a', fromAnchor: Anchor.Start, toAnchor: Anchor.End};
+    let b = {from: 2, to: 3, data: 'b', fromAnchor: Anchor.Start, toAnchor: Anchor.Start};
+    let c = {from: 3, to: 3, data: 'c', fromAnchor: Anchor.Start, toAnchor: Anchor.End};
+    let d = {from: 10, to: 20, data: 'd', fromAnchor: Anchor.Start, toAnchor: Anchor.End};
+    let e = {from: 21, to: 100, data: 'e', fromAnchor: Anchor.Start, toAnchor: Anchor.End};
 
-    let cHandle = dec.add(c.from, c.to, c.data);
-    let aHandle = dec.add(a.from, a.to, a.data);
-    let dHandle = dec.add(d.from, d.to, d.data);
-    let bHandle = dec.add(b.from, b.to, b.data);
-    let eHandle = dec.add(e.from, e.to, e.data);
+    let cHandle = dec.add(c.from, c.to, c.data, c.fromAhcnor, c.toAnchor);
+    let aHandle = dec.add(a.from, a.to, a.data, a.fromAnchor, a.toAnchor);
+    let dHandle = dec.add(d.from, d.to, d.data, d.fromAnchor, d.toAnchor);
+    let bHandle = dec.add(b.from, b.to, b.data, b.fromAnchor, b.toAnchor);
+    let eHandle = dec.add(e.from, e.to, e.data, e.fromAnchor, e.toAnchor);
 
     checkList(dec.listAll(), [a, b, c, d, e]);
 
@@ -714,25 +696,24 @@ describe('Decorator', () => {
     dec.clearStarting(5, 15);
     checkList(dec.listAll(), [a, b, c]);
 
-    dec.add(e.from, e.to, e.data);
+    dec.add(e.from, e.to, e.data, e.fromAnchor, e.toAnchor);
     checkList(dec.listAll(), [a, b, c, e]);
 
     dec.clearEnding(0, 3);
-    checkList(dec.listAll(), [e]);
+    checkList(dec.listAll(), [c, e]);
 
-    aHandle = dec.add(a.from, a.to, a.data);
-    dec.add(b.from, b.to, b.data);
-    dec.add(c.from, c.to, c.data);
-    dec.add(d.from, d.to, d.data);
+    aHandle = dec.add(a.from, a.to, a.data, a.fromAnchor, a.toAnchor);
+    dec.add(b.from, b.to, b.data, b.fromAnchor, b.toAnchor);
+    dec.add(d.from, d.to, d.data, d.fromAnchor, d.toAnchor);
     checkList(dec.listAll(), [a, b, c, d, e]);
 
     dec.clearTouching(3, 10);
-    checkList(dec.listAll(), [a, e]);
+    checkList(dec.listAll(), [a, b, e]);
 
-    dec.add(d.from, d.to, d.data);
+    dec.add(d.from, d.to, d.data, d.fromAnchor, d.toAnchor);
     expect(dec.remove(aHandle)).toBe(a.data);
     expect(dec.remove(eHandle)).toBe(undefined);
-    checkList(dec.listAll(), [d, e]);
+    checkList(dec.listAll(), [b, d, e]);
 
     dec.clearAll();
     checkList(dec.listAll(), []);

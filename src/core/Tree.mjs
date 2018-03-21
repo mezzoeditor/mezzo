@@ -137,7 +137,7 @@ export class Tree {
       return {data: null, location: null};
     let found = this._findNode(this._root, {offset});
     if (!found)
-      throw 'Inconsistency';
+      throw new Error('Inconsistent');
     return {data: found.node.data, location: found.location};
   }
 
@@ -158,12 +158,12 @@ export class Tree {
   findByPoint(point, strict) {
     if (point.y < 0) {
       if (strict)
-        throw 'Point does not belong to the tree';
+        throw new Error('Point is out of bounds');
       point = {x: 0, y: 0};
     }
     if (point.x < 0) {
       if (strict)
-        throw 'Point does not belong to the tree';
+        throw new Error('Point is out of bounds');
       point = {x: 0, y: point.y};
     }
 
@@ -176,7 +176,7 @@ export class Tree {
     if (outside) {
       if (!strict)
         return {data: null, location: this._endLocation, clampedPoint: point};
-      throw 'Point does not belong to the tree';
+      throw new Error('Point is out of bounds');
     }
     if (point.y === this._endLocation.y && point.x === this._endLocation.x)
       return {data: null, location: this._endLocation, clampedPoint: point};
@@ -185,7 +185,7 @@ export class Tree {
     if (!found) {
       if (!strict)
         return {data: null, location: this._endLocation, clampedPoint: point};
-      throw 'Point does not belong to the tree';
+      throw new Error('Point is out of bounds');
     }
     return {data: found.node.data, location: found.location, clampedPoint: point};
   }

@@ -90,7 +90,7 @@ export class Selection {
    */
   setRanges(ranges) {
     if (this._frozen)
-      throw 'Cannot change selection while frozen';
+      throw new Error('Cannot change selection while frozen');
     this._ranges = this._rebuild(ranges.map(range => ({
       id: ++this._lastId,
       upDownX: -1,
@@ -105,7 +105,7 @@ export class Selection {
    */
   setLastRange(range) {
     if (this._frozen)
-      throw 'Cannot change selection while frozen';
+      throw new Error('Cannot change selection while frozen');
     let maxRange = this._maxRange();
     if (!maxRange) {
       this._ranges = [{
@@ -128,7 +128,7 @@ export class Selection {
    */
   addRange(range) {
     if (this._frozen)
-      throw 'Cannot change selection while frozen';
+      throw new Error('Cannot change selection while frozen');
     this._ranges.push({
       id: ++this._lastId,
       upDownX: -1,
@@ -188,7 +188,7 @@ export class Selection {
    */
   collapse() {
     if (this._frozen)
-      throw 'Cannot change selection while frozen';
+      throw new Error('Cannot change selection while frozen');
     if (this._ranges.length === 0)
       return false;
     if (this._ranges.length > 1) {
@@ -400,7 +400,7 @@ export class Selection {
 
   addNextOccurence() {
     if (this._frozen)
-      throw 'Cannot change selection while frozen';
+      throw new Error('Cannot change selection while frozen');
     let tokenizer = this._document.tokenizer();
     if (!this._ranges.length || !tokenizer)
       return false;
@@ -507,7 +507,7 @@ export class Selection {
 
   selectAll() {
     if (this._frozen)
-      throw 'Cannot change selection while frozen';
+      throw new Error('Cannot change selection while frozen');
     this._ranges = [{anchor: 0, focus: this._document.length(), upDownX: -1, id: ++this._lastId}];
     this._notifyChanged();
   }
@@ -525,11 +525,11 @@ export class Selection {
    */
   restore(data, ranges) {
     if (this._frozen)
-      throw 'Cannot change selection while frozen';
+      throw new Error('Cannot change selection while frozen');
     this._ranges = data || [];
     if (ranges) {
       if (ranges.length !== this._ranges.length)
-        throw 'Wrong number of ranges to update';
+        throw new Error('Wrong number of ranges to update');
       let newRanges = [];
       for (let i = 0; i < ranges.length; i++)
         newRanges.push({id: this._ranges[i].id, upDownX: -1, anchor: ranges[i].from, focus: ranges[i].to});
@@ -598,7 +598,7 @@ export class Selection {
    */
   _operation(rangeCallback) {
     if (this._frozen)
-      throw 'Cannot change selection while frozen';
+      throw new Error('Cannot change selection while frozen');
     if (!this._ranges.length)
       return false;
     let ranges = [];
@@ -627,7 +627,7 @@ export class Selection {
       let nextFrom = Math.min(next.anchor, next.focus);
       let nextTo = Math.max(next.anchor, next.focus);
       if (nextTo < lastTo)
-        throw 'Inconsistent';
+        throw new Error('Inconsistent');
       if (nextFrom < lastTo || lastTo === nextTo) {
         if (last.anchor > last.focus)
           last.anchor = nextTo;

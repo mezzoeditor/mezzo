@@ -89,12 +89,12 @@ export class Search {
   nextMatch() {
     let offset = this._selection.focus();
     if (offset === null && this._currentMatch)
-      offset = this._currentMatch.from;
+      offset = this._currentMatch.to;
     if (offset === null)
       return false;
-    let match = this._decorator.firstStarting(offset + 1, this._document.length());
+    let match = this._decorator.firstStarting(offset - 1, this._document.length());
     if (!match)
-      match = this._decorator.firstStarting(0, this._document.length());
+      match = this._decorator.firstStarting(-1, this._document.length());
     if (!match)
       return false;
     this._updateCurrentMatch(match, true, true);
@@ -182,7 +182,6 @@ export class Search {
   _onReplace(replacement) {
     let {from, to, inserted} = replacement;
     this._decorator.replace(from, to, inserted);
-    this._currentMatchDecorator.replace(from, to, inserted);
     if (this._currentMatch && this._currentMatch.from >= to) {
       let delta = inserted - (to - from);
       this._updateCurrentMatch({from: this._currentMatch.from + delta, to: this._currentMatch.to + delta}, false, false);
@@ -271,7 +270,7 @@ export class Search {
   _searchRange(range, selectCurrentMatch, revealCurrentMatch) {
     let {from, to} = range;
     let query = this._options.query;
-    this._decorator.clearStarting(from, to);
+    this._decorator.clearStarting(from - 1, to);
     let iterator = this._document.iterator(from, from, to + query.length);
     while (iterator.find(query)) {
       this._decorator.add(iterator.offset, iterator.offset + query.length);

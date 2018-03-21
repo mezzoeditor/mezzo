@@ -23,7 +23,7 @@ export class History {
 
   reset() {
     if (this._operations)
-      throw 'Cannot reset during operation';
+      throw new Error('Cannot reset during operation');
     this._changes = [];
     this._pos = -1;
   }
@@ -45,7 +45,7 @@ export class History {
    */
   undo() {
     if (this._operations)
-      throw 'Cannot undo during operation';
+      throw new Error('Cannot undo during operation');
 
     if (this._pos === -1)
       return false;
@@ -80,7 +80,7 @@ export class History {
    */
   redo() {
     if (this._operations)
-      throw 'Cannot redo during operation';
+      throw new Error('Cannot redo during operation');
 
     if (this._pos === this._changes.length - 1)
       return false;
