@@ -63,17 +63,21 @@ export class JSHighlighter {
    * @param {!Replacement} replacement
    */
   _onReplace(replacement) {
-    this._highlightStates.clearTouching(replacement.from, replacement.to);
-    this._highlightStates.replace(replacement.from, replacement.to, replacement.inserted);
-    if (replacement.from === 0)
+    let from = replacement.offset;
+    let to = from + replacement.removed.length();
+    let inserted = replacement.inserted.length();
+
+    this._highlightStates.clearTouching(from, to);
+    this._highlightStates.replace(from, to, inserted);
+    if (from === 0)
       this._highlightStates.add(0, 0, Parser.defaultState());
-    if (this._highlightOffset <= replacement.from) {
+    if (this._highlightOffset <= from) {
       this._parser.setIterator(this._document.iterator(this._highlightOffset));
       this._scheduleHighlight();
       return;
     }
 
-    let decoration = this._highlightStates.lastTouching(0, replacement.from);
+    let decoration = this._highlightStates.lastTouching(0, from);
     if (decoration) {
       this._highlightOffset = decoration.from;
       this._parser = new Parser(this._document.iterator(this._highlightOffset), decoration.data);

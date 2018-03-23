@@ -73,27 +73,30 @@ export class Tree {
   }
 
   /**
-   * Constructs a tree from a sequence of |nodes|. Additionally, can
-   * merge this tree with |left| and/or |right| trees from the corresponding
-   * side.
-   *
-   * Note that |left| and |right| are not invalidated and can be used
-   * afterwards. In contrary, this takes ownership of |nodes|,
-   * which cannot be used afterwards.
+   * Constructs a tree from a sequence of |nodes|.
+   * Takes ownership of |nodes|, which cannot be used afterwards.
    *
    * @param {!Array<!{data: T, metrics: !TextMetrics}>} nodes
-   * @param {!Tree<T>=} left
-   * @param {!Tree<T>=} right
    * @return {!Tree<T>}
    */
-  static build(nodes, left, right) {
+  static build(nodes) {
     let tree = new Tree();
-    let root = tree._build(nodes);
-    if (left)
-      root = tree._merge(left._root, root);
-    if (right)
-      root = tree._merge(root, right._root);
-    tree._setRoot(root);
+    tree._setRoot(tree._build(nodes));
+    return tree;
+  }
+
+  /**
+   * Constructs a tree by merging two other trees in the order left -> right.
+   * Note that |left| and |right| are not invalidated and can be used
+   * afterwards.
+   *
+   * @param {!Tree<T>} left
+   * @param {!Tree<T>} right
+   * @return {!Tree<T>}
+   */
+  static merge(left, right) {
+    let tree = new Tree();
+    tree._setRoot(tree._merge(left._root, right._root));
     return tree;
   }
 
@@ -114,6 +117,7 @@ export class Tree {
    * @return {!TreeIterator<T>}
    */
   iterator(offset, from, to) {
+    // TODO: make this work when |this._root === undefined| and remove hacks in Text.
     let it = new TreeIterator(this._root, [], from, to, 0, 0);
     it._init(this._root, offset);
     return it;

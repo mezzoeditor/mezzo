@@ -180,7 +180,9 @@ export class Search {
    * @param {!Replacement} replacement
    */
   _onReplace(replacement) {
-    let {from, to, inserted} = replacement;
+    let from = replacement.offset;
+    let to = from + replacement.removed.length();
+    let inserted = replacement.inserted.length();
     this._decorator.replace(from, to, inserted);
     if (this._currentMatch && this._currentMatch.from >= to) {
       let delta = inserted - (to - from);

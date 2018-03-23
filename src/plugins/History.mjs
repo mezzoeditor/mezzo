@@ -57,12 +57,12 @@ export class History {
       let replacement = change.replacements[i];
       this._muteOnReplace = true;
       let inserted = this._document.replace(
-          replacement.from,
-          replacement.from + replacement.insertedLength,
+          replacement.offset,
+          replacement.offset + replacement.insertedLength,
           replacement.removed,
           History._documentFreeze);
       this._muteOnReplace = false;
-      replacement.removedLength = replacement.removed.length;
+      replacement.removedLength = replacement.removed.length();
       delete replacement.removed;
       replacement.inserted = inserted;
       delete replacement.insertedLength;
@@ -91,12 +91,12 @@ export class History {
     for (let replacement of change.replacements) {
       this._muteOnReplace = true;
       let removed = this._document.replace(
-          replacement.from,
-          replacement.from + replacement.removedLength,
+          replacement.offset,
+          replacement.offset + replacement.removedLength,
           replacement.inserted,
           History._documentFreeze);
       this._muteOnReplace = false;
-      replacement.insertedLength = replacement.inserted.length;
+      replacement.insertedLength = replacement.inserted.length();
       delete replacement.inserted;
       replacement.removed = removed;
       delete replacement.removedLength;
@@ -116,7 +116,6 @@ export class History {
     if (this._muteOnReplace)
       return;
 
-    let {from, to, inserted, removed} = replacement;
     if (!this._current) {
       this._current = {
         replacements: [],
@@ -126,9 +125,9 @@ export class History {
     }
 
     this._current.replacements.push({
-      from: from,
-      insertedLength: inserted,
-      removed: removed,
+      offset: replacement.offset,
+      insertedLength: replacement.inserted.length(),
+      removed: replacement.removed,
     });
 
     if (!this._operations)

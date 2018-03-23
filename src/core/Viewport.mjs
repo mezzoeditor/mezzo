@@ -632,7 +632,9 @@ export class Viewport {
    * @param {!Replacement} replacement
    */
   _onReplace(replacement) {
-    let {from, to, inserted} = replacement;
+    let from = replacement.offset;
+    let to = from + replacement.removed.length();
+    let inserted = replacement.inserted.length();
     let split = this._tree.split(from, to);
     let newFrom = split.left.metrics().length;
     let newTo = this._document.length() - split.right.metrics().length;
@@ -647,8 +649,8 @@ export class Viewport {
       chunks = this._createChunks(newFrom, newTo, kDefaultChunkSize);
     }
 
-    let nodes = this._wrapChunks(chunks);
-    this._setTree(Tree.build(nodes, split.left, split.right));
+    let middle = Tree.build(this._wrapChunks(chunks));
+    this._setTree(Tree.merge(split.left, Tree.merge(middle, split.right)));
   }
 }
 

@@ -182,32 +182,6 @@ export class Metrics {
   }
 
   /**
-   * Chunks content and measures every chunk.
-   *
-   * @param {number} chunkSize
-   * @param {string} content
-   * @param {string=} firstChunk
-   * @return {!Array<!{data: string, metrics: !TextMetrics}>}
-   */
-  chunkString(chunkSize, content, firstChunk) {
-    let index = 0;
-    let chunks = [];
-    if (firstChunk)
-      chunks.push({data: firstChunk, metrics: this.forString(firstChunk)});
-    while (index < content.length) {
-      let length = Math.min(content.length - index, chunkSize);
-      if (!Metrics.isValidOffset(content, index + length))
-        length++;
-      let chunk = content.substring(index, index + length);
-      chunks.push({data: chunk, metrics: this.forString(chunk)});
-      index += length;
-    }
-    if (!chunks.length)
-      chunks.push({data: '', metrics: this.forString('')});
-    return chunks;
-  }
-
-  /**
    * Builds a map from offset ranging [0..length) to x-coordinate
    * relative to string's start.
    *

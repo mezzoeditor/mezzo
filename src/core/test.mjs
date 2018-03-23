@@ -7,6 +7,7 @@ import {Document} from './Document.mjs';
 import {Random} from './Random.mjs';
 import {Decorator, Anchor} from './Decorator.mjs';
 import {Viewport} from './Viewport.mjs';
+import {Text} from './Text.mjs';
 
 const runner = new TestRunner();
 
@@ -128,7 +129,8 @@ describe('Document', () => {
       Document.test.setContent(document, content, chunkSize);
       for (let {from, to, insertion} of editQueries) {
         let removed = document.replace(from, to, insertion);
-        expect(removed).toBe(content.substring(from, to));
+        expect(removed.length()).toBe(to - from);
+        expect(removed.content(0, to - from)).toBe(content.substring(from, to));
         content = content.substring(0, from) + insertion + content.substring(to, content.length);
         expect(document.length()).toBe(content.length);
         for (let from = 0; from <= content.length; from++) {
@@ -906,18 +908,20 @@ describe('Metrics', () => {
     for (let test of tests)
       expect(testMetrics.locateByPoint(chunk, before, test.point, test.roundMode || RoundMode.Floor, !!test.strict)).toEqual(test.location);
   });
+});
 
-  it('Metrics.chunkString', () => {
-    let metrics = createTestMetrics();
-    expect(metrics.chunkString(5, '')).toEqual([
-      {data: '', metrics: {length: 0, firstWidth: 0, lastWidth: 0, longestWidth: 0}}
+describe('Text', () => {
+  it('chunking', () => {
+    expect(Text.test.chunks('', 5)).toEqual([]);
+    expect(Text.test.chunks('😀', 1)).toEqual([
+      {data: '😀', metrics: {length: 2, firstWidth: 1, lastWidth: 1, longestWidth: 1}}
     ]);
-    expect(metrics.chunkString(1, '😀')).toEqual([
-      {data: '😀', metrics: {length: 2, firstWidth: 100, lastWidth: 100, longestWidth: 100}}
+    expect(Text.test.chunks('ab', 1)).toEqual([
+      {data: 'a', metrics: {length: 1, firstWidth: 1, lastWidth: 1, longestWidth: 1}},
+      {data: 'b', metrics: {length: 1, firstWidth: 1, lastWidth: 1, longestWidth: 1}}
     ]);
-    expect(metrics.chunkString(2, 'a', 'b')).toEqual([
-      {data: 'b', metrics: {length: 1, firstWidth: 2, lastWidth: 2, longestWidth: 2}},
-      {data: 'a', metrics: {length: 1, firstWidth: 1, lastWidth: 1, longestWidth: 1}}
+    expect(Text.test.chunks('ab', 5)).toEqual([
+      {data: 'ab', metrics: {length: 2, firstWidth: 2, lastWidth: 2, longestWidth: 2}}
     ]);
   });
 });

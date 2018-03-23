@@ -565,7 +565,9 @@ export class Selection {
     if (this._frozen)
       return;
 
-    let {from, to, inserted} = replacement;
+    let from = replacement.offset;
+    let to = from + replacement.removed.length();
+    let inserted = replacement.inserted.length();
     let ranges = [];
     for (let range of this._ranges) {
       let start = Math.min(range.anchor, range.focus);

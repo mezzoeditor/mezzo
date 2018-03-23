@@ -1,13 +1,12 @@
-import { RoundMode, Metrics } from './Metrics.mjs';
-import { Tree } from './Tree.mjs';
-import { TextIterator } from './TextIterator.mjs';
+import { Text } from './Text.mjs';
 
 /**
  * @typedef {{
- *   from: number,
- *   to: number,
- *   inserted: number,
- *   removed: string
+ *   before: !Text,
+ *   offset: number,
+ *   inserted: !Text,
+ *   removed: !Text,
+ *   after: !Text,
  * }} Replacement;
  */
 
@@ -24,11 +23,71 @@ export class Document {
    */
   constructor(invalidateCallback) {
     this._invalidateCallback = invalidateCallback;
-    this._metrics = new Metrics(Metrics.bmpRegex, char => 1, char => 1);
-    this._setTree(this._treeWithContent(''));
+    this._text = new Text();
     this._frozenSymbols = [];
     this._tokenizer = null;
     this._replaceCallbacks = [];
+  }
+
+  /**
+   * @return {!Text}
+   */
+  text() {
+    return this._text;
+  }
+
+  /**
+   * @param {number=} fromOffset
+   * @param {number=} toOffset
+   * @return {string}
+   */
+  content(fromOffset, toOffset) {
+    let {from, to} = this._clamp(fromOffset, toOffset);
+    return this._text.content(from, to);
+  }
+
+  /**
+   * @param {number} offset
+   * @param {number=} fromOffset
+   * @param {number=} toOffset
+   * @return {!TextIterator}
+   */
+  iterator(offset, fromOffset, toOffset) {
+    let {from, to} = this._clamp(fromOffset, toOffset);
+    offset = Math.max(from, offset);
+    offset = Math.min(to, offset);
+    return this._text.iterator(offset, from, to);
+  }
+
+  /**
+   * @param {number} offset
+   * @return {?Position}
+   */
+  offsetToPosition(offset) {
+    return this._text.offsetToPosition(offset);
+  }
+
+  /**
+   * @param {!Position} position
+   * @param {boolean=} strict
+   * @return {number}
+   */
+  positionToOffset(position, strict) {
+    return this._text.positionToOffset(position, strict);
+  }
+
+  /**
+   * @return {number}
+   */
+  lineCount() {
+    return this._text.lineCount();
+  }
+
+  /**
+   * @return {number}
+   */
+  length() {
+    return this._text.length();
   }
 
   /**
@@ -61,15 +120,21 @@ export class Document {
   }
 
   /**
-   * @param {string} content
+   * @param {!Text|string} text
    */
-  reset(content) {
+  reset(text) {
     if (this._frozenSymbols.length)
       throw new Error('Cannot edit while frozen');
-    let to = this._length;
-    let removed = this.content();
-    this._setTree(this._treeWithContent(content));
-    let replacement = {from: 0, to, inserted: content.length, removed};
+    if (typeof text === 'string')
+      text = Text.fromString(text);
+    let replacement = {
+      before: this._text,
+      offset: 0,
+      inserted: text,
+      removed: this._text,
+      after: text
+    };
+    this._text = text;
     for (let callback of this._replaceCallbacks)
       callback(replacement);
     this.invalidate();
@@ -98,146 +163,29 @@ export class Document {
   /**
    * @param {number} from
    * @param {number} to
-   * @param {string} insertion
+   * @param {!Text|string} insertion
    * @param {symbol=} symbol
-   * @return {string}
+   * @return {!Text}
    */
   replace(from, to, insertion, symbol) {
     if (this._frozenSymbols.length && this._frozenSymbols[this._frozenSymbols.length - 1] !== symbol)
       throw new Error('Cannot edit while frozen');
     this.freeze(Document._replaceFreeze);
-    let removed = this._replaceRange(from, to, insertion);
-    let replacement = {from, to, inserted: insertion.length, removed};
+    if (typeof insertion === 'string')
+      insertion = Text.fromString(insertion);
+    let {result, removed} = this._text.replace(from, to, insertion);
+    let replacement = {
+      before: this._text,
+      offset: from,
+      removed: removed,
+      inserted: insertion,
+      after: result
+    };
+    this._text = result;
     for (let callback of this._replaceCallbacks)
       callback(replacement);
     this.unfreeze(Document._replaceFreeze);
     this.invalidate();
-    return removed;
-  }
-
-  /**
-   * @param {number=} fromOffset
-   * @param {number=} toOffset
-   * @return {string}
-   */
-  content(fromOffset, toOffset) {
-    let {from, to} = this._clamp(fromOffset, toOffset);
-    let iterator = this.iterator(from, from, to);
-    return iterator.substr(to - from);
-  }
-
-  /**
-   * @param {number} offset
-   * @param {number=} fromOffset
-   * @param {number=} toOffset
-   * @return {!TextIterator}
-   */
-  iterator(offset, fromOffset, toOffset) {
-    let {from, to} = this._clamp(fromOffset, toOffset);
-    offset = Math.max(from, offset);
-    offset = Math.min(to, offset);
-    let it = this._tree.iterator(offset, from, to);
-    return new TextIterator(it, offset, from, to, this._length);
-  }
-
-  /**
-   * @return {number}
-   */
-  lineCount() {
-    return this._lineCount;
-  }
-
-  /**
-   * @return {number}
-   */
-  length() {
-    return this._length;
-  }
-
-  /**
-   * @param {number} offset
-   * @return {?Position}
-   */
-  offsetToPosition(offset) {
-    let found = this._tree.findByOffset(offset);
-    if (found.location === null)
-      return null;
-    if (found.data === null)
-      return {line: found.location.y, column: found.location.x};
-    let location = this._metrics.locateByOffset(found.data, found.location, offset);
-    return {line: location.y, column: location.x};
-  }
-
-  /**
-   * @param {!Position} position
-   * @param {boolean=} strict
-   * @return {number}
-   */
-  positionToOffset(position, strict) {
-    let found = this._tree.findByPoint({x: position.column, y: position.line}, !!strict);
-    if (found.data === null)
-      return found.location.offset;
-    return this._metrics.locateByPoint(found.data, found.location, found.clampedPoint, strict).offset;
-  }
-
-  /**
-   * @param {!Tree<string>} tree
-   */
-  _setTree(tree) {
-    this._tree = tree;
-    let metrics = tree.metrics();
-    this._lineCount = (metrics.lineBreaks || 0) + 1;
-    this._length = metrics.length;
-  }
-
-  /**
-   * @param {string} content
-   * @return {!Tree<string>}
-   */
-  _treeWithContent(content) {
-    let chunks = this._metrics.chunkString(kDefaultChunkSize, content);
-    return Tree.build(chunks);
-  }
-
-  /**
-   * @param {number} from
-   * @param {number} to
-   * @param {string} insertion
-   * @return string
-   */
-  _replaceRange(from, to, insertion) {
-    let split = this._tree.split(from, to);
-
-    let removed = '';
-    let first = '';
-    let last = '';
-    let middle = split.middle.collect();
-    for (let i = 0; i < middle.length; i++) {
-      let data = middle[i];
-      let fromOffset = 0;
-      let toOffset = data.length;
-      if (i === 0) {
-        fromOffset = from - split.left.metrics().length;
-        first = data.substring(0, fromOffset);
-      }
-      if (i === middle.length - 1) {
-        toOffset = data.length - (this._length - split.right.metrics().length - to);
-        last = data.substring(toOffset);
-      }
-      removed += data.substring(fromOffset, toOffset);
-    }
-
-    let chunks = [];
-    if (first.length + insertion.length + last.length > kDefaultChunkSize &&
-        first.length + insertion.length <= kDefaultChunkSize) {
-      // For typical editing scenarios, we are most likely to replace at the
-      // end of |insertion| next time.
-      chunks = this._metrics.chunkString(kDefaultChunkSize, last, first + insertion);
-    } else {
-      chunks = this._metrics.chunkString(kDefaultChunkSize, first + insertion + last);
-    }
-
-    this._setTree(Tree.build(chunks, split.left, split.right));
     return removed;
   }
 
@@ -251,18 +199,13 @@ export class Document {
       from = 0;
     from = Math.max(0, from);
     if (to === undefined)
-      to = this._length;
-    to = Math.min(this._length, to);
+      to = this._text.length();
+    to = Math.min(this._text.length(), to);
     return {from, to};
   }
 };
 
 Document._replaceFreeze = Symbol('Document.replace');
-
-// This is very efficient for loading large files and memory consumption.
-// It might slow down common operations though. We should measure that and
-// consider different chunk sizes based on total document length.
-let kDefaultChunkSize = 1000;
 
 Document.test = {};
 
@@ -271,11 +214,14 @@ Document.test = {};
  * @param {!Array<string>} chunks
  */
 Document.test.setChunks = function(document, chunks) {
-  let nodes = chunks.map(chunk => ({data: chunk, metrics: document._metrics.forString(chunk)}));
-  document._setTree(Tree.build(nodes));
+  document._text = Text.fromChunks(chunks);
 };
 
+/**
+ * @param {!Document} document
+ * @param {string} content
+ * @param {number} chunkSize
+ */
 Document.test.setContent = function(document, content, chunkSize) {
-  let chunks = document._metrics.chunkString(chunkSize, content);
-  document._setTree(Tree.build(chunks));
+  document._text = Text.fromString(content, chunkSize);
 };

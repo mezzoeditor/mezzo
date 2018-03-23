@@ -112,7 +112,7 @@ const DefaultMatchers = {
 
 function stringify(value) {
   function stabilize(key, object) {
-    if (typeof object !== 'object' || object === undefined || object === null)
+    if (typeof object !== 'object' || object === undefined || object === null || Array.isArray(object))
       return object;
     const result = {};
     for (const key of Object.keys(object).sort())

@@ -323,6 +323,7 @@ export class Decorator {
    * @return {!Array<!Decorator.Handle>|undefined}
    */
   replace(from, to, inserted) {
+    // TODO: take offset, removed, inserted instead to align with Replacement?
     let delta = inserted - (to - from);
     let tmp = split(this._root, from, kToLess);
     let left = tmp.left;
