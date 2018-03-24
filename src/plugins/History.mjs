@@ -50,27 +50,24 @@ export class History {
     if (this._pos === -1)
       return false;
 
-    this._document.freeze(History._documentFreeze);
     this._selection.freeze();
+    this._document.beginOperation('undo');
     let change = this._changes[this._pos--];
     for (let i = change.replacements.length - 1; i >= 0; i--) {
       let replacement = change.replacements[i];
-      this._muteOnReplace = true;
       let inserted = this._document.replace(
           replacement.offset,
           replacement.offset + replacement.insertedLength,
-          replacement.removed,
-          History._documentFreeze);
-      this._muteOnReplace = false;
+          replacement.removed);
       replacement.removedLength = replacement.removed.length();
       delete replacement.removed;
       replacement.inserted = inserted;
       delete replacement.insertedLength;
     }
+    this._document.endOperation('undo');
     this._muteOnSelectionChanged = true;
     this._selection.unfreeze(change.selectionBefore);
     this._muteOnSelectionChanged = false;
-    this._document.unfreeze(History._documentFreeze);
     this._selectionChanged = false;
     return true;
   }
@@ -85,54 +82,52 @@ export class History {
     if (this._pos === this._changes.length - 1)
       return false;
 
-    this._document.freeze(History._documentFreeze);
     this._selection.freeze();
+    this._document.beginOperation('redo');
     let change = this._changes[++this._pos];
     for (let replacement of change.replacements) {
-      this._muteOnReplace = true;
       let removed = this._document.replace(
           replacement.offset,
           replacement.offset + replacement.removedLength,
-          replacement.inserted,
-          History._documentFreeze);
-      this._muteOnReplace = false;
+          replacement.inserted);
       replacement.insertedLength = replacement.inserted.length();
       delete replacement.inserted;
       replacement.removed = removed;
       delete replacement.removedLength;
     }
+    this._document.endOperation('redo');
     this._muteOnSelectionChanged = true;
     this._selection.unfreeze(change.selectionAfter || change.selectionBefore);
     this._muteOnSelectionChanged = false;
-    this._document.unfreeze(History._documentFreeze);
     this._selectionChanged = false;
     return true;
   }
 
   /**
-   * @param {!Replacement} replacement
+   * @param {!Replacements} replacements
    */
-  _onReplace(replacement) {
-    if (this._muteOnReplace)
-      return;
+  _onReplace(replacements) {
+    for (let replacement of replacements) {
+      if (replacement.operation === 'undo' || replacement.operation === 'redo')
+        continue;
 
-    if (!this._current) {
-      this._current = {
-        replacements: [],
-        selectionBefore: this._selectionState,
-        selectionAfter: null
-      };
+      if (!this._current) {
+        this._current = {
+          replacements: [],
+          selectionBefore: this._selectionState,
+          selectionAfter: null
+        };
+      }
+
+      this._current.replacements.push({
+        offset: replacement.offset,
+        insertedLength: replacement.inserted.length(),
+        removed: replacement.removed,
+      });
     }
-
-    this._current.replacements.push({
-      offset: replacement.offset,
-      insertedLength: replacement.inserted.length(),
-      removed: replacement.removed,
-    });
-
-    if (!this._operations)
+    if (!this._operations && this._current)
       this._pushChange();
-  }
+}
 
   _pushChange() {
     if (this._pos === this._changes.length - 1) {

@@ -222,15 +222,15 @@ export class Text {
 
     if (this._tree) {
       if (combine)
-        return buildTree(chunks(left + this.content() + right));
+        return buildTree(chunks(left + this.content(0, this._length) + right));
       if (left.length + this._length <= kDefaultChunkSize)
-        return buildTree(chunks(left + this.content()).concat(chunks(right)));
+        return buildTree(chunks(left + this.content(0, this._length)).concat(chunks(right)));
       return Tree.merge(buildTree(chunks(left)), Tree.merge(this._tree, buildTree(chunks(right))));
     }
 
     if (this._middle) {
       if (combine)
-        return buildTree(chunks(left + this.content() + right));
+        return buildTree(chunks(left + this.content(0, this._length) + right));
       // TODO: might make sense to rechunk (left + this._left + this._middle) if too short.
       return Tree.merge(buildTree(chunks(left + this._left)), Tree.merge(this._middle, buildTree(chunks(this._right + right))));
     }

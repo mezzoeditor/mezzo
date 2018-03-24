@@ -559,38 +559,40 @@ export class Selection {
   }
 
   /**
-   * @param {!Replacement} replacement
+   * @param {!Replacements} replacements
    */
-  _onReplace(replacement) {
+  _onReplace(replacements) {
     if (this._frozen)
       return;
 
-    let from = replacement.offset;
-    let to = from + replacement.removed.length();
-    let inserted = replacement.inserted.length();
-    let ranges = [];
-    for (let range of this._ranges) {
-      let start = Math.min(range.anchor, range.focus);
-      let end = Math.max(range.anchor, range.focus);
-      if (from < start && to > start)
-        continue;
+    for (let replacement of replacements) {
+      let from = replacement.offset;
+      let to = from + replacement.removed.length();
+      let inserted = replacement.inserted.length();
+      let ranges = [];
+      for (let range of this._ranges) {
+        let start = Math.min(range.anchor, range.focus);
+        let end = Math.max(range.anchor, range.focus);
+        if (from < start && to > start)
+          continue;
 
-      if (from <= start)
-        start = to >= start ? from : start - (to - from);
-      if (from <= end)
-        end = to >= end ? from : end - (to - from);
+        if (from <= start)
+          start = to >= start ? from : start - (to - from);
+        if (from <= end)
+          end = to >= end ? from : end - (to - from);
 
-      if (from <= start)
-        start += inserted;
-      if (from <= end)
-        end += inserted;
+        if (from <= start)
+          start += inserted;
+        if (from <= end)
+          end += inserted;
 
-      if (range.anchor > range.focus)
-        ranges.push({id: range.id, upDownX: -1, anchor: end, focus: start});
-      else
-        ranges.push({id: range.id, upDownX: -1, anchor: start, focus: end});
+        if (range.anchor > range.focus)
+          ranges.push({id: range.id, upDownX: -1, anchor: end, focus: start});
+        else
+          ranges.push({id: range.id, upDownX: -1, anchor: start, focus: end});
+      }
+      this._ranges = this._rebuild(ranges);
     }
-    this._ranges = this._rebuild(ranges);
     this._notifyChanged();
   }
 

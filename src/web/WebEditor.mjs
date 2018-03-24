@@ -527,12 +527,11 @@ export class WebEditor {
     return success;
   }
 
-  _onReplace(replacement) {
-    let from = replacement.offset;
-    let to = from + replacement.removed.length();
-    let inserted = replacement.inserted.length();
-    for (let removed of this._handles.replace(from, to, inserted))
-      removed[RangeHandle._symbol]._wasRemoved();
+  _onReplace(replacements) {
+    for (let {offset, removed, inserted} of replacements) {
+      for (let removedHandle of this._handles.replace(offset, offset + removed.length(), inserted.length()))
+        removedHandle[RangeHandle._symbol]._wasRemoved();
+    }
   }
 }
 

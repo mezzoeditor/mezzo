@@ -143,6 +143,7 @@ export class Editing {
     if (!ranges.length)
       return false;
     this._history.beginOperation();
+    this._document.beginOperation('editing');
     let savedSelection = this._selection.freeze();
     let newRanges = [];
     let delta = 0;
@@ -172,6 +173,7 @@ export class Editing {
         newRanges.push({from: from + this._indent.length, to: to + delta});
       }
     }
+    this._document.endOperation('editing');
     this._selection.unfreeze(savedSelection, newRanges);
     this._history.endOperation();
     return true;
@@ -182,6 +184,7 @@ export class Editing {
     if (!ranges.length)
       return false;
     this._history.beginOperation();
+    this._document.beginOperation('editing');
     let savedSelection = this._selection.freeze();
     let newRanges = [];
     let delta = 0;
@@ -206,6 +209,7 @@ export class Editing {
       }
       newRanges.push({from: from + startDelta, to: to + delta});
     }
+    this._document.endOperation('editing');
     this._selection.unfreeze(savedSelection, newRanges);
     this._history.endOperation();
     return true;
@@ -221,6 +225,7 @@ export class Editing {
     if (!ranges.length)
       return false;
     this._history.beginOperation();
+    this._document.beginOperation('editing');
     let savedSelection = this._selection.freeze();
     let newRanges = [];
     let delta = 0;
@@ -241,6 +246,7 @@ export class Editing {
       newRanges.push({from: cursorOffset, to: cursorOffset});
       delta += replaced.s.length - (replaced.to - replaced.from);
     }
+    this._document.endOperation('editing');
     this._selection.unfreeze(savedSelection, newRanges);
     this._history.endOperation();
     return true;

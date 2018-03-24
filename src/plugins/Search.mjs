@@ -177,29 +177,31 @@ export class Search {
   }
 
   /**
-   * @param {!Replacement} replacement
+   * @param {!Replacements} replacements
    */
-  _onReplace(replacement) {
-    let from = replacement.offset;
-    let to = from + replacement.removed.length();
-    let inserted = replacement.inserted.length();
-    this._decorator.replace(from, to, inserted);
-    if (this._currentMatch && this._currentMatch.from >= to) {
-      let delta = inserted - (to - from);
-      this._updateCurrentMatch({from: this._currentMatch.from + delta, to: this._currentMatch.to + delta}, false, false);
-    } else if (this._currentMatch && this._currentMatch.to > from) {
-      this._updateCurrentMatch(null, false, false);
-    } else if (this._currentMatch) {
-      this._updateCurrentMatch(this._currentMatch, false, false);
+  _onReplace(replacements) {
+    for (let replacement of replacements) {
+      let from = replacement.offset;
+      let to = from + replacement.removed.length();
+      let inserted = replacement.inserted.length();
+      this._decorator.replace(from, to, inserted);
+      if (this._currentMatch && this._currentMatch.from >= to) {
+        let delta = inserted - (to - from);
+        this._updateCurrentMatch({from: this._currentMatch.from + delta, to: this._currentMatch.to + delta}, false, false);
+      } else if (this._currentMatch && this._currentMatch.to > from) {
+        this._updateCurrentMatch(null, false, false);
+      } else if (this._currentMatch) {
+        this._updateCurrentMatch(this._currentMatch, false, false);
+      }
+      if (this._options) {
+        this._processed({from: from - this._options.query.length, to});
+        this._needsProcessing({
+          from: Math.max(from - this._options.query.length, 0),
+          to: Math.min(from + inserted, replacement.after.length())
+        });
+      }
     }
     this._updated = true;
-    if (this._options) {
-      this._processed({from: from - this._options.query.length, to});
-      this._needsProcessing({
-        from: Math.max(from - this._options.query.length, 0),
-        to: Math.min(from + inserted, this._document.length())
-      });
-    }
   }
 
   _cancel() {

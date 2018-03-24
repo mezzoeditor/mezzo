@@ -60,30 +60,31 @@ export class JSHighlighter {
   }
 
   /**
-   * @param {!Replacement} replacement
+   * @param {!Replacements} replacements
    */
-  _onReplace(replacement) {
-    let from = replacement.offset;
-    let to = from + replacement.removed.length();
-    let inserted = replacement.inserted.length();
+  _onReplace(replacements) {
+    // TODO: we should probably create parser just once at the end.
+    for (let replacement of replacements) {
+      let from = replacement.offset;
+      let to = from + replacement.removed.length();
 
-    this._highlightStates.clearTouching(from, to);
-    this._highlightStates.replace(from, to, inserted);
-    if (from === 0)
-      this._highlightStates.add(0, 0, Parser.defaultState());
-    if (this._highlightOffset <= from) {
-      this._parser.setIterator(this._document.iterator(this._highlightOffset));
-      this._scheduleHighlight();
-      return;
-    }
+      this._highlightStates.clearTouching(from, to);
+      this._highlightStates.replace(from, to, replacement.inserted.length());
+      if (from === 0)
+        this._highlightStates.add(0, 0, Parser.defaultState());
+      if (this._highlightOffset <= from) {
+        this._parser.setIterator(replacement.after.iterator(this._highlightOffset));
+        continue;
+      }
 
-    let decoration = this._highlightStates.lastTouching(0, from);
-    if (decoration) {
-      this._highlightOffset = decoration.from;
-      this._parser = new Parser(this._document.iterator(this._highlightOffset), decoration.data);
-    } else {
-      this._highlightOffset = 0;
-      this._parser = new Parser(this._document.iterator(this._highlightOffset), Parser.defaultState());
+      let decoration = this._highlightStates.lastTouching(0, from);
+      if (decoration) {
+        this._highlightOffset = decoration.from;
+        this._parser = new Parser(replacement.after.iterator(this._highlightOffset), decoration.data);
+      } else {
+        this._highlightOffset = 0;
+        this._parser = new Parser(replacement.after.iterator(this._highlightOffset), Parser.defaultState());
+      }
     }
     this._scheduleHighlight();
   }

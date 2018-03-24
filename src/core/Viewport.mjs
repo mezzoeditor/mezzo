@@ -163,7 +163,7 @@ export class Viewport {
     this._defaultWidth = measurer.defaultWidth();
     let measure = s => measurer.measureString(s) / this._defaultWidth;
     this._metrics = new Metrics(measurer.defaultWidthRegex(), measure, measure);
-    let nodes = this._wrapChunks(this._createChunks(0, this._document.length(), kDefaultChunkSize));
+    let nodes = this._wrapChunks(this._createChunks(this._document.text(), 0, this._document.length(), kDefaultChunkSize));
     this._setTree(Tree.build(nodes));
   }
 
@@ -391,7 +391,6 @@ export class Viewport {
    */
   decorate() {
     this._frozen = true;
-    this._document.freeze(Viewport._decorateFreeze);
 
     let y = this.offsetToViewportPoint(this.viewportPointToOffset({x: 0, y: 0})).y;
     let lines = [];
@@ -440,7 +439,6 @@ export class Viewport {
     }
     let scrollbar = this._buildScrollbar(scrollbarDecorators);
 
-    this._document.unfreeze(Viewport._decorateFreeze);
     this._frozen = false;
     return {text, background, scrollbar, lines: lineInfos};
   }
@@ -596,14 +594,15 @@ export class Viewport {
   }
 
   /**
+   * @param {!Text} text
    * @param {number} from
    * @param {number} to
    * @param {number} chunkSize
    * @param {number=} firstChunk
    * @return {!Array<!TextChunk>}
    */
-  _createChunks(from, to, chunkSize, firstChunk) {
-    let iterator = this._document.iterator(from);
+  _createChunks(text, from, to, chunkSize, firstChunk) {
+    let iterator = text.iterator(from, 0, text.length());
     let chunks = [];
     while (iterator.offset < to) {
       let offset = iterator.offset;
@@ -629,28 +628,34 @@ export class Viewport {
   }
 
   /**
-   * @param {!Replacement} replacement
+   * @param {!Replacements} replacements
    */
-  _onReplace(replacement) {
-    let from = replacement.offset;
-    let to = from + replacement.removed.length();
-    let inserted = replacement.inserted.length();
-    let split = this._tree.split(from, to);
-    let newFrom = split.left.metrics().length;
-    let newTo = this._document.length() - split.right.metrics().length;
+  _onReplace(replacements) {
+    if (this._frozen)
+      throw new Error('Document modification during decoration is prohibited');
 
-    let chunks;
-    if (newFrom - from + inserted + to - newTo > kDefaultChunkSize &&
-        newFrom - from + inserted <= kDefaultChunkSize) {
-      // For typical editing scenarios, we are most likely to replace at the
-      // end of |insertion| next time.
-      chunks = this._createChunks(newFrom, newTo, kDefaultChunkSize, newFrom - from + inserted);
-    } else {
-      chunks = this._createChunks(newFrom, newTo, kDefaultChunkSize);
+    for (let replacement of replacements) {
+      let from = replacement.offset;
+      let to = from + replacement.removed.length();
+      let inserted = replacement.inserted.length();
+      let text = replacement.after;
+      let split = this._tree.split(from, to);
+      let newFrom = split.left.metrics().length;
+      let newTo = text.length() - split.right.metrics().length;
+
+      let chunks;
+      if (newFrom - from + inserted + to - newTo > kDefaultChunkSize &&
+          newFrom - from + inserted <= kDefaultChunkSize) {
+        // For typical editing scenarios, we are most likely to replace at the
+        // end of insertion next time.
+        chunks = this._createChunks(text, newFrom, newTo, kDefaultChunkSize, newFrom - from + inserted);
+      } else {
+        chunks = this._createChunks(text, newFrom, newTo, kDefaultChunkSize);
+      }
+
+      let middle = Tree.build(this._wrapChunks(chunks));
+      this._setTree(Tree.merge(split.left, Tree.merge(middle, split.right)));
     }
-
-    let middle = Tree.build(this._wrapChunks(chunks));
-    this._setTree(Tree.merge(split.left, Tree.merge(middle, split.right)));
   }
 }
 
@@ -814,6 +819,6 @@ Viewport.test = {};
  * @param {number} chunkSize
  */
 Viewport.test.rechunk = function(viewport, chunkSize) {
-  let nodes = viewport._wrapChunks(viewport._createChunks(0, viewport._document.length(), chunkSize));
+  let nodes = viewport._wrapChunks(viewport._createChunks(viewport._document.text(), 0, viewport._document.length(), chunkSize));
   viewport._setTree(Tree.build(nodes));
 };
