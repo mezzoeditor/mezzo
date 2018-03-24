@@ -5,6 +5,9 @@ function keywordRegexp(words) {
   return new RegExp("^(?:" + words.replace(/ /g, "|") + ")$")
 }
 
+const keywordRegexp5 = keywordRegexp(keywords[5]);
+const keywordRegexp6 = keywordRegexp(keywords[6]);
+
 export const defaultOptions = {
   // `ecmaVersion` indicates the ECMAScript version to parse. Must
   // be either 3, 5, 6, 7, or 8. This influences support
@@ -96,7 +99,7 @@ export class Parser {
     this.exprAllowed = state.exprAllowed;
 
     // Infer state parts from options.
-    this.keywords = keywordRegexp(keywords[this.options.ecmaVersion >= 6 ? 6 : 5])
+    this.keywords = this.options.ecmaVersion >= 6 ? keywordRegexp6 : keywordRegexp5;
     this.inModule = this.options.sourceType === "module"
     this.strict = this.inModule
 
