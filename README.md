@@ -7,25 +7,34 @@
 * [x] performant undo/redo
 * [x] performant multiple cursors
 * [x] full unicode support for monospace fonts
-* [x] rich decorations
-* [x] rich scrollbar markers
-* [x] easy plugins system
-* [ ] rich gutter markers
+* [ ] decorations
+    - [x] text
+    - [x] background
+    - [x] scrollbar
+    - [ ] gutter
+    - [ ] line
+* [ ] easy plugins system
+    - [ ] extensible history
+    - [ ] interoperability by default
+    - [ ] synchronous updates
+    - [ ] async processing
 
 #### Tier 1 features
+* [ ] all kinds of editing commands
 * [x] search/replace
 * [x] keyboard bindings
 * [x] auto-indent
+* [ ] interactive decorations
 * [ ] instant indent block
-* [ ] inline widgets (width = multiple of character when using monospace)
+* [ ] inline widgets
 * [ ] gutter widgets
 * [ ] multi-line widgets
 * [ ] font settings
 * [ ] custom themes
 
 #### Content type features
-* [x] syntax highlight:
-    - JavaScript
+* [x] syntax highlight
+    - [x] JavaScript
 * [ ] syntax-indent
 * [ ] bracket matching
 * [x] auto-closing brackets
@@ -39,6 +48,8 @@
 * [ ] spell checking
 * [ ] indent guides
 * [ ] minimap
+* [ ] variable line height
+* [ ] variable text metrics
 
 ---
 
@@ -73,28 +84,31 @@ This is often a case with accents.
 
 * #### Point = {x: float, y: float}
   Point is measured in rendering units (e.g. pixels), and corresponds to the top-left
-  coordinate of the character's rectangle. First character of the document has `{x: 0, y: 0}` point.
+  coordinate of the character's rectangle. First visible character has `{x: 0, y: 0}` point.
+  This depends on what is visible in viewport, as opposite to just document itself. For example,
+  folding a part of document changes points for many characters, and folded parts do not
+  have any corresponding points at all.
 
-* #### Location = {x, y, line, column, offset}
-  Location is a combination of all, completely describing character's location in the universe.
-  Well, not in the universe, but in a container - see below for more details.
+* #### Location = {x, y, offset}
+  Location is a combination of `offset` and either `line + column` or `x + y`. Viewport and document have
+  different `x` and `y` meaning: position in document vs point in viewport.
 
 Most of the code should work with `offsets`, and handle surrogate pairs if doing manual text processing. This way
-it's similar to working with a string. User-manipulated code should instead resolve to `positions` or `locations`, which
+it's similar to working with a string. User-manipulated code should instead resolve to `positions` or `points`, which
 ensures that user never sees a broken code point.
 
 ### Coordinate systems of different containers
 
 * #### Document
-  - `offset`, `position`, `point`, `location`, `documentPoint`
+  - `offset`, `position`, `location`
 
-  Document coordinates are relative to the document. This is default. When you see `point`,
-  it usually means point relative to the document start.
+  Document coordinates are relative to the document. This is default.
 
 * #### Viewport
-  - `viewportPoint`
+  - `offset`, `point`
 
-  Coordinates relative to the viewport - a visible part of the document.
+  Coordinates relative to the viewport containing visible parts of the document. Note that `offsets`
+  between document and viewport match and should be used for conersions between them.
 
 * #### View
   - `viewPoint`
