@@ -1,0 +1,28 @@
+sidebar-component {
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  position: absolute;
+  overflow: auto;
+  font-family: monospace;
+  padding: 10px;
+  user-select: none;
+}
+
+sidebar-component
+.file-entry.selected {
+  background-color: rgba(126, 188, 254, 0.5);
+}
+
+sidebar-component
+.file-entry:hover:not(.selected) {
+  cursor: pointer;
+  background-color: #eee;
+}
+
+sidebar-component
+.file-entry {
+  padding: 4px;
+}
+

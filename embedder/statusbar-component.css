@@ -1,0 +1,20 @@
+statusbar-component {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+  border-top: 1px solid grey;
+  font-family: monospace;
+  user-select: none;
+}
+
+statusbar-component
+left-zone {
+  display: flex;
+  user-select: text;
+}
+
+statusbar-component
+right-zone {
+  display: flex;
+  user-select: text;
+}
