@@ -14,7 +14,7 @@ import {trace} from './Trace.mjs';
  * @typedef {{
  *   text: !Array<!TextDecorator>|undefined,
  *   background: !Array<!TextDecorator>|undefined,
- *   scrollbar: !Array<!ScrollbarDecorator>|undefined
+ *   lines: !Array<!LineDecorator>|undefined
  * }} Viewport.DecorationResult
  */
 
@@ -46,8 +46,10 @@ import {trace} from './Trace.mjs';
 
 /**
  * @typedef {{
- *   line: number,
+ *   first: number,
+ *   last: number,
  *   y: number,
+ *   styles: !Array<string>
  * }} Viewport.LineInfo
  */
 
@@ -383,7 +385,9 @@ export class Viewport {
    *   text: !Array<!Viewport.TextInfo>,
    *   background: !Array<!Viewport.BackgroundInfo>,
    *   scrollbar: !Array<!Viewport.ScrollbarInfo>,
-   *   lines: !Array<!Viewport.LineInfo>
+   *   lines: !Array<!Viewport.LineInfo>,
+   *   paddingLeft: number,
+   *   paddingRight: number,
    * }}
    */
   decorate() {
@@ -394,6 +398,8 @@ export class Viewport {
     for (; y <= this._height; y += this._lineHeight) {
       let from = this.viewportPointToOffset({x: 0, y: y});
       let to = this.viewportPointToOffset({x: this._width, y: y}, RoundMode.Ceil);
+      let start = this.viewportPointToOffset({x: -this._scrollLeft, y: y});
+      let end = this.viewportPointToOffset({x: this._maxScrollLeft + this._width - this._scrollLeft, y: y});
       let point = this.offsetToViewportPoint(from);
       if (point.y < y)
         break;
@@ -402,6 +408,8 @@ export class Viewport {
         to: to,
         x: point.x,
         y: point.y,
+        start: start,
+        end: end
       });
     }
 
@@ -415,29 +423,21 @@ export class Viewport {
 
     let textDecorators = [];
     let backgroundDecorators = [];
-    let scrollbarDecorators = [];
+    let lineDecorators = [];
     for (let decorateCallback of this._decorateCallbacks) {
       let result = decorateCallback(visibleContent);
       if (!result)
         continue;
       textDecorators.push(...(result.text || []));
       backgroundDecorators.push(...(result.background || []));
-      scrollbarDecorators.push(...(result.scrollbar || []));
+      lineDecorators.push(...(result.lines || []));
     }
 
-    let {text, background} = this._buildTextAndBackground(lines, textDecorators, backgroundDecorators);
-    let lineInfos = [];
-    for (let line of lines) {
-      lineInfos.push({
-        // TODO: this should be a range of lines, measured by start/end rather than from/to.
-        line: this._document.offsetToPosition(line.from).line,
-        y: line.y
-      });
-    }
-    let scrollbar = this._buildScrollbar(scrollbarDecorators);
+    let {text, background, lineInfos, paddingLeft, paddingRight} = this._buildTextBackgroundAndLines(lines, textDecorators, backgroundDecorators, lineDecorators);
+    let scrollbar = this._buildScrollbar(lineDecorators);
 
     this._frozen = false;
-    return {text, background, scrollbar, lines: lineInfos};
+    return {text, background, scrollbar, lines: lineInfos, paddingLeft, paddingRight};
   }
 
   /**
@@ -472,20 +472,40 @@ export class Viewport {
   }
 
   /**
-   * @param {!Array<!{from: number, to: number, x: number, y: number}>} lines
+   * @param {!Array<!{from: number, to: number, x: number, y: number, start: number, end: number}>} lines
    * @param {!Array<!TextDecorator>} textDecorators
    * @param {!Array<!TextDecorator>} backgroundDecorators
-   * @return {!{text: !Viewport.TextInfo, background: !Viewport.BackgroundInfo}}
+   * @param {!Array<!LineDecorator>} lineDecorators
+   * @return {!{
+   *    text: !Array<!Viewport.TextInfo>,
+   *    background: !Array<!Viewport.BackgroundInfo>,
+   *    lineInfos: !Array<!Viewport.LineInfo>,
+   *    paddingLeft: number,
+   *    paddingRight: number,
+   * }}
    */
-  _buildTextAndBackground(lines, textDecorators, backgroundDecorators) {
-    const decorationMinLeft = Math.max(this._padding.left - this._scrollLeft, 0);
-    const scrollRight = this._maxScrollLeft - this._scrollLeft;
-    const decorationMaxRight = this._width - Math.max(this._padding.right - scrollRight, 0);
+  _buildTextBackgroundAndLines(lines, textDecorators, backgroundDecorators, lineDecorators) {
+    const paddingLeft = Math.max(this._padding.left - this._scrollLeft, 0);
+    const paddingRight = Math.max(this._padding.right - (this._maxScrollLeft - this._scrollLeft), 0);
     const text = [];
     const background = [];
+    const lineInfos = [];
+
     for (let line of lines) {
       let lineContent = this._document.content(line.from, line.to);
       let offsetToX = this._metrics.buildXMap(lineContent, line.to - line.from + 1);
+
+      let lineStyles = [];
+      for (let decorator of lineDecorators) {
+        if (decorator.countTouching(line.start, line.end) > 0)
+          lineStyles.push(decorator.style());
+      }
+      lineInfos.push({
+        first: this._document.offsetToPosition(line.start).line,
+        last: this._document.offsetToPosition(line.end).line,
+        y: line.y,
+        styles: lineStyles
+      });
 
       for (let decorator of textDecorators) {
         decorator.visitTouching(line.from - 1, line.to + 1, decoration => {
@@ -508,10 +528,10 @@ export class Viewport {
           trace.count('decorations');
           // TODO: note that some editors only show selection up to line length. Setting?
           let from = decoration.from < line.from
-            ? decorationMinLeft
+            ? paddingLeft
             : line.x + offsetToX[decoration.from - line.from] * this._defaultWidth;
           let to = decoration.to > line.to
-            ? decorationMaxRight
+            ? this._width - paddingRight
             : line.x + offsetToX[decoration.to - line.from] * this._defaultWidth;
           if (from <= to) {
             background.push({
@@ -525,27 +545,27 @@ export class Viewport {
       }
     }
 
-    return {text, background};
+    return {text, background, lineInfos, paddingLeft, paddingRight};
   }
 
   /**
-   * @param {!Array<!ScrollbaDecorator>} scrollbarDecorators
+   * @param {!Array<!LineDecorator>} lineDecorators
    * @return {!Array<!Viewport.ScrollbarInfo>}
    */
-  _buildScrollbar(scrollbarDecorators) {
+  _buildScrollbar(lineDecorators) {
     const lineHeight = this._lineHeight;
     const ratio = this._height / (this._maxScrollTop + this._height);
     let scrollbar = [];
-    for (let decorator of scrollbarDecorators) {
+    for (let decorator of lineDecorators) {
       let lastTop = -1;
       let lastBottom = -1;
       decorator.sparseVisitAll(decoration => {
         trace.count('decorations');
-        const from = this.offsetToViewportPoint(decoration.from);
-        const to = this.offsetToViewportPoint(decoration.to);
+        const from = this.offsetToContentPoint(decoration.from).y;
+        const to = this.offsetToContentPoint(decoration.to).y;
 
-        let top = from.y * ratio;
-        let bottom = (to.y + lineHeight) * ratio;
+        let top = from * ratio;
+        let bottom = (to + lineHeight) * ratio;
         bottom = Math.max(bottom, top + kMinScrollbarDecorationHeight);
 
         if (top <= lastBottom) {
@@ -557,7 +577,7 @@ export class Viewport {
           lastBottom = bottom;
         }
 
-        let nextOffset = this.viewportPointToOffset({x: 0, y: bottom / ratio + lineHeight});
+        let nextOffset = this.contentPointToOffset({x: 0, y: bottom / ratio + lineHeight});
         return Math.max(decoration.to, nextOffset);
       });
       if (lastTop >= 0)

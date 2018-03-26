@@ -1,4 +1,4 @@
-import { TextDecorator, ScrollbarDecorator } from '../core/Decorator.mjs';
+import { LineDecorator } from '../core/Decorator.mjs';
 
 /**
  * @typdef {{
@@ -22,8 +22,8 @@ export class Search {
     this._rangeToProcess = null;  // [from, to] inclusive.
     this._selection = selection;
     this._selection.addChangeCallback(() => { this._shouldUpdateSelection = false; });
-    this._decorator = new ScrollbarDecorator('search.match');
-    this._currentMatchDecorator = new TextDecorator();
+    this._decorator = new LineDecorator('search.match');
+    this._currentMatchDecorator = new LineDecorator('search.match.current');
     this._options = null;
     this._currentMatch = null;
     this._shouldUpdateSelection = false;
@@ -173,7 +173,7 @@ export class Search {
       }
     }
 
-    return {background: [this._decorator, this._currentMatchDecorator], scrollbar: [this._decorator]};
+    return {background: [this._decorator, this._currentMatchDecorator], lines: [this._decorator, this._currentMatchDecorator]};
   }
 
   /**
@@ -222,7 +222,7 @@ export class Search {
       this._currentMatchDecorator.clearAll();
     this._currentMatch = match;
     if (this._currentMatch) {
-      this._currentMatchDecorator.add(this._currentMatch.from, this._currentMatch.to, 'search.match.current');
+      this._currentMatchDecorator.add(this._currentMatch.from, this._currentMatch.to);
       // TODO: this probably should not go into history, or it messes up with undo.
       if (select)
         this._selection.setRanges([this._currentMatch]);

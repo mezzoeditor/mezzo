@@ -1,4 +1,4 @@
-import { ScrollbarDecorator } from '../core/Decorator.mjs';
+import { LineDecorator, Anchor } from '../core/Decorator.mjs';
 import { Tokenizer } from '../core/Tokenizer.mjs';
 import { RoundMode } from '../core/Metrics.mjs';
 
@@ -31,8 +31,8 @@ export class Selection {
     this._viewport.addDecorationCallback(this._onDecorate.bind(this));
     this._document = viewport.document();
     this._document.addReplaceCallback(this._onReplace.bind(this));
-    this._rangeDecorator = new ScrollbarDecorator('selection.range');
-    this._focusDecorator = new ScrollbarDecorator('selection.focus');
+    this._rangeDecorator = new LineDecorator('selection.range');
+    this._focusDecorator = new LineDecorator('selection.focus');
     this._ranges = [];
     this._frozen = 0;
     this._lastId = 0;
@@ -551,11 +551,10 @@ export class Selection {
       this._focusDecorator.clearAll();
       for (let range of this._ranges) {
         this._focusDecorator.add(range.focus, range.focus);
-        if (range.focus !== range.anchor)
-          this._rangeDecorator.add(Math.min(range.focus, range.anchor), Math.max(range.focus, range.anchor));
+        this._rangeDecorator.add(Math.min(range.focus, range.anchor), Math.max(range.focus, range.anchor), Anchor.Start, Anchor.End);
       }
     }
-    return {background: [this._rangeDecorator, this._focusDecorator], scrollbar: [this._rangeDecorator, this._focusDecorator]};
+    return {background: [this._rangeDecorator, this._focusDecorator], lines: [this._rangeDecorator]};
   }
 
   /**
@@ -760,4 +759,4 @@ export class Selection {
   }
 };
 
-Selection.Decorations = new Set(['selection.range', 'selection.focus']);
+Selection.Decorations = new Set(['selection.range', 'selection.focus', 'selection.focus.current']);

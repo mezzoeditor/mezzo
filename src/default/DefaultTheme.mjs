@@ -7,28 +7,40 @@ export let DefaultTheme = {
   },
   'selection.range': {
     background: {
-      color: 'rgba(126, 188, 254, 0.6)',
+      color: 'rgba(126, 188, 254, 0.5)',
     },
-    scrollbar: {
-      color: 'rgba(126, 188, 254, 0.6)',
-      left: 40,
-      right: 60,
+    line: {
+      background: {
+        color: 'rgba(126, 188, 254, 0.2)',
+      },
+      scrollbar: {
+        color: 'rgba(126, 188, 254, 0.6)',
+        left: 40,
+        right: 60,
+      },
     },
   },
   'search.match': {
     background: {
       color: 'hsla(36, 96%, 56%, 0.4)'
     },
-    scrollbar: {
-      color: 'hsla(36, 96%, 56%, 0.4)',
-      left: 0,
-      right: 20,
-    },
+    line: {
+      scrollbar: {
+        color: 'hsla(36, 96%, 56%, 0.4)',
+        left: 0,
+        right: 20,
+      },
+    }
   },
   'search.match.current': {
     border: {
       width: 2,
       color: 'hsl(39, 96%, 28%)'
+    },
+    line: {
+      border: {
+        color: 'hsl(39, 96%, 25%)',
+      }
     },
   },
   'syntax.default': {

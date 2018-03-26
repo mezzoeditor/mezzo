@@ -718,7 +718,7 @@ export class Decorator {
 export class TextDecorator extends Decorator {
 };
 
-export class ScrollbarDecorator extends TextDecorator {
+export class LineDecorator extends TextDecorator {
   /**
    * Decorations which should be visible on the scrollbar must have their own decorator.
    * The |style| is used for these decorations to decorate the scrollbar.
@@ -745,7 +745,7 @@ export class ScrollbarDecorator extends TextDecorator {
    */
   add(from, to, fromAnchor, toAnchor) {
     if (fromAnchor !== undefined && fromAnchor !== Anchor.Start && fromAnchor !== Anchor.End)
-      throw new Error('ScrollbarDecorator only supports a single style passed in constructor');
+      throw new Error('LineDecorator only supports a single style passed in constructor');
     super.add(from, to, this._style, fromAnchor, toAnchor);
   }
 };
