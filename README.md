@@ -1,19 +1,29 @@
 ## Features
 
 #### Core features
-* [x] 60fps rendering
-* [x] million lines editing
-* [x] million columns editing
-* [x] performant undo/redo
-* [x] performant multiple cursors
+* [x] performance (`T` = text length, `C` = cursor count, `D` = decoration count)
+    - [x] 60fps rendering
+    - [x] no line or column limit
+    - [x] `O(log T)` editing
+    - [x] `O(log D)` decoration updates
+    - [ ] `O(log T)` undo/redo
+    - [x] `O(C * log T)` multiple cursors editing
+    - [x] `O(C + log T)` memory overhead
 * [x] full unicode support for monospace fonts
+* [ ] flexibility
+    - [x] decoupled document and viewport
+    - [ ] widgets
+        * [ ] inline
+        * [ ] gutter
+        * [ ] multi-line
+    - [ ] displaying document ranges
 * [ ] decorations
     - [x] text
     - [x] background
     - [x] scrollbar
     - [ ] gutter
-    - [ ] line
-* [ ] easy plugins system
+    - [x] line
+* [ ] plugins system
     - [ ] extensible history
     - [ ] interoperability by default
     - [ ] synchronous updates
@@ -26,9 +36,6 @@
 * [x] auto-indent
 * [ ] interactive decorations
 * [ ] instant indent block
-* [ ] inline widgets
-* [ ] gutter widgets
-* [ ] multi-line widgets
 * [ ] font settings
 * [ ] custom themes
 
