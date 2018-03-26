@@ -449,53 +449,6 @@ describe('TextIterator', () => {
   });
 });
 
-describe('Viewport.Scrollbars', () => {
-  beforeEach(state => {
-    let document = new Document(() => {});
-    let measurer = {
-      defaultWidth: () => 10,
-      lineHeight: () => 10,
-      defaultWidthRegex: () => null,
-      measureString: s => 10,
-    };
-    state.viewport = new Viewport(document, measurer, () => {});
-    document.reset(new Array(10).fill('').join('\n'));
-    state.viewport.setSize(100, 100);
-    state.viewport.vScrollbar.setSize(100);
-  });
-
-  it('should update thumb', ({viewport}) => {
-    expect(viewport.vScrollbar.thumbOffset()).toBe(0);
-    expect(viewport.vScrollbar.thumbSize()).toBe(100);
-
-    viewport.setPadding({ top: 100 });
-    expect(viewport.vScrollbar.thumbOffset()).toBe(0);
-    expect(viewport.vScrollbar.thumbSize()).toBe(50);
-    expect(viewport._maxScrollTop).toBe(100);
-
-    viewport.advanceScroll(50, 50);
-    expect(viewport._scrollLeft).toBe(0);
-    expect(viewport.vScrollbar.thumbOffset()).toBe(25);
-    expect(viewport.vScrollbar.thumbSize()).toBe(50);
-  });
-
-  it('Scrollbar coordinate conversion', ({viewport}) => {
-    let scrollbar = viewport.vScrollbar;
-
-    viewport.setPadding({ top: 100 });
-    expect(scrollbar.thumbOffset()).toBe(0);
-    expect(scrollbar.thumbSize()).toBe(50);
-    expect(scrollbar.contentOffsetToScrollbarOffset(50)).toBe(25);
-    expect(scrollbar.scrollbarOffsetToContentOffset(25)).toBe(50);
-
-    scrollbar.setSize(200);
-    expect(scrollbar.thumbOffset()).toBe(0);
-    expect(scrollbar.thumbSize()).toBe(100);
-    expect(scrollbar.contentOffsetToScrollbarOffset(50)).toBe(50);
-    expect(scrollbar.scrollbarOffsetToContentOffset(50)).toBe(50);
-  });
-});
-
 describe('Viewport', () => {
   it('Viewport points API all chunk sizes', () => {
     let testMetrics = createTestMetrics();
@@ -1087,6 +1040,5 @@ new Reporter(runner);
 runner.run();
 
 // TODO:
-//   - reduce API around scrollbars;
 //   - add tests for Viewport;
 //   - add tests for various Document stuff;

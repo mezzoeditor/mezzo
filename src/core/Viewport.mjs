@@ -132,6 +132,8 @@ export class Viewport {
 
     this._width = 0;
     this._height = 0;
+    this._contentWidth = 0;
+    this._contentHeight = 0;
     this._scrollTop = 0;
     this._scrollLeft = 0;
     this._maxScrollTop = 0;
@@ -139,11 +141,6 @@ export class Viewport {
     this._padding = { left: 0, right: 0, top: 0, bottom: 0};
     this._frozen = false;
     this._decorateCallbacks = [];
-
-    this.hScrollbar = new Viewport.Scrollbar(offset => this.setScrollLeft(offset));
-    this.vScrollbar = new Viewport.Scrollbar(offset => this.setScrollTop(offset));
-
-    this._revealCallback = () => {};
 
     this.setMeasurer(measurer);
   }
@@ -191,16 +188,6 @@ export class Viewport {
   }
 
   /**
-   * @param {number} width
-   * @param {number} height
-   */
-  setSize(width, height) {
-    this._width = width;
-    this._height = height;
-    this._recompute();
-  }
-
-  /**
    * @return {number}
    */
   width() {
@@ -212,6 +199,54 @@ export class Viewport {
    */
   height() {
     return this._height;
+  }
+
+  /**
+   * @return {number}
+   */
+  scrollLeft() {
+    return this._scrollLeft;
+  }
+
+  /**
+   * @return {number}
+   */
+  scrollTop() {
+    return this._scrollTop;
+  }
+
+  /**
+   * @return {number}
+   */
+  maxScrollLeft() {
+    return this._maxScrollLeft;
+  }
+
+  /**
+   * @return {number}
+   */
+  maxScrollTop() {
+    return this._maxScrollTop;
+  }
+
+  /**
+   * @param {number} width
+   * @param {number} height
+   */
+  setSize(width, height) {
+    this._width = width;
+    this._height = height;
+    this._recompute();
+  }
+
+  /**
+   * @param {number} scrollTopDelta
+   * @param {number} scrollLeftDelta
+   */
+  advanceScroll(scrollTopDelta, scrollLeftDelta) {
+    this._scrollTop += scrollTopDelta;
+    this._scrollLeft += scrollLeftDelta;
+    this._recompute();
   }
 
   /**
@@ -231,16 +266,6 @@ export class Viewport {
   }
 
   /**
-   * @param {number} scrollTopDelta
-   * @param {number} scrollLeftDelta
-   */
-  advanceScroll(scrollTopDelta, scrollLeftDelta) {
-    this._scrollTop += scrollTopDelta;
-    this._scrollLeft += scrollLeftDelta;
-    this._recompute();
-  }
-
-  /**
    * @param {!{left: number, right: number, top: number, bottom: number}} padding
    */
   setPadding(padding) {
@@ -251,6 +276,20 @@ export class Viewport {
       bottom: 0
     }, padding);
     this._recompute();
+  }
+
+  /**
+   * @return {number}
+   */
+  contentWidth() {
+    return this._contentWidth;
+  }
+
+  /**
+   * @return {number}
+   */
+  contentHeight() {
+    return this._contentHeight;
   }
 
   /**
@@ -301,48 +340,6 @@ export class Viewport {
       x: point.x * this._defaultWidth,
       y: point.y * this._lineHeight
     };
-  }
-
-  /**
-   * @param {!Point} point
-   * @param {RoundMode} roundMode
-   * @param {boolean} strict
-   * @return {number}
-   */
-  _virtualPointToOffset(point, roundMode = RoundMode.Floor, strict) {
-    let found = this._tree.findByPoint(point, !!strict);
-    if (found.data === null)
-      return found.location.offset;
-    let from = found.location.offset;
-    let chunk = this._document.content(from, from + found.data.metrics.length);
-    return this._metrics.locateByPoint(chunk, found.location, found.clampedPoint, roundMode, strict).offset;
-  }
-
-  /**
-   * @param {number} offset
-   * @return {?Point}
-   */
-  _offsetToVirtualPoint(offset) {
-    let found = this._tree.findByOffset(offset);
-    if (found.location === null || found.data === null)
-      return found.location;
-    let from = found.location.offset;
-    let chunk = this._document.content(from, from + found.data.metrics.length);
-    return this._metrics.locateByOffset(chunk, found.location, offset);
-  }
-
-  /**
-   * @return {number}
-   */
-  contentWidth() {
-    return this._contentWidth;
-  }
-
-  /**
-   * @return {number}
-   */
-  contentHeight() {
-    return this._contentHeight;
   }
 
   /**
@@ -537,6 +534,7 @@ export class Viewport {
    */
   _buildScrollbar(scrollbarDecorators) {
     const lineHeight = this._lineHeight;
+    const ratio = this._height / (this._maxScrollTop + this._height);
     let scrollbar = [];
     for (let decorator of scrollbarDecorators) {
       let lastTop = -1;
@@ -546,8 +544,8 @@ export class Viewport {
         const from = this.offsetToViewportPoint(decoration.from);
         const to = this.offsetToViewportPoint(decoration.to);
 
-        let top = this.vScrollbar.contentOffsetToScrollbarOffset(from.y);
-        let bottom = this.vScrollbar.contentOffsetToScrollbarOffset(to.y + lineHeight);
+        let top = from.y * ratio;
+        let bottom = (to.y + lineHeight) * ratio;
         bottom = Math.max(bottom, top + kMinScrollbarDecorationHeight);
 
         if (top <= lastBottom) {
@@ -559,8 +557,7 @@ export class Viewport {
           lastBottom = bottom;
         }
 
-        let nextY = this.vScrollbar.scrollbarOffsetToContentOffset(bottom);
-        let nextOffset = this.viewportPointToOffset({x: 0, y: nextY + lineHeight});
+        let nextOffset = this.viewportPointToOffset({x: 0, y: bottom / ratio + lineHeight});
         return Math.max(decoration.to, nextOffset);
       });
       if (lastTop >= 0)
@@ -570,17 +567,40 @@ export class Viewport {
   }
 
   _recompute() {
-    // To properly handle input events, we have to update rects synchronously.
     this._maxScrollTop = Math.max(0, this._contentHeight - this._height + this._padding.top + this._padding.bottom);
     this._maxScrollLeft = Math.max(0, this._contentWidth - this._width + this._padding.left + this._padding.right);
-
     this._scrollLeft = Math.max(this._scrollLeft, 0);
     this._scrollLeft = Math.min(this._scrollLeft, this._maxScrollLeft);
     this._scrollTop = Math.max(this._scrollTop, 0);
     this._scrollTop = Math.min(this._scrollTop, this._maxScrollTop);
+  }
 
-    this.vScrollbar._setViewportMetrics(this._scrollTop, this._maxScrollTop, this._height);
-    this.hScrollbar._setViewportMetrics(this._scrollLeft, this._maxScrollLeft, this._width);
+  /**
+   * @param {!Point} point
+   * @param {RoundMode} roundMode
+   * @param {boolean} strict
+   * @return {number}
+   */
+  _virtualPointToOffset(point, roundMode = RoundMode.Floor, strict) {
+    let found = this._tree.findByPoint(point, !!strict);
+    if (found.data === null)
+      return found.location.offset;
+    let from = found.location.offset;
+    let chunk = this._document.content(from, from + found.data.metrics.length);
+    return this._metrics.locateByPoint(chunk, found.location, found.clampedPoint, roundMode, strict).offset;
+  }
+
+  /**
+   * @param {number} offset
+   * @return {?Point}
+   */
+  _offsetToVirtualPoint(offset) {
+    let found = this._tree.findByOffset(offset);
+    if (found.location === null || found.data === null)
+      return found.location;
+    let from = found.location.offset;
+    let chunk = this._document.content(from, from + found.data.metrics.length);
+    return this._metrics.locateByOffset(chunk, found.location, offset);
   }
 
   /**
@@ -591,6 +611,7 @@ export class Viewport {
     let metrics = tree.metrics();
     this._contentWidth = metrics.longestWidth * this._defaultWidth;
     this._contentHeight = (1 + (metrics.lineBreaks || 0)) * this._lineHeight;
+    this._recompute();
   }
 
   /**
@@ -659,109 +680,6 @@ export class Viewport {
   }
 }
 
-Viewport.Scrollbar = class {
-  /**
-   * @param {function(number)} scrollCallback
-   */
-  constructor(scrollCallback) {
-    this._size = 0;
-    this._thumbOffset = 0;
-    this._thumbSize = 0;
-
-    this._viewportMaxScroll = 0;
-    this._viewportScroll = 0;
-    this._viewportSize = 0;
-    this._scrolledPercentage = 0;
-    this._scrollCallback = scrollCallback;
-  }
-
-  /**
-   * @return {boolean}
-   */
-  isScrollable() {
-    return this._viewportMaxScroll > 0;
-  }
-
-  /**
-   * @return {number}
-   */
-  scrolledPercentage() {
-    return this._scrolledPercentage;
-  }
-
-  /**
-   * @return {number}
-   */
-  thumbSize() {
-    return this._thumbSize;
-  }
-
-  /**
-   * @return {number}
-   */
-  thumbOffset() {
-    return this._thumbOffset;
-  }
-
-  /**
-   * @param {number} offset
-   */
-  setThumbOffset(offset) {
-    let contentOffset = (this._viewportMaxScroll + this._viewportSize) * offset / this._size;
-    this._scrollCallback.call(null, contentOffset);
-  }
-
-  /**
-   * @return {number}
-   */
-  size() {
-    return this._size;
-  }
-
-  /**
-   * @param {number} size
-   */
-  setSize(size) {
-    this._size = size;
-    this._recompute();
-  }
-
-  /**
-   * @param {number} offset
-   * @return {number}
-   */
-  contentOffsetToScrollbarOffset(offset) {
-    return this._size * offset / (this._viewportMaxScroll + this._viewportSize);
-  }
-
-  /**
-   * @param {number} offset
-   * @return {number}
-   */
-  scrollbarOffsetToContentOffset(offset) {
-    return offset * (this._viewportMaxScroll + this._viewportSize) / this._size;
-  }
-
-  /**
-   * @param {number} viewportScroll
-   * @param {number} viewportMaxScroll
-   * @param {number} viewportSize
-   */
-  _setViewportMetrics(viewportScroll, viewportMaxScroll, viewportSize) {
-    this._viewportMaxScroll = viewportMaxScroll;
-    this._viewportScroll = viewportScroll;
-    this._viewportSize = viewportSize;
-    this._scrolledPercentage = viewportScroll / viewportMaxScroll;
-    this._recompute();
-  }
-
-  _recompute() {
-    let ratio = this._viewportSize / (this._viewportMaxScroll + this._viewportSize);
-    this._thumbSize = this._size * ratio;
-    this._thumbOffset = this.contentOffsetToScrollbarOffset(this._viewportScroll);
-  }
-}
-
 Viewport.VisibleRange = class {
   /**
    * @param {!Document} document
@@ -806,8 +724,6 @@ function cachedContent(document, from, to, cache, left, right) {
   return cache._content.substring(cache._left - left,
                                   cache._content.length - (cache._right - right));
 }
-
-Viewport._decorateFreeze = Symbol('Viewport.decorate');
 
 let kDefaultChunkSize = 1000;
 const kMinScrollbarDecorationHeight = 5;

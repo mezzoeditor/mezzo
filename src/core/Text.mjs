@@ -110,7 +110,7 @@ export class Text {
       left = leftChunk.substring(0, leftLength);
       tmp = tmp.rest.splitLast();
       if (tmp.last) {
-        let rightChunk = tmp.right;
+        let rightChunk = tmp.last;
         if (rightLength > rightChunk.length)
           throw new Error('Inconsistent');
         right = rightChunk.substring(rightChunk.length - rightLength, rightChunk.length);

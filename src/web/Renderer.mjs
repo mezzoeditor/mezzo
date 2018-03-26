@@ -106,12 +106,14 @@ export class Renderer {
       x: 0, y: 0, width: 0, height: 0
     };
     this._vScrollbar = {
+      ratio: 1,
       rect: {x: 0, y: 0, width: 0, height: 0},
       thumbRect: {x: 0, y: 0, width: 0, height: 0},
       hovered: false,
       dragged: false
     };
     this._hScrollbar = {
+      ratio: 1,
       rect: {x: 0, y: 0, width: 0, height: 0},
       thumbRect: {x: 0, y: 0, width: 0, height: 0},
       hovered: false,
@@ -234,7 +236,7 @@ export class Renderer {
     if (this._vScrollbar.hovered) {
       this._vScrollbar.dragged = true;
       this._mouseDownState.name = MouseDownStates.VSCROLL_DRAG;
-      this._mouseDownState.insideThumb = this._viewport.vScrollbar.thumbOffset() - (canvasPosition.y - this._vScrollbar.rect.y);
+      this._mouseDownState.insideThumb = this._viewport.scrollTop() * this._vScrollbar.ratio - (canvasPosition.y - this._vScrollbar.rect.y);
       this.raf();
       event.stopPropagation();
       event.preventDefault();
@@ -244,7 +246,7 @@ export class Renderer {
     if (this._hScrollbar.hovered) {
       this._hScrollbar.dragged = true;
       this._mouseDownState.name = MouseDownStates.HSCROLL_DRAG;
-      this._mouseDownState.insideThumb = this._viewport.hScrollbar.thumbOffset() - (canvasPosition.x - this._hScrollbar.rect.x);
+      this._mouseDownState.insideThumb = this._viewport.scrollLeft() * this._hScrollbar.ratio - (canvasPosition.x - this._hScrollbar.rect.x);
       this.raf();
       event.stopPropagation();
       event.preventDefault();
@@ -267,11 +269,11 @@ export class Renderer {
       this.raf();
     } else if (this._mouseDownState.name === MouseDownStates.VSCROLL_DRAG) {
       let scrollbarOffset = canvasPosition.y - this._vScrollbar.rect.y + this._mouseDownState.insideThumb;
-      this._viewport.vScrollbar.setThumbOffset(scrollbarOffset);
+      this._viewport.setScrollTop(scrollbarOffset / this._vScrollbar.ratio);
       this.invalidate();
     } else if (this._mouseDownState.name === MouseDownStates.HSCROLL_DRAG) {
       let scrollbarOffset = canvasPosition.x - this._hScrollbar.rect.x + this._mouseDownState.insideThumb;
-      this._viewport.hScrollbar.setThumbOffset(scrollbarOffset);
+      this._viewport.setScrollLeft(scrollbarOffset / this._hScrollbar.ratio);
       this.invalidate();
     }
   }
@@ -314,8 +316,6 @@ export class Renderer {
     this._editorRect.height = this._cssHeight;
 
     this._viewport.setSize(this._editorRect.width, this._editorRect.height);
-    this._viewport.vScrollbar.setSize(this._cssHeight);
-    this._viewport.hScrollbar.setSize(this._cssWidth - this._gutterRect.width - SCROLLBAR_WIDTH);
     this._viewport.setPadding({
       left: 4,
       right: 4,
@@ -323,31 +323,35 @@ export class Renderer {
       bottom: this._editorRect.height - this._measurer.lineHeight() - 4
     });
 
+    this._vScrollbar.ratio = this._viewport.height() / (this._viewport.maxScrollTop() + this._viewport.height());
     this._vScrollbar.rect.x = this._cssWidth - SCROLLBAR_WIDTH;
     this._vScrollbar.rect.y = 0;
     this._vScrollbar.rect.width = SCROLLBAR_WIDTH;
-    this._vScrollbar.rect.height = this._viewport.vScrollbar.size();
+    this._vScrollbar.rect.height = this._editorRect.height;
     this._vScrollbar.thumbRect.x = this._vScrollbar.rect.x;
-    this._vScrollbar.thumbRect.y = this._viewport.vScrollbar.thumbOffset();
+    this._vScrollbar.thumbRect.y = this._viewport.scrollTop() * this._vScrollbar.ratio;
     this._vScrollbar.thumbRect.width = this._vScrollbar.rect.width;
-    this._vScrollbar.thumbRect.height = this._viewport.vScrollbar.thumbSize();
+    this._vScrollbar.thumbRect.height = this._viewport.height() * this._vScrollbar.ratio;
     if (this._vScrollbar.thumbRect.height < MIN_THUMB_SIZE) {
       let delta = MIN_THUMB_SIZE - this._vScrollbar.thumbRect.height;
-      this._vScrollbar.thumbRect.y -= delta * this._viewport.vScrollbar.scrolledPercentage();
+      let percent = this._viewport.maxScrollTop() ? this._viewport.scrollTop() / this._viewport.maxScrollTop() : 1;
+      this._vScrollbar.thumbRect.y -= delta * percent;
       this._vScrollbar.thumbRect.height = MIN_THUMB_SIZE;
     }
 
+    this._hScrollbar.ratio = this._viewport.width() / (this._viewport.maxScrollLeft() + this._viewport.width());
     this._hScrollbar.rect.x = this._gutterRect.width;
     this._hScrollbar.rect.y = this._cssHeight - SCROLLBAR_WIDTH;
-    this._hScrollbar.rect.width = this._viewport.hScrollbar.size();
-    this._hScrollbar.rect.height = this._viewport.hScrollbar.isScrollable() ? SCROLLBAR_WIDTH : 0;
-    this._hScrollbar.thumbRect.x = this._hScrollbar.rect.x + this._viewport.hScrollbar.thumbOffset();
+    this._hScrollbar.rect.width = this._editorRect.width;
+    this._hScrollbar.rect.height = this._viewport.maxScrollLeft() > 0 ? SCROLLBAR_WIDTH : 0;
+    this._hScrollbar.thumbRect.x = this._hScrollbar.rect.x + this._viewport.scrollLeft() * this._hScrollbar.ratio;
     this._hScrollbar.thumbRect.y = this._hScrollbar.rect.y;
-    this._hScrollbar.thumbRect.width = this._viewport.hScrollbar.thumbSize();
+    this._hScrollbar.thumbRect.width = this._viewport.width() * this._hScrollbar.ratio;
     this._hScrollbar.thumbRect.height = this._hScrollbar.rect.height;
     if (this._hScrollbar.thumbRect.width < MIN_THUMB_SIZE) {
       let delta = MIN_THUMB_SIZE - this._hScrollbar.thumbRect.width;
-      this._hScrollbar.thumbRect.x -= delta * this._viewport.hScrollbar.scrolledPercentage();
+      let percent = this._viewport.maxScrollLeft() ? this._viewport.scrollLeft() / this._viewport.maxScrollLeft() : 1;
+      this._hScrollbar.thumbRect.x -= delta * percent;
       this._hScrollbar.thumbRect.width = MIN_THUMB_SIZE;
     }
 

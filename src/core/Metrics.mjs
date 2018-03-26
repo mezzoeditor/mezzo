@@ -197,7 +197,7 @@ export class Metrics {
         let charCode = s.charCodeAt(i);
         if (charCode >= 0xD800 && charCode <= 0xDBFF && i + 1 < s.length) {
           result[i + 1] = x;
-          let codePoint = lineContent.codePointAt(i);
+          let codePoint = s.codePointAt(i);
           if (this._supplementary[codePoint] === undefined)
             this._supplementary[codePoint] = this._measureSupplementary(s.substring(i, i + 2));
           x += this._supplementary[codePoint];
