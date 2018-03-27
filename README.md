@@ -34,6 +34,7 @@
 * [x] search/replace
 * [x] keyboard bindings
 * [x] auto-indent
+* [ ] line wrapping
 * [ ] interactive decorations
 * [ ] instant indent block
 * [ ] font settings
