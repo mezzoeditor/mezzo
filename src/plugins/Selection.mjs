@@ -551,7 +551,10 @@ export class Selection {
       this._focusDecorator.clearAll();
       for (let range of this._ranges) {
         this._focusDecorator.add(range.focus, range.focus);
-        this._rangeDecorator.add(Math.min(range.focus, range.anchor), Math.max(range.focus, range.anchor), Anchor.Start, Anchor.End);
+        if (range.focus === range.anchor)
+          this._rangeDecorator.add(Math.min(range.focus, range.anchor), Math.max(range.focus, range.anchor), Anchor.Start, Anchor.End);
+        else
+          this._rangeDecorator.add(Math.min(range.focus, range.anchor), Math.max(range.focus, range.anchor), Anchor.Start, Anchor.Start);
       }
     }
     return {background: [this._rangeDecorator, this._focusDecorator], lines: [this._rangeDecorator]};

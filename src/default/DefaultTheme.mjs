@@ -11,7 +11,7 @@ export let DefaultTheme = {
     },
     line: {
       background: {
-        color: 'rgba(126, 188, 254, 0.2)',
+        color: 'rgba(126, 188, 254, 0.1)',
       },
       scrollbar: {
         color: 'rgba(126, 188, 254, 0.6)',
@@ -40,7 +40,7 @@ export let DefaultTheme = {
     line: {
       border: {
         color: 'hsl(39, 96%, 25%)',
-      }
+      },
     },
   },
   'syntax.default': {
