@@ -20,6 +20,10 @@ export class EditorComponent extends HTMLElement {
       rafId = requestAnimationFrame(() => {
         rafId = 0;
         const ranges = this._editor.selection().ranges();
+        if (!ranges.length) {
+          this._selectionDescription.textContent = ``;
+          return;
+        }
         if (ranges.length > 1) {
           this._selectionDescription.textContent = `${ranges.length} selection regions`;
           return;
