@@ -8,6 +8,7 @@ sidebar-component {
   font-family: monospace;
   padding: 10px;
   user-select: none;
+  contain: strict;
 }
 
 sidebar-component
