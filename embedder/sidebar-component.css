@@ -9,6 +9,7 @@ sidebar-component {
   padding: 10px;
   user-select: none;
   contain: strict;
+  white-space: nowrap;
 }
 
 sidebar-component
