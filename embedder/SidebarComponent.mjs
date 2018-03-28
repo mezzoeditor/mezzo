@@ -11,6 +11,7 @@ export class SidebarComponent extends HTMLElement {
     this._render();
     this._selectedCallback = null;
     this._selectedItem = null;
+    this._treeElement = null;
     this.addEventListener('click', this._onClick.bind(this), false);
   }
 
@@ -33,9 +34,10 @@ export class SidebarComponent extends HTMLElement {
   }
 
   _render() {
-    if (this._listElement)
-      this._listElement.remove();
-    this._listElement = document.createElement('div');
+    if (this._treeElement)
+      this._treeElement.remove();
+    this._treeElement = document.createElement('div');
+    this._treeElement.classList.add('tree');
 
     const root = this._fs.roots()[0];
     if (!root)
@@ -53,10 +55,10 @@ export class SidebarComponent extends HTMLElement {
       fileEntry.textContent = filePath;
       fileEntry.title = path;
       fileEntry[FilePathSymbol] = path;
-      this._listElement.appendChild(fileEntry);
+      this._treeElement.appendChild(fileEntry);
     }
 
-    this.appendChild(this._listElement);
+    this.appendChild(this._treeElement);
   }
 
   _onFilesChanged() {

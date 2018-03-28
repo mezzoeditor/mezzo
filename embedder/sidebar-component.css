@@ -28,3 +28,7 @@ sidebar-component
   padding: 4px;
 }
 
+sidebar-component
+.tree {
+  min-width: max-content;
+}
