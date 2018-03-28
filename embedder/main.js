@@ -26,6 +26,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   const statusbar = new StatusbarComponent();
   statusbar.leftElement().appendChild(editor.selectionDescriptionElement());
+  statusbar.rightElement().textContent = editor.mimeType();
   document.body.appendChild(statusbar);
 
   let selectedFile = '';
