@@ -10,6 +10,37 @@ export class EditorComponent extends HTMLElement {
     this._editor.element().classList.add('editor');
     this.appendChild(this._editor.element());
     this._mimeType = 'text/plain';
+    this._selectionChangedCallback = null;
+    this._selectionDescription = document.createElement('span');
+
+    let rafId = 0;
+    this._editor.selection().addChangeCallback(() => {
+      if (rafId)
+        return;
+      rafId = requestAnimationFrame(() => {
+        rafId = 0;
+        const ranges = this._editor.selection().ranges();
+        if (ranges.length > 1) {
+          this._selectionDescription.textContent = `${ranges.length} selection regions`;
+          return;
+        }
+        const range = ranges[0];
+        if (range.from === range.to) {
+          const position = this._editor.document().offsetToPosition(range.from);
+          this._selectionDescription.textContent = `Line ${position.line + 1}, Column ${position.column + 1}`;
+          return;
+        }
+        const fromPosition = this._editor.document().offsetToPosition(range.from);
+        const toPosition = this._editor.document().offsetToPosition(range.to);
+        const charDelta = Math.abs(range.from - range.to);
+        const lineDelta = Math.abs(fromPosition.line - toPosition.line);
+        if (!lineDelta) {
+          this._selectionDescription.textContent = `${charDelta} character${charDelta > 1 ? 's' : ''} selected`;
+        } else {
+          this._selectionDescription.textContent = `${lineDelta + 1} lines, ${charDelta} character${charDelta > 1 ? 's' : ''} selected`;
+        }
+      });
+    });
   }
 
   setText(text) {
@@ -35,6 +66,10 @@ export class EditorComponent extends HTMLElement {
 
   mimeType() {
     return this._mimeType;
+  }
+
+  selectionDescriptionElement() {
+    return this._selectionDescription;
   }
 
   connectedCallback() {
