@@ -172,6 +172,10 @@ export class Renderer {
     if (false)
       this._viewport.setMeasurer(this._measurer);
     this.invalidate();
+
+    // Changing cavas width/height clears the canvas synchronously.
+    // We need to re-render so that it doesn't blink on continious resizing.
+    this._render();
   }
 
   /**
