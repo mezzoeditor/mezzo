@@ -36,6 +36,7 @@ export class EditorComponent extends HTMLElement {
         }
         const fromPosition = this._editor.document().offsetToPosition(range.from);
         const toPosition = this._editor.document().offsetToPosition(range.to);
+        // TODO: this should measure columns, not offsets.
         const charDelta = Math.abs(range.from - range.to);
         const lineDelta = Math.abs(fromPosition.line - toPosition.line);
         if (!lineDelta) {

@@ -1,3 +1,4 @@
+import { Start, End } from '../core/Anchor.mjs';
 import { TextDecorator, Decorator} from '../core/Decorator.mjs';
 import { Parser, TokenTypes, KeywordTypes } from './jslexer/index.mjs';
 import { trace } from '../core/Trace.mjs';
@@ -21,11 +22,11 @@ export class JSHighlighter {
     if (this._highlightOffset >= this._document.length())
       return;
     let to = Math.min(this._highlightOffset + HIGHLIGHT_CHUNK, this._document.length());
-    this._highlightStates.clearTouching(this._highlightOffset, to);
+    this._highlightStates.clearTouching(Start(this._highlightOffset), End(to));
     for (; this._highlightOffset < to; this._highlightOffset += STATE_CHUNK) {
       this._parser.it.setConstraints(0, this._highlightOffset);
       for (let token of this._parser);
-      this._highlightStates.add(this._highlightOffset, this._highlightOffset, this._parser.state());
+      this._highlightStates.add(Start(this._highlightOffset), Start(this._highlightOffset), this._parser.state());
     }
     if (this._highlightOffset < this._document.length())
       this._rafId = requestAnimationFrame(this._doHighlight.bind(this));
@@ -68,18 +69,18 @@ export class JSHighlighter {
       let from = replacement.offset;
       let to = from + replacement.removed.length();
 
-      this._highlightStates.clearTouching(from, to);
+      this._highlightStates.clearTouching(Start(from), End(to));
       this._highlightStates.replace(from, to, replacement.inserted.length());
       if (from === 0)
-        this._highlightStates.add(0, 0, Parser.defaultState());
+        this._highlightStates.add(Start(0), Start(0), Parser.defaultState());
       if (this._highlightOffset <= from) {
         this._parser.setIterator(replacement.after.iterator(this._highlightOffset));
         continue;
       }
 
-      let decoration = this._highlightStates.lastTouching(0, from);
+      let decoration = this._highlightStates.lastTouching(Start(0), End(from));
       if (decoration) {
-        this._highlightOffset = decoration.from;
+        this._highlightOffset = decoration.from.offset;
         this._parser = new Parser(replacement.after.iterator(this._highlightOffset), decoration.data);
       } else {
         this._highlightOffset = 0;
@@ -97,26 +98,26 @@ export class JSHighlighter {
     trace.beginGroup('js');
     let decorator = new TextDecorator();
     for (let range of visibleContent.ranges) {
-      let decoration = this._highlightStates.lastTouching(range.from - STATE_CHUNK, range.from);
+      let decoration = this._highlightStates.lastTouching(Start(range.from - STATE_CHUNK), End(range.from));
       if (!decoration) {
-        decorator.add(range.from, range.to, 'syntax.default');
+        decorator.add(Start(range.from), Start(range.to), 'syntax.default');
         continue;
       }
-      let parser = new Parser(visibleContent.document.iterator(decoration.to, 0, range.to), decoration.data);
+      let parser = new Parser(visibleContent.document.iterator(decoration.to.offset, 0, range.to), decoration.data);
       for (let token of parser) {
         if (token.end <= range.from)
           continue;
         let start = Math.max(range.from, token.start);
         if (token.type.keyword || (token.type === TokenTypes.name && token.value === 'let')) {
-          decorator.add(start, token.end, 'syntax.keyword');
+          decorator.add(Start(start), Start(token.end), 'syntax.keyword');
         } else if (token.type === TokenTypes.string || token.type === TokenTypes.regexp || token.type === TokenTypes.template) {
-          decorator.add(start, token.end, 'syntax.string');
+          decorator.add(Start(start), Start(token.end), 'syntax.string');
         } else if (token.type === TokenTypes.num) {
-          decorator.add(start, token.end, 'syntax.number');
+          decorator.add(Start(start), Start(token.end), 'syntax.number');
         } else if (token.type === TokenTypes.blockComment || token.type === TokenTypes.lineComment) {
-          decorator.add(start, token.end, 'syntax.comment');
+          decorator.add(Start(start), Start(token.end), 'syntax.comment');
         } else {
-          decorator.add(start, token.end, 'syntax.default');
+          decorator.add(Start(start), Start(token.end), 'syntax.default');
         }
       }
     }

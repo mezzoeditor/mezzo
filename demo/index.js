@@ -1,3 +1,4 @@
+import { Start } from "../src/core/Anchor.mjs";
 import { TextDecorator } from "../src/core/Decorator.mjs";
 import { WebEditor } from "../src/web/WebEditor.mjs";
 import { Random } from "../src/core/Random.mjs";
@@ -100,18 +101,18 @@ function addSearch(editor) {
 
 function addRangeHandle(editor) {
   const rangeText = document.querySelector('.range');
-  rangeText.addEventListener('click', updateRangeHandle);
+  rangeText.addEventListener('click', updateRangeHandle.bind(null, editor));
   editor.addDecorationCallback(() => {
     if (!rangeHandle || rangeHandle.removed())
       return {};
     let decorator = new TextDecorator();
     let {from, to} = rangeHandle.resolve();
-    decorator.add(from.offset, to.offset, 'the-range');
+    decorator.add(Start(from.offset), Start(to.offset), 'the-range');
     return {background: [decorator]};
   });
 }
 
-function updateRangeHandle() {
+function updateRangeHandle(editor) {
   if (!rangeHandle)
     return;
   const rangeText = document.querySelector('.range');
@@ -119,7 +120,9 @@ function updateRangeHandle() {
     rangeText.textContent = 'Range removed';
   } else {
     const {from, to} = rangeHandle.resolve();
-    rangeText.textContent = `Range {${from.offset}/${from.line},${from.column}} : {${to.offset}/${to.line},${to.column}}`;
+    let fromPosition = editor.document().offsetToPosition(from.offset);
+    let toPosition = editor.document().offsetToPosition(to.offset);
+    rangeText.textContent = `Range {${from.offset}/${fromPosition.line},${fromPosition.column}} : {${to.offset}/${toPosition.line},${toPosition.column}}`;
   }
 }
 
@@ -166,8 +169,8 @@ class TokenHighlighter {
       let index = text.indexOf(this._token);
       while (index !== -1) {
         decorator.add(
-          offset + index,
-          offset + index + this._token.length,
+          Start(offset + index),
+          Start(offset + index + this._token.length),
           ['red', 'green', 'blue'][(offset + index) % 3]
         );
         index = text.indexOf(this._token, index + this._token.length);
@@ -205,6 +208,6 @@ async function setupEditor(editor, exampleName) {
   //let ranges = [{from: 0, to: 0}, {from: 9, to: 9}];
   editor.selection().setRanges(ranges);
 
-  rangeHandle = editor.addHandle(20, 40, updateRangeHandle);
-  updateRangeHandle();
+  rangeHandle = editor.addHandle(Start(20), Start(40), updateRangeHandle);
+  updateRangeHandle(editor);
 }

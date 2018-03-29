@@ -1,24 +1,12 @@
+import { CompareAnchors, NextAnchor, MaxAnchor, Start, End } from './Anchor.mjs';
 import { Random } from './Random.mjs';
 let random = Random(25);
 
 /**
- * "Start" anchor at |x| stays next to character at offset |x - 1|. When
- * inserting text at position |x|, the anchor does not move.
- * "End" anchor at |x| stays next to character at offset |x|. When
- * inserting text at position |x|, the anchor moves to the right.
- */
-export let Anchor = {
-  Start: 0,
-  End: 1,
-};
-
-/**
  * @template T
  * @typedef {{
- *   from: number,
- *   fromAnchor: !Anchor,
- *   to: number,
- *   toAnchor: !Anchor,
+ *   from: !Anchor,
+ *   to: !Anchor,
  *   data: T,
  * }} Decoration
  */
@@ -27,10 +15,8 @@ export let Anchor = {
  * @template T
  * @typedef {{
  *   data: T,
- *   from: number,
- *   fromAnchor: !Anchor,
- *   to: number,
- *   toAnchor: !Anchor,
+ *   from: !Anchor,
+ *   to: !Anchor,
  *   h: number,
  *   size: number,
  *   add: number|undefined,
@@ -52,8 +38,8 @@ export let Anchor = {
 function normalize(node) {
   if (!node.add)
     return node;
-  node.from += node.add;
-  node.to += node.add;
+  node.from.offset += node.add;
+  node.to.offset += node.add;
   if (node.left)
     node.left.add = (node.left.add || 0) + node.add;
   if (node.right)
@@ -105,43 +91,27 @@ function merge(left, right) {
     return setChildren(right, merge(left, right.left), right.right);
 };
 
-const kFromLess = 0;
-const kFromLessEqual = 1;
-const kToLess = 2;
-const kToLessEqual = 3;
+const kFrom = 0;
+const kTo = 1;
 
 /**
  * @template T
  * @param {!TreeNode<T>|undefined} node
- * @param {number} offset
+ * @param {!Anchor} key
  * @param {number} splitBy
  * @return {{left: !TreeNode<T>|undefined, right: !TreeNode<T>|undefined}}
  */
-function split(node, offset, splitBy) {
+function split(node, key, splitBy) {
   if (!node)
     return {};
   node = normalize(node);
-  let nodeToLeft;
-  switch (splitBy) {
-    case kFromLess:
-      nodeToLeft = more(offset, node.from, node.fromAnchor);
-      break;
-    case kFromLessEqual:
-      nodeToLeft = node.from <= offset;
-      break;
-    case kToLess:
-      nodeToLeft = more(offset, node.to, node.toAnchor);
-      break;
-    case kToLessEqual:
-      nodeToLeft = node.to <= offset;
-      break;
-  }
+  let nodeToLeft = splitBy === kFrom ? CompareAnchors(node.from, key) < 0 : CompareAnchors(node.to, key) < 0;
   if (nodeToLeft) {
-    let tmp = split(node.right, offset, splitBy);
+    let tmp = split(node.right, key, splitBy);
     node.parent = undefined;
     return {left: setChildren(node, node.left, tmp.left), right: tmp.right};
   } else {
-    let tmp = split(node.left, offset, splitBy);
+    let tmp = split(node.left, key, splitBy);
     node.parent = undefined;
     return {left: tmp.left, right: setChildren(node, tmp.right, node.right)};
   }
@@ -199,16 +169,16 @@ function last(node) {
 /**
  * @template T
  * @param {!TreeNode<T>|undefined} node
- * @param {number} from
+ * @param {!Anchor} key
  * @return {!TreeNode<T>|undefined}
  */
-function find(node, offset) {
+function find(node, key) {
   if (!node)
     return;
   node = normalize(node);
-  if (node.from >= offset)
-    return find(node.left, offset) || node;
-  return find(node.right, offset);
+  if (CompareAnchors(node.from, key) >= 0)
+    return find(node.left, key) || node;
+  return find(node.right, key);
 };
 
 /**
@@ -218,6 +188,7 @@ export class Decorator {
   /**
    * Decorator with handles is slower on replace() operation, but keeps a handle
    * to each decoration which can be used to resolve or remove it later.
+   *
    * @param {boolean=} createHandles
    */
   constructor(createHandles) {
@@ -230,61 +201,48 @@ export class Decorator {
    *   - not degenerate (|from| <= |to|);
    *   - disjoiint (no decorations have common interior point).
    * Only returns a handle if asked for in constructor.
-   * @param {number} from
-   * @param {number} to
+   *
+   * @param {!Anchor} from
+   * @param {!Anchor} to
    * @param {T} data
-   * @param {!Anchor=} fromAnchor
-   * @param {!Anchor=} toAnchor
    * @return {!Decorator.Handle|undefined}
    */
-  add(from, to, data, fromAnchor, toAnchor) {
-    if (fromAnchor === undefined)
-      fromAnchor = Anchor.Start;
-    if (toAnchor === undefined)
-      toAnchor = fromAnchor;
-    if (from > to)
+  add(from, to, data) {
+    if (CompareAnchors(from, to) > 0)
       throw new Error('Reversed decorations are not allowed');
-    if (from === to && fromAnchor === Anchor.End && toAnchor === Anchor.Start)
-      throw new Error('Reversed anchoring for collapsed decoration is not allowed');
-    let tmp = split(this._root, to, toAnchor === Anchor.End ? kToLessEqual : kToLess);
-    if (tmp.left) {
-      let lastLeft = last(tmp.left);
-      if (lastLeft.to > from ||
-          lastLeft.to === from && lastLeft.toAnchor === Anchor.End && fromAnchor === Anchor.Start)
-        throw new Error('Decorations must be disjoint');
-    }
-    if (tmp.right) {
-      let firstRight = first(tmp.right);
-      if (firstRight.from < to ||
-          firstRight.from === to && firstRight.fromAnchor === Anchor.Start && toAnchor === Anchor.End)
-        throw new Error('Decorations must be disjoint');
-    }
-    let node = {data, from, to, fromAnchor, toAnchor, h: random(), size: 1};
+    let tmp = split(this._root, NextAnchor(from), kTo);
+    if (tmp.left && CompareAnchors(last(tmp.left).to, from) > 0)
+      throw new Error('Decorations must be disjoint');
+    if (tmp.right && CompareAnchors(first(tmp.right).from, to) < 0)
+      throw new Error('Decorations must be disjoint');
+    let node = {data, from, to, h: random(), size: 1};
     this._root = merge(merge(tmp.left, node), tmp.right);
     return this._createHandles ? node : undefined;
   }
 
   /**
    * Removes a single decoration by handle and returns it's data if any.
+   *
    * @param {!Decorator.Handle} handle
-   * @return {T|undefined}
+   * @return {!Decoration|undefined}
    */
   remove(handle) {
     let decoration = this.resolve(handle);
     if (!decoration)
       return;
-    let tmp = split(this._root, decoration.from, decoration.fromAnchor === Anchor.Start ? kToLess : kToLessEqual);
-    let tmp2 = split(tmp.right, decoration.to, decoration.toAnchor === Anchor.Start ? kFromLess : kFromLessEqual);
+    let tmp = split(this._root, decoration.from, kTo);
+    let tmp2 = split(tmp.right, decoration.to, kFrom);
     let removed = tmp2.left;
-    if (!removed || removed.from !== decoration.from || removed.to !== decoration.to || removed.left || removed.right)
+    if (!removed || CompareAnchors(removed.from, decoration.from) !== 0 || CompareAnchors(removed.to, decoration.to) !== 0 || removed.left || removed.right)
       throw new Error('Inconsistent');
     removed.parent = undefined;
     this._root = merge(tmp.left, tmp2.right);
-    return removed.data;
+    return decoration;
   }
 
   /**
    * Returns the range of a single decoration if any.
+   *
    * @param {!Decorator.Handle} handle
    * @return {!Decoration|undefined}
    */
@@ -300,13 +258,7 @@ export class Decorator {
       return;
     for (let parent of stack)
       normalize(parent);
-    return {
-      from: handle.from,
-      to: handle.to,
-      fromAnchor: handle.fromAnchor,
-      toAnchor: handle.toAnchor,
-      data: handle.data
-    };
+    return {from: handle.from, to: handle.to, data: handle.data};
   }
 
   /**
@@ -317,6 +269,7 @@ export class Decorator {
    *   - decorations covering |from| or |to| are cropped by [from, to];
    *   - decorations starting after |to| are moved by |inserted - to + from|.
    * Returns the list of handles to removed decorations if asked for in constructor.
+   *
    * @param {number} from
    * @param {number} to
    * @param {number} inserted
@@ -325,13 +278,13 @@ export class Decorator {
   replace(from, to, inserted) {
     // TODO: take offset, removed, inserted instead to align with Replacement?
     let delta = inserted - (to - from);
-    let tmp = split(this._root, from, kToLess);
+    let tmp = split(this._root, Start(from), kTo);
     let left = tmp.left;
-    tmp = split(tmp.right, to, kFromLessEqual);
+    tmp = split(tmp.right, End(to), kFrom);
     let right = tmp.right;
-    tmp = split(tmp.left, from, kFromLessEqual);
+    tmp = split(tmp.left, End(from), kFrom);
     let crossLeft = tmp.left;
-    tmp = split(tmp.right, to, kToLess);
+    tmp = split(tmp.right, Start(to), kTo);
     let crossRight = tmp.right;
 
     let removed;
@@ -353,6 +306,7 @@ export class Decorator {
 
   /**
    * Returns the total number of decorations.
+   *
    * @return {number}
    */
   countAll() {
@@ -360,9 +314,10 @@ export class Decorator {
   }
 
   /**
-   * Returns the number of decorations which start at [from, to].
-   * @param {number} from
-   * @param {number} to
+   * Returns the number of decorations which start at [from, to).
+   *
+   * @param {!Anchor} from
+   * @param {!Anchor} to
    * @return {number}
    */
   countStarting(from, to) {
@@ -370,9 +325,10 @@ export class Decorator {
   }
 
   /**
-   * Returns the number of decorations which end at [from, to].
-   * @param {number} from
-   * @param {number} to
+   * Returns the number of decorations which end at [from, to).
+   *
+   * @param {!Anchor} from
+   * @param {!Anchor} to
    * @return {number}
    */
   countEnding(from, to) {
@@ -380,9 +336,10 @@ export class Decorator {
   }
 
   /**
-   * Returns the number of decorations which intersect or touch [from, to].
-   * @param {number} from
-   * @param {number} to
+   * Returns the number of decorations which intersect or touch [from, to).
+   *
+   * @param {!Anchor} from
+   * @param {!Anchor} to
    * @return {number}
    */
   countTouching(from, to) {
@@ -391,6 +348,7 @@ export class Decorator {
 
   /**
    * Lists all decorations.
+   *
    * @return {!Array<!Decoration>}
    */
   listAll() {
@@ -400,9 +358,10 @@ export class Decorator {
   }
 
   /**
-   * Lists all decorations which start at [from, to].
-   * @param {number} from
-   * @param {number} to
+   * Lists all decorations which start at [from, to).
+   *
+   * @param {!Anchor} from
+   * @param {!Anchor} to
    * @return {!Array<!Decoration>}
    */
   listStarting(from, to) {
@@ -412,9 +371,10 @@ export class Decorator {
   }
 
   /**
-   * Lists all decorations which end at [from, to].
-   * @param {number} from
-   * @param {number} to
+   * Lists all decorations which end at [from, to).
+   *
+   * @param {!Anchor} from
+   * @param {!Anchor} to
    * @return {!Array<!Decoration>}
    */
   listEnding(from, to) {
@@ -424,9 +384,10 @@ export class Decorator {
   }
 
   /**
-   * Lists all decorations which intersect or touch [from, to].
-   * @param {number} from
-   * @param {number} to
+   * Lists all decorations which intersect or touch [from, to).
+   *
+   * @param {!Anchor} from
+   * @param {!Anchor} to
    * @return {!Array<!Decoration>}
    */
   listTouching(from, to) {
@@ -443,27 +404,30 @@ export class Decorator {
   }
 
   /**
-   * Removes all decorations which start at [from, to].
-   * @param {number} from
-   * @param {number} to
+   * Removes all decorations which start at [from, to).
+   *
+   * @param {!Anchor} from
+   * @param {!Anchor} to
    */
   clearStarting(from, to) {
     this._starting(from, to, null);
   }
 
   /**
-   * Removes all decorations which end at [from, to].
-   * @param {number} from
-   * @param {number} to
+   * Removes all decorations which end at [from, to).
+   *
+   * @param {!Anchor} from
+   * @param {!Anchor} to
    */
   clearEnding(from, to) {
     this._ending(from, to, null);
   }
 
   /**
-   * Removes all decorations which intersect or touch [from, to].
-   * @param {number} from
-   * @param {number} to
+   * Removes all decorations which intersect or touch [from, to).
+   *
+   * @param {!Anchor} from
+   * @param {!Anchor} to
    */
   clearTouching(from, to) {
     this._touching(from, to, null);
@@ -471,6 +435,7 @@ export class Decorator {
 
   /**
    * Visits all decorations.
+   *
    * @param {function(!Decoration)} visitor
    */
   visitAll(visitor) {
@@ -478,9 +443,10 @@ export class Decorator {
   }
 
   /**
-   * Visits all decorations which start at [from, to].
-   * @param {number} from
-   * @param {number} to
+   * Visits all decorations which start at [from, to).
+   *
+   * @param {!Anchor} from
+   * @param {!Anchor} to
    * @param {function(!Decoration)} visitor
    */
   visitStarting(from, to, visitor) {
@@ -488,9 +454,10 @@ export class Decorator {
   }
 
   /**
-   * Visits all decorations which end at [from, to].
-   * @param {number} from
-   * @param {number} to
+   * Visits all decorations which end at [from, to).
+   *
+   * @param {!Anchor} from
+   * @param {!Anchor} to
    * @param {function(!Decoration)} visitor
    */
   visitEnding(from, to, visitor) {
@@ -498,9 +465,10 @@ export class Decorator {
   }
 
   /**
-   * Visits all decorations which intersect or touch [from, to].
-   * @param {number} from
-   * @param {number} to
+   * Visits all decorations which intersect or touch [from, to).
+   *
+   * @param {!Anchor} from
+   * @param {!Anchor} to
    * @param {function(!Decoration)} visitor
    */
   visitTouching(from, to, visitor) {
@@ -508,7 +476,8 @@ export class Decorator {
   }
 
   /**
-   * Returns the first (sorted by offset) decoration.
+   * Returns the first (sorted by anchor) decoration.
+   *
    * @return {?Decoration}
    */
   firstAll() {
@@ -516,9 +485,10 @@ export class Decorator {
   }
 
   /**
-   * Returns the first (sorted by offset) decoration which starts at [from, to].
-   * @param {number} from
-   * @param {number} to
+   * Returns the first (sorted by anchor) decoration which starts at [from, to).
+   *
+   * @param {!Anchor} from
+   * @param {!Anchor} to
    * @return {?Decoration}
    */
   firstStarting(from, to) {
@@ -526,9 +496,10 @@ export class Decorator {
   }
 
   /**
-   * Returns the first (sorted by offset) decoration which ends at [from, to].
-   * @param {number} from
-   * @param {number} to
+   * Returns the first (sorted by anchor) decoration which ends at [from, to).
+   *
+   * @param {!Anchor} from
+   * @param {!Anchor} to
    * @return {?Decoration}
    */
   firstEnding(from, to) {
@@ -536,9 +507,10 @@ export class Decorator {
   }
 
   /**
-   * Returns the first (sorted by offset) decoration which intersects or touches [from, to].
-   * @param {number} from
-   * @param {number} to
+   * Returns the first (sorted by anchor) decoration which intersects or touches [from, to).
+   *
+   * @param {!Anchor} from
+   * @param {!Anchor} to
    * @return {?Decoration}
    */
   firstTouching(from, to) {
@@ -546,7 +518,8 @@ export class Decorator {
   }
 
   /**
-   * Returns the last (sorted by offset) decoration.
+   * Returns the last (sorted by anchor) decoration.
+   *
    * @return {?Decoration}
    */
   lastAll() {
@@ -554,9 +527,10 @@ export class Decorator {
   }
 
   /**
-   * Returns the last (sorted by offset) decoration which starts at [from, to].
-   * @param {number} from
-   * @param {number} to
+   * Returns the last (sorted by anchor) decoration which starts at [from, to).
+   *
+   * @param {!Anchor} from
+   * @param {!Anchor} to
    * @return {?Decoration}
    */
   lastStarting(from, to) {
@@ -564,9 +538,10 @@ export class Decorator {
   }
 
   /**
-   * Returns the last (sorted by offset) decoration which ends at [from, to].
-   * @param {number} from
-   * @param {number} to
+   * Returns the last (sorted by anchor) decoration which ends at [from, to).
+   *
+   * @param {!Anchor} from
+   * @param {!Anchor} to
    * @return {?Decoration}
    */
   lastEnding(from, to) {
@@ -574,9 +549,10 @@ export class Decorator {
   }
 
   /**
-   * Returns the last (sorted by offset) decoration which intersects or touches [from, to].
-   * @param {number} from
-   * @param {number} to
+   * Returns the last (sorted by anchor) decoration which intersects or touches [from, to).
+   *
+   * @param {!Anchor} from
+   * @param {!Anchor} to
    * @return {?Decoration}
    */
   lastTouching(from, to) {
@@ -592,7 +568,8 @@ export class Decorator {
    * Passing the following function will not skip anything
    * (based on decorations being disjoint):
    *   let visitor = decoration => decoration.to;
-   * @param {function(decoration: !Decoration):number} visitor
+   *
+   * @param {function(decoration: !Decoration):!Anchor} visitor
    */
   sparseVisitAll(visitor) {
     if (!this._root)
@@ -603,57 +580,57 @@ export class Decorator {
       if (!node)
         return;
       let next = visitor(node);
-      if (next < node.from)
+      if (CompareAnchors(next, node.from) < 0)
         throw new Error('Return value of visitor must not be less than decoration.from');
-      from = Math.max(from + 1, Math.max(node.to, next));
+      from = MaxAnchor(NextAnchor(from), MaxAnchor(node.to, next));
     }
   }
 
   /**
-   * @template T
-   * @param {number} from
-   * @param {number} to
-   * @param {?function(!TreeNode|undefined):T} callback
-   * @return {T}
+   * @template P
+   * @param {!Anchor} from
+   * @param {!Anchor} to
+   * @param {?function(!TreeNode|undefined):P} callback
+   * @return {P}
    */
   _starting(from, to, callback) {
-    return this._handleRange(from, kFromLess, to, kFromLess, callback);
+    return this._handleRange(from, kFrom, to, kFrom, callback);
   }
 
   /**
-   * @template T
-   * @param {number} from
-   * @param {number} to
-   * @param {?function(!TreeNode|undefined):T} callback
-   * @return {T}
+   * @template P
+   * @param {!Anchor} from
+   * @param {!Anchor} to
+   * @param {?function(!TreeNode|undefined):P} callback
+   * @return {P}
    */
   _ending(from, to, callback) {
-    return this._handleRange(from, kToLess, to, kToLess, callback);
+    return this._handleRange(from, kTo, to, kTo, callback);
   }
 
   /**
-   * @template T
-   * @param {number} from
-   * @param {number} to
-   * @param {?function(!TreeNode|undefined):T} callback
-   * @return {T}
+   * @template P
+   * @param {!Anchor} from
+   * @param {!Anchor} to
+   * @param {?function(!TreeNode|undefined):P} callback
+   * @return {P}
    */
   _touching(from, to, callback) {
-    return this._handleRange(from, kToLess, to, kFromLess, callback);
+    return this._handleRange(from, kTo, to, kFrom, callback);
   }
 
   /**
-   * @template T
-   * @param {number} offset1
+   * @template P
+   * @param {!Anchor} anchor1
    * @param {number} by1
-   * @param {number} offset2
+   * @param {!Anchor} anchor2
    * @param {number} by2
-   * @param {?function(!TreeNode|undefined):T} callback
-   * @return {T}
+   * @param {?function(!TreeNode|undefined):P} callback
+   * @return {P}
    */
-  _handleRange(offset1, by1, offset2, by2, callback) {
-    let tmp = split(this._root, offset1, by1);
-    let tmp2 = split(tmp.right, offset2, by2);
+  _handleRange(anchor1, by1, anchor2, by2, callback) {
+    let tmp = split(this._root, anchor1, by1);
+    let tmp2 = split(tmp.right, anchor2, by2);
     let result;
     if (callback)
       result = callback(tmp2.left);
@@ -672,6 +649,9 @@ export class Decorator {
    * @return {!TreeNode}
    */
   _process(root, from, to, inserted, removed) {
+    let less = (offset, anchor) => anchor.end ? offset <= anchor.offset : offset < anchor.offset;
+    let more = (offset, anchor) => anchor.end ? offset > anchor.offset : offset >= anchor.offset;
+
     let all = [];
     visit(root, all.push.bind(all));
 
@@ -679,33 +659,29 @@ export class Decorator {
     for (let node of all) {
       let start = node.from;
       let end = node.to;
-      let startAnchor = node.fromAnchor;
-      let endAnchor = node.toAnchor;
-      if (less(from, start, startAnchor) && more(to, end, endAnchor)) {
+      if (less(from, start) && more(to, end)) {
         node.parent = undefined;
         if (removed)
           removed.push(node);
         continue;
       }
 
-      if (!less(from, start, startAnchor) && !more(to, end, endAnchor)) {
-        end += inserted - (to - from);
-      } else if (!more(from, start, startAnchor) && !less(to, start, startAnchor)) {
-        start = from + inserted;
-        end = from + inserted + (end - to);
-      } else if (!more(from, end, endAnchor) && !less(to, end, endAnchor)) {
-        end = from;
-      } else if (!less(from, end, endAnchor)) {
-        from += inserted - (to - from);
-        end += inserted - (to - from);
+      if (!less(from, start) && !more(to, end)) {
+        end.offset += inserted - (to - from);
+      } else if (!more(from, start) && !less(to, start)) {
+        start.offset = from + inserted;
+        end.offset = from + inserted + (end.offset - to);
+      } else if (!more(from, end) && !less(to, end)) {
+        end.offset = from;
+      } else if (!more(to, start)) {
+        start.offset += inserted - (to - from);
+        end.offset += inserted - (to - from);
       }
 
-      node.from = start;
-      node.to = end;
-      node.size = 1;
       delete node.left;
       delete node.right;
       node.parent = node.add = undefined;
+      node.size = 1;
       result = merge(result, node);
     }
     return result;
@@ -738,34 +714,12 @@ export class LineDecorator extends TextDecorator {
 
   /**
    * @override
-   * @param {number} from
-   * @param {number} to
-   * @param {!Anchor=} fromAnchor
-   * @param {!Anchor=} toAnchor
+   * @param {!Anchor} from
+   * @param {!Anchor} to
    */
-  add(from, to, fromAnchor, toAnchor) {
-    if (fromAnchor !== undefined && fromAnchor !== Anchor.Start && fromAnchor !== Anchor.End)
+  add(from, to, data) {
+    if (data !== undefined)
       throw new Error('LineDecorator only supports a single style passed in constructor');
-    super.add(from, to, this._style, fromAnchor, toAnchor);
+    super.add(from, to, this._style);
   }
 };
-
-/**
- * @param {number} pos
- * @param {number} offset
- * @param {!Anchor} anchor
- * @return {boolean}
- */
-function less(pos, offset, anchor) {
-  return anchor === Anchor.Start ? pos < offset : pos <= offset;
-}
-
-/**
- * @param {number} pos
- * @param {number} offset
- * @param {!Anchor} anchor
- * @return {boolean}
- */
-function more(pos, offset, anchor) {
-  return anchor === Anchor.End ? pos > offset : pos >= offset;
-}

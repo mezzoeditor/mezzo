@@ -1,3 +1,4 @@
+import { Start } from '../core/Anchor.mjs';
 import { TextDecorator } from '../core/Decorator.mjs';
 
 export class DefaultHighlighter {
@@ -26,7 +27,7 @@ export class DefaultHighlighter {
   _onDecorate(visibleContent) {
     let {from, to} = visibleContent.range;
     let decorator = new TextDecorator();
-    decorator.add(from, to, 'syntax.default');
+    decorator.add(Start(from), Start(to), 'syntax.default');
     return {text: [decorator]};
   }
 };

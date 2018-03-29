@@ -1,3 +1,4 @@
+import { Start, End, Range } from '../core/Anchor.mjs';
 import { LineDecorator } from '../core/Decorator.mjs';
 
 /**
@@ -45,7 +46,7 @@ export class Search {
    * @return {!Array<!Range>}
    */
   matches() {
-    return this._decorator.listAll();
+    return this._decorator.listAll().map(Range);
   }
 
   /**
@@ -61,7 +62,7 @@ export class Search {
   currentMatchIndex() {
     if (!this._currentMatch)
       return -1;
-    return this._decorator.countStarting(0, this._currentMatch.from) - 1;
+    return this._decorator.countStarting(Start(0), End(this._currentMatch.from)) - 1;
   }
 
   /**
@@ -92,12 +93,12 @@ export class Search {
       offset = this._currentMatch.to;
     if (offset === null)
       return false;
-    let match = this._decorator.firstStarting(offset - 1, this._document.length());
+    let match = this._decorator.firstStarting(Start(offset), End(this._document.length()));
     if (!match)
-      match = this._decorator.firstStarting(-1, this._document.length());
+      match = this._decorator.firstAll();
     if (!match)
       return false;
-    this._updateCurrentMatch(match, true, true);
+    this._updateCurrentMatch(Range(match), true, true);
     this._updated = true;
     this._document.invalidate();
     return true;
@@ -113,12 +114,12 @@ export class Search {
       offset = this._currentMatch.from;
     if (offset === null)
       return false;
-    let match = this._decorator.lastEnding(0, offset - 1);
+    let match = this._decorator.lastEnding(Start(0), Start(offset));
     if (!match)
-      match = this._decorator.lastEnding(0, this._document.length());
+      match = this._decorator.lastAll();
     if (!match)
       return false;
-    this._updateCurrentMatch(match, true, true);
+    this._updateCurrentMatch(Range(match), true, true);
     this._updated = true;
     this._document.invalidate();
     return true;
@@ -222,7 +223,7 @@ export class Search {
       this._currentMatchDecorator.clearAll();
     this._currentMatch = match;
     if (this._currentMatch) {
-      this._currentMatchDecorator.add(this._currentMatch.from, this._currentMatch.to);
+      this._currentMatchDecorator.add(Start(this._currentMatch.from), Start(this._currentMatch.to));
       // TODO: this probably should not go into history, or it messes up with undo.
       if (select)
         this._selection.setRanges([this._currentMatch]);
@@ -274,10 +275,10 @@ export class Search {
   _searchRange(range, selectCurrentMatch, revealCurrentMatch) {
     let {from, to} = range;
     let query = this._options.query;
-    this._decorator.clearStarting(from - 1, to);
+    this._decorator.clearStarting(Start(from), End(to));
     let iterator = this._document.iterator(from, from, to + query.length);
     while (iterator.find(query)) {
-      this._decorator.add(iterator.offset, iterator.offset + query.length);
+      this._decorator.add(Start(iterator.offset), Start(iterator.offset + query.length));
       if (!this._currentMatch)
         this._updateCurrentMatch({from: iterator.offset, to: iterator.offset + query.length}, selectCurrentMatch, revealCurrentMatch);
       iterator.advance(query.length);

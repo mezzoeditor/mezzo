@@ -1,4 +1,5 @@
-import { LineDecorator, Anchor } from '../core/Decorator.mjs';
+import { Start, End } from '../core/Anchor.mjs';
+import { LineDecorator } from '../core/Decorator.mjs';
 import { Tokenizer } from '../core/Tokenizer.mjs';
 import { RoundMode } from '../core/Metrics.mjs';
 
@@ -550,11 +551,13 @@ export class Selection {
       this._rangeDecorator.clearAll();
       this._focusDecorator.clearAll();
       for (let range of this._ranges) {
-        this._focusDecorator.add(range.focus, range.focus);
+        this._focusDecorator.add(Start(range.focus), Start(range.focus));
+        let from = Math.min(range.focus, range.anchor);
+        let to = Math.max(range.focus, range.anchor);
         if (range.focus === range.anchor)
-          this._rangeDecorator.add(Math.min(range.focus, range.anchor), Math.max(range.focus, range.anchor), Anchor.Start, Anchor.End);
+          this._rangeDecorator.add(Start(from), End(to));
         else
-          this._rangeDecorator.add(Math.min(range.focus, range.anchor), Math.max(range.focus, range.anchor), Anchor.Start, Anchor.Start);
+          this._rangeDecorator.add(Start(from), Start(to));
       }
     }
     return {background: [this._rangeDecorator, this._focusDecorator], lines: [this._rangeDecorator]};

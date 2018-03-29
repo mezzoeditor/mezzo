@@ -5,7 +5,8 @@ import {RoundMode, Metrics} from './Metrics.mjs';
 import {TextIterator} from './TextIterator.mjs';
 import {Document} from './Document.mjs';
 import {Random} from './Random.mjs';
-import {Decorator, Anchor} from './Decorator.mjs';
+import {Decorator} from './Decorator.mjs';
+import {CompareAnchors, Start, End} from './Anchor.mjs';
 import {Viewport} from './Viewport.mjs';
 import {Text} from './Text.mjs';
 
@@ -522,10 +523,8 @@ describe('Decorator', () => {
     if (!expected) {
       expect(got).toBe(null);
     } else {
-      expect(got.from).toBe(expected.from);
-      expect(got.to).toBe(expected.to);
-      expect(got.fromAnchor).toBe(expected.fromAnchor);
-      expect(got.toAnchor).toBe(expected.toAnchor);
+      expect(got.from).toEqual(expected.from);
+      expect(got.to).toEqual(expected.to);
       expect(got.data).toBe(expected.data);
     }
   }
@@ -544,37 +543,34 @@ describe('Decorator', () => {
 
   it('Decorator getters', () => {
     let dec = new Decorator(true /* createHandles */);
-    let a = {from: 0, to: 1, data: 'a', fromAnchor: Anchor.End, toAnchor: Anchor.Start};
-    let b = {from: 0, to: 0, data: 'b', fromAnchor: Anchor.Start, toAnchor: Anchor.End};
-    let c = {from: 2, to: 3, data: 'c', fromAnchor: Anchor.Start, toAnchor: Anchor.Start};
-    let d = {from: 15, to: 33, data: 'd', fromAnchor: Anchor.End, toAnchor: Anchor.Start};
-    let e = {from: 8, to: 12, data: 'e', fromAnchor: Anchor.End, toAnchor: Anchor.End};
-    let f = {from: 8, to: 8, data: 'f', fromAnchor: Anchor.Start, toAnchor: Anchor.Start};
-    let g = {from: 12, to: 12, data: 'g', fromAnchor: Anchor.End, toAnchor: Anchor.End};
-    let h = {from: 1, to: 1, data: 'h', fromAnchor: Anchor.Start, toAnchor: Anchor.Start};
-    let i = {from: 1, to: 1, data: 'i', fromAnchor: Anchor.End, toAnchor: Anchor.End};
-    for (let x of [a, b, c, d, e, f, g, h, i])
-      x.handle = dec.add(x.from, x.to, x.data, x.fromAnchor, x.toAnchor);
+    let a = {from: End(0), to: Start(1), data: 'a'};
+    let b = {from: Start(0), to: End(0), data: 'b'};
+    let c = {from: Start(2), to: Start(3), data: 'c'};
+    let d = {from: End(15), to: Start(33), data: 'd'};
+    let e = {from: End(8), to: End(12), data: 'e'};
+    let f = {from: Start(8), to: Start(8), data: 'f'};
+    let g = {from: End(12), to: End(12), data: 'g'};
+    let h = {from: Start(1), to: Start(1), data: 'h'};
+    let i = {from: End(1), to: End(1), data: 'i'};
+    let j = {from: End(1), to: End(1), data: 'j'};
+    for (let x of [a, b, c, d, e, f, g, h, i, j])
+      x.handle = dec.add(x.from, x.to, x.data);
 
-    let all = [b, a, h, i, c, f, e, g, d];
+    let all = [b, a, h, i, j, c, f, e, g, d];
     checkList(dec.listAll(), all);
     expect(dec.countAll()).toBe(all.length);
     checkOne(dec.firstAll(), all[0]);
     checkOne(dec.lastAll(), all[all.length - 1]);
     checkVisitor(v => dec.visitAll(v), all);
-    for (let x of all) {
-      let range = dec.resolve(x.handle);
-      expect(range.from).toBe(x.from);
-      expect(range.to).toBe(x.to);
-    }
+    for (let x of all)
+      checkOne(dec.resolve(x.handle), x);
 
-    let starting = [
-      {from: 0, to: 4, list: [a, h, i, c]},
-      {from: 1, to: 4, list: [i, c]},
-      {from: 9, to: 10, list: []},
-      {from: 12, to: 12, list: []},
-    ];
-    for (let {from, to, list} of starting) {
+    function checkStarting(from, to) {
+      let list = [];
+      for (let d of all) {
+        if (CompareAnchors(d.from, from) >= 0 && CompareAnchors(d.from, to) < 0)
+          list.push(d);
+      }
       checkList(dec.listStarting(from, to), list);
       expect(dec.countStarting(from, to)).toBe(list.length);
       checkOne(dec.firstStarting(from, to), list[0] || null);
@@ -582,14 +578,12 @@ describe('Decorator', () => {
       checkVisitor(v => dec.visitStarting(from, to, v), list);
     }
 
-    let ending = [
-      {from: 1, to: 1, list: []},
-      {from: 3, to: 8, list: [f]},
-      {from: 0, to: 40, list: [b, a, h, i, c, f, e, g, d]},
-      {from: 12, to: 13, list: [e, g]},
-      {from: 12, to: 12, list: []},
-    ];
-    for (let {from, to, list} of ending) {
+    function checkEnding(from, to) {
+      let list = [];
+      for (let d of all) {
+        if (CompareAnchors(d.to, from) >= 0 && CompareAnchors(d.to, to) < 0)
+          list.push(d);
+      }
       checkList(dec.listEnding(from, to), list);
       expect(dec.countEnding(from, to)).toBe(list.length);
       checkOne(dec.firstEnding(from, to), list[0] || null);
@@ -597,21 +591,34 @@ describe('Decorator', () => {
       checkVisitor(v => dec.visitEnding(from, to, v), list);
     }
 
-    let touching = [
-      {from: 0, to: 0, list: [b]},
-      {from: 0, to: 1, list: [b, a, h]},
-      {from: 0, to: 14, list: [b, a, h, i, c, f, e, g]},
-      {from: 1, to: 15, list: [i, c, f, e, g]},
-      {from: 1, to: 16, list: [i, c, f, e, g, d]},
-      {from: 9, to: 10, list: [e]},
-      {from: 13, to: 14, list: []},
-    ];
-    for (let {from, to, list} of touching) {
+    function checkTouching(from, to) {
+      let list = [];
+      for (let d of all) {
+        if (CompareAnchors(d.to, from) >= 0 && CompareAnchors(d.from, to) < 0)
+          list.push(d);
+      }
       checkList(dec.listTouching(from, to), list);
       expect(dec.countTouching(from, to)).toBe(list.length);
       checkOne(dec.firstTouching(from, to), list[0] || null);
       checkOne(dec.lastTouching(from, to), list[list.length - 1] || null);
       checkVisitor(v => dec.visitTouching(from, to, v), list);
+    }
+
+    for (let from = -1; from <= 34; from++) {
+      for (let to = from; to <= 34; to++) {
+        checkStarting(Start(from), Start(to));
+        checkStarting(Start(from), End(to));
+        checkStarting(End(from), Start(to));
+        checkStarting(End(from), End(to));
+        checkEnding(Start(from), Start(to));
+        checkEnding(Start(from), End(to));
+        checkEnding(End(from), Start(to));
+        checkEnding(End(from), End(to));
+        checkTouching(Start(from), Start(to));
+        checkTouching(Start(from), End(to));
+        checkTouching(End(from), Start(to));
+        checkTouching(End(from), End(to));
+      }
     }
   });
 
@@ -643,18 +650,18 @@ describe('Decorator', () => {
     for (let test of cases) {
       let {from, to, inserted, expected} = test;
       let dec = new Decorator(true /* createHandles */);
-      let handle = dec.add(before.from, before.to, '');
+      let handle = dec.add(Start(before.from), Start(before.to), '');
       let removed = dec.replace(from, to, inserted);
       let got = dec.listAll();
       expect(got.length).toBe(expected.length, `test: ${JSON.stringify(test)}`);
       for (let i = 0; i < got.length; i++) {
-        expect(got[i].from).toBe(expected[i].from, `test: ${JSON.stringify(test)}`);
-        expect(got[i].to).toBe(expected[i].to, `test: ${JSON.stringify(test)}`);
+        expect(got[i].from).toEqual(Start(expected[i].from), `test: ${JSON.stringify(test)}`);
+        expect(got[i].to).toEqual(Start(expected[i].to), `test: ${JSON.stringify(test)}`);
       }
       if (expected.length) {
         let range = dec.resolve(handle);
-        expect(range.from).toBe(expected[0].from);
-        expect(range.to).toBe(expected[0].to);
+        expect(range.from).toEqual(Start(expected[0].from));
+        expect(range.to).toEqual(Start(expected[0].to));
       } else {
         expect(removed.length).toBe(1);
         expect(removed[0]).toBe(handle);
@@ -666,56 +673,56 @@ describe('Decorator', () => {
     let dec = new Decorator();
     let count = 10000;
     for (let i = 0; i < count; i++)
-      dec.add(i + 200, i + 200, '');
+      dec.add(Start(i + 200), Start(i + 200), '');
     for (let i = 0; i < 99; i++)
       dec.replace(2 * i, 2 * i + 1, 2);
     let list = dec.listAll();
     expect(list.length).toBe(count);
     for (let i = 0; i < count; i++) {
-      expect(list[i].from).toBe(i + 200 + 99);
-      expect(list[i].to).toBe(i + 200 + 99);
+      expect(list[i].from).toEqual(Start(i + 200 + 99));
+      expect(list[i].to).toEqual(Start(i + 200 + 99));
     }
   });
 
   it('Decorator.editing', () => {
     let dec = new Decorator(true /* createHandles */);
-    let a = {from: 0, to: 1, data: 'a', fromAnchor: Anchor.Start, toAnchor: Anchor.End};
-    let b = {from: 2, to: 3, data: 'b', fromAnchor: Anchor.Start, toAnchor: Anchor.Start};
-    let c = {from: 3, to: 3, data: 'c', fromAnchor: Anchor.Start, toAnchor: Anchor.End};
-    let d = {from: 10, to: 20, data: 'd', fromAnchor: Anchor.Start, toAnchor: Anchor.End};
-    let e = {from: 21, to: 100, data: 'e', fromAnchor: Anchor.Start, toAnchor: Anchor.End};
+    let a = {from: Start(0), to: End(1), data: 'a'};
+    let b = {from: Start(2), to: Start(3), data: 'b'};
+    let c = {from: Start(3), to: End(3), data: 'c'};
+    let d = {from: Start(10), to: End(20), data: 'd'};
+    let e = {from: Start(21), to: End(100), data: 'e'};
 
-    let cHandle = dec.add(c.from, c.to, c.data, c.fromAhcnor, c.toAnchor);
-    let aHandle = dec.add(a.from, a.to, a.data, a.fromAnchor, a.toAnchor);
-    let dHandle = dec.add(d.from, d.to, d.data, d.fromAnchor, d.toAnchor);
-    let bHandle = dec.add(b.from, b.to, b.data, b.fromAnchor, b.toAnchor);
-    let eHandle = dec.add(e.from, e.to, e.data, e.fromAnchor, e.toAnchor);
+    let cHandle = dec.add(c.from, c.to, c.data);
+    let aHandle = dec.add(a.from, a.to, a.data);
+    let dHandle = dec.add(d.from, d.to, d.data);
+    let bHandle = dec.add(b.from, b.to, b.data);
+    let eHandle = dec.add(e.from, e.to, e.data);
 
     checkList(dec.listAll(), [a, b, c, d, e]);
 
-    expect(dec.remove(eHandle)).toBe(e.data);
+    expect(dec.remove(eHandle)).toEqual(e);
     expect(dec.remove(eHandle)).toBe(undefined);
     checkList(dec.listAll(), [a, b, c, d]);
 
-    dec.clearStarting(5, 15);
+    dec.clearStarting(Start(5), Start(15));
     checkList(dec.listAll(), [a, b, c]);
 
-    dec.add(e.from, e.to, e.data, e.fromAnchor, e.toAnchor);
+    dec.add(e.from, e.to, e.data);
     checkList(dec.listAll(), [a, b, c, e]);
 
-    dec.clearEnding(0, 3);
+    dec.clearEnding(Start(0), End(3));
     checkList(dec.listAll(), [c, e]);
 
-    aHandle = dec.add(a.from, a.to, a.data, a.fromAnchor, a.toAnchor);
-    dec.add(b.from, b.to, b.data, b.fromAnchor, b.toAnchor);
-    dec.add(d.from, d.to, d.data, d.fromAnchor, d.toAnchor);
+    aHandle = dec.add(a.from, a.to, a.data);
+    dec.add(b.from, b.to, b.data);
+    dec.add(d.from, d.to, d.data);
     checkList(dec.listAll(), [a, b, c, d, e]);
 
-    dec.clearTouching(3, 10);
+    dec.clearTouching(End(3), End(10));
     checkList(dec.listAll(), [a, b, e]);
 
-    dec.add(d.from, d.to, d.data, d.fromAnchor, d.toAnchor);
-    expect(dec.remove(aHandle)).toBe(a.data);
+    dec.add(d.from, d.to, d.data);
+    expect(dec.remove(aHandle)).toEqual(a);
     expect(dec.remove(eHandle)).toBe(undefined);
     checkList(dec.listAll(), [b, d, e]);
 
@@ -725,11 +732,11 @@ describe('Decorator', () => {
 
   it('Decorator.multiple removals', () => {
     let dec = new Decorator(true /* createHandles */);
-    let a = {from: 1, to: 2, data: 'a'};
-    let b = {from: 2, to: 3, data: 'b'};
-    let c = {from: 3, to: 3, data: 'c'};
-    let d = {from: 10, to: 20, data: 'd'};
-    let e = {from: 21, to: 100, data: 'e'};
+    let a = {from: Start(1), to: Start(2), data: 'a'};
+    let b = {from: Start(2), to: Start(3), data: 'b'};
+    let c = {from: Start(3), to: Start(3), data: 'c'};
+    let d = {from: Start(10), to: Start(20), data: 'd'};
+    let e = {from: Start(21), to: Start(100), data: 'e'};
     let all = [a, b, c, d, e];
     for (let x of all)
       x.handle = dec.add(x.from, x.to, x.data);
