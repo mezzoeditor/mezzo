@@ -8,6 +8,7 @@ export class SidebarComponent extends HTMLElement {
     super();
     this._fs = fs;
     this._fs.addFilesChangedCallback(this._onFilesChanged.bind(this));
+    this._fs.addRootsChangedCallback(this._onRootsChanged.bind(this));
     this._selectedCallback = null;
     this._selectedItem = null;
     this._treeElement = document.createElement('file-navigator');
@@ -16,6 +17,9 @@ export class SidebarComponent extends HTMLElement {
     this.appendChild(this._treeElement);
     this._root = new NavigatorTreeNode('', null);
     this.addEventListener('click', this._onClick.bind(this), false);
+
+    this._onRootsChanged(this._fs.roots(), []);
+    this._onFilesChanged(this._fs.paths(), []);
     this._render();
   }
 
@@ -45,10 +49,6 @@ export class SidebarComponent extends HTMLElement {
   }
 
   _render() {
-    const root = this._fs.roots()[0];
-    if (!root)
-      return;
-
     const elements = this._flatNodes(0, Infinity).map(node => node.render()).concat(this._footer);
     let last = this._treeElement.firstChild;
     for (const element of elements) {
@@ -66,9 +66,14 @@ export class SidebarComponent extends HTMLElement {
   }
 
   _onFilesChanged(added, removed) {
-    this._addNodes(added);
+    this._addNodes(added, false /* createExpanded */);
     this._removeNodes(removed);
     this._render();
+  }
+
+  _onRootsChanged(added, removed) {
+    this._addNodes(added, true /* createExpanded */);
+    this._removeNodes(removed);
   }
 
   _flatNodes(from, to) {
@@ -93,7 +98,7 @@ export class SidebarComponent extends HTMLElement {
     }
   }
 
-  _addNodes(paths) {
+  _addNodes(paths, createExpanded) {
     for (const path of paths) {
       const tokens = path.split('/').filter(token => !!token);
       let wp = this._root;
@@ -104,7 +109,7 @@ export class SidebarComponent extends HTMLElement {
           continue;
         }
         const node = new NavigatorTreeNode(token, wp);
-        node.collapsed = true;
+        node.collapsed = !createExpanded;
         node.subtreeSize += 1;
         wp.children.set(node.name, node);
         wp.sortedChildren.length = 0;

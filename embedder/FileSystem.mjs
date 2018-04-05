@@ -2,16 +2,19 @@ let id = 1;
 
 export class FileSystem {
   constructor() {
-    this._roots = [];
-    this._callbacks = [];
+    this._roots = new Set();
+    this._filesChangedCallbacks = [];
+    this._rootsChangedCallbacks = [];
     this._paths = new Set();
   }
 
   initialize(path) {
-    this._roots.push(path);
+    this._roots.add(path);
     const callbackName = '_bindingFilesChanged' + (id++);
     window[callbackName] = this._bindingFilesChanged.bind(this);
     window._bindingInitializeFS(path, callbackName);
+    for (const callback of this._rootsChangedCallbacks)
+      callback.call(null, [path], []);
   }
 
   _bindingFilesChanged(added, removed, changed) {
@@ -29,7 +32,7 @@ export class FileSystem {
     }
     for (const path of added)
       this._paths.add(path);
-    for (const callback of this._callbacks)
+    for (const callback of this._filesChangedCallbacks)
       callback.call(null, added, removedPaths, changedPaths);
   }
 
@@ -38,7 +41,7 @@ export class FileSystem {
   }
 
   roots() {
-    return this._roots;
+    return Array.from(this._roots);
   }
 
   isFilePath(path) {
@@ -48,7 +51,11 @@ export class FileSystem {
   }
 
   addFilesChangedCallback(callback) {
-    this._callbacks.push(callback);
+    this._filesChangedCallbacks.push(callback);
+  }
+
+  addRootsChangedCallback(callback) {
+    this._rootsChangedCallbacks.push(callback);
   }
 
   async readFile(filePath) {
