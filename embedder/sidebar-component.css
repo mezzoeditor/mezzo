@@ -12,7 +12,7 @@ sidebar-component {
 
 sidebar-component
 header {
-  padding: 10px 10px 0px 10px;
+  padding: 10px 10px 2px 10px;
   font-weight: 700;
   color: #969696;
 }
@@ -20,12 +20,13 @@ header {
 sidebar-component
 file-entry {
   padding: 4px;
+  padding-left: calc(var(--depth) * 11px);
   display: block;
 }
 
 sidebar-component
 file-entry-content {
-  --icon-size: 12px;
+  --icon-size: 9px;
   position: relative;
   display: flex;
   align-items: center;
@@ -62,6 +63,7 @@ filetype-icon {
   height: var(--icon-size);
   margin-right: 4px;
   flex-shrink: 0;
+  margin-left: 2px;
 }
 
 sidebar-component

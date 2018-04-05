@@ -196,7 +196,7 @@ class NavigatorTreeNode {
       const nodeEntry = document.createElement('file-entry');
       nodeEntry.title = this.fullName;
       nodeEntry[NavigatorTreeNodeSymbol] = this;
-      nodeEntry.style.paddingLeft = 10 * this.depth + 'px';
+      nodeEntry.style.setProperty('--depth', this.depth);
 
       const content = document.createElement('file-entry-content');
 

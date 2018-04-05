@@ -2,6 +2,6 @@
  <!-- Created with Method Draw - http://github.com/duopixel/Method-Draw/ -->
  <g>
   <title>Layer 1</title>
-  <ellipse ry="129" rx="129" id="svg_3" cy="199.999996" cx="199.999996" fill-opacity="null" stroke-opacity="null" stroke-width="0" stroke="#000" fill="#fff"/>
+  <ellipse stroke="#000" fill="#fff" stroke-width="0" stroke-opacity="null" fill-opacity="null" cx="200" cy="200" id="svg_3" rx="200" ry="200"/>
  </g>
 </svg>
