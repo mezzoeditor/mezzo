@@ -3,7 +3,7 @@ statusbar-component {
   justify-content: space-between;
   padding: 10px;
   border-top: 1px solid grey;
-  font-family: monospace;
+  font-family: var(--monospace);
   user-select: none;
 }
 

@@ -5,10 +5,16 @@ sidebar-component {
   bottom: 0;
   position: absolute;
   overflow: auto;
-  font-family: monospace;
   user-select: none;
   contain: strict;
   white-space: nowrap;
+}
+
+sidebar-component
+header {
+  padding: 10px 10px 0px 10px;
+  font-weight: 700;
+  color: #969696;
 }
 
 sidebar-component
@@ -40,6 +46,7 @@ expand-icon {
   height: var(--icon-size);
   margin-right: 4px;
   transition: transform 100ms ease-in-out;
+  flex-shrink: 0;
 }
 
 expand-icon.expanded {

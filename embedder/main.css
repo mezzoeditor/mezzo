@@ -1,8 +1,27 @@
+@font-face {
+  font-family: 'Inconsolata';
+  src: url('./fonts/Inconsolata-Regular.ttf');
+}
+
+@font-face {
+  font-family: 'Montserrat';
+  font-weight: 400;
+  src: url('./fonts/Montserrat-Regular.ttf');
+}
+
+@font-face {
+  font-family: 'Montserrat';
+  font-weight: 700;
+  src: url('./fonts/Montserrat-Bold.ttf');
+}
+
 body {
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
+  font-family: 'Montserrat', sans-serif;
+  --monospace: 'Inconsolata', monospace;
 }
 
 * {

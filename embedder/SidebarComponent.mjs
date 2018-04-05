@@ -11,8 +11,12 @@ export class SidebarComponent extends HTMLElement {
     this._fs.addRootsChangedCallback(this._onRootsChanged.bind(this));
     this._selectedCallback = null;
     this._selectedItem = null;
+    this._header = document.createElement('header');
+    this.appendChild(this._header);
+    this._header.textContent = `FOLDERS`;
     this._treeElement = document.createElement('file-navigator');
     this._footer = document.createElement('footer');
+
     this._treeElement.appendChild(this._footer);
     this.appendChild(this._treeElement);
     this._root = new NavigatorTreeNode('', null);
