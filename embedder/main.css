@@ -22,6 +22,7 @@ body {
   flex-direction: column;
   font-family: 'Montserrat', sans-serif;
   --monospace: 'Inconsolata', monospace;
+  font-size: 14px;
 }
 
 * {
