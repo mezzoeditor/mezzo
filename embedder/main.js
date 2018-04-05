@@ -36,10 +36,7 @@ window.addEventListener('DOMContentLoaded', () => {
     selectedFile = path;
     const content = await window.fs.readFile(path);
     editor.setText(content);
-    if (path.endsWith('.mjs') || path.endsWith('.js'))
-      editor.setMimeType('text/javascript');
-    else
-      editor.setMimeType('text/plain');
+    editor.setMimeType(window.fs.mimeType(path));
     statusbar.rightElement().textContent = editor.mimeType();
   });
 

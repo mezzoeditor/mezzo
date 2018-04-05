@@ -44,6 +44,16 @@ export class FileSystem {
     return Array.from(this._roots);
   }
 
+  mimeType(path) {
+    if (path.endsWith('.mjs') || path.endsWith('.js'))
+      return 'text/javascript';
+    if (path.endsWith('.css'))
+      return 'text/css';
+    if (path.endsWith('.html') || path.endsWith('.htm'))
+      return 'text/html';
+    return 'text/plain';
+  }
+
   isFilePath(path) {
     // TODO: this is a very rough way to figure "fileness".
     // Stats for fileSystem entries has to be reported from embedder.

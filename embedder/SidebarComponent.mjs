@@ -105,6 +105,7 @@ export class SidebarComponent extends HTMLElement {
     for (const path of paths) {
       const tokens = path.split('/').filter(token => !!token);
       let wp = this._root;
+      const mimeType = this._fs.mimeType(path);
       for (const token of tokens) {
         if (wp.children.has(token)) {
           wp.subtreeSize += 1;
@@ -114,6 +115,7 @@ export class SidebarComponent extends HTMLElement {
         const node = new NavigatorTreeNode(token, wp);
         node.collapsed = !createExpanded;
         node.subtreeSize += 1;
+        node.mimeType = mimeType;
         wp.children.set(node.name, node);
         wp.sortedChildren.length = 0;
         wp = node;
@@ -164,6 +166,13 @@ export class SidebarComponent extends HTMLElement {
 
 customElements.define('sidebar-component', SidebarComponent);
 
+const filetypeClasses = {
+  'text/javascript': 'mime-js',
+  'text/css': 'mime-css',
+  'text/html': 'mime-html',
+  'text/plain': 'mime-plain',
+};
+
 class NavigatorTreeNode {
   constructor(name, parent) {
     this.name = name;
@@ -175,8 +184,9 @@ class NavigatorTreeNode {
     this.children = new Map();
     this.isFile = false;
 
-    this._expandIcon = null;
+    this._icon = null;
     this._element = null;
+    this.mimeType = 'text/plain';
 
     this.sortedChildren = [];
   }
@@ -190,14 +200,19 @@ class NavigatorTreeNode {
 
       const content = document.createElement('file-entry-content');
 
-      this._expandIcon = document.createElement('expand-icon');
-      this._expandIcon.style.visibility = this.isFile ? 'hidden' : 'visible';
-      content.appendChild(this._expandIcon);
+      if (this.isFile) {
+        this._icon = document.createElement('filetype-icon');
+        this._icon.classList.add(filetypeClasses[this.mimeType]);
+      } else {
+        this._icon = document.createElement('expand-icon');
+      }
+      content.appendChild(this._icon);
       content.appendChild(document.createTextNode(this.name));
       nodeEntry.appendChild(content);
       this._element = nodeEntry;
     }
-    this._expandIcon.classList.toggle('expanded', !this.collapsed);
+    if (!this.isFile)
+      this._icon.classList.toggle('expanded', !this.collapsed);
     return this._element;
   }
 
