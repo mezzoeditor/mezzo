@@ -34,10 +34,9 @@ export class SidebarComponent extends HTMLElement {
   }
 
   _select(item) {
-    if (this._selectedItem) {
-      this._selectedItem.classList.remove('selected');
-    }
     const node = item[NavigatorTreeNodeSymbol];
+    if (this._selectedItem && node.isFile)
+      this._selectedItem.classList.remove('selected');
     if (!node.isFile) {
       node.collapsed = !node.collapsed;
       this._render();
