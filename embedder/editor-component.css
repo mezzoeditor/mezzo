@@ -1,14 +1,14 @@
 editor-component {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  bottom: 0;
+  flex: auto;
+  contain: content;
+  position: relative;
+  display: flex;
+  align-items: stretch;
 }
 
 editor-component
 .editor {
-  width: 100%;
-  height: 100%;
+  flex: auto;
+  background-color: white;
 }
 

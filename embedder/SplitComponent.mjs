@@ -2,8 +2,10 @@ export class SplitComponent extends HTMLElement {
   constructor() {
     super();
     this._left = document.createElement('split-left');
+    this._left.classList.add('vbox');
     this._divider = document.createElement('split-divider');
     this._right = document.createElement('split-right');
+    this._right.classList.add('vbox');
     this.appendChild(this._left);
     this.appendChild(this._divider);
     this.addEventListener('mousedown', this._onMouseDown.bind(this), false);

@@ -60,6 +60,10 @@ export class FileSystem {
     return path.split('/').pop().indexOf('.') !== -1;
   }
 
+  fileName(path) {
+    return path.split('/').pop();
+  }
+
   addFilesChangedCallback(callback) {
     this._filesChangedCallbacks.push(callback);
   }

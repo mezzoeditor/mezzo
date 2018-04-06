@@ -1,0 +1,19 @@
+tabstrip-component {
+  flex: 0 0 30px;
+  contain: content;
+}
+
+tabstrip-tab {
+  padding: 2px 7px;
+  flex: none;
+  display: flex;
+  align-items: center;
+}
+
+tabstrip-tab {
+  border-right: 1px solid white;
+}
+
+tabstrip-tab.selected {
+  background-color: white;
+}

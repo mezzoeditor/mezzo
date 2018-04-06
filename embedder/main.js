@@ -3,6 +3,7 @@ import { SplitComponent } from './SplitComponent.mjs';
 import { SidebarComponent } from './SidebarComponent.mjs';
 import { EditorComponent } from './EditorComponent.mjs';
 import { StatusbarComponent } from './StatusbarComponent.mjs';
+import { TabStripComponent } from './TabStripComponent.mjs';
 
 window.fs = new FileSystem();
 
@@ -17,12 +18,19 @@ window.fs = new FileSystem();
 })();
 
 window.addEventListener('DOMContentLoaded', () => {
+  document.body.classList.add('vbox');
+
   const split = new SplitComponent();
-  const sidebar = new SidebarComponent(window.fs);
-  const editor = new EditorComponent();
-  split.leftElement().appendChild(sidebar);
-  split.rightElement().appendChild(editor);
   document.body.appendChild(split);
+
+  const sidebar = new SidebarComponent(window.fs);
+  split.leftElement().appendChild(sidebar);
+
+  const tabstrip = new TabStripComponent();
+  split.rightElement().appendChild(tabstrip);
+
+  const editor = new EditorComponent();
+  split.rightElement().appendChild(editor);
 
   const statusbar = new StatusbarComponent();
   statusbar.leftElement().appendChild(editor.selectionDescriptionElement());
@@ -34,6 +42,9 @@ window.addEventListener('DOMContentLoaded', () => {
     if (selectedFile === path)
       return;
     selectedFile = path;
+    if (!tabstrip.hasTab(path))
+      tabstrip.addTab(path, window.fs.fileName(path));
+    tabstrip.selectTab(path);
     const content = await window.fs.readFile(path);
     editor.setText(content);
     editor.setMimeType(window.fs.mimeType(path));

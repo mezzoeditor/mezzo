@@ -1,12 +1,8 @@
 sidebar-component {
-  left: 0;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  position: absolute;
+  flex: auto;
   overflow: auto;
   user-select: none;
-  contain: strict;
+  contain: content;
   white-space: nowrap;
 }
 
@@ -69,7 +65,7 @@ filetype-icon {
 sidebar-component
 file-entry:hover:not(.selected) {
   cursor: pointer;
-  background-color: #eee;
+  background-color: #ddd;
 }
 
 sidebar-component
