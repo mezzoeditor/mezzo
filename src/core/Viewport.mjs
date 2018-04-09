@@ -2,6 +2,7 @@ import { Start, End } from './Anchor.mjs';
 import { RoundMode, Metrics } from './Metrics.mjs';
 import { Tree } from './Tree.mjs';
 import { trace } from './Trace.mjs';
+import { EventEmitter } from './EventEmitter.mjs';
 
 /**
  * @typedef {{
@@ -122,16 +123,15 @@ export class Measurer {
  *    |   +------------+ |
  *    +------------------+
  */
-export class Viewport {
+export class Viewport extends EventEmitter {
   /**
    * @param {!Document} document
    * @param {!Measurer} measurer
-   * @param {function()} revealCallback
    */
-  constructor(document, measurer, revealCallback) {
+  constructor(document, measurer) {
+    super();
     this._document = document;
     this._document.addReplaceCallback(this._onReplace.bind(this));
-    this._revealCallback = revealCallback;
 
     this._width = 0;
     this._height = 0;
@@ -378,7 +378,7 @@ export class Viewport {
       this._scrollLeft = Math.min(to.x - this._width + rangePadding.right, this._maxScrollLeft);
     }
     this._recompute();
-    this._revealCallback.call(null);
+    this.emit(Viewport.Events.Reveal);
   }
 
   /**
@@ -700,6 +700,10 @@ export class Viewport {
     }
   }
 }
+
+Viewport.Events = {
+  Reveal: 'reveal'
+};
 
 Viewport.VisibleRange = class {
   /**

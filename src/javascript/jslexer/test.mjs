@@ -44,7 +44,7 @@ for (let fileName of files) {
     continue;
   runner.it(fileName, async () => {
     let text = await readFile(path.join(TESTDIR, fileName));
-    let document = new Document(() => {});
+    let document = new Document();
     document.reset(text);
     let tt = new Parser(document.iterator(0), Parser.defaultState());
     const tokens = [];

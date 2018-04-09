@@ -39,7 +39,7 @@ for (let typeName of Object.keys(TokenTypes)) {
 
 describe('Recovery', () => {
   it('should serialize and deserialize state', () => {
-    let document = new Document(() => {});
+    let document = new Document();
     document.reset('var a = 10;');
     let state = Parser.defaultState();
     let parser = new Parser(document.iterator(0, 0, 4), state);
@@ -81,7 +81,7 @@ describe('Recovery', () => {
     ]);
   });
   it('should rebaseline state after edits', () => {
-    let document = new Document(() => {});
+    let document = new Document();
     document.reset('aa;/*1234*/');
     let state = Parser.defaultState();
     let parser = new Parser(document.iterator(0, 0, 8), state);
@@ -100,7 +100,7 @@ describe('Recovery', () => {
     ]);
   });
   it('should re-parse last token', () => {
-    let document = new Document(() => {});
+    let document = new Document();
     document.reset('function');
     let parser = new Parser(document.iterator(0, 0, 4), Parser.defaultState());
     expect(getTokens(parser)).toEqual([
@@ -118,7 +118,7 @@ describe('Recovery', () => {
     ]);
   });
   it('should re-parse last block comment', () => {
-    let document = new Document(() => {});
+    let document = new Document();
     let text = '/* test */ ';
     document.reset(text);
     let parser = new Parser(document.iterator(0), Parser.defaultState());
@@ -136,7 +136,7 @@ describe('Recovery', () => {
   // NOTE: this test will work O(N^2) and will hang if parser
   // recovery doesn't work.
   it('should re-parse last block comment in O(N) time', () => {
-    let document = new Document(() => {});
+    let document = new Document();
     // 10Mb comment
     const N = 1024 * 1024 * 10;
     let longComment = '/*' + (new Array(N).fill(' ').join('')) + '*/';
@@ -151,7 +151,7 @@ describe('Recovery', () => {
     }
   });
   it('should re-parse last line comment', () => {
-    let document = new Document(() => {});
+    let document = new Document();
     let text = '// test ';
     document.reset(text);
     let parser = new Parser(document.iterator(0), Parser.defaultState());
@@ -169,7 +169,7 @@ describe('Recovery', () => {
   // NOTE: this test will work O(N^2) and will hang if parser
   // recovery doesn't work.
   it('should re-parse last line comment in O(N) time', () => {
-    let document = new Document(() => {});
+    let document = new Document();
     // 10Mb comment
     const N = 1024 * 1024 * 10;
     let longComment = '//' + (new Array(N).fill(' ').join(''));
@@ -184,7 +184,7 @@ describe('Recovery', () => {
     }
   });
   it('should re-parse last string token', () => {
-    let document = new Document(() => {});
+    let document = new Document();
     let text = '"foobar"';
     document.reset(text);
     let parser = new Parser(document.iterator(0), Parser.defaultState());
@@ -198,7 +198,7 @@ describe('Recovery', () => {
   // NOTE: this test will work O(N^2) and will hang if parser
   // recovery doesn't work.
   it('should re-parse last string token in O(N) time', () => {
-    let document = new Document(() => {});
+    let document = new Document();
     // 10Mb comment
     const N = 1024 * 1024 * 10;
     let longString = '"' + (new Array(N).fill(' ').join('')) + '"';
@@ -213,7 +213,7 @@ describe('Recovery', () => {
     }
   });
   it('should re-parse last template token', () => {
-    let document = new Document(() => {});
+    let document = new Document();
     let text = '`foobar`';
     document.reset(text);
     let parser = new Parser(document.iterator(0), Parser.defaultState());
@@ -232,7 +232,7 @@ describe('Recovery', () => {
   // NOTE: this test will work O(N^2) and will hang if parser
   // recovery doesn't work.
   it('should re-parse last template token in O(N) time', () => {
-    let document = new Document(() => {});
+    let document = new Document();
     // 10Mb comment
     const N = 1024 * 1024 * 10;
     let longTemplate = '`' + (new Array(N).fill(' ').join('')) + '`';

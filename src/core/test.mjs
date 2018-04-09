@@ -88,7 +88,7 @@ describe('Document text API', () => {
   it('Document text API manual chunks', () => {
     let chunks = ['ab\ncd', 'def', '\n', '', 'a\n\n\nbbbc', 'xy', 'za\nh', 'pp', '\n', ''];
     let content = chunks.join('');
-    let document = new Document(() => {});
+    let document = new Document();
     Document.test.setChunks(document, chunks);
     expect(document.lineCount()).toBe(8);
     expect(document.length()).toBe(content.length);
@@ -130,7 +130,7 @@ describe('Document text API', () => {
     }
 
     for (let chunkSize = 1; chunkSize <= 100; chunkSize++) {
-      let document = new Document(() => {});
+      let document = new Document();
       Document.test.setContent(document, content, chunkSize);
       expect(document.lineCount()).toBe(lineCount + 1);
       expect(document.length()).toBe(content.length);
@@ -175,7 +175,7 @@ describe('Document text API', () => {
 
     for (let chunkSize = 1; chunkSize <= 100; chunkSize++) {
       content = chunks.join('');
-      let document = new Document(() => {});
+      let document = new Document();
       Document.test.setContent(document, content, chunkSize);
       for (let {from, to, insertion} of editQueries) {
         let removed = document.replace(from, to, insertion);
@@ -194,7 +194,7 @@ describe('Document text API', () => {
 
 describe('TextIterator', () => {
   it('TextIterator basics', () => {
-    let document = new Document(() => {});
+    let document = new Document();
     document.reset('world');
     let iterator = document.iterator(0);
     expect(iterator.current).toBe('w');
@@ -208,7 +208,7 @@ describe('TextIterator', () => {
   });
 
   it('TextIterator.advance', () => {
-    let document = new Document(() => {});
+    let document = new Document();
     document.reset('world');
     let iterator = document.iterator(0);
     iterator.advance(4);
@@ -218,7 +218,7 @@ describe('TextIterator', () => {
   });
 
   it('TextIterator.read', () => {
-    let document = new Document(() => {});
+    let document = new Document();
     document.reset('world');
     let iterator = document.iterator(0);
     expect(iterator.read(4)).toBe('worl');
@@ -228,7 +228,7 @@ describe('TextIterator', () => {
   });
 
   it('TextIterator.charAt', () => {
-    let document = new Document(() => {});
+    let document = new Document();
     document.reset('world');
     let iterator = document.iterator(2);
     expect(iterator.charAt(0)).toBe('r');
@@ -252,7 +252,7 @@ describe('TextIterator', () => {
   });
 
   it('TextIterator.find successful', () => {
-    let document = new Document(() => {});
+    let document = new Document();
     document.reset('hello, world');
     let iterator = document.iterator(0);
     expect(iterator.find('world')).toBe(true);
@@ -261,7 +261,7 @@ describe('TextIterator', () => {
   });
 
   it('TextIterator.find manual chunks 1', () => {
-    let document = new Document(() => {});
+    let document = new Document();
     Document.test.setChunks(document, ['hello, w', 'o', 'r', 'ld!!!']);
     let iterator = document.iterator(0);
     expect(iterator.find('world')).toBe(true);
@@ -270,7 +270,7 @@ describe('TextIterator', () => {
   });
 
   it('TextIterator.find manual chunks 2', () => {
-    let document = new Document(() => {});
+    let document = new Document();
     Document.test.setChunks(document, ['hello', ',', ' ', 'w', 'orl', 'd!!!']);
     let iterator = document.iterator(0);
     expect(iterator.find('world')).toBe(true);
@@ -279,7 +279,7 @@ describe('TextIterator', () => {
   });
 
   it('TextIterator.find manual chunks 3', () => {
-    let document = new Document(() => {});
+    let document = new Document();
     Document.test.setChunks(document, ['hello, w', 'or', 'ld', '!!!']);
     let iterator = document.iterator(0);
     expect(iterator.find('world')).toBe(true);
@@ -288,7 +288,7 @@ describe('TextIterator', () => {
   });
 
   it('TextIterator.find unsuccessful', () => {
-    let document = new Document(() => {});
+    let document = new Document();
     document.reset('hello, world');
     let iterator = document.iterator(0);
     expect(iterator.find('eee')).toBe(false);
@@ -302,7 +302,7 @@ describe('TextIterator', () => {
   });
 
   it('TextIteratof.find unsuccessful across chunks', () => {
-    let document = new Document(() => {});
+    let document = new Document();
     Document.test.setContent(document, '/*abcdefghijklmonpqrsuvwxyz0123456789@!*/', 5);
     let iterator = document.iterator(0, 0, 8);
     expect(iterator.find('*/')).toBe(false);
@@ -316,7 +316,7 @@ describe('TextIterator', () => {
   });
 
   it('TextIterator constraints', () => {
-    let document = new Document(() => {});
+    let document = new Document();
     document.reset('hello');
     let iterator = document.iterator(0, 0, 2);
     expect(iterator.offset).toBe(0);
@@ -352,7 +352,7 @@ describe('TextIterator', () => {
   });
 
   it('TextIterator out-of-bounds API', () => {
-    let document = new Document(() => {});
+    let document = new Document();
     document.reset('abcdefg');
     let iterator = document.iterator(4, 2, 4);
     expect(iterator.offset).toBe(4);
@@ -363,7 +363,7 @@ describe('TextIterator', () => {
   });
 
   it('TextIterator.setConstraints', () => {
-    let document = new Document(() => {});
+    let document = new Document();
     document.reset('012');
     let iterator = document.iterator(0, 0, 1);
     expect(iterator.outOfBounds()).toBe(false);
@@ -408,7 +408,7 @@ describe('TextIterator', () => {
     let content = chunks.join('');
 
     for (let chunkSize = 1; chunkSize <= 101; chunkSize += 10) {
-      let document = new Document(() => {});
+      let document = new Document();
       Document.test.setContent(document, content, chunkSize);
       for (let from = 0; from <= content.length; from++) {
         let iterator = document.iterator(from, from, content.length);
@@ -487,9 +487,9 @@ describe('Viewport', () => {
     }
 
     for (let chunkSize = 1; chunkSize <= 100; chunkSize++) {
-      let document = new Document(() => {});
+      let document = new Document();
       document.reset(content);
-      let viewport = new Viewport(document, createTestMeasurer(), () => {});
+      let viewport = new Viewport(document, createTestMeasurer());
       Viewport.test.rechunk(viewport, chunkSize);
       expect(viewport.contentWidth()).toBe(longest);
       expect(viewport.contentHeight()).toBe((lineCount + 1) * 3);
@@ -937,7 +937,7 @@ describe('Text', () => {
 
 describe('Document callbacks', () => {
   it('simple changes/operations', () => {
-    let document = new Document(() => {});
+    let document = new Document();
     let client1 = new ReplaceClient(document);
 
     client1.expect([{offset: 0, before: '', after: 'abc', removed: '', inserted: 'abc', operation: 'unknown'}]);
@@ -979,7 +979,7 @@ describe('Document callbacks', () => {
   });
 
   it('recursive changes', () => {
-    let document = new Document(() => {});
+    let document = new Document();
     let client1 = new ReplaceClient(document);
     let client2 = new ReplaceClient(document);
 
@@ -1000,7 +1000,7 @@ describe('Document callbacks', () => {
   });
 
   it('recursive operations', () => {
-    let document = new Document(() => {});
+    let document = new Document();
     let client1 = new ReplaceClient(document);
     let client2 = new ReplaceClient(document);
 

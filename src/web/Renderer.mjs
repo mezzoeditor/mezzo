@@ -1,6 +1,7 @@
 import { RoundMode, Metrics } from '../core/Metrics.mjs';
 import { Viewport, Measurer } from '../core/Viewport.mjs';
 import { trace } from '../core/Trace.mjs';
+import { Document } from '../core/Document.mjs';
 
 /**
  * @implements Measurer
@@ -88,7 +89,9 @@ export class Renderer {
     this._cssHeight = 0;
     this._ratio = this._getRatio();
     this._measurer = new ContextBasedMeasurer(this._canvas.getContext('2d'), this._monospace);
-    this._viewport = new Viewport(document, this._measurer, () => this.invalidate());
+    this._viewport = new Viewport(document, this._measurer);
+    this._viewport.on(Viewport.Events.Reveal, this.invalidate.bind(this));
+    this._document.on(Document.Events.Invalidate, this.invalidate.bind(this));
 
     this._render = this._render.bind(this);
 

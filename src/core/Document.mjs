@@ -1,4 +1,5 @@
 import { Text } from './Text.mjs';
+import { EventEmitter } from './EventEmitter.mjs';
 
 /**
  * @typedef {{
@@ -22,12 +23,9 @@ import { Text } from './Text.mjs';
  * }} Position;
  */
 
-export class Document {
-  /**
-   * @param {function()} invalidateCallback
-   */
-  constructor(invalidateCallback) {
-    this._invalidateCallback = invalidateCallback;
+export class Document extends EventEmitter {
+  constructor() {
+    super();
     this._text = new Text();
     this._operation = null;
     this._tokenizer = null;
@@ -159,7 +157,7 @@ export class Document {
   }
 
   invalidate() {
-    this._invalidateCallback.call(null);
+    this.emit(Document.Events.Invalidate);
   }
 
   /**
@@ -256,6 +254,10 @@ export class Document {
     this._dispatchingReplacements = false;
     this.invalidate();
   }
+};
+
+Document.Events = {
+  Invalidate: 'invalidate'
 };
 
 Document.test = {};
