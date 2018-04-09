@@ -63,7 +63,7 @@ export class Text {
    */
   static fromStringChunked(string, chunkSize) {
     let text = new Text();
-    text._tree = buildTree(chunks(string, chunkSize));
+    text._tree = Tree.build(chunks(string, chunkSize));
     text._length = text._tree.metrics().length;
     return text;
   }
@@ -84,7 +84,9 @@ export class Text {
    * @return {!TextIterator}
    */
   iterator(offset, from, to) {
-    return new TextIterator(this._build().iterator(offset, from, to), offset, from, to, this._length);
+    let iterator = this._build().iterator();
+    iterator.locateByOffset(offset);
+    return new TextIterator(iterator, offset, from, to, this._length);
   }
 
   /**
@@ -148,12 +150,12 @@ export class Text {
    * @return {?Position}
    */
   offsetToPosition(offset) {
-    let found = this._build().findByOffset(offset);
-    if (found.location === null)
+    let iterator = this._build().iterator();
+    if (iterator.locateByOffset(offset, true /* strict */) === null)
       return null;
-    if (found.data === null)
-      return {line: found.location.y, column: found.location.x};
-    let location = metrics.locateByOffset(found.data, found.location, offset);
+    let location = iterator.data === undefined
+        ? iterator.before || {x: 0, y: 0}
+        : metrics.locateByOffset(iterator.data, iterator.before, offset);
     return {line: location.y, column: location.x};
   }
 
@@ -163,10 +165,13 @@ export class Text {
    * @return {number}
    */
   positionToOffset(position, strict) {
-    let found = this._build().findByPoint({x: position.column, y: position.line}, !!strict);
-    if (found.data === null)
-      return found.location.offset;
-    return metrics.locateByPoint(found.data, found.location, found.clampedPoint, strict).offset;
+    let iterator = this._build().iterator();
+    let clamped = iterator.locateByPoint({x: position.column, y: position.line}, !!strict);
+    if (clamped === null)
+      throw 'Position does not belong to text';
+    if (iterator.data === undefined)
+      return iterator.before ? iterator.before.offset : 0;
+    return metrics.locateByPoint(iterator.data, iterator.before, clamped, strict).offset;
   }
 
   /**
@@ -190,21 +195,21 @@ export class Text {
     if (this._tree)
       return this._tree;
     if (this._string) {
-      this._tree = buildTree(chunks(this._string));
+      this._tree = Tree.build(chunks(this._string));
       delete this._string;
     } else if (this._chunks) {
       let chunks = this._chunks.map(chunk => ({data: chunk, metrics: metrics.forString(chunk)}));
-      this._tree = buildTree(chunks);
+      this._tree = Tree.build(chunks);
       delete this._chunks;
     } else if (this._middle) {
-      let leftTree = buildTree(chunks(this._left));
-      let rightTree = buildTree(chunks(this._right));
+      let leftTree = Tree.build(chunks(this._left));
+      let rightTree = Tree.build(chunks(this._right));
       this._tree = Tree.merge(leftTree, Tree.merge(this._middle, rightTree));
       delete this._left;
       delete this._right;
       delete this._middle;
     } else {
-      this._tree = buildTree([]);
+      this._tree = Tree.build([]);
     }
     return this._tree;
   }
@@ -222,37 +227,37 @@ export class Text {
 
     if (this._tree) {
       if (combine)
-        return buildTree(chunks(left + this.content(0, this._length) + right));
+        return Tree.build(chunks(left + this.content(0, this._length) + right));
       if (left.length + this._length <= kDefaultChunkSize)
-        return buildTree(chunks(left + this.content(0, this._length)).concat(chunks(right)));
-      return Tree.merge(buildTree(chunks(left)), Tree.merge(this._tree, buildTree(chunks(right))));
+        return Tree.build(chunks(left + this.content(0, this._length)).concat(chunks(right)));
+      return Tree.merge(Tree.build(chunks(left)), Tree.merge(this._tree, Tree.build(chunks(right))));
     }
 
     if (this._middle) {
       if (combine)
-        return buildTree(chunks(left + this.content(0, this._length) + right));
+        return Tree.build(chunks(left + this.content(0, this._length) + right));
       // TODO: might make sense to rechunk (left + this._left + this._middle) if too short.
-      return Tree.merge(buildTree(chunks(left + this._left)), Tree.merge(this._middle, buildTree(chunks(this._right + right))));
+      return Tree.merge(Tree.build(chunks(left + this._left)), Tree.merge(this._middle, Tree.build(chunks(this._right + right))));
     }
 
     if (this._string) {
       if (combine)
-        return buildTree(chunks(left + this._string + right));
+        return Tree.build(chunks(left + this._string + right));
       if (left.length + this._length <= kDefaultChunkSize)
-        return buildTree(chunks(left + this._string).concat(chunks(right)));
+        return Tree.build(chunks(left + this._string).concat(chunks(right)));
       // Avoid concatenating |left| and |this._string| to not duplicate possibly long
       // |this._string|.
-      return buildTree(chunks(left).concat(chunks(this._string)).concat(chunks(right)));
+      return Tree.build(chunks(left).concat(chunks(this._string)).concat(chunks(right)));
     }
 
     if (this._chunks) {
       let chunks = this._chunks.map(chunk => ({data: chunk, metrics: metrics.forString(chunk)}));
-      return buildTree(chunks(left).concat(chunks).concat(chunks(right)));
+      return Tree.build(chunks(left).concat(chunks).concat(chunks(right)));
     }
 
     if (combine)
-      return buildTree(chunks(left + right));
-    return buildTree(chunks(left).concat(chunks(right)));
+      return Tree.build(chunks(left + right));
+    return Tree.build(chunks(left).concat(chunks(right)));
   }
 
   /**
@@ -306,16 +311,6 @@ function chunks(content, chunkSize) {
     index += length;
   }
   return chunks;
-}
-
-/**
- * @param {!Array<!{data: string, metrics: !TextMetrics}>} chunks
- * @return {!Tree<string>}
- */
-function buildTree(chunks) {
-  if (!chunks.length)
-    return Tree.build([{data: '', metrics: metrics.forString('')}]);
-  return Tree.build(chunks);
 }
 
 Text.test = {};

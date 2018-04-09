@@ -56,6 +56,7 @@ import { EventEmitter } from './EventEmitter.mjs';
  */
 
 /**
+ * TODO: perhaps we can get rid of metrics inside TextChunk?
  * @typedef {{
  *   metrics: !TextMetrics
  * }} TextChunk
@@ -603,12 +604,15 @@ export class Viewport extends EventEmitter {
    * @return {number}
    */
   _virtualPointToOffset(point, roundMode = RoundMode.Floor, strict) {
-    let found = this._tree.findByPoint(point, !!strict);
-    if (found.data === null)
-      return found.location.offset;
-    let from = found.location.offset;
-    let chunk = this._document.content(from, from + found.data.metrics.length);
-    return this._metrics.locateByPoint(chunk, found.location, found.clampedPoint, roundMode, strict).offset;
+    let iterator = this._tree.iterator();
+    let clamped = iterator.locateByPoint(point, !!strict);
+    if (clamped === null)
+      throw 'Point does not belong to viewport';
+    if (iterator.data === undefined)
+      return iterator.before ? iterator.before.offset : 0;
+    let from = iterator.before.offset;
+    let chunk = this._document.content(from, from + iterator.data.metrics.length);
+    return this._metrics.locateByPoint(chunk, iterator.before, clamped, roundMode, strict).offset;
   }
 
   /**
@@ -616,12 +620,14 @@ export class Viewport extends EventEmitter {
    * @return {?Point}
    */
   _offsetToVirtualPoint(offset) {
-    let found = this._tree.findByOffset(offset);
-    if (found.location === null || found.data === null)
-      return found.location;
-    let from = found.location.offset;
-    let chunk = this._document.content(from, from + found.data.metrics.length);
-    return this._metrics.locateByOffset(chunk, found.location, offset);
+    let iterator = this._tree.iterator();
+    if (iterator.locateByOffset(offset, true /* strict */) === null)
+      return null;
+    if (iterator.data === undefined)
+      return iterator.before || {x: 0, y: 0};
+    let from = iterator.before.offset;
+    let chunk = this._document.content(from, from + iterator.data.metrics.length);
+    return this._metrics.locateByOffset(chunk, iterator.before, offset);
   }
 
   /**

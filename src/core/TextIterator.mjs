@@ -17,8 +17,8 @@ export class TextIterator {
     this._from = from;
     this._to = to;
     this._length = length;
-    this._chunk = this._iterator.data;
-    this._pos = offset - this._iterator.before;
+    this._chunk = this._iterator.data || '';
+    this._pos = offset - (this._iterator.before ? this._iterator.before.offset : 0);
 
     /**
      * Current iterator position in the text.
@@ -36,6 +36,7 @@ export class TextIterator {
   /**
    * Changes the constraints. The new [from, to) range must contain
    * current |offset|.
+   *
    * @param {number} from
    * @param {number} to
    */
@@ -45,13 +46,12 @@ export class TextIterator {
     console.assert(from - 1 <= this.offset && this.offset <= to, 'Current offset does not belong to new constraints');
     this._from = from;
     this._to = to;
-    this._iterator._from = from;
-    this._iterator._to = to;
     this.current = this.outOfBounds() ? undefined : this._chunk[this._pos];
   }
 
   /**
    * Returns a substring starting at current position. Does not advance.
+   *
    * @param {number} length
    * @return {string}
    */
@@ -69,7 +69,7 @@ export class TextIterator {
     let moves = -1;
     do {
       ++moves;
-      let chunk = iterator.data;
+      let chunk = iterator.data || '';
       let word = chunk.substr(pos, length);
       pos = 0;
       result += word;
@@ -82,6 +82,7 @@ export class TextIterator {
 
   /**
    * Returns a substring ending at current position. Does not advance.
+   *
    * @param {number} length
    * @return {string}
    */
@@ -99,7 +100,7 @@ export class TextIterator {
     let moves = -1;
     do {
       moves++;
-      let chunk = iterator.data;
+      let chunk = iterator.data || '';
       let word = pos === -1 ? chunk.substr(-length) : chunk.substr(0, pos).substr(-length);
       pos = -1;
       result = word + result;
@@ -111,8 +112,8 @@ export class TextIterator {
   }
 
   /**
-   * Returns a substring starting at current position.
-   * Advances to the end of this substring.
+   * Returns a substring starting at current position. Advances to the end of this substring.
+   *
    * @param {number} length
    * @return {string}
    */
@@ -134,8 +135,8 @@ export class TextIterator {
   }
 
   /**
-   * Returns a substring ending at current position.
-   * Advances to the start of this substring.
+   * Returns a substring ending at current position. Advances to the start of this substring.
+   *
    * @param {number} length
    * @return {string}
    */
@@ -160,6 +161,7 @@ export class TextIterator {
    * Searches for a |query| starting at current position. Advances
    * to the start of the first occurance of |query|. If the |query|
    * cannot be found, advances to the end and returns false.
+   *
    * @param {string} query
    * @return {boolean}
    */
@@ -204,7 +206,7 @@ export class TextIterator {
       if (!this._iterator.next()) {
         this.current = undefined;
         this.offset = this._to;
-        this._pos = this._to - this._iterator.before;
+        this._pos = this._to - (this._iterator.before ? this._iterator.before.offset : 0);
         return false;
       }
       this._chunk = this._iterator.data;
@@ -215,6 +217,7 @@ export class TextIterator {
 
   /**
    * Returns an identical copy.
+   *
    * @return {!TextIterator}
    */
   clone() {
@@ -241,6 +244,7 @@ export class TextIterator {
    * on it's sign. When advancing by |x| goes out of bounds, advances
    * to the respective bound instead and returns the actual offset
    * advanced by.
+   *
    * @param {number} x
    * @return {number}
    */
@@ -271,6 +275,7 @@ export class TextIterator {
 
   /**
    * Sets current position to |offset|.
+   *
    * @param {number} offset
    */
   reset(offset) {
@@ -279,6 +284,7 @@ export class TextIterator {
 
   /**
    * Returns char code at position |current + offset|.
+   *
    * @param {number} offset
    * @return {number}
    */
@@ -293,6 +299,7 @@ export class TextIterator {
 
   /**
    * Returns char at position |current + offset|.
+   *
    * @param {number} offset
    * @return {number}
    */
@@ -314,6 +321,7 @@ export class TextIterator {
 
   /**
    * The total length of iterable text.
+   *
    * @return {number}
    */
   length() {
@@ -321,9 +329,10 @@ export class TextIterator {
   }
 
   /**
-   * Whether this iterator reached the start or end.
+   * Returns whether the iterator has reached it's start or end.
    * Note that iterator can still be used by advancing in the opposite
    * direction.
+   *
    * @return {boolean}
    */
   outOfBounds() {
