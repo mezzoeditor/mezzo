@@ -171,8 +171,8 @@ export class Search extends EventEmitter {
         this._lastReportedCurrentMatchIndex = currentMatchIndex;
         this._lastReportedMatchesCount = matchesCount;
         this.emit(Search.Events.Updated, {
-          index: currentMatchIndex,
-          count: matchesCount
+          currentIndex: currentMatchIndex,
+          totalCount: matchesCount
         });
       }
     }

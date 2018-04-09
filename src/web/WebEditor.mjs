@@ -25,20 +25,29 @@ export class WebEditor {
     this._document.setTokenizer(new DefaultTokenizer());
     this._document.addReplaceCallback(this._onReplace.bind(this));
 
+    this._setupScheduler();
+
     this._renderer = new Renderer(domDocument, this._document, DefaultTheme);
     this._element = this._renderer.element();
     this._input = this._renderer.input();
 
-    this._setupScheduler();
-    this._setupSelection();
-    this._selectedWordHighlighter = new SelectedWordHighlighter(this._renderer.viewport(), this._selection);
+    this._selection = new Selection(this._renderer.viewport());
+    this._selection.on(Selection.Events.Changed, () => this._renderer.raf());
+    this._search = new Search(this._renderer.viewport(), this._selection);
+    this.addIdleCallback(() => this._search.searchChunk());
     this._history = new History(this._document, this._selection);
-    this._setupEditing();
-    this._setupSearch();
-    this._highlighter = null;
+    this._editing = new Editing(this._document, this._selection, this._history);
+    this._selectedWordHighlighter = new SelectedWordHighlighter(this._renderer.viewport(), this._selection);
     this._smartBraces = new SmartBraces(this._document, this._editing);
     this._blockIndentation = new BlockIndentation(this._document, this._editing);
+
+    this._setupSelection();
+
+    this._highlighter = null;
     this.setHighlighter(new DefaultHighlighter());
+
+    this._setupEventListeners();
+
     this._keymap = new Map();
     this._installKeyMap({
       'Up': 'selection.move.up',
@@ -82,122 +91,36 @@ export class WebEditor {
     });
   }
 
-  _installKeyMap(keyMap) {
-    this._keymap.clear();
-    for (let key in keyMap) {
-      let value = keyMap[key];
-      this._keymap.set(stringToHash(key), value);
-    }
-  }
-
-  invalidate() {
-    if (this._renderer)
-      this._renderer.invalidate();
-  }
-
-  reset(text) {
-    this._document.reset(text);
-    this._history.reset();
-  }
-
-  /**
-   * @return {!Document}
-   */
-  document() {
-    return this._document;
-  }
-
-  /**
-   * @return {!Selection}
-   */
-  selection() {
-    return this._selection;
-  }
-
-  resize() {
-    this._renderer.resize();
-  }
-
-  /**
-   * @param {!MouseEvent} event
-   * @return {number}
-   */
-  mouseEventToTextOffset(event) {
-    return this._renderer.mouseEventToTextOffset(event);
-  }
-
-  /**
-   * @return {!Element}
-   */
-  element() {
-    return this._renderer.element();
-  }
-
-  focus() {
-    this._input.focus();
-  }
-
-  /**
-   * @param {boolean} monospace
-   */
-  setUseMonospaceFont(monospace) {
-    this._renderer.setUseMonospaceFont(monospace);
-  }
-
-  addIdleCallback(callback) {
-    this._idleCallbacks.push(callback);
-    this._renderer.addBeforeFrameCallback(callback);
-  }
-
-  removeIdleCallback(callback) {
-    let index = this._idleCallbacks.indexOf(callback);
-    if (index !== -1)
-      this._idleCallbacks.splice(index, 1);
-    this._renderer.removeBeforeFrameCallback(callback);
-  }
-
-  addDecorationCallback(callback) {
-    this._renderer.viewport().addDecorationCallback(callback);
-    this.invalidate();
-  }
-
-  removeDecorationCallback(callback) {
-    this._renderer.viewport().removeDecorationCallback(callback);
-    this.invalidate();
-  }
-
-  addHandle(from, to, onRemoved) {
-    if (to === undefined)
-      to = from;
-    return new RangeHandle(this._document, this._handles, from, to, onRemoved);
-  }
-
-  setHighlighter(highlighter) {
-    if (highlighter === this._highlighter)
-      return;
-    if (this._highlighter)
-      this._highlighter.uninstall(this._renderer.viewport());
-    this._highlighter = highlighter;
-    if (this._highlighter)
-      this._highlighter.install(this._renderer.viewport());
-    this.invalidate();
-  }
-
-  /**
-   * @param {!Document} domDocument
-   */
-  _createDOM(domDocument) {
-  }
-
-  /**
-   * @param {!Document} domDocument
-   */
-  _createRenderer(domDocument) {
-  }
-
-  _setupSelection() {
-    this._selection = new Selection(this._renderer.viewport());
-    this._selection.on(Selection.Events.Changed, () => this._renderer.raf());
+  _setupEventListeners() {
+    this._element.addEventListener('paste', event => {
+      let data = event.clipboardData;
+      if (data.types.indexOf('text/plain') === -1)
+        return;
+      this._editing.paste(data.getData('text/plain'));
+      this._revealSelection(true);
+      this._revealCursors();
+      event.preventDefault();
+      event.stopPropagation();
+    });
+    this._element.addEventListener('cut', event => {
+      const text = this._selection.selectedText();
+      if (!text)
+        return;
+      event.clipboardData.setData('text/plain', text);
+      this._editing.deleteBefore();
+      this._revealSelection(true);
+      this._revealCursors();
+      event.preventDefault();
+      event.stopPropagation();
+    });
+    this._input.addEventListener('input', event => {
+      if (!this._input.value)
+        return;
+      this._editing.type(this._input.value);
+      this._revealSelection(true);
+      this._revealCursors();
+      this._input.value = '';
+    });
     this._input.addEventListener('keydown', event => {
       let handled = false;
       let command = this._keymap.get(eventToHash(event));
@@ -296,7 +219,116 @@ export class WebEditor {
         event.stopPropagation();
       }
     }, false);
+  }
 
+  _installKeyMap(keyMap) {
+    this._keymap.clear();
+    for (let key in keyMap) {
+      let value = keyMap[key];
+      this._keymap.set(stringToHash(key), value);
+    }
+  }
+
+  invalidate() {
+    this._renderer.invalidate();
+  }
+
+  reset(text) {
+    this._document.reset(text);
+    this._history.reset();
+  }
+
+  /**
+   * @return {!Document}
+   */
+  document() {
+    return this._document;
+  }
+
+  /**
+   * @return {!Selection}
+   */
+  selection() {
+    return this._selection;
+  }
+
+  /**
+   * @return {!Search}
+   */
+  search() {
+    return this._search;
+  }
+
+  resize() {
+    this._renderer.resize();
+  }
+
+  /**
+   * @param {!MouseEvent} event
+   * @return {number}
+   */
+  mouseEventToTextOffset(event) {
+    return this._renderer.mouseEventToTextOffset(event);
+  }
+
+  /**
+   * @return {!Element}
+   */
+  element() {
+    return this._renderer.element();
+  }
+
+  focus() {
+    this._input.focus();
+  }
+
+  /**
+   * @param {boolean} monospace
+   */
+  setUseMonospaceFont(monospace) {
+    this._renderer.setUseMonospaceFont(monospace);
+  }
+
+  addIdleCallback(callback) {
+    this._idleCallbacks.push(callback);
+    this._renderer.addBeforeFrameCallback(callback);
+  }
+
+  removeIdleCallback(callback) {
+    let index = this._idleCallbacks.indexOf(callback);
+    if (index !== -1)
+      this._idleCallbacks.splice(index, 1);
+    this._renderer.removeBeforeFrameCallback(callback);
+  }
+
+  addDecorationCallback(callback) {
+    this._renderer.viewport().addDecorationCallback(callback);
+    this.invalidate();
+  }
+
+  removeDecorationCallback(callback) {
+    this._renderer.viewport().removeDecorationCallback(callback);
+    this.invalidate();
+  }
+
+  addHandle(from, to, onRemoved) {
+    if (to === undefined)
+      to = from;
+    return new RangeHandle(this._document, this._handles, from, to, onRemoved);
+  }
+
+  setHighlighter(highlighter) {
+    if (highlighter === this._highlighter)
+      return;
+    if (this._highlighter)
+      this._highlighter.uninstall(this._renderer.viewport());
+    this._highlighter = highlighter;
+    if (this._highlighter)
+      this._highlighter.install(this._renderer.viewport());
+    this.invalidate();
+  }
+
+  _setupSelection() {
     let theme = this._renderer.theme();
     let selectionFocusTheme = theme['selection.focus'];
     let cursorsVisible = false;
@@ -332,64 +364,14 @@ export class WebEditor {
     this._revealCursors();
   }
 
-  _setupEditing() {
-    this._editing = new Editing(this._document, this._selection, this._history);
-    this._element.addEventListener('paste', event => {
-      let data = event.clipboardData;
-      if (data.types.indexOf('text/plain') === -1)
-        return;
-      this._editing.paste(data.getData('text/plain'));
-      this._revealSelection(true);
-      this._revealCursors();
-      event.preventDefault();
-      event.stopPropagation();
-    });
-    this._element.addEventListener('cut', event => {
-      const text = this._selection.selectedText();
-      if (!text)
-        return;
-      event.clipboardData.setData('text/plain', text);
-      this._editing.deleteBefore();
-      this._revealSelection(true);
-      this._revealCursors();
-      event.preventDefault();
-      event.stopPropagation();
-    });
-    this._input.addEventListener('input', event => {
-      if (!this._input.value)
-        return;
-      this._editing.type(this._input.value);
-      this._revealSelection(true);
-      this._revealCursors();
-      this._input.value = '';
-    });
+  find(query) {
+    this._selectedWordHighlighter.setEnabled(false);
+    this._search.search({query});
   }
 
-  _setupSearch() {
-    let updateCallback = null;
-    this.onSearchUpdate = callback => { updateCallback = callback; };
-    this._search = new Search(this._renderer.viewport(), this._selection);
-    this._search.on(Search.Events.Updated, ({index, count}) => {
-      if (updateCallback)
-        updateCallback.call(null, index, count);
-    });
-
-    this.find = query => {
-      this._selectedWordHighlighter.setEnabled(false);
-      this._search.search({query});
-    };
-    this.findCancel = () => {
-      this._selectedWordHighlighter.setEnabled(true);
-      this._search.cancel();
-    };
-    this.findNext = () => {
-      this._search.nextMatch();
-    };
-    this.findPrevious = () => {
-      this._search.previousMatch();
-    };
-
-    this.addIdleCallback(this._search.searchChunk.bind(this._search));
+  findCancel() {
+    this._selectedWordHighlighter.setEnabled(true);
+    this._search.cancel();
   }
 
   _setupScheduler() {

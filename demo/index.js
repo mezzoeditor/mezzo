@@ -60,9 +60,9 @@ function addSearch(editor) {
   input.addEventListener('keydown', event => {
     if (event.key === 'Enter') {
       if (event.shiftKey)
-        editor.findPrevious();
+        editor.search().previousMatch();
       else
-        editor.findNext();
+        editor.search().nextMatch();
       event.preventDefault();
       event.stopPropagation();
     } else if (event.key === 'Escape') {
@@ -74,17 +74,17 @@ function addSearch(editor) {
     }
   }, false);
   document.querySelector('.next').addEventListener('click', event => {
-    editor.findNext();
+    editor.search().nextMatch();
   }, false);
   document.querySelector('.prev').addEventListener('click', event => {
-    editor.findPrevious();
+    editor.search().previousMatch();
   }, false);
   const info = document.querySelector('.search-info');
-  editor.onSearchUpdate((current, total) => {
-    if (current === -1)
-      info.textContent = `${total} matches`;
+  editor.search().on('updated', ({currentIndex, totalCount}) => {
+    if (currentIndex === -1)
+      info.textContent = `${totalCount} matches`;
     else
-      info.textContent = `${current + 1} of ${total} matches`;
+      info.textContent = `${currentIndex + 1} of ${totalCount} matches`;
   });
 
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') !== -1;
