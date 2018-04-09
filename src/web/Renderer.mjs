@@ -170,10 +170,10 @@ export class Renderer {
     this._canvas.style.width = cssWidth + 'px';
     this._canvas.style.height = cssHeight + 'px';
     this._measurer = new ContextBasedMeasurer(this._canvas.getContext('2d'), this._monospace);
-    // Updating in viewport every time is slow, but not doing it might be wrong on
+    // TODO: Updating in viewport every time is slow, but not doing it might be wrong on
     // scale change. We should detect that.
-    if (false)
-      this._viewport.setMeasurer(this._measurer);
+    // if (zoomHasChanged())
+    //   this._viewport.setMeasurer(this._measurer);
     this.invalidate();
 
     // Changing cavas width/height clears the canvas synchronously.
