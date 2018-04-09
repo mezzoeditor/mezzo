@@ -76,8 +76,31 @@ export class Renderer {
    * @param {!Theme} theme
    */
   constructor(domDocument, document, theme) {
+    this._element = domDocument.createElement('div');
+    this._element.style.cssText = `
+      position: relative;
+      overflow: hidden;
+      user-select: none;
+      cursor: text;
+    `;
     this._canvas = domDocument.createElement('canvas');
-    this._document = document;
+    this._canvas.style.setProperty('position', 'absolute');
+    this._canvas.style.setProperty('top', '0');
+    this._canvas.style.setProperty('left', '0');
+    this._element.appendChild(this._canvas);
+
+    this._input = domDocument.createElement('input');
+    this._input.style.cssText = `
+      outline: none;
+      border: none;
+      width: 0;
+      height: 0;
+      position: absolute;
+      top: 0;
+      left: 0;
+    `;
+    this._element.appendChild(this._input);
+
     this._theme = theme;
     this._monospace = true;
 
@@ -89,9 +112,11 @@ export class Renderer {
     this._cssHeight = 0;
     this._ratio = this._getRatio();
     this._measurer = new ContextBasedMeasurer(this._canvas.getContext('2d'), this._monospace);
+
+    this._document = document;
+    this._document.on(Document.Events.Invalidate, this.invalidate.bind(this));
     this._viewport = new Viewport(document, this._measurer);
     this._viewport.on(Viewport.Events.Reveal, this.invalidate.bind(this));
-    this._document.on(Document.Events.Invalidate, this.invalidate.bind(this));
 
     this._render = this._render.bind(this);
 
@@ -100,6 +125,7 @@ export class Renderer {
     this._canvas.addEventListener('mouseup', event => this._onMouseUp(event));
     this._canvas.addEventListener('mouseout', event => this._onMouseOut(event));
     this._canvas.addEventListener('wheel', event => this._onScroll(event));
+    this._element.addEventListener('click', event => this._input.focus());
 
     // Rects are in css pixels, in canvas coordinates.
     this._gutterRect = {
@@ -131,6 +157,18 @@ export class Renderer {
     this._mouseDownState = {
       name: null,
     };
+  }
+
+  element() {
+    return this._element;
+  }
+
+  input() {
+    return this._input;
+  }
+
+  resize() {
+    this.setSize(this._element.clientWidth, this._element.clientHeight);
   }
 
   /**
@@ -199,13 +237,6 @@ export class Renderer {
     let index = this._beforeFrameCallbacks.indexOf(callback);
     if (index !== -1)
       this._beforeFrameCallbacks.splice(index, 1);
-  }
-
-  /**
-   * @return {!Element}
-   */
-  canvas() {
-    return this._canvas;
   }
 
   _mouseEventToCanvas(event) {

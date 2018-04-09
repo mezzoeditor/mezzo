@@ -20,16 +20,19 @@ export class WebEditor {
    * @param {!Document} domDocument
    */
   constructor(domDocument) {
-    this._createDOM(domDocument);
     this._handles = new Decorator(true /* createHandles */);
     this._document = new Document();
     this._document.setTokenizer(new DefaultTokenizer());
     this._document.addReplaceCallback(this._onReplace.bind(this));
-    this._createRenderer(domDocument);
+
+    this._renderer = new Renderer(domDocument, this._document, DefaultTheme);
+    this._element = this._renderer.element();
+    this._input = this._renderer.input();
+
     this._setupScheduler();
     this._setupSelection();
     this._selectedWordHighlighter = new SelectedWordHighlighter(this._renderer.viewport(), this._selection);
-    this._setupHistory();
+    this._history = new History(this._document, this._selection);
     this._setupEditing();
     this._setupSearch();
     this._highlighter = null;
@@ -112,7 +115,7 @@ export class WebEditor {
   }
 
   resize() {
-    this._renderer.setSize(this._element.clientWidth, this._element.clientHeight);
+    this._renderer.resize();
   }
 
   /**
@@ -127,7 +130,7 @@ export class WebEditor {
    * @return {!Element}
    */
   element() {
-    return this._element;
+    return this._renderer.element();
   }
 
   focus() {
@@ -184,40 +187,12 @@ export class WebEditor {
    * @param {!Document} domDocument
    */
   _createDOM(domDocument) {
-    //TODO: shadow dom?
-    this._element = domDocument.createElement('div');
-    this._element.style.cssText = `
-      position: relative;
-      overflow: hidden;
-      user-select: none;
-      cursor: text;
-    `;
-    this._element.addEventListener('click', event => {
-      this._input.focus();
-    });
-    this._input = domDocument.createElement('input');
-    this._input.style.cssText = `
-      outline: none;
-      border: none;
-      width: 0;
-      height: 0;
-      position: absolute;
-      top: 0;
-      left: 0;
-    `;
-    this._element.appendChild(this._input);
   }
 
   /**
    * @param {!Document} domDocument
    */
   _createRenderer(domDocument) {
-    this._renderer = new Renderer(domDocument, this._document, DefaultTheme);
-    const canvas = this._renderer.canvas();
-    canvas.style.setProperty('position', 'absolute');
-    canvas.style.setProperty('top', '0');
-    canvas.style.setProperty('left', '0');
-    this._element.appendChild(canvas);
   }
 
   _setupSelection() {
@@ -355,10 +330,6 @@ export class WebEditor {
       cursorsTimeout = window.setInterval(toggleCursors, 500);
     };
     this._revealCursors();
-  }
-
-  _setupHistory() {
-    this._history = new History(this._document, this._selection);
   }
 
   _setupEditing() {
