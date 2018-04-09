@@ -2,6 +2,7 @@ import { Start, End } from '../core/Anchor.mjs';
 import { LineDecorator } from '../core/Decorator.mjs';
 import { Tokenizer } from '../core/Tokenizer.mjs';
 import { RoundMode } from '../core/Metrics.mjs';
+import { EventEmitter } from '../core/EventEmitter.mjs';
 
 /**
  * @typedef {{
@@ -23,11 +24,12 @@ import { RoundMode } from '../core/Metrics.mjs';
    };
  }
 
-export class Selection {
+export class Selection extends EventEmitter {
   /**
    * @param {!Viewport} viewport
    */
   constructor(viewport) {
+    super();
     this._viewport = viewport;
     this._viewport.addDecorationCallback(this._onDecorate.bind(this));
     this._document = viewport.document();
@@ -38,7 +40,6 @@ export class Selection {
     this._frozen = 0;
     this._lastId = 0;
     this._staleDecorations = true;
-    this._changeCallbacks = [];
 
     this._nextOccurenceText = null;
     this._nextOccurenceGroupOnly = false;
@@ -156,22 +157,6 @@ export class Selection {
     this._frozen--;
     if (!this._frozen)
       this.restore(data, ranges);
-  }
-
-  /**
-   * @param {function()} callback
-   */
-  addChangeCallback(callback) {
-    this._changeCallbacks.push(callback);
-  }
-
-  /**
-   * @param {function()} callback
-   */
-  removeChangeCallback(callback) {
-    let index = this._changeCallbacks.indexOf(callback);
-    if (index !== -1)
-      this._changeCallbacks.splice(index);
   }
 
   /**
@@ -679,8 +664,7 @@ export class Selection {
       this._nextOccurenceSearchOffset = 0;
     }
     this._staleDecorations = true;
-    for (let callback of this._changeCallbacks)
-      callback();
+    this.emit(Selection.Events.Changed);
   }
 
   /**
@@ -763,6 +747,10 @@ export class Selection {
     }
     return max;
   }
+};
+
+Selection.Events = {
+  Changed: 'changed'
 };
 
 Selection.Decorations = new Set(['selection.range', 'selection.focus', 'selection.focus.current']);

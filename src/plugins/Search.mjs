@@ -1,5 +1,6 @@
 import { Start, End, Range } from '../core/Anchor.mjs';
 import { LineDecorator } from '../core/Decorator.mjs';
+import { Selection } from '../plugins/Selection.mjs';
 
 /**
  * @typdef {{
@@ -22,7 +23,7 @@ export class Search {
     this._chunkSize = 20000;
     this._rangeToProcess = null;  // [from, to] inclusive.
     this._selection = selection;
-    this._selection.addChangeCallback(() => { this._shouldUpdateSelection = false; });
+    this._selection.on(Selection.Events.Changed, () => { this._shouldUpdateSelection = false; });
     this._decorator = new LineDecorator('search.match');
     this._currentMatchDecorator = new LineDecorator('search.match.current');
     this._options = null;

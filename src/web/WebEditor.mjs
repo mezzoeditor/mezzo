@@ -222,7 +222,7 @@ export class WebEditor {
 
   _setupSelection() {
     this._selection = new Selection(this._renderer.viewport());
-    this._selection.addChangeCallback(() => this._renderer.raf());
+    this._selection.on(Selection.Events.Changed, () => this._renderer.raf());
     this._input.addEventListener('keydown', event => {
       let handled = false;
       let command = this._keymap.get(eventToHash(event));

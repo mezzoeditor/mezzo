@@ -1,3 +1,5 @@
+import { Selection } from './Selection.mjs';
+
 export class History {
   /**
    * @param {!Document} document
@@ -14,7 +16,7 @@ export class History {
 
     this._selectionChanged = false;
     this._selectionState = this._selection.save();
-    this._selection.addChangeCallback(this._onSelectionChanged.bind(this));
+    this._selection.on(Selection.Events.Changed, this._onSelectionChanged.bind(this));
 
     this._muteOnReplace = false;
     this._muteOnSelectionChanged = false;

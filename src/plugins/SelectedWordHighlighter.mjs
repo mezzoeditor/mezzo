@@ -1,6 +1,7 @@
 import { Start } from '../core/Anchor.mjs';
 import { TextDecorator } from '../core/Decorator.mjs';
 import { Tokenizer } from "../core/Tokenizer.mjs";
+import { Selection } from "../plugins/Selection.mjs";
 
 export class SelectedWordHighlighter {
   /**
@@ -12,7 +13,7 @@ export class SelectedWordHighlighter {
     this._document = viewport.document();
     this._viewport.addDecorationCallback(this._onDecorate.bind(this));
     this._selection = selection;
-    this._selection.addChangeCallback(this._onSelectionChanged.bind(this));
+    this._selection.on(Selection.Events.Changed, this._onSelectionChanged.bind(this));
     this._selectedWord = '';
     this._selectedWordRange = null;
     this._enabled = true;

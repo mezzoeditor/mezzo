@@ -1,6 +1,7 @@
 import { WebEditor } from '../src/web/WebEditor.mjs';
 import { JSHighlighter } from '../src/javascript/JSHighlighter.mjs';
 import { DefaultHighlighter } from '../src/default/DefaultHighlighter.mjs';
+import { Selection } from '../src/plugins/Selection.mjs';
 
 export class EditorComponent extends HTMLElement {
   constructor() {
@@ -14,7 +15,7 @@ export class EditorComponent extends HTMLElement {
     this._selectionDescription = document.createElement('span');
 
     let rafId = 0;
-    this._editor.selection().addChangeCallback(() => {
+    this._editor.selection().on(Selection.Events.Changed, () => {
       if (rafId)
         return;
       rafId = requestAnimationFrame(() => {
