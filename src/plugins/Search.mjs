@@ -1,6 +1,7 @@
 import { Start, End, Range } from '../core/Anchor.mjs';
 import { LineDecorator } from '../core/Decorator.mjs';
 import { Selection } from '../plugins/Selection.mjs';
+import { EventEmitter } from '../core/EventEmitter.mjs';
 
 /**
  * @typdef {{
@@ -8,14 +9,13 @@ import { Selection } from '../plugins/Selection.mjs';
  * }} SearchOptions
  */
 
-export class Search {
+export class Search extends EventEmitter {
   /**
    * @param {!Viewport} viewport
    * @param {!Selection} selection
-   * @param {function(number, number)=} onUpdate
-   *   Takes currentMatchIndex and totalMatchesCount.
    */
-  constructor(viewport, selection, onUpdate) {
+  constructor(viewport, selection) {
+    super();
     this._viewport = viewport;
     this._viewport.addDecorationCallback(this._onDecorate.bind(this));
     this._document = viewport.document();
@@ -30,7 +30,6 @@ export class Search {
     this._currentMatch = null;
     this._shouldUpdateSelection = false;
 
-    this._onUpdate = (onUpdate || function() {}).bind(null);
     this._updated = false;
     this._lastReportedCurrentMatchIndex = -1;
     this._lastReportedMatchesCount = 0;
@@ -171,7 +170,10 @@ export class Search {
           matchesCount !== this._lastReportedMatchesCount) {
         this._lastReportedCurrentMatchIndex = currentMatchIndex;
         this._lastReportedMatchesCount = matchesCount;
-        this._onUpdate(currentMatchIndex, matchesCount);
+        this.emit(Search.Events.Updated, {
+          index: currentMatchIndex,
+          count: matchesCount
+        });
       }
     }
 
@@ -287,4 +289,8 @@ export class Search {
     this._updated = true;
     return range;
   }
+};
+
+Search.Events = {
+  Updated: 'updated'
 };

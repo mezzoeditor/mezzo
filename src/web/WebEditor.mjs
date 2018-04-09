@@ -397,11 +397,11 @@ export class WebEditor {
   _setupSearch() {
     let updateCallback = null;
     this.onSearchUpdate = callback => { updateCallback = callback; };
-    let onUpdate = (currentMatchIndex, totalMatchesCount) => {
+    this._search = new Search(this._renderer.viewport(), this._selection);
+    this._search.on(Search.Events.Updated, ({index, count}) => {
       if (updateCallback)
-      updateCallback.call(null, currentMatchIndex, totalMatchesCount);
-    };
-    this._search = new Search(this._renderer.viewport(), this._selection, onUpdate);
+        updateCallback.call(null, index, count);
+    });
 
     this.find = query => {
       this._selectedWordHighlighter.setEnabled(false);
