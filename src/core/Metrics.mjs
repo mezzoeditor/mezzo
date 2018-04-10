@@ -5,16 +5,6 @@ export let RoundMode = {
 };
 
 /**
- * @typedef {{
- *   length: number,
- *   lineBreaks: number|undefined,
- *   firstWidth: number,
- *   lastWidth: number,
- *   longestWidth: number,
- * }} TextMetrics;
- */
-
-/**
  * This class calculates metrics for string chunks. It is designed to work
  * exclusively with an additive metric. Note that we only support fixed height equal to one.
  *
@@ -240,25 +230,6 @@ export class Metrics {
   }
 
   /**
-   * Combines two additive text metrics in the left->right order.
-   *
-   * @param {!TextMetrics} left
-   * @param {!TextMetrics} right
-   * @return {!TextMetrics}
-   */
-  static combine(left, right) {
-    let result = {
-      longestWidth: Math.max(Math.max(left.longestWidth, left.lastWidth + right.firstWidth), right.longestWidth),
-      firstWidth: left.firstWidth + (left.lineBreaks ? 0 : right.firstWidth),
-      lastWidth: right.lastWidth + (right.lineBreaks ? 0 : left.lastWidth),
-      length: left.length + right.length
-    }
-    if (left.lineBreaks || right.lineBreaks)
-      result.lineBreaks = (left.lineBreaks || 0) + (right.lineBreaks || 0);
-    return result;
-  }
-
-  /**
    * Returns the total width of a substring, which must not contain line breaks.
    *
    * @param {string} s
@@ -370,11 +341,5 @@ Metrics.bmpRegex = /^[\u{0000}-\u{d7ff}]*$/u;
 Metrics.asciiRegex = /^[\u{0020}-\u{007e}]*$/u;
 Metrics.whitespaceRegex = /\s/u;
 Metrics.anythingRegex = /.*/u;
-
-/** @type {!TextMetrics} */
-Metrics.zero = { length: 0, firstWidth: 0, lastWidth: 0, longestWidth: 0 };
-
-/** @type {!Location} */
-Metrics.origin = { offset: 0, x: 0, y: 0 };
 
 Metrics._lineBreakCharCode = '\n'.charCodeAt(0);

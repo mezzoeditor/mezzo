@@ -1,5 +1,4 @@
 import { Random } from './Random.mjs';
-import { Metrics } from './Metrics.mjs';
 
 let random = Random(42);
 
@@ -30,30 +29,22 @@ let random = Random(42);
  */
 
 /**
- * @template T
+ * Represents metrics of a text chunk. Note that it can be used
+ * not only for text, but for any entities interleaving with text.
+ *
  * @typedef {{
- *   data: T,
- *   metrics: !TextMetrics,
- *   selfMetrics: !TextMetrics|undefined,
- *   left: !TreeNode<T>|undefined,
- *   right: !TreeNode<T>|undefined,
- *   h: number
- * }} TreeNode;
+ *   length: number,
+ *   lineBreaks: number|undefined,
+ *   firstWidth: number,
+ *   lastWidth: number,
+ *   longestWidth: number,
+ * }} TextMetrics;
  */
 
-/**
- * @typedef {{
- *   offset: number|undefined,
- *   x: number|undefined,
- *   y: number|undefined,
- * }} FindKey;
- */
-
-const kClone = true;
-const kNoClone = false;
-
-const kSplitIntersectionToLeft = true;
-const kSplitIntersectionToRight = false;
+/** @type {!Location} */
+const origin = { offset: 0, x: 0, y: 0 };
+/** @type {!TextMetrics} */
+const zeroMetrics = { length: 0, firstWidth: 0, lastWidth: 0, longestWidth: 0 };
 
 /**
  * This is a generic metrics-aware immutable tree. Each node in the tree contains
@@ -69,7 +60,7 @@ export class Tree {
    */
   constructor() {
     this._root = undefined;
-    this._endLocation = Metrics.origin;
+    this._endLocation = origin;
   }
 
   /**
@@ -102,7 +93,7 @@ export class Tree {
    * @return {!TextMetrics}
    */
   metrics() {
-    return this._root ? this._root.metrics : Metrics.zero;
+    return this._root ? this._root.metrics : zeroMetrics;
   }
 
   /**
@@ -161,6 +152,25 @@ export class Tree {
     if (this._root)
       collect(this._root, list);
     return list;
+  }
+
+  /**
+   * Combines two additive text metrics in the left->right order.
+   *
+   * @param {!TextMetrics} left
+   * @param {!TextMetrics} right
+   * @return {!TextMetrics}
+   */
+  static combineMetrics(left, right) {
+    let result = {
+      longestWidth: Math.max(Math.max(left.longestWidth, left.lastWidth + right.firstWidth), right.longestWidth),
+      firstWidth: left.firstWidth + (left.lineBreaks ? 0 : right.firstWidth),
+      lastWidth: right.lastWidth + (right.lineBreaks ? 0 : left.lastWidth),
+      length: left.length + right.length
+    }
+    if (left.lineBreaks || right.lineBreaks)
+      result.lineBreaks = (left.lineBreaks || 0) + (right.lineBreaks || 0);
+    return result;
   }
 };
 
@@ -276,7 +286,7 @@ class TreeIterator {
     if (!this._root)
       return;
     this._stack = [];
-    let location = Metrics.origin;
+    let location = origin;
     let node = this._root;
     while (true) {
       this._stack.push({node, location});
@@ -419,6 +429,32 @@ class TreeIterator {
 };
 
 /**
+ * @template T
+ * @typedef {{
+ *   data: T,
+ *   metrics: !TextMetrics,
+ *   selfMetrics: !TextMetrics|undefined,
+ *   left: !TreeNode<T>|undefined,
+ *   right: !TreeNode<T>|undefined,
+ *   h: number
+ * }} TreeNode;
+ */
+
+/**
+ * @typedef {{
+ *   offset: number|undefined,
+ *   x: number|undefined,
+ *   y: number|undefined,
+ * }} FindKey;
+ */
+
+const kClone = true;
+const kNoClone = false;
+
+const kSplitIntersectionToLeft = true;
+const kSplitIntersectionToRight = false;
+
+/**
  * @param {!Location} location
  * @param {!TextMetrics} metrics
  * @return {!Location}
@@ -448,11 +484,11 @@ function setChildren(parent, left, right, clone) {
     node.selfMetrics = node.metrics;
   if (left) {
     node.left = left;
-    node.metrics = Metrics.combine(left.metrics, node.metrics);
+    node.metrics = Tree.combineMetrics(left.metrics, node.metrics);
   }
   if (right) {
     node.right = right;
-    node.metrics = Metrics.combine(node.metrics, right.metrics);
+    node.metrics = Tree.combineMetrics(node.metrics, right.metrics);
   }
   return node;
 }
@@ -545,7 +581,7 @@ function split(root, offset, intersectionToLeft, current) {
   if (!root)
     return {};
   if (!current)
-    current = Metrics.origin;
+    current = origin;
   if (current.offset >= offset)
     return {right: root};
   if (current.offset + root.metrics.length <= offset)
