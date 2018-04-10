@@ -71,6 +71,8 @@ export class Tree {
    * @return {!Tree<T>}
    */
   static build(nodes) {
+    for (let node of nodes)
+      node.h = random();
     return wrap(build(nodes));
   }
 
@@ -114,9 +116,9 @@ export class Tree {
    * @return {!{left: !Tree<T>, right: !Tree<T>, middle: !Tree<T>}}
    */
   split(from, to) {
-    let tmp = split(this._root, to, kSplitIntersectionToLeft);
+    let tmp = split(this._root, to, kSplitIntersectionToLeft, 0);
     let right = wrap(tmp.right);
-    tmp = split(tmp.left, from, kSplitIntersectionToRight);
+    tmp = split(tmp.left, from, kSplitIntersectionToRight, 0);
     let left = wrap(tmp.left);
     let middle = wrap(tmp.right);
     return {left, right, middle};
@@ -515,8 +517,6 @@ function wrap(root) {
  * @return {!TreeNode<T>|undefined}
  */
 function build(nodes) {
-  for (let node of nodes)
-    node.h = random();
   if (!nodes.length)
     return;
   if (nodes.length === 1)
@@ -574,18 +574,23 @@ function build(nodes) {
  * @param {!TreeNode<T>|undefined} root
  * @param {number} offset
  * @param {boolean} intersectionToLeft
- * @param {!Location=} current
+ * @param {number} current
  * @return {{left: !TreeNode<T>|undefined, right: !TreeNode<T>|undefined}}
  */
 function split(root, offset, intersectionToLeft, current) {
   if (!root)
     return {};
-  if (!current)
-    current = origin;
-  if (current.offset >= offset)
-    return {right: root};
-  if (current.offset + root.metrics.length <= offset)
-    return {left: root};
+  if (intersectionToLeft === kSplitIntersectionToLeft) {
+    if (current >= offset)
+      return {right: root};
+    if (current + root.metrics.length < offset)
+      return {left: root};
+  } else {
+    if (current > offset)
+      return {right: root};
+    if (current + root.metrics.length <= offset)
+      return {left: root};
+  }
 
   // intersection to left:
   //   offset a b  ->  root to right
@@ -599,11 +604,11 @@ function split(root, offset, intersectionToLeft, current) {
   //   a b offset  ->  root to left
   //   rootToLeft = (offset >= b) == (b <= offset) == !(b > offset)
 
-  let next = root.left ? advanceLocation(current, root.left.metrics) : current;
-  let rootToLeft = next.offset < offset;
-  next = advanceLocation(next, root.selfMetrics || root.metrics);
+  let next = root.left ? current + root.left.metrics.length : current;
+  let rootToLeft = next < offset;
+  next = next + (root.selfMetrics || root.metrics).length;
   if (intersectionToLeft === kSplitIntersectionToRight)
-    rootToLeft = next.offset <= offset;
+    rootToLeft = next <= offset;
   if (rootToLeft) {
     let tmp = split(root.right, offset, intersectionToLeft, next);
     return {left: setChildren(root, root.left, tmp.left, kClone), right: tmp.right};
@@ -670,3 +675,11 @@ function collect(node, list) {
   if (node.right)
     collect(node.right, list);
 }
+
+Tree.test = {};
+
+/**
+ * @param {!Array<!{data: T, metrics: !TextMetrics, h: number}>} nodes
+ * @return {!Tree<T>}
+ */
+Tree.test.build = nodes => wrap(build(nodes));
