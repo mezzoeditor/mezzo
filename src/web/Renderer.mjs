@@ -3,8 +3,8 @@ import { Viewport, Measurer } from '../core/Viewport.mjs';
 import { trace } from '../core/Trace.mjs';
 import { Document } from '../core/Document.mjs';
 import { DefaultTheme } from '../default/DefaultTheme.mjs';
-import { Tokenizer } from '../core/Tokenizer.mjs';
-import { Selection } from '../plugins/Selection.mjs';
+import { Tokenizer } from '../editor/Tokenizer.mjs';
+import { Selection } from '../editor/Selection.mjs';
 
 /**
  * @implements Measurer
@@ -365,7 +365,7 @@ export class Renderer {
       lastMouseEvent = event;
       let offset = this._mouseEventToTextOffset(event);
       if (event.detail === 2) {
-        let range = Tokenizer.characterGroupRange(this._editor.document(), offset);
+        let range = Tokenizer.characterGroupRange(this._editor.document(), this._editor.tokenizer(), offset);
         mouseRangeStartOffset = range.from;
         mouseRangeEndOffset = range.to;
         this._editor.selection().setLastRange({from: mouseRangeStartOffset, to: mouseRangeEndOffset});

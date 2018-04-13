@@ -1,6 +1,6 @@
 import { Start, End, Range } from '../core/Anchor.mjs';
 import { LineDecorator } from '../core/Decorator.mjs';
-import { Selection } from '../plugins/Selection.mjs';
+import { Selection } from './Selection.mjs';
 import { EventEmitter } from '../core/EventEmitter.mjs';
 
 /**
@@ -11,18 +11,17 @@ import { EventEmitter } from '../core/EventEmitter.mjs';
 
 export class Search extends EventEmitter {
   /**
-   * @param {!Viewport} viewport
-   * @param {!Selection} selection
+   * @param {!Editor} editor
    */
-  constructor(viewport, selection) {
+  constructor(editor) {
     super();
-    this._viewport = viewport;
+    this._viewport = editor.viewport();
     this._viewport.addDecorationCallback(this._onDecorate.bind(this));
-    this._document = viewport.document();
+    this._document = editor.document();
     this._document.addReplaceCallback(this._onReplace.bind(this));
     this._chunkSize = 20000;
     this._rangeToProcess = null;  // [from, to] inclusive.
-    this._selection = selection;
+    this._selection = editor.selection();
     this._selection.on(Selection.Events.Changed, () => { this._shouldUpdateSelection = false; });
     this._decorator = new LineDecorator('search.match');
     this._currentMatchDecorator = new LineDecorator('search.match.current');

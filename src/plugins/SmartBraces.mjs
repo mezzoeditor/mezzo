@@ -1,17 +1,16 @@
 export class SmartBraces {
   /**
-   * @param {!Document} document
-   * @param {!Editing} editing
+   * @param {!Editor} editor
    */
-  constructor(document, editing) {
-    this._editing = editing;
-    this._document = document;
+  constructor(editor) {
+    this._editing = editor.editing();
+    this._document = editor.document();
     this._pairs = [
       '()',
       '{}',
       '[]',
     ];
-    editing.addEditingOverride(this._onEdit.bind(this));
+    this._editing.addEditingOverride(this._onEdit.bind(this));
   }
 
   /**

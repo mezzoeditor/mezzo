@@ -1,4 +1,4 @@
-import { Tokenizer } from "../core/Tokenizer.mjs";
+import { Tokenizer } from "./Tokenizer.mjs";
 
 /**
  * @typedef {{
@@ -17,14 +17,13 @@ import { Tokenizer } from "../core/Tokenizer.mjs";
 
 export class Editing {
   /**
-   * @param {!Document} document
-   * @param {!Selection} selection
-   * @param {!History} history
+   * @param {!Editor} editor
    */
-  constructor(document, selection, history) {
-    this._document = document;
-    this._selection = selection;
-    this._history = history;
+  constructor(editor) {
+    this._editor = editor;
+    this._document = editor.document();
+    this._selection = editor.selection();
+    this._history = editor.history();
     this._indent = ' '.repeat(2);
     this._overrides = new Set();
   }
@@ -79,7 +78,7 @@ export class Editing {
     return this._replace('', range => {
       if (range.from !== range.to)
         return range;
-      let offset = Tokenizer.leftBoundary(this._document, range.from - 1);
+      let offset = Tokenizer.leftBoundary(this._document, this._editor.tokenizer(), range.from - 1);
       return {s: range.s, from: offset, to: range.to};
     });
   }

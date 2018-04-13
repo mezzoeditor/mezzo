@@ -1,6 +1,6 @@
 import { Start, End } from '../core/Anchor.mjs';
 import { LineDecorator } from '../core/Decorator.mjs';
-import { Tokenizer } from '../core/Tokenizer.mjs';
+import { Tokenizer } from './Tokenizer.mjs';
 import { RoundMode } from '../core/Metrics.mjs';
 import { EventEmitter } from '../core/EventEmitter.mjs';
 
@@ -28,11 +28,12 @@ export class Selection extends EventEmitter {
   /**
    * @param {!Viewport} viewport
    */
-  constructor(viewport) {
+  constructor(editor) {
     super();
-    this._viewport = viewport;
+    this._editor = editor;
+    this._viewport = editor.viewport();
     this._viewport.addDecorationCallback(this._onDecorate.bind(this));
-    this._document = viewport.document();
+    this._document = editor.document();
     this._document.addReplaceCallback(this._onReplace.bind(this));
     this._rangeDecorator = new LineDecorator('selection.range');
     this._focusDecorator = new LineDecorator('selection.focus');
@@ -256,7 +257,7 @@ export class Selection extends EventEmitter {
    */
   moveWordLeft() {
     return this._operation(range => {
-      let offset = Tokenizer.leftBoundary(this._document, range.focus - 1);
+      let offset = Tokenizer.leftBoundary(this._document, this._editor.tokenizer(), range.focus - 1);
       return {id: range.id, upDownX: -1, anchor: offset, focus: offset};
     });
   }
@@ -266,7 +267,7 @@ export class Selection extends EventEmitter {
    */
   moveWordRight() {
     return this._operation(range => {
-      let offset = Tokenizer.rightBoundary(this._document, range.focus);
+      let offset = Tokenizer.rightBoundary(this._document, this._editor.tokenizer(), range.focus);
       return {id: range.id, upDownX: -1, anchor: offset, focus: offset};
     });
   }
@@ -380,7 +381,7 @@ export class Selection extends EventEmitter {
    */
   selectWordLeft() {
     return this._operation(range => {
-      return {id: range.id, upDownX: -1, anchor: range.anchor, focus: Tokenizer.leftBoundary(this._document, range.focus - 1)};
+      return {id: range.id, upDownX: -1, anchor: range.anchor, focus: Tokenizer.leftBoundary(this._document, this._editor.tokenizer(), range.focus - 1)};
     });
   }
 
@@ -402,11 +403,11 @@ export class Selection extends EventEmitter {
           // Gravitate towards word selection in borderline cases for collapsed cursors.
           if (offset > 0 && tokenizer.isWordChar(this._document.iterator(offset - 1).current))
             --offset;
-          let {from, to} = Tokenizer.characterGroupRange(this._document, offset);
+          let {from, to} = Tokenizer.characterGroupRange(this._document, this._editor.tokenizer(), offset);
           ranges.push({id: range.id, anchor: from, focus: to, upDownX: range.upDownX});
         } else {
-          let anchor = Tokenizer.leftBoundary(this._document, Math.min(range.anchor, range.focus));
-          let focus = Tokenizer.rightBoundary(this._document, Math.max(range.anchor, range.focus) - 1);
+          let anchor = Tokenizer.leftBoundary(this._document, this._editor.tokenizer(), Math.min(range.anchor, range.focus));
+          let focus = Tokenizer.rightBoundary(this._document, this._editor.tokenizer(), Math.max(range.anchor, range.focus) - 1);
           ranges.push({id: range.id, anchor, focus, upDownX: range.upDownX});
         }
       }
@@ -441,7 +442,7 @@ export class Selection extends EventEmitter {
       }
       this._nextOccurenceSearchOffset = it.offset + this._nextOccurenceText.length;
       if (this._nextOccurenceGroupOnly) {
-        let range = Tokenizer.characterGroupRange(this._document, it.offset);
+        let range = Tokenizer.characterGroupRange(this._document, this._editor.tokenizer(), it.offset);
         if (range.from !== it.offset || range.to !== it.offset + this._nextOccurenceText.length)
           continue;
       }
@@ -462,7 +463,7 @@ export class Selection extends EventEmitter {
    */
   selectWordRight() {
     return this._operation(range => {
-      return {id: range.id, upDownX: -1, anchor: range.anchor, focus: Tokenizer.rightBoundary(this._document, range.focus)};
+      return {id: range.id, upDownX: -1, anchor: range.anchor, focus: Tokenizer.rightBoundary(this._document, this._editor.tokenizer(), range.focus)};
     });
   }
 

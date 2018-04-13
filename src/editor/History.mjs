@@ -2,12 +2,11 @@ import { Selection } from './Selection.mjs';
 
 export class History {
   /**
-   * @param {!Document} document
-   * @param {!Selection} selection
+   * @param {!Editor} document
    */
-  constructor(document, selection) {
-    this._document = document;
-    this._selection = selection;
+  constructor(editor) {
+    this._document = editor.document();
+    this._selection = editor.selection();
     this._document.addReplaceCallback(this._onReplace.bind(this));
 
     this._changes = [];

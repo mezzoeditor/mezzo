@@ -1,10 +1,10 @@
 import { Document } from '../core/Document.mjs';
 import { Decorator } from '../core/Decorator.mjs';
-import { Selection } from '../plugins/Selection.mjs';
-import { History } from '../plugins/History.mjs';
+import { Selection } from './Selection.mjs';
+import { History } from './History.mjs';
+import { Editing } from './Editing.mjs';
+import { Search } from './Search.mjs';
 import { SelectedWordHighlighter } from '../plugins/SelectedWordHighlighter.mjs';
-import { Editing } from '../plugins/Editing.mjs';
-import { Search } from '../plugins/Search.mjs';
 import { SmartBraces } from '../plugins/SmartBraces.mjs';
 import { BlockIndentation } from '../plugins/BlockIndentation.mjs';
 import { DefaultHighlighter } from '../default/DefaultHighlighter.mjs';
@@ -20,24 +20,25 @@ export class Editor extends EventEmitter {
     super();
     this._handles = new Decorator(true /* createHandles */);
     this._document = new Document();
-    this._document.setTokenizer(new DefaultTokenizer());
     this._document.addReplaceCallback(this._onReplace.bind(this));
 
     this._setupScheduler();
 
     this._viewport = new Viewport(this._document, measurer);
 
-    this._selection = new Selection(this._viewport);
-    this._search = new Search(this._viewport, this._selection);
-    this.addIdleCallback(() => this._search.searchChunk());
-    this._history = new History(this._document, this._selection);
-    this._editing = new Editing(this._document, this._selection, this._history);
-    this._selectedWordHighlighter = new SelectedWordHighlighter(this._viewport, this._selection);
-    this._smartBraces = new SmartBraces(this._document, this._editing);
-    this._blockIndentation = new BlockIndentation(this._document, this._editing);
-
+    this._tokenizer = null;
+    this.setTokenizer(new DefaultTokenizer());
     this._highlighter = null;
     this.setHighlighter(new DefaultHighlighter());
+
+    this._selection = new Selection(this);
+    this._search = new Search(this);
+    this.addIdleCallback(() => this._search.searchChunk());
+    this._history = new History(this);
+    this._editing = new Editing(this);
+    this._selectedWordHighlighter = new SelectedWordHighlighter(this);
+    this._smartBraces = new SmartBraces(this);
+    this._blockIndentation = new BlockIndentation(this);
   }
 
   invalidate() {
@@ -47,6 +48,20 @@ export class Editor extends EventEmitter {
   reset(text) {
     this._document.reset(text);
     this._history.reset();
+  }
+
+  /**
+   * @return {?Tokenizer}
+   */
+  tokenizer() {
+    return this._tokenizer;
+  }
+
+  /**
+   * @param {?Tokenizer} tokenizer
+   */
+  setTokenizer(tokenizer) {
+    this._tokenizer = tokenizer;
   }
 
   /**

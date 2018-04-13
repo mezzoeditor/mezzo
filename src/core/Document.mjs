@@ -96,20 +96,6 @@ export class Document extends EventEmitter {
   }
 
   /**
-   * @return {?Tokenizer}
-   */
-  tokenizer() {
-    return this._tokenizer;
-  }
-
-  /**
-   * @param {?Tokenizer} tokenizer
-   */
-  setTokenizer(tokenizer) {
-    this._tokenizer = tokenizer;
-  }
-
-  /**
    * Starts an operation named |operation|. Any replacements made during this
    * operation will be atomically dispatched after endOperation() call.
    *

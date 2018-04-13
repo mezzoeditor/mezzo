@@ -29,14 +29,12 @@ export class Tokenizer {
 
 /**
  * @param {!Document} document
+ * @param {!Tokenizer} tokenizer
  * @param {number} offset
  * @return {number}
  */
-Tokenizer.leftBoundary = function(document, offset) {
+Tokenizer.leftBoundary = function(document, tokenizer, offset) {
   // TODO: this is not aware of code points.
-  let tokenizer = document.tokenizer();
-  if (!tokenizer)
-    return offset;
   let it = document.iterator(offset);
   if (it.current === '\n')
     return offset;
@@ -58,14 +56,12 @@ Tokenizer.leftBoundary = function(document, offset) {
 
 /**
  * @param {!Document} document
+ * @param {!Tokenizer} tokenizer
  * @param {number} offset
  * @return {number}
  */
-Tokenizer.rightBoundary = function(document, offset) {
+Tokenizer.rightBoundary = function(document, tokenizer, offset) {
   // TODO: this is not aware of code points.
-  let tokenizer = document.tokenizer();
-  if (!tokenizer)
-    return offset;
   let it = document.iterator(offset);
   if (it.current === '\n')
     return offset + 1;
@@ -87,13 +83,11 @@ Tokenizer.rightBoundary = function(document, offset) {
 
 /**
  * @param {!Document} document
+ * @param {!Tokenizer} tokenizer
  * @param {number} offset
  * @return {!Range}
  */
-Tokenizer.characterGroupRange = function(document, offset) {
-  let tokenizer = document.tokenizer();
-  if (!tokenizer)
-    return {from: offset, to: offset};
+Tokenizer.characterGroupRange = function(document, tokenizer, offset) {
   let from = document.iterator(offset);
   if (from.current === '\n')
     from.prev();
@@ -115,18 +109,16 @@ Tokenizer.characterGroupRange = function(document, offset) {
 
 /**
  * @param {!Document} document
+ * @param {!Tokenizer} tokenizer
  * @param {!Range} range
  * @return {boolean}
  */
-Tokenizer.isWord = function(document, range) {
-  let tokenizer = document.tokenizer();
-  if (!tokenizer)
-    return false;
+Tokenizer.isWord = function(document, tokenizer, range) {
   if (range.from >= range.to)
     return false;
-  if (Tokenizer.leftBoundary(document, range.from) !== range.from)
+  if (Tokenizer.leftBoundary(document, tokenizer, range.from) !== range.from)
     return false;
-  if (Tokenizer.rightBoundary(document, range.to - 1) !== range.to)
+  if (Tokenizer.rightBoundary(document, tokenizer, range.to - 1) !== range.to)
     return false;
   let it = document.iterator(range.from, range.from, range.to);
   for (it; !it.outOfBounds(); it.next()) {

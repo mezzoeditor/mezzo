@@ -1,18 +1,18 @@
 import { Start } from '../core/Anchor.mjs';
 import { TextDecorator } from '../core/Decorator.mjs';
-import { Tokenizer } from "../core/Tokenizer.mjs";
-import { Selection } from "../plugins/Selection.mjs";
+import { Tokenizer } from "../editor/Tokenizer.mjs";
+import { Selection } from "../editor/Selection.mjs";
 
 export class SelectedWordHighlighter {
   /**
-   * @param {!Viewport} viewport
-   * @param {!Selection} selection
+   * @param {!Editor} editor
    */
-  constructor(viewport, selection) {
-    this._viewport = viewport;
-    this._document = viewport.document();
+  constructor(editor) {
+    this._editor = editor;
+    this._viewport = editor.viewport();
+    this._document = editor.document();
     this._viewport.addDecorationCallback(this._onDecorate.bind(this));
-    this._selection = selection;
+    this._selection = editor.selection();
     this._selection.on(Selection.Events.Changed, this._onSelectionChanged.bind(this));
     this._selectedWord = '';
     this._selectedWordRange = null;
@@ -40,7 +40,7 @@ export class SelectedWordHighlighter {
     let endPosition = this._document.offsetToPosition(selectionRange.to);
     if (startPosition.line !== endPosition.line)
       return;
-    if (!Tokenizer.isWord(this._document, selectionRange))
+    if (!Tokenizer.isWord(this._document, this._editor.tokenizer(), selectionRange))
       return;
     this._selectedWord = this._document.content(selectionRange.from, selectionRange.to);
     this._selectedWordRange = selectionRange;
@@ -51,7 +51,7 @@ export class SelectedWordHighlighter {
    * @return {?Viewpor.DecorationResult}
    */
   _onDecorate(visibleContent) {
-    let tokenizer = this._document.tokenizer();
+    let tokenizer = this._editor.tokenizer();
     if (!this._selectedWord || !tokenizer)
       return null;
     const decorator = new TextDecorator();

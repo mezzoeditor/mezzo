@@ -1,12 +1,11 @@
 export class BlockIndentation {
   /**
-   * @param {!Document} document
-   * @param {!Editing} editing
+   * @param {!Editor} editor
    */
-  constructor(document, editing) {
-    this._editing = editing;
-    this._document = document;
-    editing.addEditingOverride(this._onEdit.bind(this));
+  constructor(editor) {
+    this._editing = editor.editing();
+    this._document = editor.document();
+    this._editing.addEditingOverride(this._onEdit.bind(this));
   }
 
   /**

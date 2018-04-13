@@ -1,8 +1,8 @@
 import { Editor } from '../src/editor/Editor.mjs';
+import { Selection } from '../src/editor/Selection.mjs';
 import { Renderer } from '../src/web/Renderer.mjs';
 import { JSHighlighter } from '../src/javascript/JSHighlighter.mjs';
 import { DefaultHighlighter } from '../src/default/DefaultHighlighter.mjs';
-import { Selection } from '../src/plugins/Selection.mjs';
 
 export class EditorComponent extends HTMLElement {
   constructor() {
