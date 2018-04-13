@@ -146,6 +146,8 @@ export class Viewport extends EventEmitter {
     this._frozen = false;
     this._decorateCallbacks = [];
 
+    this._measurer = null;
+
     this.setMeasurer(measurer);
   }
 
@@ -160,6 +162,9 @@ export class Viewport extends EventEmitter {
    * @param {!Measurer} measurer
    */
   setMeasurer(measurer) {
+    if (this._measurer === measurer)
+      return;
+    this._measurer = measurer;
     this._lineHeight = measurer.lineHeight();
     this._defaultWidth = measurer.defaultWidth();
     let measure = s => measurer.measureString(s) / this._defaultWidth;

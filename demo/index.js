@@ -1,6 +1,7 @@
 import { Start } from "../src/core/Anchor.mjs";
 import { TextDecorator } from "../src/core/Decorator.mjs";
-import { WebEditor } from "../src/web/WebEditor.mjs";
+import { Renderer } from "../src/web/Renderer.mjs";
+import { Editor } from "../src/editor/Editor.mjs";
 import { Random } from "../src/core/Random.mjs";
 import { JSHighlighter } from "../src/javascript/JSHighlighter.mjs";
 import { DefaultHighlighter } from "../src/default/DefaultHighlighter.mjs";
@@ -25,14 +26,14 @@ const jsHighlighter = new JSHighlighter();
 const defaultHighlighter = new DefaultHighlighter();
 let rangeHandle;
 
-function addExamples(editor) {
+function addExamples(renderer) {
   const select = document.querySelector('.examples');
   for (const example of examples) {
     const option = document.createElement('option');
     option.textContent = example;
     select.appendChild(option);
   }
-  select.addEventListener('input', () => setupEditor(editor, select.value), false);
+  select.addEventListener('input', () => setupEditor(renderer, select.value), false);
 }
 
 function addHighlights(editor) {
@@ -49,7 +50,8 @@ function addHighlights(editor) {
   select.addEventListener('input', () => tokenHighlighter.setToken(select.value), false);
 }
 
-function addSearch(editor) {
+function addSearch(renderer) {
+  const editor = renderer.editor();
   const input = document.querySelector('.search');
   input.addEventListener('input', event => {
     if (!input.value)
@@ -67,7 +69,7 @@ function addSearch(editor) {
       event.stopPropagation();
     } else if (event.key === 'Escape') {
       editor.findCancel();
-      editor.focus();
+      renderer.focus();
       input.value = '';
       event.preventDefault();
       event.stopPropagation();
@@ -102,7 +104,7 @@ function addSearch(editor) {
 function addRangeHandle(editor) {
   const rangeText = document.querySelector('.range');
   rangeText.addEventListener('click', updateRangeHandle.bind(null, editor));
-  editor.addDecorationCallback(() => {
+  editor.viewport().addDecorationCallback(() => {
     if (!rangeHandle || rangeHandle.removed())
       return {};
     let decorator = new TextDecorator();
@@ -127,22 +129,24 @@ function updateRangeHandle(editor) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  const editor = new WebEditor(document);
-  addExamples(editor);
+  const renderer = new Renderer(document);
+  const editor = new Editor(renderer.measurer());
+  renderer.setEditor(editor);
+  addExamples(renderer);
   addHighlights(editor);
-  addSearch(editor);
+  addSearch(renderer);
   document.querySelector('.ismonospace').addEventListener('change', event => {
-    editor.setUseMonospaceFont(event.target.checked);
+    renderer.setUseMonospaceFont(event.target.checked);
   }, false);
   addRangeHandle(editor);
 
-  editor.element().classList.add('editor');
-  document.body.appendChild(editor.element());
-  editor.resize();
-  window.onresize = () => editor.resize();
-  window.editor = editor;
+  renderer.element().classList.add('editor');
+  document.body.appendChild(renderer.element());
+  renderer.resize();
+  window.onresize = () => renderer.resize();
+  window.editor = renderer;
 
-  setupEditor(editor, examples[0]);
+  setupEditor(renderer, examples[0]);
 });
 
 class TokenHighlighter {
@@ -180,7 +184,8 @@ class TokenHighlighter {
   }
 }
 
-async function setupEditor(editor, exampleName) {
+async function setupEditor(renderer, exampleName) {
+  const editor = renderer.editor();
   const response = await fetch(exampleName);
   const text = await response.text();
 
@@ -198,7 +203,7 @@ async function setupEditor(editor, exampleName) {
   //editor.reset('abc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\n');
   //editor.reset('abc\nabc\nabc\nabc\n');
   //editor.reset('abc\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nabc');
-  editor.focus();
+  renderer.focus();
 
   let ranges = [];
   for (let i = 0; i < 20; i++) {

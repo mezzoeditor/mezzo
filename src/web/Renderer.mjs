@@ -2,6 +2,9 @@ import { RoundMode, Metrics } from '../core/Metrics.mjs';
 import { Viewport, Measurer } from '../core/Viewport.mjs';
 import { trace } from '../core/Trace.mjs';
 import { Document } from '../core/Document.mjs';
+import { DefaultTheme } from '../default/DefaultTheme.mjs';
+import { Tokenizer } from '../core/Tokenizer.mjs';
+import { Selection } from '../plugins/Selection.mjs';
 
 /**
  * @implements Measurer
@@ -47,6 +50,7 @@ class ContextBasedMeasurer {
 const MIN_THUMB_SIZE = 30;
 const GUTTER_PADDING_LEFT_RIGHT = 4;
 const SCROLLBAR_WIDTH = 15;
+const isMac = navigator.platform.toUpperCase().indexOf('MAC') !== -1;
 
 const MouseDownStates = {
   VSCROLL_DRAG: 'VSCROLL_DRAG',
@@ -72,10 +76,8 @@ function roundRect(ctx, x, y, width, height, radius) {
 export class Renderer {
   /**
    * @param {!Document} domDocument
-   * @param {!Document} document
-   * @param {!Theme} theme
    */
-  constructor(domDocument, document, theme) {
+  constructor(domDocument) {
     this._element = domDocument.createElement('div');
     this._element.style.cssText = `
       position: relative;
@@ -99,24 +101,21 @@ export class Renderer {
       top: 0;
       left: 0;
     `;
+    this._input.addEventListener('input', this._onInputInput.bind(this), false);
+    this._input.addEventListener('keydown', this._onInputKeydown.bind(this), false);
+
     this._element.appendChild(this._input);
 
-    this._theme = theme;
+    this._theme = DefaultTheme;
     this._monospace = true;
 
     this._animationFrameId = 0;
-    this._beforeFrameCallbacks = [];
     this._rendering = false;
 
     this._cssWidth = 0;
     this._cssHeight = 0;
     this._ratio = this._getRatio();
     this._measurer = new ContextBasedMeasurer(this._canvas.getContext('2d'), this._monospace);
-
-    this._document = document;
-    this._document.on(Document.Events.Invalidate, this.invalidate.bind(this));
-    this._viewport = new Viewport(document, this._measurer);
-    this._viewport.on(Viewport.Events.Reveal, this.invalidate.bind(this));
 
     this._render = this._render.bind(this);
 
@@ -157,29 +156,359 @@ export class Renderer {
     this._mouseDownState = {
       name: null,
     };
+
+    this._setupSelection();
+    this._setupEventListeners();
+    this._keymap = new Map();
+
+    this._installKeyMap({
+      'Up': 'selection.move.up',
+      'Down': 'selection.move.down',
+      'Left': 'selection.move.left',
+      'Right': 'selection.move.right',
+      'Alt-Left': 'selection.move.word.left',
+      'Alt-Right': 'selection.move.word.right',
+      'Shift-Up': 'selection.select.up',
+      'Shift-Down': 'selection.select.down',
+      'Shift-Left': 'selection.select.left',
+      'Shift-Right': 'selection.select.right',
+      'Alt-Shift-Left': 'selection.select.word.left',
+      'Alt-Shift-Right': 'selection.select.word.right',
+      'Home': 'selection.move.linestart',
+      'Home-Shift': 'selection.select.linestart',
+      'End': 'selection.move.lineend',
+      'End-Shift': 'selection.select.lineend',
+      'Cmd/Ctrl-a': 'selection.select.all',
+      'Cmd-Left': 'selection.move.linestart',
+      'Cmd-Right': 'selection.move.lineend',
+      'Cmd/Ctrl-d': 'selection.addnext',
+      'Cmd-Up': 'selection.move.documentstart',
+      'Cmd-Down': 'selection.move.documentend',
+      'Cmd-Shift-Up': 'selection.select.documentstart',
+      'Cmd-Shift-Down': 'selection.select.documentend',
+      'Shift-Cmd-Left': 'selection.select.linestart',
+      'Shift-Cmd-Right': 'selection.select.lineend',
+      'Escape': 'selection.collapse',
+
+      'Enter': 'editing.newline',
+      'Backspace': 'editing.backspace',
+      'Delete': 'editing.delete',
+      'Alt-Backspace': 'editing.backspace.word',
+      'Cmd-Backspace': 'editing.backspace.line',
+      'Tab': 'editing.indent',
+      'Shift-Tab': 'editing.unindent',
+
+      'Cmd/Ctrl-z': 'history.undo',
+      'Cmd/Ctrl-Shift-z': 'history.redo',
+    });
+  }
+
+  measurer() {
+    return this._measurer;
+  }
+
+  setEditor(editor) {
+    if (this._editor)
+      throw new Error('NOT IMPLEMENTED: tear down previous editor');
+    this._editor = editor;
+    this._editor.document().on(Document.Events.Invalidate, this.invalidate.bind(this));
+    this._editor.viewport().on(Viewport.Events.Reveal, this.invalidate.bind(this));
+    this._editor.viewport().setMeasurer(this._measurer);
+    this._editor.selection().on(Selection.Events.Changed, () => this.raf());
+  }
+
+  editor() {
+    return this._editor;
+  }
+
+  _onInputInput(event) {
+    if (!this._editor)
+      return;
+    if (!this._input.value)
+      return;
+    this._editor.editing().type(this._input.value);
+    this._revealSelection(true);
+    this._revealCursors();
+    this._input.value = '';
+  }
+
+  _onInputKeydown(event) {
+    if (!this._editor)
+      return;
+    let handled = false;
+    let command = this._keymap.get(eventToHash(event));
+    if (command)
+      handled = this._performCommand(command);
+    if (handled) {
+      this._revealCursors();
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  }
+
+  _installKeyMap(keyMap) {
+    this._keymap.clear();
+    for (let key in keyMap) {
+      let value = keyMap[key];
+      this._keymap.set(stringToHash(key), value);
+    }
+  }
+
+  _performCommand(command) {
+    if (!this._editor)
+      return false;
+    switch (command) {
+      case 'history.undo':
+        return this._editor.history().undo() || true;
+      case 'history.redo':
+        return this._editor.history().redo() || true;
+
+      case 'editing.backspace':
+        return this._revealSelection(this._editor.editing().deleteBefore());
+      case 'editing.backspace.word':
+        return this._revealSelection(this._editor.editing().deleteWordBefore());
+      case 'editing.backspace.line':
+        return this._revealSelection(this._editor.editing().deleteLineBefore());
+      case 'editing.delete':
+        return this._revealSelection(this._editor.editing().deleteAfter());
+      case 'editing.newline':
+        return this._revealSelection(this._editor.editing().insertNewLine());
+      case 'editing.indent':
+        return this._revealSelection(this._editor.editing().insertIndent());
+      case 'editing.unindent':
+        return this._revealSelection(this._editor.editing().removeIndent());
+
+      case 'selection.addnext':
+        return this._revealSelection(this._editor.selection().addNextOccurence(), true /* center */) || true;
+      case 'selection.move.up':
+        return this._revealSelection(this._editor.selection().moveUp());
+      case 'selection.move.down':
+        return this._revealSelection(this._editor.selection().moveDown());
+      case 'selection.move.documentstart':
+        return this._revealSelection(this._editor.selection().moveDocumentStart());
+      case 'selection.move.documentend':
+        return this._revealSelection(this._editor.selection().moveDocumentEnd());
+      case 'selection.move.left':
+        return this._revealSelection(this._editor.selection().moveLeft());
+      case 'selection.move.right':
+        return this._revealSelection(this._editor.selection().moveRight());
+      case 'selection.move.word.left':
+        return this._revealSelection(this._editor.selection().moveWordLeft());
+      case 'selection.move.word.right':
+        return this._revealSelection(this._editor.selection().moveWordRight());
+      case 'selection.move.linestart':
+        return this._revealSelection(this._editor.selection().moveLineStart());
+      case 'selection.move.lineend':
+        return this._revealSelection(this._editor.selection().moveLineEnd());
+      case 'selection.select.up':
+        return this._revealSelection(this._editor.selection().selectUp());
+      case 'selection.select.down':
+        return this._revealSelection(this._editor.selection().selectDown());
+      case 'selection.select.documentstart':
+        return this._revealSelection(this._editor.selection().selectDocumentStart());
+      case 'selection.select.documentend':
+        return this._revealSelection(this._editor.selection().selectDocumentEnd());
+      case 'selection.select.left':
+        return this._revealSelection(this._editor.selection().selectLeft());
+      case 'selection.select.right':
+        return this._revealSelection(this._editor.selection().selectRight());
+      case 'selection.select.word.left':
+        return this._revealSelection(this._editor.selection().selectWordLeft());
+      case 'selection.select.word.right':
+        return this._revealSelection(this._editor.selection().selectWordRight());
+      case 'selection.select.linestart':
+        return this._revealSelection(this._editor.selection().selectLineStart());
+      case 'selection.select.lineend':
+        return this._revealSelection(this._editor.selection().selectLineEnd());
+      case 'selection.select.all':
+        this._editor.selection().selectAll();
+        return this._revealSelection(true);
+      case 'selection.collapse':
+        return this._revealSelection(this._editor.selection().collapse(), true /* center */);
+    }
+    return false;
+  }
+
+  _setupEventListeners() {
+    this._element.addEventListener('paste', event => {
+      if (!this._editor)
+        return;
+      let data = event.clipboardData;
+      if (data.types.indexOf('text/plain') === -1)
+        return;
+      this._editor.editing().paste(data.getData('text/plain'));
+      this._revealSelection(true);
+      this._revealCursors();
+      event.preventDefault();
+      event.stopPropagation();
+    });
+    this._element.addEventListener('cut', event => {
+      if (!this._editor)
+        return;
+      const text = this._editor.selection().selectedText();
+      if (!text)
+        return;
+      event.clipboardData.setData('text/plain', text);
+      this._editor.editing().deleteBefore();
+      this._revealSelection(true);
+      this._revealCursors();
+      event.preventDefault();
+      event.stopPropagation();
+    });
+
+    let mouseRangeStartOffset = null;
+    let mouseRangeEndOffset = null;
+    let lastMouseEvent = null;
+    this._element.addEventListener('mousedown', event => {
+      if (!this._editor)
+        return;
+      lastMouseEvent = event;
+      let offset = this._mouseEventToTextOffset(event);
+      if (event.detail === 2) {
+        let range = Tokenizer.characterGroupRange(this._editor.document(), offset);
+        mouseRangeStartOffset = range.from;
+        mouseRangeEndOffset = range.to;
+        this._editor.selection().setLastRange({from: mouseRangeStartOffset, to: mouseRangeEndOffset});
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+      if (event.detail > 2) {
+        let position = this._editor.document().offsetToPosition(offset);
+        let from = this._editor.document().positionToOffset({
+          line: position.line,
+          column: 0
+        });
+        let to = this._editor.document().positionToOffset({
+          line: position.line + 1,
+          column: 0
+        });
+
+        this._editor.selection().setLastRange({from, to});
+        mouseRangeStartOffset = from;
+        mouseRangeEndOffset = to;
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+      if (event.shiftKey) {
+        mouseRangeStartOffset = this._editor.selection().anchor();
+        mouseRangeEndOffset = offset;
+        this._editor.selection().setRanges([{from: mouseRangeStartOffset, to: mouseRangeEndOffset}]);
+      } else if ((isMac && event.metaKey) || (!isMac && event.ctrlKey)) {
+        this._editor.selection().addRange({from: offset, to: offset});
+        mouseRangeStartOffset = offset;
+        mouseRangeEndOffset = offset;
+      } else {
+        this._editor.selection().setRanges([{from: offset, to: offset}]);
+        mouseRangeStartOffset = offset;
+        mouseRangeEndOffset = offset;
+      }
+      event.stopPropagation();
+      event.preventDefault();
+    });
+    this._element.addEventListener('mousemove', event => {
+      if (!this._editor)
+        return;
+      if (mouseRangeStartOffset === null)
+        return;
+      lastMouseEvent = event;
+      let offset = this._mouseEventToTextOffset(event);
+      if (offset <= mouseRangeStartOffset)
+        this._editor.selection().setLastRange({from: mouseRangeEndOffset, to: offset});
+      else if (offset >= mouseRangeEndOffset)
+        this._editor.selection().setLastRange({from: mouseRangeStartOffset, to: offset});
+      else
+        this._editor.selection().setLastRange({from: mouseRangeStartOffset, to: mouseRangeEndOffset});
+      this._revealCursors();
+    });
+    this._element.addEventListener('wheel', event => {
+      if (!this._editor)
+        return;
+      if (mouseRangeStartOffset === null)
+        return;
+      let offset = this._mouseEventToTextOffset(lastMouseEvent);
+      if (offset <= mouseRangeStartOffset)
+        this._editor.selection().setLastRange({from: mouseRangeEndOffset, to: offset});
+      else if (offset >= mouseRangeEndOffset)
+        this._editor.selection().setLastRange({from: mouseRangeStartOffset, to: offset});
+      else
+        this._editor.selection().setLastRange({from: mouseRangeStartOffset, to: mouseRangeEndOffset});
+      this._revealCursors();
+    });
+    this._element.addEventListener('mouseup', event => {
+      mouseRangeStartOffset = null;
+      mouseRangeEndOffset = null;
+    });
+    this._element.addEventListener('copy', event => {
+      if (!this._editor)
+        return;
+      let text = this._editor.selection().selectedText();
+      if (text) {
+        event.clipboardData.setData('text/plain', text);
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    }, false);
+  }
+
+  _setupSelection() {
+    let theme = this._theme;
+    let selectionFocusTheme = theme['selection.focus'];
+    let cursorsVisible = false;
+    let cursorsTimeout;
+    let toggleCursors = () => {
+      cursorsVisible = !cursorsVisible;
+      if (cursorsVisible)
+        theme['selection.focus'] = selectionFocusTheme;
+      else
+        delete theme['selection.focus'];
+      this.invalidate();
+    };
+    this._element.addEventListener('focusin', event => {
+      toggleCursors();
+      cursorsTimeout = window.setInterval(toggleCursors, 500);
+    });
+    this._element.addEventListener('focusout', event => {
+      if (cursorsVisible)
+        toggleCursors();
+      if (cursorsTimeout) {
+        window.clearInterval(cursorsTimeout);
+        cursorsTimeout = null;
+      }
+    });
+    this._revealCursors = () => {
+      if (!cursorsTimeout)
+        return;
+      window.clearInterval(cursorsTimeout);
+      if (!cursorsVisible)
+        toggleCursors();
+      cursorsTimeout = window.setInterval(toggleCursors, 500);
+    };
+    this._revealCursors();
+  }
+
+  _revealSelection(success, center = false) {
+    if (!this._editor)
+      return false;
+    let focus = this._editor.selection().focus();
+    if (success && focus !== null) {
+      let vPadding = center ? this._editor.viewport().height() / 2 : 0;
+      this._editor.viewport().reveal({from: focus, to: focus}, {top: vPadding, bottom: vPadding});
+    }
+    return success;
   }
 
   element() {
     return this._element;
   }
 
-  input() {
-    return this._input;
+  focus() {
+    this._input.focus();
   }
 
   resize() {
-    this.setSize(this._element.clientWidth, this._element.clientHeight);
-  }
-
-  /**
-   * @return {!Viewport}
-   */
-  viewport() {
-    return this._viewport;
-  }
-
-  theme() {
-    return this._theme;
+    this._setSize(this._element.clientWidth, this._element.clientHeight);
   }
 
   _getRatio() {
@@ -197,7 +526,7 @@ export class Renderer {
    * @param {number} cssWidth
    * @param {number} cssHeight
    */
-  setSize(cssWidth, cssHeight) {
+  _setSize(cssWidth, cssHeight) {
     if (this._cssWidth === cssWidth && this._cssHeight === cssHeight)
       return;
     this._ratio = this._getRatio();
@@ -225,18 +554,10 @@ export class Renderer {
   setUseMonospaceFont(monospace) {
     this._monospace = monospace;
     this._measurer = new ContextBasedMeasurer(this._canvas.getContext('2d'), this._monospace);
-    this._viewport.setMeasurer(this._measurer);
-    this.invalidate();
-  }
-
-  addBeforeFrameCallback(callback) {
-    this._beforeFrameCallbacks.push(callback);
-  }
-
-  removeBeforeFrameCallback(callback) {
-    let index = this._beforeFrameCallbacks.indexOf(callback);
-    if (index !== -1)
-      this._beforeFrameCallbacks.splice(index, 1);
+    if (this._editor) {
+      this._editor.viewport().setMeasurer(this._measurer);
+      this.invalidate();
+    }
   }
 
   _mouseEventToCanvas(event) {
@@ -249,24 +570,28 @@ export class Renderer {
   _canvasToTextOffset({x, y}) {
     x -= this._editorRect.x;
     y -= this._editorRect.y;
-    return this._viewport.viewportPointToOffset({x, y}, RoundMode.Round);
+    return this._editor.viewport().viewportPointToOffset({x, y}, RoundMode.Round);
   }
 
   /**
    * @param {!MouseEvent} event
    * @return {number}
    */
-  mouseEventToTextOffset(event) {
+  _mouseEventToTextOffset(event) {
     return this._canvasToTextOffset(this._mouseEventToCanvas(event));
   }
 
   _onScroll(event) {
-    this._viewport.advanceScroll(event.deltaY, event.deltaX);
+    if (!this._editor)
+      return;
+    this._editor.viewport().advanceScroll(event.deltaY, event.deltaX);
     this.invalidate();
     event.preventDefault();
   }
 
   _onMouseDown(event) {
+    if (!this._editor)
+      return;
     const canvasPosition = this._mouseEventToCanvas(event);
     this._lastCoordinates.mouseDown = canvasPosition;
 
@@ -274,7 +599,7 @@ export class Renderer {
     if (this._vScrollbar.hovered) {
       this._vScrollbar.dragged = true;
       this._mouseDownState.name = MouseDownStates.VSCROLL_DRAG;
-      this._mouseDownState.insideThumb = this._viewport.scrollTop() * this._vScrollbar.ratio - (canvasPosition.y - this._vScrollbar.rect.y);
+      this._mouseDownState.insideThumb = this._editor.viewport().scrollTop() * this._vScrollbar.ratio - (canvasPosition.y - this._vScrollbar.rect.y);
       this.raf();
       event.stopPropagation();
       event.preventDefault();
@@ -284,7 +609,7 @@ export class Renderer {
     if (this._hScrollbar.hovered) {
       this._hScrollbar.dragged = true;
       this._mouseDownState.name = MouseDownStates.HSCROLL_DRAG;
-      this._mouseDownState.insideThumb = this._viewport.scrollLeft() * this._hScrollbar.ratio - (canvasPosition.x - this._hScrollbar.rect.x);
+      this._mouseDownState.insideThumb = this._editor.viewport().scrollLeft() * this._hScrollbar.ratio - (canvasPosition.x - this._hScrollbar.rect.x);
       this.raf();
       event.stopPropagation();
       event.preventDefault();
@@ -293,6 +618,8 @@ export class Renderer {
   }
 
   _onMouseMove(event) {
+    if (!this._editor)
+      return;
     const canvasPosition = this._mouseEventToCanvas(event);
     this._lastCoordinates.mouseMove = canvasPosition;
 
@@ -307,11 +634,11 @@ export class Renderer {
       this.raf();
     } else if (this._mouseDownState.name === MouseDownStates.VSCROLL_DRAG) {
       let scrollbarOffset = canvasPosition.y - this._vScrollbar.rect.y + this._mouseDownState.insideThumb;
-      this._viewport.setScrollTop(scrollbarOffset / this._vScrollbar.ratio);
+      this._editor.viewport().setScrollTop(scrollbarOffset / this._vScrollbar.ratio);
       this.invalidate();
     } else if (this._mouseDownState.name === MouseDownStates.HSCROLL_DRAG) {
       let scrollbarOffset = canvasPosition.x - this._hScrollbar.rect.x + this._mouseDownState.insideThumb;
-      this._viewport.setScrollLeft(scrollbarOffset / this._hScrollbar.ratio);
+      this._editor.viewport().setScrollLeft(scrollbarOffset / this._hScrollbar.ratio);
       this.invalidate();
     }
   }
@@ -341,10 +668,10 @@ export class Renderer {
   }
 
   invalidate() {
-    if (!this._cssWidth || !this._cssHeight || this._rendering)
+    if (!this._editor || !this._cssWidth || !this._cssHeight || this._rendering)
       return;
     // To properly handle input events, we have to update rects synchronously.
-    const gutterLength = (Math.max(this._document.lineCount(), 100) + '').length;
+    const gutterLength = (Math.max(this._editor.document().lineCount(), 100) + '').length;
     const gutterWidth = this._measurer.width9 * gutterLength;
     this._gutterRect.width = gutterWidth + 2 * GUTTER_PADDING_LEFT_RIGHT;
     this._gutterRect.height = this._cssHeight;
@@ -353,42 +680,43 @@ export class Renderer {
     this._editorRect.width = this._cssWidth - this._gutterRect.width - SCROLLBAR_WIDTH;
     this._editorRect.height = this._cssHeight;
 
-    this._viewport.setSize(this._editorRect.width, this._editorRect.height);
-    this._viewport.setPadding({
+    const viewport = this._editor.viewport();
+    viewport.setSize(this._editorRect.width, this._editorRect.height);
+    viewport.setPadding({
       left: 4,
       right: 4,
       top: 4,
       bottom: this._editorRect.height - this._measurer.lineHeight() - 4
     });
 
-    this._vScrollbar.ratio = this._viewport.height() / (this._viewport.maxScrollTop() + this._viewport.height());
+    this._vScrollbar.ratio = viewport.height() / (viewport.maxScrollTop() + viewport.height());
     this._vScrollbar.rect.x = this._cssWidth - SCROLLBAR_WIDTH;
     this._vScrollbar.rect.y = 0;
     this._vScrollbar.rect.width = SCROLLBAR_WIDTH;
     this._vScrollbar.rect.height = this._editorRect.height;
     this._vScrollbar.thumbRect.x = this._vScrollbar.rect.x;
-    this._vScrollbar.thumbRect.y = this._viewport.scrollTop() * this._vScrollbar.ratio;
+    this._vScrollbar.thumbRect.y = viewport.scrollTop() * this._vScrollbar.ratio;
     this._vScrollbar.thumbRect.width = this._vScrollbar.rect.width;
-    this._vScrollbar.thumbRect.height = this._viewport.height() * this._vScrollbar.ratio;
+    this._vScrollbar.thumbRect.height = viewport.height() * this._vScrollbar.ratio;
     if (this._vScrollbar.thumbRect.height < MIN_THUMB_SIZE) {
       let delta = MIN_THUMB_SIZE - this._vScrollbar.thumbRect.height;
-      let percent = this._viewport.maxScrollTop() ? this._viewport.scrollTop() / this._viewport.maxScrollTop() : 1;
+      let percent = viewport.maxScrollTop() ? viewport.scrollTop() / viewport.maxScrollTop() : 1;
       this._vScrollbar.thumbRect.y -= delta * percent;
       this._vScrollbar.thumbRect.height = MIN_THUMB_SIZE;
     }
 
-    this._hScrollbar.ratio = this._viewport.width() / (this._viewport.maxScrollLeft() + this._viewport.width());
+    this._hScrollbar.ratio = viewport.width() / (viewport.maxScrollLeft() + viewport.width());
     this._hScrollbar.rect.x = this._gutterRect.width;
     this._hScrollbar.rect.y = this._cssHeight - SCROLLBAR_WIDTH;
     this._hScrollbar.rect.width = this._editorRect.width;
-    this._hScrollbar.rect.height = this._viewport.maxScrollLeft() > 0 ? SCROLLBAR_WIDTH : 0;
-    this._hScrollbar.thumbRect.x = this._hScrollbar.rect.x + this._viewport.scrollLeft() * this._hScrollbar.ratio;
+    this._hScrollbar.rect.height = viewport.maxScrollLeft() > 0 ? SCROLLBAR_WIDTH : 0;
+    this._hScrollbar.thumbRect.x = this._hScrollbar.rect.x + viewport.scrollLeft() * this._hScrollbar.ratio;
     this._hScrollbar.thumbRect.y = this._hScrollbar.rect.y;
-    this._hScrollbar.thumbRect.width = this._viewport.width() * this._hScrollbar.ratio;
+    this._hScrollbar.thumbRect.width = viewport.width() * this._hScrollbar.ratio;
     this._hScrollbar.thumbRect.height = this._hScrollbar.rect.height;
     if (this._hScrollbar.thumbRect.width < MIN_THUMB_SIZE) {
       let delta = MIN_THUMB_SIZE - this._hScrollbar.thumbRect.width;
-      let percent = this._viewport.maxScrollLeft() ? this._viewport.scrollLeft() / this._viewport.maxScrollLeft() : 1;
+      let percent = viewport.maxScrollLeft() ? viewport.scrollLeft() / viewport.maxScrollLeft() : 1;
       this._hScrollbar.thumbRect.x -= delta * percent;
       this._hScrollbar.thumbRect.width = MIN_THUMB_SIZE;
     }
@@ -402,13 +730,10 @@ export class Renderer {
   }
 
   _render() {
+    if (!this._editor)
+      return;
     trace.beginGroup('render');
     this._rendering = true;
-
-    trace.begin('beforeframe');
-    for (let callback of this._beforeFrameCallbacks)
-      callback();
-    trace.end('beforeframe');
 
     this._animationFrameId = 0;
 
@@ -418,7 +743,7 @@ export class Renderer {
     ctx.lineWidth = 1 / this._ratio;
 
     trace.begin('frame');
-    const {text, background, scrollbar, lines, paddingLeft, paddingRight} = this._viewport.decorate();
+    const {text, background, scrollbar, lines, paddingLeft, paddingRight} = this._editor.viewport().decorate();
     trace.end('frame');
 
     trace.begin('gutter');
@@ -571,3 +896,43 @@ export class Renderer {
     }
   }
 }
+
+function eventToHash(event) {
+  let hash = [];
+  if (event.ctrlKey)
+    hash.push('CTRL');
+  if (event.metaKey)
+    hash.push('CMD');
+  if (event.altKey)
+    hash.push('ALT');
+  if (event.shiftKey)
+    hash.push('SHIFT');
+  let key = event.key.toUpperCase();
+  if (key.startsWith('ARROW'))
+    hash.push(key.substring('ARROW'.length));
+  else if (key !== 'META' && key !== 'CONTROL' && key !== 'ALT' && key !== 'SHIFT')
+    hash.push(key);
+  return hash.join('-');
+}
+
+function stringToHash(eventString) {
+  let tokens = eventString.toUpperCase().split('-');
+  let ctrlOrCmd = tokens.includes('CMD/CTRL');
+  let ctrl = tokens.includes('CTRL') || (ctrlOrCmd && !isMac);
+  let cmd = tokens.includes('CMD') || (ctrlOrCmd && isMac);
+
+  let hash = [];
+  if (ctrl)
+    hash.push('CTRL');
+  if (cmd)
+    hash.push('CMD');
+  if (tokens.includes('ALT'))
+    hash.push('ALT');
+  if (tokens.includes('SHIFT'))
+    hash.push('SHIFT');
+  tokens = tokens.filter(token => token !== 'ALT' && token !== 'CTRL' && token !== 'SHIFT' && token !== 'CMD' && token !== 'CMD/CTRL');
+  tokens.sort();
+  hash.push(...tokens);
+  return hash.join('-');
+}
+

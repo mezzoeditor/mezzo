@@ -1,4 +1,5 @@
-import { WebEditor } from '../src/web/WebEditor.mjs';
+import { Editor } from '../src/editor/Editor.mjs';
+import { Renderer } from '../src/web/Renderer.mjs';
 import { JSHighlighter } from '../src/javascript/JSHighlighter.mjs';
 import { DefaultHighlighter } from '../src/default/DefaultHighlighter.mjs';
 import { Selection } from '../src/plugins/Selection.mjs';
@@ -6,10 +7,13 @@ import { Selection } from '../src/plugins/Selection.mjs';
 export class EditorComponent extends HTMLElement {
   constructor() {
     super();
-    this._editor = new WebEditor(document);
+    this._renderer = new Renderer(document);
+    this._editor = new Editor(this._renderer.measurer());
+    this._renderer.setEditor(this._editor);
+
     this._editor.selection().setRanges([{from: 0, to: 0}]);
-    this._editor.element().classList.add('editor');
-    this.appendChild(this._editor.element());
+    this._renderer.element().classList.add('editor');
+    this.appendChild(this._renderer.element());
     this._mimeType = 'text/plain';
     this._selectionChangedCallback = null;
     this._selectionDescription = document.createElement('span');
@@ -80,10 +84,10 @@ export class EditorComponent extends HTMLElement {
 
   connectedCallback() {
     console.log('connected');
-    this._editor.resize();
+    this._renderer.resize();
     this._resizeObserver = new ResizeObserver(entries => {
       console.log('Editor Resized');
-      this._editor.resize();
+      this._renderer.resize();
     });
     this._resizeObserver.observe(this);
   }
