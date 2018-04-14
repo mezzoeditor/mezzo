@@ -172,36 +172,33 @@ export class Metrics {
   }
 
   /**
-   * Builds a map from offset ranging [0..length) to x-coordinate
+   * Builds a map from offset ranging [0 .. s.length] to x-coordinate
    * relative to string's start.
    *
    * @param {string} s
-   * @param {number} length
    * @return {!Float32Array}
    */
-  buildXMap(s, length) {
-    let result = new Float32Array(length);
-    for (let x = 0, i = 0; i < length; ) {
+  buildXMap(s) {
+    let result = new Float32Array(s.length + 1);
+    let x = 0;
+    for (let i = 0; i < s.length; ) {
       result[i] = x;
-      if (i < s.length) {
-        let charCode = s.charCodeAt(i);
-        if (charCode >= 0xD800 && charCode <= 0xDBFF && i + 1 < s.length) {
-          result[i + 1] = x;
-          let codePoint = s.codePointAt(i);
-          if (this._supplementary[codePoint] === undefined)
-            this._supplementary[codePoint] = this._measureSupplementary(s.substring(i, i + 2));
-          x += this._supplementary[codePoint];
-          i += 2;
-        } else {
-          if (this._bmp[charCode] === -1)
-            this._bmp[charCode] = this._measureBMP(s[i]);
-          x += this._bmp[charCode];
-          i++;
-        }
+      let charCode = s.charCodeAt(i);
+      if (charCode >= 0xD800 && charCode <= 0xDBFF && i + 1 < s.length) {
+        result[i + 1] = x;
+        let codePoint = s.codePointAt(i);
+        if (this._supplementary[codePoint] === undefined)
+          this._supplementary[codePoint] = this._measureSupplementary(s.substring(i, i + 2));
+        x += this._supplementary[codePoint];
+        i += 2;
       } else {
+        if (this._bmp[charCode] === -1)
+          this._bmp[charCode] = this._measureBMP(s[i]);
+        x += this._bmp[charCode];
         i++;
       }
     }
+    result[s.length] = x;
     return result;
   }
 

@@ -499,7 +499,7 @@ export class Viewport extends EventEmitter {
 
     for (let line of lines) {
       let lineContent = this._document.content(line.from, line.to);
-      let offsetToX = this._metrics.buildXMap(lineContent, line.to - line.from + 1);
+      let offsetToX = this._metrics.buildXMap(lineContent);
 
       let lineStyles = [];
       for (let decorator of lineDecorators) {
