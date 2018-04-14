@@ -147,7 +147,7 @@ export class Tree {
   /**
    * Returns every node's data.
    *
-   * @return {!Array<T>}
+   * @return {!Array<!{data: T, metrics: !TextMetrics}>}
    */
   collect() {
     let list = [];
@@ -666,12 +666,12 @@ function merge(left, right) {
 
 /**
  * @param {!TreeNode<T>} node
- * @param {!Array<T>} list
+ * @param {!Array<!{data: T, metrics: !TextMetrics}>} list
  */
 function collect(node, list) {
   if (node.left)
     collect(node.left, list);
-  list.push(node.data);
+  list.push({data: node.data, metrics: node.selfMetrics || node.metrics});
   if (node.right)
     collect(node.right, list);
 }
