@@ -56,10 +56,9 @@ import { EventEmitter } from './EventEmitter.mjs';
  */
 
 /**
- * TODO: perhaps we can get rid of metrics inside TextChunk?
  * @typedef {{
- *   metrics: !TextMetrics
- * }} TextChunk
+ *   widget: undefined
+ * }} Chunk
  */
 
 /**
@@ -169,7 +168,7 @@ export class Viewport extends EventEmitter {
     this._defaultWidth = measurer.defaultWidth();
     let measure = s => measurer.measureString(s) / this._defaultWidth;
     this._metrics = new Metrics(measurer.defaultWidthRegex(), measure, measure);
-    let nodes = this._wrapChunks(this._createChunks(this._document.text(), 0, this._document.length(), kDefaultChunkSize));
+    let nodes = this._createNodes(this._document.text(), 0, this._document.length(), kDefaultChunkSize);
     this._setTree(Tree.build(nodes));
   }
 
@@ -616,8 +615,8 @@ export class Viewport extends EventEmitter {
     if (iterator.data === undefined)
       return iterator.before ? iterator.before.offset : 0;
     let from = iterator.before.offset;
-    let chunk = this._document.content(from, from + iterator.data.metrics.length);
-    return this._metrics.locateByPoint(chunk, iterator.before, clamped, roundMode, strict).offset;
+    let textChunk = this._document.content(from, from + iterator.metrics.length);
+    return this._metrics.locateByPoint(textChunk, iterator.before, clamped, roundMode, strict).offset;
   }
 
   /**
@@ -631,12 +630,12 @@ export class Viewport extends EventEmitter {
     if (iterator.data === undefined)
       return iterator.before || {x: 0, y: 0};
     let from = iterator.before.offset;
-    let chunk = this._document.content(from, from + iterator.data.metrics.length);
-    return this._metrics.locateByOffset(chunk, iterator.before, offset);
+    let textChunk = this._document.content(from, from + iterator.metrics.length);
+    return this._metrics.locateByOffset(textChunk, iterator.before, offset);
   }
 
   /**
-   * @param {!Tree<!TreeChunk>} tree
+   * @param {!Tree<!Chunk>} tree
    */
   _setTree(tree) {
     this._tree = tree;
@@ -651,33 +650,25 @@ export class Viewport extends EventEmitter {
    * @param {number} from
    * @param {number} to
    * @param {number} chunkSize
-   * @param {number=} firstChunk
-   * @return {!Array<!TextChunk>}
+   * @param {number=} firstChunkSize
+   * @return {!Array<!{metrics: !TextMetrics, data: !Chunk}>}
    */
-  _createChunks(text, from, to, chunkSize, firstChunk) {
+  _createNodes(text, from, to, chunkSize, firstChunkSize) {
     let iterator = text.iterator(from, 0, text.length());
-    let chunks = [];
+    let nodes = [];
     while (iterator.offset < to) {
       let offset = iterator.offset;
       let size = Math.min(to - iterator.offset, chunkSize);
-      if (offset === from && firstChunk != undefined)
-        size = firstChunk;
+      if (offset === from && firstChunkSize != undefined)
+        size = firstChunkSize;
       let chunk = iterator.read(size);
       if (Metrics.isSurrogate(chunk.charCodeAt(chunk.length - 1))) {
         chunk += iterator.current;
         iterator.next();
       }
-      chunks.push({metrics: this._metrics.forString(chunk)});
+      nodes.push({metrics: this._metrics.forString(chunk), data: {}});
     }
-    return chunks;
-  }
-
-  /**
-   * @param {!Array<!TextChunk>} chunks
-   * @return {!Array<!{metrics: !TextMetrics, data: !TextChunk}>}
-   */
-  _wrapChunks(chunks) {
-    return chunks.map(chunk => ({metrics: chunk.metrics, data: chunk}));
+    return nodes;
   }
 
   /**
@@ -696,18 +687,17 @@ export class Viewport extends EventEmitter {
       let newFrom = split.left.metrics().length;
       let newTo = text.length() - split.right.metrics().length;
 
-      let chunks;
+      let nodes;
       if (newFrom - from + inserted + to - newTo > kDefaultChunkSize &&
           newFrom - from + inserted <= kDefaultChunkSize) {
         // For typical editing scenarios, we are most likely to replace at the
         // end of insertion next time.
-        chunks = this._createChunks(text, newFrom, newTo, kDefaultChunkSize, newFrom - from + inserted);
+        nodes = this._createNodes(text, newFrom, newTo, kDefaultChunkSize, newFrom - from + inserted);
       } else {
-        chunks = this._createChunks(text, newFrom, newTo, kDefaultChunkSize);
+        nodes = this._createNodes(text, newFrom, newTo, kDefaultChunkSize);
       }
 
-      let middle = Tree.build(this._wrapChunks(chunks));
-      this._setTree(Tree.merge(split.left, Tree.merge(middle, split.right)));
+      this._setTree(Tree.merge(split.left, Tree.merge(Tree.build(nodes), split.right)));
     }
   }
 }
@@ -771,6 +761,6 @@ Viewport.test = {};
  * @param {number} chunkSize
  */
 Viewport.test.rechunk = function(viewport, chunkSize) {
-  let nodes = viewport._wrapChunks(viewport._createChunks(viewport._document.text(), 0, viewport._document.length(), chunkSize));
+  let nodes = viewport._createNodes(viewport._document.text(), 0, viewport._document.length(), chunkSize);
   viewport._setTree(Tree.build(nodes));
 };
