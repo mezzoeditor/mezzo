@@ -66,10 +66,10 @@ export class EditorComponent extends HTMLElement {
       return;
     this._mimeType = mimeType;
     if (mimeType === 'text/javascript') {
-      const highlighter = new JSHighlighter();
+      const highlighter = new JSHighlighter(this._editor);
       this._editor.setHighlighter(highlighter);
     } else {
-      const highlighter = new DefaultHighlighter();
+      const highlighter = new DefaultHighlighter(this._editor);
       this._editor.setHighlighter(highlighter);
     }
   }

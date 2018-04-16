@@ -12,12 +12,11 @@ import { DefaultTokenizer } from '../default/DefaultTokenizer.mjs';
 import { Viewport, Measurer } from '../core/Viewport.mjs';
 import { EventEmitter } from '../core/EventEmitter.mjs';
 
-export class Editor extends EventEmitter {
+export class Editor {
   /**
    * @param {!Measurer} measurer
    */
   constructor(measurer) {
-    super();
     this._handles = new Decorator(true /* createHandles */);
     this._document = new Document();
     this._document.addReplaceCallback(this._onReplace.bind(this));
@@ -40,10 +39,6 @@ export class Editor extends EventEmitter {
     this._blockIndentation = new BlockIndentation(this);
 
     this.setHighlighter(new DefaultHighlighter(this));
-  }
-
-  invalidate() {
-    this.emit(Editor.Events.Invalidate);
   }
 
   reset(text) {
@@ -114,16 +109,6 @@ export class Editor extends EventEmitter {
       this._idleCallbacks.splice(index, 1);
   }
 
-  addDecorationCallback(callback) {
-    this._viewport.addDecorationCallback(callback);
-    this.invalidate();
-  }
-
-  removeDecorationCallback(callback) {
-    this._viewport.removeDecorationCallback(callback);
-    this.invalidate();
-  }
-
   addHandle(from, to, onRemoved) {
     if (to === undefined)
       to = from;
@@ -134,7 +119,6 @@ export class Editor extends EventEmitter {
     if (this._highlighter)
       this._highlighter.dispose();
     this._highlighter = highlighter;
-    this.invalidate();
   }
 
   find(query) {
@@ -178,10 +162,6 @@ export class Editor extends EventEmitter {
     }
   }
 }
-
-Editor.Events = {
-  Invalidate: 'invalidate'
-};
 
 class RangeHandle {
   constructor(document, decorator, from, to, onRemoved) {

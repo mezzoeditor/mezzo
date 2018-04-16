@@ -151,14 +151,14 @@ class TokenHighlighter {
   constructor(editor) {
     this._editor = editor;
     this._token = '';
-    this._editor.addDecorationCallback(this._onDecorate.bind(this));
+    this._editor.viewport().addDecorationCallback(this._onDecorate.bind(this));
   }
 
   setToken(token) {
     if (this._token === token)
       return;
     this._token = token;
-    this._editor.invalidate();
+    this._editor.viewport().raf();
   }
 
   _onDecorate(visibleContent) {

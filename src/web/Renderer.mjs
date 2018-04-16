@@ -731,12 +731,12 @@ export class Renderer {
   }
 
   _render() {
+    this._animationFrameId = 0;
+
     if (!this._editor)
       return;
     trace.beginGroup('render');
     this._rendering = true;
-
-    this._animationFrameId = 0;
 
     const ctx = this._canvas.getContext('2d');
     ctx.setTransform(this._ratio, 0, 0, this._ratio, 0, 0);

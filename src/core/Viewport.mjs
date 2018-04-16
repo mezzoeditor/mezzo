@@ -188,6 +188,7 @@ export class Viewport extends EventEmitter {
    */
   addDecorationCallback(callback) {
     this._decorateCallbacks.push(callback);
+    this.raf();
   }
 
   /**
@@ -197,6 +198,7 @@ export class Viewport extends EventEmitter {
     let index = this._decorateCallbacks.indexOf(callback);
     if (index !== -1)
       this._decorateCallbacks.splice(index, 1);
+    this.raf();
   }
 
   /**
