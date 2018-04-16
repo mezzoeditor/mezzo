@@ -1,4 +1,4 @@
-import { Start } from "../src/core/Anchor.mjs";
+import { Start, End } from "../src/core/Anchor.mjs";
 import { TextDecorator } from "../src/core/Decorator.mjs";
 import { Renderer, PlatformSupport } from "../src/web/Renderer.mjs";
 import { Editor } from "../src/editor/Editor.mjs";
@@ -173,4 +173,12 @@ async function setupEditor(renderer, exampleName) {
 
   rangeHandle = editor.addHandle(Start(20), Start(40), updateRangeHandle);
   updateRangeHandle(editor);
+
+  editor._viewport.addInlineWidget({width: 43}, Start(60));
+  editor._viewport.addInlineWidget({width: 18}, End(60));
+  editor._viewport.addInlineWidget({width: 43}, Start(70));
+  editor._viewport.addInlineWidget({width: 18}, End(75));
+  editor._viewport.addInlineWidget({width: 43}, Start(53));
+  editor._viewport.addInlineWidget({width: 43}, End(51));
+  editor._viewport.addInlineWidget({width: 18}, End(52));
 }

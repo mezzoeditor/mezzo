@@ -38,8 +38,8 @@ let random = Random(25);
 function normalize(node) {
   if (!node.add)
     return node;
-  node.from.offset += node.add;
-  node.to.offset += node.add;
+  node.from = {offset: node.from.offset + node.add, end: node.from.end};
+  node.to = {offset: node.to.offset + node.add, end: node.to.end};
   if (node.left)
     node.left.add = (node.left.add || 0) + node.add;
   if (node.right)

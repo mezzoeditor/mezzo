@@ -99,6 +99,15 @@ export class Tree {
   }
 
   /**
+   * Whether the tree has no nodes.
+   *
+   * @return {boolean}
+   */
+  empty() {
+    return !this._root;
+  }
+
+  /**
    * Creates an iterator.
    *
    * @return {!TreeIterator<T>}
@@ -580,37 +589,14 @@ function build(nodes) {
 function split(root, offset, intersectionToLeft, current) {
   if (!root)
     return {};
-  if (intersectionToLeft === kSplitIntersectionToLeft) {
-    if (current >= offset)
-      return {right: root};
-    if (current + root.metrics.length < offset)
-      return {left: root};
-  } else {
-    if (current > offset)
-      return {right: root};
-    if (current + root.metrics.length <= offset)
-      return {left: root};
-  }
 
-  // intersection to left:
-  //   offset a b  ->  root to right
-  //   a offset b  ->  root to left
-  //   a b offset  ->  root to left
-  //   rootToLeft = (offset > a) == (a < offset) == !(a >= offset)
-
-  // intersection to right:
-  //   offset a b  ->  root to right
-  //   a offset b  ->  root to right
-  //   a b offset  ->  root to left
-  //   rootToLeft = (offset >= b) == (b <= offset) == !(b > offset)
-
-  let next = root.left ? current + root.left.metrics.length : current;
-  let rootToLeft = next < offset;
-  next = next + (root.selfMetrics || root.metrics).length;
-  if (intersectionToLeft === kSplitIntersectionToRight)
-    rootToLeft = next <= offset;
+  let before = current + (root.left ? root.left.metrics.length : 0);
+  let after = before + (root.selfMetrics || root.metrics).length;
+  let rootToLeft = intersectionToLeft === kSplitIntersectionToLeft ?
+    before < offset || after <= offset :
+    !(after > offset || before >= offset);
   if (rootToLeft) {
-    let tmp = split(root.right, offset, intersectionToLeft, next);
+    let tmp = split(root.right, offset, intersectionToLeft, after);
     return {left: setChildren(root, root.left, tmp.left, kClone), right: tmp.right};
   } else {
     let tmp = split(root.left, offset, intersectionToLeft, current);

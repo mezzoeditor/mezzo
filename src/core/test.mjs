@@ -1150,8 +1150,8 @@ describe('Tree', () => {
 
     tmp = tree.split(0, 3);
     expect(tmp.left.collect()).toEqual([]);
-    expect(tmp.middle.collect()).toEqual([node1]);
-    expect(tmp.right.collect()).toEqual([node2, node0, node3, node4, node0]);
+    expect(tmp.middle.collect()).toEqual([node1, node2, node0]);
+    expect(tmp.right.collect()).toEqual([node3, node4, node0]);
 
     tmp = tree.split(2, 5);
     expect(tmp.left.collect()).toEqual([]);
@@ -1159,8 +1159,8 @@ describe('Tree', () => {
     expect(tmp.right.collect()).toEqual([node4, node0]);
 
     tmp = tree.split(3, 8);
-    expect(tmp.left.collect()).toEqual([node1, node2, node0]);
-    expect(tmp.middle.collect()).toEqual([node3]);
+    expect(tmp.left.collect()).toEqual([node1]);
+    expect(tmp.middle.collect()).toEqual([node2, node0, node3]);
     expect(tmp.right.collect()).toEqual([node4, node0]);
 
     tmp = tree.split(7, 7);
@@ -1169,9 +1169,9 @@ describe('Tree', () => {
     expect(tmp.right.collect()).toEqual([node4, node0]);
 
     tmp = tree.split(3, 9);
-    expect(tmp.left.collect()).toEqual([node1, node2, node0]);
-    expect(tmp.middle.collect()).toEqual([node3, node4]);
-    expect(tmp.right.collect()).toEqual([node0]);
+    expect(tmp.left.collect()).toEqual([node1]);
+    expect(tmp.middle.collect()).toEqual([node2, node0, node3, node4, node0]);
+    expect(tmp.right.collect()).toEqual([]);
 
     tmp = tree.split(12, 15);
     expect(tmp.left.collect()).toEqual([node1, node2, node0, node3, node4, node0]);

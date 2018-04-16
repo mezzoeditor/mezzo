@@ -172,34 +172,34 @@ export class Metrics {
   }
 
   /**
-   * Builds a map from offset ranging [0 .. s.length] to x-coordinate
-   * relative to string's start.
+   * Fills a map between offset in (from..to] range to x-coordinate,
+   * starting with |x| at position |from|.
    *
+   * @param {!Float32Array} xmap
    * @param {string} s
-   * @return {!Float32Array}
+   * @param {number} from
+   * @param {number} to
+   * @param {number} x
+   * @param {number} multiplier
    */
-  buildXMap(s) {
-    let result = new Float32Array(s.length + 1);
-    let x = 0;
-    for (let i = 0; i < s.length; ) {
-      result[i] = x;
+  fillXMap(xmap, s, from, to, x, multiplier) {
+    for (let i = from; i < to; ) {
       let charCode = s.charCodeAt(i);
-      if (charCode >= 0xD800 && charCode <= 0xDBFF && i + 1 < s.length) {
-        result[i + 1] = x;
+      if (charCode >= 0xD800 && charCode <= 0xDBFF && i + 1 < to) {
+        xmap[i + 1] = x;
         let codePoint = s.codePointAt(i);
         if (this._supplementary[codePoint] === undefined)
           this._supplementary[codePoint] = this._measureSupplementary(s.substring(i, i + 2));
-        x += this._supplementary[codePoint];
+        x += this._supplementary[codePoint] * multiplier;
         i += 2;
       } else {
         if (this._bmp[charCode] === -1)
           this._bmp[charCode] = this._measureBMP(s[i]);
-        x += this._bmp[charCode];
+        x += this._bmp[charCode] * multiplier;
         i++;
       }
+      xmap[i] = x;
     }
-    result[s.length] = x;
-    return result;
   }
 
   /**

@@ -1,4 +1,5 @@
-import { Start, End } from './Anchor.mjs';
+import { Start, End, Before, After } from './Anchor.mjs';
+import { Decorator } from './Decorator.mjs';
 import { RoundMode, Metrics } from './Metrics.mjs';
 import { Tree } from './Tree.mjs';
 import { trace } from './Trace.mjs';
@@ -57,7 +58,22 @@ import { EventEmitter } from './EventEmitter.mjs';
 
 /**
  * @typedef {{
- *   widget: undefined
+ *   x: number,
+ *   y: number,
+ *   widget: !Viewport.InlineWidget,
+ * }} Viewport.InlineWidgetInfo
+ */
+
+/**
+ * @typedef {{
+ *   width: number,
+ * }} Viewport.InlineWidget
+ */
+
+ /**
+ * @typedef {{
+ *   inlineWidget: !Viewport.InlineWidget|undefined,
+ *   end: boolean|undefined,
  * }} Chunk
  */
 
@@ -144,9 +160,9 @@ export class Viewport extends EventEmitter {
     this._padding = { left: 0, right: 0, top: 0, bottom: 0};
     this._frozen = false;
     this._decorateCallbacks = [];
+    this._inlineWidgets = new Decorator(true /* createHandles */);
 
     this._measurer = null;
-
     this.setMeasurer(measurer);
   }
 
@@ -392,9 +408,43 @@ export class Viewport extends EventEmitter {
   }
 
   /**
+   * @param {!Viewport.InlineWidget} inlineWidget
+   * @param {!Anchor} anchor
+   */
+  addInlineWidget(inlineWidget, anchor) {
+    if (inlineWidget[kWidgetSymbol])
+      throw new Error('Widget was already added before');
+    inlineWidget[kWidgetSymbol] = this._inlineWidgets.add(anchor, anchor, inlineWidget);
+    this._rechunk(this._document.text(), anchor.offset, anchor.offset, 0);
+  }
+
+  /**
+   * @param {!Viewport.InlineWidget} inlineWidget
+   */
+  removeWidget(inlineWidget) {
+    if (!inlineWidget[kWidgetSymbol])
+      throw new Error('Widget was not added before');
+    let anchor = this._inlineWidgets.resolve(inlineWidget[kWidgetSymbol]).from;
+    this._inlineWidgets.remove(inlineWidget[kWidgetSymbol]);
+    delete inlineWidget[kWidgetSymbol];
+
+    let split = this._tree.split(anchor.offset, anchor.offset);
+    let nodes = split.middle.collect();
+    if (nodes.some(node => !node.data.inlineWidget || !node.data.inlineWidget[kWidgetSymbol]))
+      throw new Error('Inconsistent');
+    let index = nodes.findIndex(node => node.data.inlineWidget === inlineWidget);
+    if (index === -1)
+      throw new Error('Inconsistent');
+    nodes.splice(index, 1);
+
+    this._setTree(Tree.merge(split.left, Tree.merge(Tree.build(nodes), split.right)));
+  }
+
+  /**
    * @return {!{
    *   text: !Array<!Viewport.TextInfo>,
    *   background: !Array<!Viewport.BackgroundInfo>,
+   *   inlineWidgets: !Array<!Viewport.InlineWidgetInfo>,
    *   scrollbar: !Array<!Viewport.ScrollbarInfo>,
    *   lines: !Array<!Viewport.LineInfo>,
    *   paddingLeft: number,
@@ -407,6 +457,7 @@ export class Viewport extends EventEmitter {
     let y = this.offsetToViewportPoint(this.viewportPointToOffset({x: 0, y: 0})).y;
     let lines = [];
     for (; y <= this._height; y += this._lineHeight) {
+      // TODO: from/to do not include widgets on the edge.
       let from = this.viewportPointToOffset({x: 0, y: y});
       let to = this.viewportPointToOffset({x: this._width, y: y}, RoundMode.Ceil);
       let start = this.viewportPointToOffset({x: -this._scrollLeft, y: y});
@@ -444,11 +495,11 @@ export class Viewport extends EventEmitter {
       lineDecorators.push(...(result.lines || []));
     }
 
-    let {text, background, lineInfos, paddingLeft, paddingRight} = this._buildTextBackgroundAndLines(lines, textDecorators, backgroundDecorators, lineDecorators);
+    let {text, background, inlineWidgets, lineInfos, paddingLeft, paddingRight} = this._buildContents(lines, textDecorators, backgroundDecorators, lineDecorators);
     let scrollbar = this._buildScrollbar(lineDecorators);
 
     this._frozen = false;
-    return {text, background, scrollbar, lines: lineInfos, paddingLeft, paddingRight};
+    return {text, background, inlineWidgets, scrollbar, lines: lineInfos, paddingLeft, paddingRight};
   }
 
   /**
@@ -490,21 +541,68 @@ export class Viewport extends EventEmitter {
    * @return {!{
    *    text: !Array<!Viewport.TextInfo>,
    *    background: !Array<!Viewport.BackgroundInfo>,
+   *    inlineWidgets: !Array<!Viewport.InlineWidgetInfo>,
    *    lineInfos: !Array<!Viewport.LineInfo>,
    *    paddingLeft: number,
    *    paddingRight: number,
    * }}
    */
-  _buildTextBackgroundAndLines(lines, textDecorators, backgroundDecorators, lineDecorators) {
+  _buildContents(lines, textDecorators, backgroundDecorators, lineDecorators) {
     const paddingLeft = Math.max(this._padding.left - this._scrollLeft, 0);
     const paddingRight = Math.max(this._padding.right - (this._maxScrollLeft - this._scrollLeft), 0);
     const text = [];
     const background = [];
+    const inlineWidgets = [];
     const lineInfos = [];
 
     for (let line of lines) {
+      let offsetToX = new Float32Array(line.to - line.from + 1);
       let lineContent = this._document.content(line.from, line.to);
-      let offsetToX = this._metrics.buildXMap(lineContent);
+
+      let iterator = this._tree.iterator();
+      iterator.locateByOffset(line.from);
+      if (!iterator.before)
+        continue;
+
+      let x = line.x;
+      let offset = line.from;
+      offsetToX[0] = x;
+      while (true) {
+        if (iterator.data && iterator.data.inlineWidget) {
+          inlineWidgets.push({x: x, y: line.y, inlineWidget: iterator.data.inlineWidget});
+          x += iterator.data.inlineWidget.width;
+          if (!iterator.data.end)
+            offsetToX[offset - line.from] = x;
+        } else {
+          let after = Math.min(line.to, iterator.after ? iterator.after.offset : offset);
+          this._metrics.fillXMap(offsetToX, lineContent, offset - line.from, after - line.from, x, this._defaultWidth);
+          x = offsetToX[after - line.from];
+
+          for (let decorator of textDecorators) {
+            decorator.visitTouching(Start(offset), End(after), decoration => {
+              trace.count('decorations');
+              let from = Math.max(offset, decoration.from.offset);
+              let to = Math.min(after, decoration.to.offset);
+              if (from < to) {
+                text.push({
+                  x: offsetToX[from - line.from],
+                  y: line.y,
+                  content: lineContent.substring(from - line.from, to - line.from),
+                  style: decoration.data
+                });
+              }
+            });
+          }
+
+          offset = after;
+        }
+
+        if (offset === line.to)
+          break;
+        if (!iterator.after)
+          throw new Error('Inconsistent');
+        iterator.next();
+      }
 
       let lineStyles = [];
       for (let decorator of lineDecorators) {
@@ -518,32 +616,12 @@ export class Viewport extends EventEmitter {
         styles: lineStyles
       });
 
-      for (let decorator of textDecorators) {
-        decorator.visitTouching(Start(line.from), End(line.to), decoration => {
-          trace.count('decorations');
-          let from = Math.max(line.from, decoration.from.offset);
-          let to = Math.min(line.to, decoration.to.offset);
-          if (from < to) {
-            text.push({
-              x: line.x + offsetToX[from - line.from] * this._defaultWidth,
-              y: line.y,
-              content: lineContent.substring(from - line.from, to - line.from),
-              style: decoration.data
-            });
-          }
-        });
-      }
-
       for (let decorator of backgroundDecorators) {
         decorator.visitTouching(Start(line.from - 1), End(line.to + 1), decoration => {
           trace.count('decorations');
           // TODO: note that some editors only show selection up to line length. Setting?
-          let from = decoration.from.offset < line.from
-            ? paddingLeft
-            : line.x + offsetToX[decoration.from.offset - line.from] * this._defaultWidth;
-          let to = decoration.to.offset > line.to
-            ? this._width - paddingRight
-            : line.x + offsetToX[decoration.to.offset - line.from] * this._defaultWidth;
+          let from = decoration.from.offset < line.from ? paddingLeft : offsetToX[decoration.from.offset - line.from];
+          let to = decoration.to.offset > line.to ? this._width - paddingRight : offsetToX[decoration.to.offset - line.from];
           if (from <= to) {
             background.push({
               x: from,
@@ -556,7 +634,7 @@ export class Viewport extends EventEmitter {
       }
     }
 
-    return {text, background, lineInfos, paddingLeft, paddingRight};
+    return {text, background, inlineWidgets, lineInfos, paddingLeft, paddingRight};
   }
 
   /**
@@ -662,18 +740,33 @@ export class Viewport extends EventEmitter {
   _createNodes(text, from, to, chunkSize, firstChunkSize) {
     let iterator = text.iterator(from, 0, text.length());
     let nodes = [];
-    while (iterator.offset < to) {
-      let offset = iterator.offset;
-      let size = Math.min(to - iterator.offset, chunkSize);
-      if (offset === from && firstChunkSize != undefined)
-        size = firstChunkSize;
-      let chunk = iterator.read(size);
-      if (Metrics.isSurrogate(chunk.charCodeAt(chunk.length - 1))) {
-        chunk += iterator.current;
-        iterator.next();
+
+    let addNodes = upTo => {
+      while (iterator.offset < upTo) {
+        let offset = iterator.offset;
+        let size = chunkSize;
+        if (offset === from && firstChunkSize != undefined)
+          size = firstChunkSize;
+        size = Math.min(upTo - iterator.offset, size);
+        let chunk = iterator.read(size);
+        if (Metrics.isSurrogate(chunk.charCodeAt(chunk.length - 1))) {
+          chunk += iterator.current;
+          iterator.next();
+        }
+        nodes.push({metrics: this._metrics.forString(chunk), data: {}});
       }
-      nodes.push({metrics: this._metrics.forString(chunk), data: {}});
-    }
+    };
+
+    this._inlineWidgets.visitTouching(End(from - 1), Start(to + 1), decoration => {
+      if (decoration.from.offset < from || decoration.to.offset > to)
+        return;
+      addNodes(decoration.from.offset);
+      let inlineWidget = decoration.data;
+      let width = inlineWidget.width / this._defaultWidth;
+      let metrics = {length: 0, firstWidth: width, lastWidth: width, longestWidth: width};
+      nodes.push({metrics, data: {inlineWidget, end: decoration.from.end}});
+    });
+    addNodes(to);
     return nodes;
   }
 
@@ -688,29 +781,56 @@ export class Viewport extends EventEmitter {
       let from = replacement.offset;
       let to = from + replacement.removed.length();
       let inserted = replacement.inserted.length();
-      let text = replacement.after;
-      let split = this._tree.split(from, to);
-      let newFrom = split.left.metrics().length;
-      let newTo = text.length() - split.right.metrics().length;
 
-      let nodes;
-      if (newFrom - from + inserted + to - newTo > kDefaultChunkSize &&
-          newFrom - from + inserted <= kDefaultChunkSize) {
-        // For typical editing scenarios, we are most likely to replace at the
-        // end of insertion next time.
-        nodes = this._createNodes(text, newFrom, newTo, kDefaultChunkSize, newFrom - from + inserted);
-      } else {
-        nodes = this._createNodes(text, newFrom, newTo, kDefaultChunkSize);
+      for (let inlineWidget of this._inlineWidgets.replace(from, to, inserted)) {
+        delete inlineWidget[kWidgetSymbol];
+        this.emit(Viewport.Events.InlineWidgetRemoved, inlineWidget);
       }
 
-      this._setTree(Tree.merge(split.left, Tree.merge(Tree.build(nodes), split.right)));
+      this._rechunk(replacement.after, from, to, inserted);
     }
+  }
+
+  /**
+   * @param {!Text} text
+   * @param {number} from
+   * @param {number} to
+   * @param {number} inserted
+   */
+  _rechunk(text, from, to, inserted) {
+    let split = this._tree.split(from, to);
+    let newFrom = split.left.metrics().length;
+    let newTo = text.length() - split.right.metrics().length;
+
+    let tmp = split.left.split(split.left.metrics().length, split.left.metrics().length);
+    if (!tmp.right.empty())
+      throw new Error('Inconsistent');
+    split.left = tmp.left;
+
+    tmp = split.right.split(0, 0);
+    if (!tmp.left.empty())
+      throw new Error('Inconsistent');
+    split.right = tmp.right;
+
+    let nodes;
+    if (newFrom - from + inserted + to - newTo > kDefaultChunkSize &&
+        newFrom - from + inserted <= kDefaultChunkSize) {
+      // For typical editing scenarios, we are most likely to replace at the
+      // end of insertion next time.
+      nodes = this._createNodes(text, newFrom, newTo, kDefaultChunkSize, newFrom - from + inserted);
+    } else {
+      nodes = this._createNodes(text, newFrom, newTo, kDefaultChunkSize);
+    }
+
+    // TODO: remove widgets at split.left.last and split.right.first.
+    this._setTree(Tree.merge(split.left, Tree.merge(Tree.build(nodes), split.right)));
   }
 }
 
 Viewport.Events = {
   Raf: 'raf',
-  Changed: 'changed'
+  Changed: 'changed',
+  InlineWidgetRemoved: 'inlineWidgetRemoved',
 };
 
 Viewport.VisibleRange = class {
@@ -760,6 +880,7 @@ function cachedContent(document, from, to, cache, left, right) {
 
 let kDefaultChunkSize = 1000;
 const kMinScrollbarDecorationHeight = 5;
+const kWidgetSymbol = Symbol('widgetHandle');
 
 Viewport.test = {};
 
