@@ -1,6 +1,6 @@
 import { Start } from "../src/core/Anchor.mjs";
 import { TextDecorator } from "../src/core/Decorator.mjs";
-import { Renderer } from "../src/web/Renderer.mjs";
+import { Renderer, PlatformSupport } from "../src/web/Renderer.mjs";
 import { Editor } from "../src/editor/Editor.mjs";
 import { Random } from "../src/core/Random.mjs";
 import { JSHighlighter } from "../src/javascript/JSHighlighter.mjs";
@@ -128,7 +128,7 @@ function updateRangeHandle(editor) {
 
 document.addEventListener('DOMContentLoaded', () => {
   const renderer = new Renderer(document);
-  const editor = new Editor(renderer.measurer());
+  const editor = new Editor(renderer.measurer(), PlatformSupport.instance());
   renderer.setEditor(editor);
   addExamples(renderer);
   addHighlights(editor);

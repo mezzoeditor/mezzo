@@ -15,6 +15,7 @@ export class Search extends EventEmitter {
    */
   constructor(editor) {
     super();
+    this._editor = editor;
     this._viewport = editor.viewport();
     this._viewport.addDecorationCallback(this._onDecorate.bind(this));
     this._document = editor.document();
@@ -29,7 +30,6 @@ export class Search extends EventEmitter {
     this._currentMatch = null;
     this._shouldUpdateSelection = false;
 
-    this._updated = false;
     this._lastReportedCurrentMatchIndex = -1;
     this._lastReportedMatchesCount = 0;
   }
@@ -71,15 +71,15 @@ export class Search extends EventEmitter {
     this._cancel();
     this._options = options;
     this._needsProcessing({from: 0, to: this._document.length() - options.query.length});
-    this._updated = true;
     this._shouldUpdateSelection = true;
     this._viewport.raf();
+    this._emitUpdatedIfNeeded();
   }
 
   cancel() {
     this._cancel();
-    this._updated = true;
     this._viewport.raf();
+    this._emitUpdatedIfNeeded();
   }
 
   /**
@@ -98,8 +98,8 @@ export class Search extends EventEmitter {
     if (!match)
       return false;
     this._updateCurrentMatch(Range(match), true, true);
-    this._updated = true;
     this._viewport.raf();
+    this._emitUpdatedIfNeeded();
     return true;
   }
 
@@ -119,24 +119,27 @@ export class Search extends EventEmitter {
     if (!match)
       return false;
     this._updateCurrentMatch(Range(match), true, true);
-    this._updated = true;
     this._viewport.raf();
+    this._emitUpdatedIfNeeded();
     return true;
   }
 
   /**
    * @return {boolean}
    */
-  searchChunk() {
+  _searchChunk() {
+    this._jobId = 0;
     if (!this._rangeToProcess)
-      return false;
+      return;
 
     let from = this._rangeToProcess.from;
     let to = Math.min(this._rangeToProcess.to, from + this._chunkSize);
     this._searchRange({from, to}, this._shouldUpdateSelection, this._shouldUpdateSelection);
     this._processed({from, to});
     this._viewport.raf();
-    return !!this._rangeToProcess;
+    if (this._rangeToProcess)
+      this._jobId = this._editor.platformSupport().requestIdleCallback(this._searchChunk.bind(this));
+    this._emitUpdatedIfNeeded();
   }
 
   // ------ Internals -------
@@ -161,22 +164,21 @@ export class Search extends EventEmitter {
         this._selection._onDecorate(visibleContent);
     }
 
-    if (this._updated) {
-      this._updated = false;
-      let currentMatchIndex = this.currentMatchIndex();
-      let matchesCount = this.matchesCount();
-      if (currentMatchIndex !== this._lastReportedCurrentMatchIndex ||
-          matchesCount !== this._lastReportedMatchesCount) {
-        this._lastReportedCurrentMatchIndex = currentMatchIndex;
-        this._lastReportedMatchesCount = matchesCount;
-        this.emit(Search.Events.Updated, {
-          currentIndex: currentMatchIndex,
-          totalCount: matchesCount
-        });
-      }
-    }
-
+    this._emitUpdatedIfNeeded();
     return {background: [this._decorator, this._currentMatchDecorator], lines: [this._decorator, this._currentMatchDecorator]};
+  }
+
+  _emitUpdatedIfNeeded() {
+    let currentMatchIndex = this.currentMatchIndex();
+    let matchesCount = this.matchesCount();
+    if (currentMatchIndex === this._lastReportedCurrentMatchIndex && matchesCount === this._lastReportedMatchesCount)
+      return;
+    this._lastReportedCurrentMatchIndex = currentMatchIndex;
+    this._lastReportedMatchesCount = matchesCount;
+    this.emit(Search.Events.Updated, {
+      currentIndex: currentMatchIndex,
+      totalCount: matchesCount
+    });
   }
 
   /**
@@ -204,7 +206,7 @@ export class Search extends EventEmitter {
         });
       }
     }
-    this._updated = true;
+    this._emitUpdatedIfNeeded();
   }
 
   _cancel() {
@@ -213,6 +215,10 @@ export class Search extends EventEmitter {
     this._currentMatchDecorator.clearAll();
     this._currentMatch = null;
     this._options = null;
+    if (this._jobId) {
+      this._editor.platformSupport().cancelIdleCallback(this._jobId);
+      this._jobId = 0;
+    }
   }
 
   /**
@@ -249,6 +255,8 @@ export class Search extends EventEmitter {
       to = Math.max(to, this._rangeToProcess.to);
     }
     this._rangeToProcess = {from, to};
+    if (!this._jobId)
+      this._jobId = this._editor.platformSupport().requestIdleCallback(this._searchChunk.bind(this));
   }
 
   /**
@@ -285,7 +293,6 @@ export class Search extends EventEmitter {
         this._updateCurrentMatch({from: iterator.offset, to: iterator.offset + query.length}, selectCurrentMatch, revealCurrentMatch);
       iterator.advance(query.length);
     }
-    this._updated = true;
     return range;
   }
 };

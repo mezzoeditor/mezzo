@@ -12,16 +12,29 @@ import { DefaultTokenizer } from '../default/DefaultTokenizer.mjs';
 import { Viewport, Measurer } from '../core/Viewport.mjs';
 import { EventEmitter } from '../core/EventEmitter.mjs';
 
+export class PlatformSupport {
+  /**
+   * @param {function(?)} callback
+   * @return {number}
+   */
+  requestIdleCallback(callback) { }
+
+  /**
+   * @param {number} callbackId
+   */
+  cancelIdleCallback(id) { }
+}
+
 export class Editor {
   /**
    * @param {!Measurer} measurer
+   * @param {!Platform} platformSupport
    */
-  constructor(measurer) {
+  constructor(measurer, platformSupport) {
     this._handles = new Decorator(true /* createHandles */);
     this._document = new Document();
     this._document.addReplaceCallback(this._onReplace.bind(this));
-
-    this._setupScheduler();
+    this._platformSupport = platformSupport;
 
     this._viewport = new Viewport(this._document, measurer);
 
@@ -31,7 +44,6 @@ export class Editor {
 
     this._selection = new Selection(this);
     this._search = new Search(this);
-    this.addIdleCallback(() => this._search.searchChunk());
     this._history = new History(this);
     this._editing = new Editing(this);
     this._selectedWordHighlighter = new SelectedWordHighlighter(this);
@@ -44,6 +56,13 @@ export class Editor {
   reset(text) {
     this._document.reset(text);
     this._history.reset();
+  }
+
+  /**
+   * @return {!PlatformSupport}
+   */
+  platformSupport() {
+    return this._platformSupport;
   }
 
   /**
@@ -99,16 +118,6 @@ export class Editor {
     return this._editing;
   }
 
-  addIdleCallback(callback) {
-    this._idleCallbacks.push(callback);
-  }
-
-  removeIdleCallback(callback) {
-    let index = this._idleCallbacks.indexOf(callback);
-    if (index !== -1)
-      this._idleCallbacks.splice(index, 1);
-  }
-
   addHandle(from, to, onRemoved) {
     if (to === undefined)
       to = from;
@@ -129,30 +138,6 @@ export class Editor {
   findCancel() {
     this._selectedWordHighlighter.setEnabled(true);
     this._search.cancel();
-  }
-
-  _setupScheduler() {
-    this._idleCallbacks = [];
-    let scheduleId = null;
-
-    let runCallbacks = (deadline) => {
-      scheduleId = null;
-      while (true) {
-        let hasMore = false;
-        for (let idleCallback of this._idleCallbacks)
-          hasMore |= idleCallback();
-        if (!hasMore || deadline.didTimeout || deadline.timeRemaining() <= 0)
-          break;
-      }
-      schedule();
-    };
-
-    let schedule = () => {
-      if (!scheduleId)
-        scheduleId = self.requestIdleCallback(runCallbacks, {timeout: 1000});
-    };
-
-    schedule();
   }
 
   _onReplace(replacements) {

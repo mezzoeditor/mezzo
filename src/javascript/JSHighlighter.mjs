@@ -8,9 +8,10 @@ const STATE_CHUNK = 2000;
 
 export class JSHighlighter {
   constructor(editor) {
+    this._platformSupport = editor.platformSupport();
     this._highlightStates = new Decorator();
     this._highlightOffset = 0;
-    this._rafId = 0;
+    this._jobId = 0;
     this._parser = null;
 
     this._onReplaceCallback = this._onReplace.bind(this);
@@ -29,7 +30,7 @@ export class JSHighlighter {
   }
 
   _doHighlight() {
-    this._rafId = 0;
+    this._jobId = 0;
     if (this._highlightOffset >= this._document.length())
       return;
     let to = Math.min(this._highlightOffset + HIGHLIGHT_CHUNK, this._document.length());
@@ -40,7 +41,7 @@ export class JSHighlighter {
       this._highlightStates.add(Start(this._highlightOffset), Start(this._highlightOffset), this._parser.state());
     }
     if (this._highlightOffset < this._document.length()) {
-      this._rafId = requestAnimationFrame(this._doHighlight.bind(this));
+      this._jobId = this._platformSupport.requestIdleCallback(this._doHighlight.bind(this));
       this._viewport.raf();
     } else {
       this._highlightOffset = this._document.length();
@@ -48,8 +49,8 @@ export class JSHighlighter {
   }
 
   _scheduleHighlight() {
-    if (!this._rafId)
-      this._rafId = requestAnimationFrame(this._doHighlight.bind(this));
+    if (!this._jobId)
+      this._jobId = this._platformSupport.requestIdleCallback(this._doHighlight.bind(this));
   }
 
   /**
@@ -58,6 +59,10 @@ export class JSHighlighter {
   dispose() {
     this._viewport.removeDecorationCallback(this._onDecorateCallback);
     this._document.removeReplaceCallback(this._onReplaceCallback);
+    if (this._jobId) {
+      this._platformSupport.cancelIdleCallback(this._jobId);
+      this._jobId = 0;
+    }
   }
 
   /**

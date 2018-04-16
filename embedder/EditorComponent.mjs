@@ -1,6 +1,6 @@
 import { Editor } from '../src/editor/Editor.mjs';
 import { Selection } from '../src/editor/Selection.mjs';
-import { Renderer } from '../src/web/Renderer.mjs';
+import { Renderer, PlatformSupport } from '../src/web/Renderer.mjs';
 import { JSHighlighter } from '../src/javascript/JSHighlighter.mjs';
 import { DefaultHighlighter } from '../src/default/DefaultHighlighter.mjs';
 
@@ -8,7 +8,7 @@ export class EditorComponent extends HTMLElement {
   constructor() {
     super();
     this._renderer = new Renderer(document);
-    this._editor = new Editor(this._renderer.measurer());
+    this._editor = new Editor(this._renderer.measurer(), PlatformSupport.instance());
     this._renderer.setEditor(this._editor);
 
     this._editor.selection().setRanges([{from: 0, to: 0}]);
