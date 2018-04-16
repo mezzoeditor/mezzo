@@ -157,6 +157,8 @@ export class Renderer {
       name: null,
     };
 
+    this._muteViewportChangedEvent = false;
+
     this._setupSelection();
     this._setupEventListeners();
     this._keymap = new Map();
@@ -211,11 +213,14 @@ export class Renderer {
     if (this._editor)
       throw new Error('NOT IMPLEMENTED: tear down previous editor');
     this._editor = editor;
-    this._editor.document().on(Document.Events.Invalidate, this.invalidate.bind(this));
-    this._editor.viewport().on(Viewport.Events.Reveal, this.invalidate.bind(this));
-    this._editor.viewport().on(Viewport.Events.Raf, this.raf.bind(this));
     this._editor.viewport().setMeasurer(this._measurer);
+    this._editor.viewport().on(Viewport.Events.Changed, () => {
+      if (!this._muteViewportChangedEvent)
+        this.invalidate(this);
+    });
+    this._editor.viewport().on(Viewport.Events.Raf, this.raf.bind(this));
     this._editor.selection().on(Selection.Events.Changed, () => this.raf());
+    this.invalidate();
   }
 
   editor() {
@@ -555,10 +560,8 @@ export class Renderer {
   setUseMonospaceFont(monospace) {
     this._monospace = monospace;
     this._measurer = new ContextBasedMeasurer(this._canvas.getContext('2d'), this._monospace);
-    if (this._editor) {
+    if (this._editor)
       this._editor.viewport().setMeasurer(this._measurer);
-      this.invalidate();
-    }
   }
 
   _mouseEventToCanvas(event) {
@@ -586,7 +589,6 @@ export class Renderer {
     if (!this._editor)
       return;
     this._editor.viewport().advanceScroll(event.deltaY, event.deltaX);
-    this.invalidate();
     event.preventDefault();
   }
 
@@ -636,11 +638,9 @@ export class Renderer {
     } else if (this._mouseDownState.name === MouseDownStates.VSCROLL_DRAG) {
       let scrollbarOffset = canvasPosition.y - this._vScrollbar.rect.y + this._mouseDownState.insideThumb;
       this._editor.viewport().setScrollTop(scrollbarOffset / this._vScrollbar.ratio);
-      this.invalidate();
     } else if (this._mouseDownState.name === MouseDownStates.HSCROLL_DRAG) {
       let scrollbarOffset = canvasPosition.x - this._hScrollbar.rect.x + this._mouseDownState.insideThumb;
       this._editor.viewport().setScrollLeft(scrollbarOffset / this._hScrollbar.ratio);
-      this.invalidate();
     }
   }
 
@@ -682,6 +682,8 @@ export class Renderer {
     this._editorRect.height = this._cssHeight;
 
     const viewport = this._editor.viewport();
+
+    this._muteViewportChangedEvent = true;
     viewport.setSize(this._editorRect.width, this._editorRect.height);
     viewport.setPadding({
       left: 4,
@@ -689,6 +691,7 @@ export class Renderer {
       top: 4,
       bottom: this._editorRect.height - this._measurer.lineHeight() - 4
     });
+    this._muteViewportChangedEvent = false;
 
     this._vScrollbar.ratio = viewport.height() / (viewport.maxScrollTop() + viewport.height());
     this._vScrollbar.rect.x = this._cssWidth - SCROLLBAR_WIDTH;

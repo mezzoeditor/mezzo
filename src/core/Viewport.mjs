@@ -389,7 +389,6 @@ export class Viewport extends EventEmitter {
       this._scrollLeft = Math.min(to.x - this._width + rangePadding.right, this._maxScrollLeft);
     }
     this._recompute();
-    this.emit(Viewport.Events.Reveal);
   }
 
   /**
@@ -605,6 +604,7 @@ export class Viewport extends EventEmitter {
     this._scrollLeft = Math.min(this._scrollLeft, this._maxScrollLeft);
     this._scrollTop = Math.max(this._scrollTop, 0);
     this._scrollTop = Math.min(this._scrollTop, this._maxScrollTop);
+    this.emit(Viewport.Events.Changed);
   }
 
   /**
@@ -710,7 +710,7 @@ export class Viewport extends EventEmitter {
 
 Viewport.Events = {
   Raf: 'raf',
-  Reveal: 'reveal'
+  Changed: 'changed'
 };
 
 Viewport.VisibleRange = class {
