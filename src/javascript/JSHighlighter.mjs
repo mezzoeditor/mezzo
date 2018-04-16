@@ -23,6 +23,7 @@ export class JSHighlighter {
 
     this._parser = new Parser(this._document.iterator(0), Parser.defaultState());
     this._highlightStates.clearAll();
+    this._highlightStates.add(Start(0), Start(0), Parser.defaultState());
     this._highlightOffset = 0;
     this._scheduleHighlight();
   }
