@@ -73,13 +73,13 @@ export class Search extends EventEmitter {
     this._needsProcessing({from: 0, to: this._document.length() - options.query.length});
     this._updated = true;
     this._shouldUpdateSelection = true;
-    this._document.invalidate();
+    this._viewport.raf();
   }
 
   cancel() {
     this._cancel();
     this._updated = true;
-    this._document.invalidate();
+    this._viewport.raf();
   }
 
   /**
@@ -99,7 +99,7 @@ export class Search extends EventEmitter {
       return false;
     this._updateCurrentMatch(Range(match), true, true);
     this._updated = true;
-    this._document.invalidate();
+    this._viewport.raf();
     return true;
   }
 
@@ -120,7 +120,7 @@ export class Search extends EventEmitter {
       return false;
     this._updateCurrentMatch(Range(match), true, true);
     this._updated = true;
-    this._document.invalidate();
+    this._viewport.raf();
     return true;
   }
 
@@ -135,7 +135,7 @@ export class Search extends EventEmitter {
     let to = Math.min(this._rangeToProcess.to, from + this._chunkSize);
     this._searchRange({from, to}, this._shouldUpdateSelection, this._shouldUpdateSelection);
     this._processed({from, to});
-    this._document.invalidate();
+    this._viewport.raf();
     return !!this._rangeToProcess;
   }
 

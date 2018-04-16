@@ -22,8 +22,6 @@ const examples = [
   'unicodeperf.txt',
 ];
 
-const jsHighlighter = new JSHighlighter();
-const defaultHighlighter = new DefaultHighlighter();
 let rangeHandle;
 
 function addExamples(renderer) {
@@ -189,7 +187,7 @@ async function setupEditor(renderer, exampleName) {
   const response = await fetch(exampleName);
   const text = await response.text();
 
-  const highlighter = exampleName.endsWith('.js') ? jsHighlighter : defaultHighlighter;
+  const highlighter = exampleName.endsWith('.js') ? new JSHighlighter(editor) : new DefaultHighlighter(editor);
   editor.setHighlighter(highlighter);
 
   if (exampleName.indexOf('jquery') !== -1)

@@ -213,6 +213,7 @@ export class Renderer {
     this._editor = editor;
     this._editor.document().on(Document.Events.Invalidate, this.invalidate.bind(this));
     this._editor.viewport().on(Viewport.Events.Reveal, this.invalidate.bind(this));
+    this._editor.viewport().on(Viewport.Events.Raf, this.raf.bind(this));
     this._editor.viewport().setMeasurer(this._measurer);
     this._editor.selection().on(Selection.Events.Changed, () => this.raf());
   }

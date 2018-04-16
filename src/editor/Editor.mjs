@@ -29,7 +29,6 @@ export class Editor extends EventEmitter {
     this._tokenizer = null;
     this.setTokenizer(new DefaultTokenizer());
     this._highlighter = null;
-    this.setHighlighter(new DefaultHighlighter());
 
     this._selection = new Selection(this);
     this._search = new Search(this);
@@ -39,6 +38,8 @@ export class Editor extends EventEmitter {
     this._selectedWordHighlighter = new SelectedWordHighlighter(this);
     this._smartBraces = new SmartBraces(this);
     this._blockIndentation = new BlockIndentation(this);
+
+    this.setHighlighter(new DefaultHighlighter(this));
   }
 
   invalidate() {
@@ -130,13 +131,9 @@ export class Editor extends EventEmitter {
   }
 
   setHighlighter(highlighter) {
-    if (highlighter === this._highlighter)
-      return;
     if (this._highlighter)
-      this._highlighter.uninstall(this._viewport);
+      this._highlighter.dispose();
     this._highlighter = highlighter;
-    if (this._highlighter)
-      this._highlighter.install(this._viewport);
     this.invalidate();
   }
 

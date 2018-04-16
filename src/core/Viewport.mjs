@@ -150,6 +150,10 @@ export class Viewport extends EventEmitter {
     this.setMeasurer(measurer);
   }
 
+  raf() {
+    this.emit(Viewport.Events.Raf);
+  }
+
   /**
    * @return {!Document}
    */
@@ -703,6 +707,7 @@ export class Viewport extends EventEmitter {
 }
 
 Viewport.Events = {
+  Raf: 'raf',
   Reveal: 'reveal'
 };
 

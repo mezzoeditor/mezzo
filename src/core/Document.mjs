@@ -142,10 +142,6 @@ export class Document extends EventEmitter {
     this._addReplacement(replacement);
   }
 
-  invalidate() {
-    this.emit(Document.Events.Invalidate);
-  }
-
   /**
    * Adds a callback to be notified about all replacement operations.
    *
@@ -238,12 +234,10 @@ export class Document extends EventEmitter {
       }
     }
     this._dispatchingReplacements = false;
-    this.invalidate();
   }
 };
 
 Document.Events = {
-  Invalidate: 'invalidate'
 };
 
 Document.test = {};

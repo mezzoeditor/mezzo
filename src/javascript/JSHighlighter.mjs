@@ -7,7 +7,7 @@ const HIGHLIGHT_CHUNK = 20000;
 const STATE_CHUNK = 2000;
 
 export class JSHighlighter {
-  constructor() {
+  constructor(editor) {
     this._highlightStates = new Decorator();
     this._highlightOffset = 0;
     this._rafId = 0;
@@ -15,6 +15,16 @@ export class JSHighlighter {
 
     this._onReplaceCallback = this._onReplace.bind(this);
     this._onDecorateCallback = this._onDecorate.bind(this);
+
+    this._viewport = editor.viewport();
+    this._viewport.addDecorationCallback(this._onDecorateCallback);
+    this._document = editor.document();
+    this._document.addReplaceCallback(this._onReplaceCallback);
+
+    this._parser = new Parser(this._document.iterator(0), Parser.defaultState());
+    this._highlightStates.clearAll();
+    this._highlightOffset = 0;
+    this._scheduleHighlight();
   }
 
   _doHighlight() {
@@ -28,10 +38,12 @@ export class JSHighlighter {
       for (let token of this._parser);
       this._highlightStates.add(Start(this._highlightOffset), Start(this._highlightOffset), this._parser.state());
     }
-    if (this._highlightOffset < this._document.length())
+    if (this._highlightOffset < this._document.length()) {
       this._rafId = requestAnimationFrame(this._doHighlight.bind(this));
-    else
+      this._viewport.raf();
+    } else {
       this._highlightOffset = this._document.length();
+    }
   }
 
   _scheduleHighlight() {
@@ -42,22 +54,9 @@ export class JSHighlighter {
   /**
    * @param {!Viewport} viewport
    */
-  install(viewport) {
-    viewport.addDecorationCallback(this._onDecorateCallback);
-    viewport.document().addReplaceCallback(this._onReplaceCallback);
-    this._document = viewport.document();
-    this._parser = new Parser(this._document.iterator(0), Parser.defaultState());
-    this._highlightStates.clearAll();
-    this._highlightOffset = 0;
-    this._scheduleHighlight();
-  }
-
-  /**
-   * @param {!Viewport} viewport
-   */
-  uninstall(viewport) {
-    viewport.removeDecorationCallback(this._onDecorateCallback);
-    viewport.document().removeReplaceCallback(this._onReplaceCallback);
+  dispose() {
+    this._viewport.removeDecorationCallback(this._onDecorateCallback);
+    this._document.removeReplaceCallback(this._onReplaceCallback);
   }
 
   /**

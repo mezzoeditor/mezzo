@@ -2,22 +2,15 @@ import { Start } from '../core/Anchor.mjs';
 import { TextDecorator } from '../core/Decorator.mjs';
 
 export class DefaultHighlighter {
-  constructor() {
+  constructor(editor) {
     this._onDecorateCallback = this._onDecorate.bind(this);
+
+    this._viewport = editor.viewport();
+    this._viewport.addDecorationCallback(this._onDecorateCallback);
   }
 
-  /**
-   * @param {!Viewport} viewport
-   */
-  install(viewport) {
-    viewport.addDecorationCallback(this._onDecorateCallback);
-  }
-
-  /**
-   * @param {!Viewport} viewport
-   */
-  uninstall(viewport) {
-    viewport.removeDecorationCallback(this._onDecorateCallback);
+  dispose() {
+    this._viewport.removeDecorationCallback(this._onDecorateCallback);
   }
 
   /**
