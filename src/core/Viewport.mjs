@@ -589,7 +589,7 @@ export class Viewport extends EventEmitter {
         }
 
         let nextOffset = this.contentPointToOffset({x: 0, y: bottom / ratio + lineHeight});
-        return Math.max(decoration.to.offset, nextOffset);
+        return Start(Math.max(decoration.to.offset, nextOffset));
       });
       if (lastTop >= 0)
         scrollbar.push({y: lastTop, height: lastBottom - lastTop, style: decorator.style()});
