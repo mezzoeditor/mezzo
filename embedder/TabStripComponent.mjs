@@ -33,6 +33,10 @@ export class TabStripComponent extends HTMLElement {
     return this._tabs.has(id);
   }
 
+  selectedTab() {
+    return this._selectedTabId;
+  }
+
   selectTab(id) {
     if (this._selectedTabId === id)
       return;

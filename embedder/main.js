@@ -39,10 +39,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   /** @type {!Map<string, !Editor>} */
   let editors = new Map();
-  let selectedFile = '';
   sidebar.setSelectedCallback(async path => {
-    if (selectedFile === path)
-      return;
     if (!tabstrip.hasTab(path))
       tabstrip.addTab(path, window.fs.fileName(path));
     tabstrip.selectTab(path);
@@ -61,10 +58,10 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 
   document.addEventListener('keydown', (event) => {
-    if (!selectedFile)
-      return;
-    if (event.key === 's' && event.metaKey) {
-      window.fs.saveFile(selectedFile, editor.text());
+    let path = tabstrip.selectedTab();
+    let editor = editors.get(path);
+    if (editor && event.key === 's' && event.metaKey) {
+      window.fs.saveFile(path, editor.document().content());
       event.stopPropagation();
       event.preventDefault();
     }
