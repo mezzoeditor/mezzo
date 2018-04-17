@@ -29,8 +29,11 @@ export class SidebarComponent extends HTMLElement {
 
   _onClick(event) {
     const fileEntry = event.path.find(node => node.tagName && node.tagName.toLowerCase() === 'file-entry');
-    if (fileEntry && this._selectedCallback)
+    if (fileEntry && this._selectedCallback) {
       this._select(fileEntry);
+      event.preventDefault();
+      event.stopPropagation();
+    }
   }
 
   _select(item) {

@@ -16,10 +16,14 @@
 }
 
 body {
+  --monospace: 'Inconsolata', monospace;
+  --divider-color: #8e8e8e;
+}
+
+body {
   margin: 0;
   padding: 0;
   font-family: 'Montserrat', sans-serif;
-  --monospace: 'Inconsolata', monospace;
   font-size: 14px;
   background-color: #f0f0f0;
 }

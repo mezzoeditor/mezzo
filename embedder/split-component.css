@@ -20,8 +20,8 @@ split-component
 split-divider {
   flex: 0 0 4px;
   z-index: 10;
-  border-left: 1px solid #8e8e8e;
-  border-right: 1px solid #8e8e8e;
+  border-left: 1px solid var(--divider-color);
+  border-right: 1px solid var(--divider-color);
 }
 
 split-component

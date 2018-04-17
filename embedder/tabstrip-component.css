@@ -1,6 +1,7 @@
 tabstrip-component {
   flex: 0 0 30px;
   contain: content;
+  border-bottom: 1px solid var(--divider-color);
 }
 
 tabstrip-tab {
@@ -12,6 +13,11 @@ tabstrip-tab {
 
 tabstrip-tab {
   border-right: 1px solid white;
+}
+
+tabstrip-tab:hover {
+  cursor: pointer;
+  background-color: #ddd;
 }
 
 tabstrip-tab.selected {

@@ -41,10 +41,11 @@ window.addEventListener('DOMContentLoaded', () => {
   sidebar.setSelectedCallback(async path => {
     if (selectedFile === path)
       return;
-    selectedFile = path;
     if (!tabstrip.hasTab(path))
       tabstrip.addTab(path, window.fs.fileName(path));
     tabstrip.selectTab(path);
+  });
+  tabstrip.setSelectedCallback(async path => {
     const content = await window.fs.readFile(path);
     editor.setText(content);
     editor.setMimeType(window.fs.mimeType(path));
