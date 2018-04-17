@@ -588,7 +588,7 @@ export class Viewport extends EventEmitter {
           lastBottom = bottom;
         }
 
-        let nextOffset = this.contentPointToOffset({x: 0, y: bottom / ratio + lineHeight});
+        let nextOffset = this.contentPointToOffset({x: 0, y: bottom / ratio });
         return Start(Math.max(decoration.to.offset, nextOffset));
       });
       if (lastTop >= 0)
