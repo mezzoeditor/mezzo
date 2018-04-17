@@ -37,11 +37,6 @@ export let DefaultTheme = {
       width: 2,
       color: 'hsl(39, 96%, 28%)'
     },
-    line: {
-      border: {
-        color: 'hsl(39, 96%, 25%)',
-      },
-    },
   },
   'syntax.default': {
     text: {

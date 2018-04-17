@@ -171,7 +171,7 @@ export class Search extends EventEmitter {
     }
 
     this._emitUpdatedIfNeeded();
-    return {background: [this._decorator, this._currentMatchDecorator], lines: [this._decorator, this._currentMatchDecorator]};
+    return {background: [this._decorator, this._currentMatchDecorator], lines: [this._decorator]};
   }
 
   _emitUpdatedIfNeeded() {
