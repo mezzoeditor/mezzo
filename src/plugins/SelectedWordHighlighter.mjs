@@ -34,8 +34,8 @@ export class SelectedWordHighlighter {
   /**
    * @param {!Object} event
    */
-  _onSearchChanged({isSearching}) {
-    this.setEnabled(!isSearching);
+  _onSearchChanged({enabled}) {
+    this.setEnabled(!enabled);
   }
 
   _onSelectionChanged() {

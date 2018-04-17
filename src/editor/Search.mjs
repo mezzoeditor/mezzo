@@ -24,9 +24,7 @@ export class Search extends EventEmitter {
     this._currentMatch = null;
     this._shouldUpdateSelection = false;
 
-    this._isSearching = false;
-
-    this._lastIsSearching = false;
+    this._lastEnabled = false;
     this._lastReportedCurrentMatchIndex = -1;
     this._lastReportedMatchesCount = 0;
   }
@@ -65,7 +63,6 @@ export class Search extends EventEmitter {
    * @param {string} query
    */
   find(query) {
-    this._isSearching = true;
     this._cancel();
     this._options = {query};
     this._needsProcessing({from: 0, to: this._document.length() - query.length});
@@ -75,7 +72,6 @@ export class Search extends EventEmitter {
   }
 
   cancel() {
-    this._isSearching = false;
     this._cancel();
     this._viewport.raf();
     this._emitUpdatedIfNeeded();
@@ -84,8 +80,8 @@ export class Search extends EventEmitter {
   /**
    * @param {boolean}
    */
-  isSearching() {
-    return this._isSearching;
+  enabled() {
+    return !!this._options;
   }
 
   /**
@@ -177,16 +173,13 @@ export class Search extends EventEmitter {
   _emitUpdatedIfNeeded() {
     let currentMatchIndex = this.currentMatchIndex();
     let matchesCount = this.matchesCount();
-    if (this._isSearching === this._lastIsSearching && currentMatchIndex === this._lastReportedCurrentMatchIndex && matchesCount === this._lastReportedMatchesCount)
+    let enabled = !!this._options;
+    if (enabled === this._lastEnabled && currentMatchIndex === this._lastReportedCurrentMatchIndex && matchesCount === this._lastReportedMatchesCount)
       return;
     this._lastReportedCurrentMatchIndex = currentMatchIndex;
     this._lastReportedMatchesCount = matchesCount;
-    this._lastIsSearching = this._isSearching;
-    this.emit(Search.Events.Changed, {
-      isSearching: this._isSearching,
-      currentIndex: currentMatchIndex,
-      totalCount: matchesCount
-    });
+    this._lastEnabled = enabled;
+    this.emit(Search.Events.Changed, { enabled, currentMatchIndex, matchesCount });
   }
 
   /**

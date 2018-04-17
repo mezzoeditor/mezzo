@@ -84,11 +84,11 @@ function addSearch(renderer) {
     editor.search().previousMatch();
   }, false);
   const info = document.querySelector('.search-info');
-  editor.search().on('changed', ({currentIndex, totalCount}) => {
-    if (currentIndex === -1)
-      info.textContent = `${totalCount} matches`;
+  editor.search().on('changed', ({currentMatchIndex, matchesCount}) => {
+    if (currentMatchIndex === -1)
+      info.textContent = `${matchesCount} matches`;
     else
-      info.textContent = `${currentIndex + 1} of ${totalCount} matches`;
+      info.textContent = `${currentMatchIndex + 1} of ${matchesCount} matches`;
   });
 
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') !== -1;
