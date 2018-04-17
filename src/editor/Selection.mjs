@@ -388,7 +388,7 @@ export class Selection extends EventEmitter {
   addNextOccurence() {
     if (this._frozen)
       throw new Error('Cannot change selection while frozen');
-    let tokenizer = this._document.tokenizer();
+    let tokenizer = this._editor.tokenizer();
     if (!this._ranges.length || !tokenizer)
       return false;
     let hasCollapsedRange = false;
