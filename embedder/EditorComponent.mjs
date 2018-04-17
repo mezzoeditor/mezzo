@@ -4,6 +4,10 @@ import { Renderer, PlatformSupport } from '../src/web/Renderer.mjs';
 import { JSHighlighter } from '../src/javascript/JSHighlighter.mjs';
 import { DefaultHighlighter } from '../src/default/DefaultHighlighter.mjs';
 
+import { SelectedWordHighlighter } from '../src/plugins/SelectedWordHighlighter.mjs';
+import { SmartBraces } from '../src/plugins/SmartBraces.mjs';
+import { BlockIndentation } from '../src/plugins/BlockIndentation.mjs';
+
 export class EditorComponent extends HTMLElement {
   constructor() {
     super();
@@ -17,6 +21,11 @@ export class EditorComponent extends HTMLElement {
     this._mimeType = 'text/plain';
     this._selectionChangedCallback = null;
     this._selectionDescription = document.createElement('span');
+
+    const selectedWordHighlighter = new SelectedWordHighlighter(this._editor);
+    const smartBraces = new SmartBraces(this._editor);
+    const blockIndentation = new BlockIndentation(this._editor);
+
 
     let rafId = 0;
     this._editor.selection().on(Selection.Events.Changed, () => {

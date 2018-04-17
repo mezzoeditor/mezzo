@@ -4,9 +4,6 @@ import { Selection } from './Selection.mjs';
 import { History } from './History.mjs';
 import { Editing } from './Editing.mjs';
 import { Search } from './Search.mjs';
-import { SelectedWordHighlighter } from '../plugins/SelectedWordHighlighter.mjs';
-import { SmartBraces } from '../plugins/SmartBraces.mjs';
-import { BlockIndentation } from '../plugins/BlockIndentation.mjs';
 import { DefaultHighlighter } from '../default/DefaultHighlighter.mjs';
 import { DefaultTokenizer } from '../default/DefaultTokenizer.mjs';
 import { Viewport, Measurer } from '../core/Viewport.mjs';
@@ -46,9 +43,6 @@ export class Editor {
     this._search = new Search(this);
     this._history = new History(this);
     this._editing = new Editing(this);
-    this._selectedWordHighlighter = new SelectedWordHighlighter(this);
-    this._smartBraces = new SmartBraces(this);
-    this._blockIndentation = new BlockIndentation(this);
 
     this.setHighlighter(new DefaultHighlighter(this));
   }
@@ -128,16 +122,6 @@ export class Editor {
     if (this._highlighter)
       this._highlighter.dispose();
     this._highlighter = highlighter;
-  }
-
-  find(query) {
-    this._selectedWordHighlighter.setEnabled(false);
-    this._search.search({query});
-  }
-
-  findCancel() {
-    this._selectedWordHighlighter.setEnabled(true);
-    this._search.cancel();
   }
 
   _onReplace(replacements) {

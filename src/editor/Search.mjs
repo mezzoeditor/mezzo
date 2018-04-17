@@ -3,12 +3,6 @@ import { LineDecorator } from '../core/Decorator.mjs';
 import { Selection } from './Selection.mjs';
 import { EventEmitter } from '../core/EventEmitter.mjs';
 
-/**
- * @typdef {{
- *   query: string,
- * }} SearchOptions
- */
-
 export class Search extends EventEmitter {
   /**
    * @param {!Editor} editor
@@ -30,6 +24,9 @@ export class Search extends EventEmitter {
     this._currentMatch = null;
     this._shouldUpdateSelection = false;
 
+    this._isSearching = false;
+
+    this._lastIsSearching = false;
     this._lastReportedCurrentMatchIndex = -1;
     this._lastReportedMatchesCount = 0;
   }
@@ -65,21 +62,30 @@ export class Search extends EventEmitter {
   }
 
   /**
-   * @param {!SearchOptions} options
+   * @param {string} query
    */
-  search(options) {
+  find(query) {
+    this._isSearching = true;
     this._cancel();
-    this._options = options;
-    this._needsProcessing({from: 0, to: this._document.length() - options.query.length});
+    this._options = {query};
+    this._needsProcessing({from: 0, to: this._document.length() - query.length});
     this._shouldUpdateSelection = true;
     this._viewport.raf();
     this._emitUpdatedIfNeeded();
   }
 
   cancel() {
+    this._isSearching = false;
     this._cancel();
     this._viewport.raf();
     this._emitUpdatedIfNeeded();
+  }
+
+  /**
+   * @param {boolean}
+   */
+  isSearching() {
+    return this._isSearching;
   }
 
   /**
@@ -171,11 +177,13 @@ export class Search extends EventEmitter {
   _emitUpdatedIfNeeded() {
     let currentMatchIndex = this.currentMatchIndex();
     let matchesCount = this.matchesCount();
-    if (currentMatchIndex === this._lastReportedCurrentMatchIndex && matchesCount === this._lastReportedMatchesCount)
+    if (this._isSearching === this._lastIsSearching && currentMatchIndex === this._lastReportedCurrentMatchIndex && matchesCount === this._lastReportedMatchesCount)
       return;
     this._lastReportedCurrentMatchIndex = currentMatchIndex;
     this._lastReportedMatchesCount = matchesCount;
-    this.emit(Search.Events.Updated, {
+    this._lastIsSearching = this._isSearching;
+    this.emit(Search.Events.Changed, {
+      isSearching: this._isSearching,
       currentIndex: currentMatchIndex,
       totalCount: matchesCount
     });
@@ -298,5 +306,5 @@ export class Search extends EventEmitter {
 };
 
 Search.Events = {
-  Updated: 'updated'
+  Changed: 'changed'
 };

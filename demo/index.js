@@ -6,6 +6,10 @@ import { Random } from "../src/core/Random.mjs";
 import { JSHighlighter } from "../src/javascript/JSHighlighter.mjs";
 import { DefaultHighlighter } from "../src/default/DefaultHighlighter.mjs";
 
+import { SelectedWordHighlighter } from '../src/plugins/SelectedWordHighlighter.mjs';
+import { SmartBraces } from '../src/plugins/SmartBraces.mjs';
+import { BlockIndentation } from '../src/plugins/BlockIndentation.mjs';
+
 import { trace } from "../src/core/Trace.mjs";
 trace.setup();
 
@@ -53,9 +57,9 @@ function addSearch(renderer) {
   const input = document.querySelector('.search');
   input.addEventListener('input', event => {
     if (!input.value)
-      editor.findCancel();
+      editor.search().cancel();
     else
-      editor.find(input.value);
+      editor.search().find(input.value);
   }, false);
   input.addEventListener('keydown', event => {
     if (event.key === 'Enter') {
@@ -66,7 +70,7 @@ function addSearch(renderer) {
       event.preventDefault();
       event.stopPropagation();
     } else if (event.key === 'Escape') {
-      editor.findCancel();
+      editor.search().cancel();
       renderer.focus();
       input.value = '';
       event.preventDefault();
@@ -80,7 +84,7 @@ function addSearch(renderer) {
     editor.search().previousMatch();
   }, false);
   const info = document.querySelector('.search-info');
-  editor.search().on('updated', ({currentIndex, totalCount}) => {
+  editor.search().on('changed', ({currentIndex, totalCount}) => {
     if (currentIndex === -1)
       info.textContent = `${totalCount} matches`;
     else
@@ -129,6 +133,11 @@ function updateRangeHandle(editor) {
 document.addEventListener('DOMContentLoaded', () => {
   const renderer = new Renderer(document);
   const editor = new Editor(renderer.measurer(), PlatformSupport.instance());
+
+  const selectedWordHighlighter = new SelectedWordHighlighter(editor);
+  const smartBraces = new SmartBraces(editor);
+  const blockIndentation = new BlockIndentation(editor);
+
   renderer.setEditor(editor);
   addExamples(renderer);
   addHighlights(editor);
