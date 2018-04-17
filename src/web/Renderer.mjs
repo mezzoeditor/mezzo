@@ -5,6 +5,7 @@ import { Document } from '../core/Document.mjs';
 import { DefaultTheme } from '../default/DefaultTheme.mjs';
 import { Tokenizer } from '../editor/Tokenizer.mjs';
 import { Selection } from '../editor/Selection.mjs';
+import { EventEmitter } from '../core/EventEmitter.mjs';
 
 /**
  * @implements Measurer
@@ -108,6 +109,7 @@ export class Renderer {
 
     this._theme = DefaultTheme;
     this._monospace = true;
+    this._eventListeners = [];
 
     this._animationFrameId = 0;
     this._rendering = false;
@@ -211,15 +213,19 @@ export class Renderer {
 
   setEditor(editor) {
     if (this._editor)
-      throw new Error('NOT IMPLEMENTED: tear down previous editor');
+      EventEmitter.removeEventListeners(this._eventListeners);
     this._editor = editor;
-    this._editor.viewport().setMeasurer(this._measurer);
-    this._editor.viewport().on(Viewport.Events.Changed, () => {
-      if (!this._muteViewportChangedEvent)
-        this.invalidate(this);
-    });
-    this._editor.viewport().on(Viewport.Events.Raf, this.raf.bind(this));
-    this._editor.selection().on(Selection.Events.Changed, () => this.raf());
+    if (this._editor) {
+      this._editor.viewport().setMeasurer(this._measurer);
+      this._eventListeners = [
+        this._editor.viewport().on(Viewport.Events.Changed, () => {
+          if (!this._muteViewportChangedEvent)
+            this.invalidate(this);
+        }),
+        this._editor.viewport().on(Viewport.Events.Raf, this.raf.bind(this)),
+        this._editor.selection().on(Selection.Events.Changed, () => this.raf())
+      ];
+    }
     this.invalidate();
   }
 

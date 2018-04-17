@@ -1,3 +1,4 @@
+import { EventEmitter } from '../src/core/EventEmitter.mjs';
 import { Editor } from '../src/editor/Editor.mjs';
 import { Selection } from '../src/editor/Selection.mjs';
 import { Renderer, PlatformSupport } from '../src/web/Renderer.mjs';
@@ -12,79 +13,61 @@ export class EditorComponent extends HTMLElement {
   constructor() {
     super();
     this._renderer = new Renderer(document);
-    this._editor = new Editor(this._renderer.measurer(), PlatformSupport.instance());
-    this._renderer.setEditor(this._editor);
-
-    this._editor.selection().setRanges([{from: 0, to: 0}]);
+    this._editor = null;
+    this._eventListeners = [];
     this._renderer.element().classList.add('editor');
     this.appendChild(this._renderer.element());
-    this._mimeType = 'text/plain';
     this._selectionChangedCallback = null;
     this._selectionDescription = document.createElement('span');
 
-    const selectedWordHighlighter = new SelectedWordHighlighter(this._editor);
-    const smartBraces = new SmartBraces(this._editor);
-    const blockIndentation = new BlockIndentation(this._editor);
+    this._rafId = 0;
+  }
 
-
-    let rafId = 0;
-    this._editor.selection().on(Selection.Events.Changed, () => {
-      if (rafId)
+  _onSelectionChanged() {
+    if (this._rafId)
+      return;
+    this._rafId = requestAnimationFrame(() => {
+      this._rafId = 0;
+      const ranges = this._editor.selection().ranges();
+      if (!ranges.length) {
+        this._selectionDescription.textContent = ``;
         return;
-      rafId = requestAnimationFrame(() => {
-        rafId = 0;
-        const ranges = this._editor.selection().ranges();
-        if (!ranges.length) {
-          this._selectionDescription.textContent = ``;
-          return;
-        }
-        if (ranges.length > 1) {
-          this._selectionDescription.textContent = `${ranges.length} selection regions`;
-          return;
-        }
-        const range = ranges[0];
-        if (range.from === range.to) {
-          const position = this._editor.document().offsetToPosition(range.from);
-          this._selectionDescription.textContent = `Line ${position.line + 1}, Column ${position.column + 1}`;
-          return;
-        }
-        const fromPosition = this._editor.document().offsetToPosition(range.from);
-        const toPosition = this._editor.document().offsetToPosition(range.to);
-        // TODO: this should measure columns, not offsets.
-        const charDelta = Math.abs(range.from - range.to);
-        const lineDelta = Math.abs(fromPosition.line - toPosition.line);
-        if (!lineDelta) {
-          this._selectionDescription.textContent = `${charDelta} character${charDelta > 1 ? 's' : ''} selected`;
-        } else {
-          this._selectionDescription.textContent = `${lineDelta + 1} lines, ${charDelta} character${charDelta > 1 ? 's' : ''} selected`;
-        }
-      });
+      }
+      if (ranges.length > 1) {
+        this._selectionDescription.textContent = `${ranges.length} selection regions`;
+        return;
+      }
+      const range = ranges[0];
+      if (range.from === range.to) {
+        const position = this._editor.document().offsetToPosition(range.from);
+        this._selectionDescription.textContent = `Line ${position.line + 1}, Column ${position.column + 1}`;
+        return;
+      }
+      const fromPosition = this._editor.document().offsetToPosition(range.from);
+      const toPosition = this._editor.document().offsetToPosition(range.to);
+      // TODO: this should measure columns, not offsets.
+      const charDelta = Math.abs(range.from - range.to);
+      const lineDelta = Math.abs(fromPosition.line - toPosition.line);
+      if (!lineDelta) {
+        this._selectionDescription.textContent = `${charDelta} character${charDelta > 1 ? 's' : ''} selected`;
+      } else {
+        this._selectionDescription.textContent = `${lineDelta + 1} lines, ${charDelta} character${charDelta > 1 ? 's' : ''} selected`;
+      }
     });
   }
 
-  setText(text) {
-    this._editor.reset(text);
+  setEditor(editor) {
+    EventEmitter.removeEventListeners(this._eventListeners);
+    this._editor = editor;
+    this._renderer.setEditor(editor);
+    this._eventListeners = [
+      this._editor.selection().on(Selection.Events.Changed, this._onSelectionChanged.bind(this))
+    ];
+    this._onSelectionChanged();
   }
 
   text() {
     return this._editor.document().content();
-  }
-
-  setMimeType(mimeType) {
-    if (this._mimeType === mimeType)
-      return;
-    this._mimeType = mimeType;
-    if (mimeType === 'text/javascript') {
-      const highlighter = new JSHighlighter(this._editor);
-      this._editor.setHighlighter(highlighter);
-    } else {
-      const highlighter = new DefaultHighlighter(this._editor);
-      this._editor.setHighlighter(highlighter);
-    }
-  }
-
-  mimeType() {
-    return this._mimeType;
   }
 
   selectionDescriptionElement() {
@@ -105,6 +88,23 @@ export class EditorComponent extends HTMLElement {
     console.log('disconnected');
     this._resizeObserver.disconnect();
     this._resizeObserver = null;
+  }
+
+  createEditor(mimeType) {
+    const editor = new Editor(this._renderer.measurer(), PlatformSupport.instance());
+    editor.selection().setRanges([{from: 0, to: 0}]);
+
+    const selectedWordHighlighter = new SelectedWordHighlighter(editor);
+    const smartBraces = new SmartBraces(editor);
+    const blockIndentation = new BlockIndentation(editor);
+    if (mimeType === 'text/javascript') {
+      const highlighter = new JSHighlighter(editor);
+      editor.setHighlighter(highlighter);
+    } else {
+      const highlighter = new DefaultHighlighter(editor);
+      editor.setHighlighter(highlighter);
+    }
+    return editor;
   }
 }
 

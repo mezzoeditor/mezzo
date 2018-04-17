@@ -29,14 +29,16 @@ window.addEventListener('DOMContentLoaded', () => {
   const tabstrip = new TabStripComponent();
   split.rightElement().appendChild(tabstrip);
 
-  const editor = new EditorComponent();
-  split.rightElement().appendChild(editor);
+  const renderer = new EditorComponent();
+  split.rightElement().appendChild(renderer);
 
   const statusbar = new StatusbarComponent();
-  statusbar.leftElement().appendChild(editor.selectionDescriptionElement());
-  statusbar.rightElement().textContent = editor.mimeType();
+  statusbar.leftElement().appendChild(renderer.selectionDescriptionElement());
+  statusbar.rightElement().textContent = '';
   document.body.appendChild(statusbar);
 
+  /** @type {!Map<string, !Editor>} */
+  let editors = new Map();
   let selectedFile = '';
   sidebar.setSelectedCallback(async path => {
     if (selectedFile === path)
@@ -46,10 +48,16 @@ window.addEventListener('DOMContentLoaded', () => {
     tabstrip.selectTab(path);
   });
   tabstrip.setSelectedCallback(async path => {
-    const content = await window.fs.readFile(path);
-    editor.setText(content);
-    editor.setMimeType(window.fs.mimeType(path));
-    statusbar.rightElement().textContent = editor.mimeType();
+    let mimeType = window.fs.mimeType(path);
+    let editor = editors.get(path);
+    if (!editor) {
+      editor = renderer.createEditor(mimeType);
+      editors.set(path, editor);
+      const content = await window.fs.readFile(path);
+      editor.reset(content);
+    }
+    renderer.setEditor(editor);
+    statusbar.rightElement().textContent = mimeType;
   });
 
   document.addEventListener('keydown', (event) => {
@@ -62,3 +70,4 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
