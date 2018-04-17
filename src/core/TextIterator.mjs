@@ -203,6 +203,7 @@ export class TextIterator {
 
       searchWindow = searchWindow.substring(skip);
       this.offset += skip;
+      // Check that we don't go past the iterator boundary.
       if (this.offset >= this._to || !this._iterator.next()) {
         this.current = undefined;
         this.offset = this._to;
