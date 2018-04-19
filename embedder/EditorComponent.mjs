@@ -2,6 +2,7 @@ import { EventEmitter } from '../src/core/EventEmitter.mjs';
 import { Editor } from '../src/editor/Editor.mjs';
 import { Selection } from '../src/editor/Selection.mjs';
 import { Renderer, PlatformSupport } from '../src/web/Renderer.mjs';
+import { SearchToolbar } from '../src/web/SearchToolbar.mjs';
 import { JSHighlighter } from '../src/javascript/JSHighlighter.mjs';
 import { DefaultHighlighter } from '../src/default/DefaultHighlighter.mjs';
 
@@ -13,6 +14,7 @@ export class EditorComponent extends HTMLElement {
   constructor() {
     super();
     this._renderer = new Renderer(document);
+    this._searchToolbar = new SearchToolbar(this._renderer);
     this._editor = null;
     this._eventListeners = [];
     this._renderer.element().classList.add('editor');
