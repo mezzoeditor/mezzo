@@ -40,6 +40,7 @@ export class SearchToolbar {
     }, this._onCommand.bind(this));
 
     this._eventListeners = [];
+    this._isShown = false;
 
     renderer.element().appendChild(this._element);
   }
@@ -64,15 +65,17 @@ export class SearchToolbar {
       this._eventListeners = [
         editor.search().on('changed', this._onSearchChanged.bind(this))
       ];
+      this._isShown = true;
       return true;
     }
-    if (!editor.search().enabled())
+    if (!this._isShown)
       return false;
     if (command === 'search.hide') {
       editor.search().cancel();
       this._element.style.setProperty('display', 'none');
       this._renderer.focus();
       EventEmitter.removeEventListeners(this._eventListeners);
+      this._isShown = false;
       return true;
     }
     if (command === 'search.prev') {
