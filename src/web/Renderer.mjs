@@ -194,13 +194,13 @@ export class Renderer {
       'Shift-Cmd-Right': 'selection.select.lineend',
       'Escape': 'selection.collapse',
 
-      'Enter': 'editing.newline',
-      'Backspace': 'editing.backspace',
-      'Delete': 'editing.delete',
-      'Alt-Backspace': 'editing.backspace.word',
-      'Cmd-Backspace': 'editing.backspace.line',
-      'Tab': 'editing.indent',
-      'Shift-Tab': 'editing.unindent',
+      'Enter': 'input.newline',
+      'Backspace': 'input.backspace',
+      'Delete': 'input.delete',
+      'Alt-Backspace': 'input.backspace.word',
+      'Cmd-Backspace': 'input.backspace.line',
+      'Tab': 'input.indent',
+      'Shift-Tab': 'input.unindent',
 
       'Cmd/Ctrl-z': 'history.undo',
       'Cmd/Ctrl-Shift-z': 'history.redo',
@@ -238,7 +238,7 @@ export class Renderer {
       return;
     if (!this._input.value)
       return;
-    this._editor.editing().type(this._input.value);
+    this._editor.input().type(this._input.value);
     this._revealSelection(true);
     this._revealCursors();
     this._input.value = '';
@@ -275,20 +275,20 @@ export class Renderer {
       case 'history.redo':
         return this._editor.history().redo() || true;
 
-      case 'editing.backspace':
-        return this._revealSelection(this._editor.editing().deleteBefore());
-      case 'editing.backspace.word':
-        return this._revealSelection(this._editor.editing().deleteWordBefore());
-      case 'editing.backspace.line':
-        return this._revealSelection(this._editor.editing().deleteLineBefore());
-      case 'editing.delete':
-        return this._revealSelection(this._editor.editing().deleteAfter());
-      case 'editing.newline':
-        return this._revealSelection(this._editor.editing().insertNewLine());
-      case 'editing.indent':
-        return this._revealSelection(this._editor.editing().insertIndent());
-      case 'editing.unindent':
-        return this._revealSelection(this._editor.editing().removeIndent());
+      case 'input.backspace':
+        return this._revealSelection(this._editor.input().deleteBefore());
+      case 'input.backspace.word':
+        return this._revealSelection(this._editor.input().deleteWordBefore());
+      case 'input.backspace.line':
+        return this._revealSelection(this._editor.input().deleteLineBefore());
+      case 'input.delete':
+        return this._revealSelection(this._editor.input().deleteAfter());
+      case 'input.newline':
+        return this._revealSelection(this._editor.input().insertNewLine());
+      case 'input.indent':
+        return this._revealSelection(this._editor.input().insertIndent());
+      case 'input.unindent':
+        return this._revealSelection(this._editor.input().removeIndent());
 
       case 'selection.addnext':
         return this._revealSelection(this._editor.selection().addNextOccurence(), true /* center */) || true;
@@ -348,7 +348,7 @@ export class Renderer {
       let data = event.clipboardData;
       if (data.types.indexOf('text/plain') === -1)
         return;
-      this._editor.editing().paste(data.getData('text/plain'));
+      this._editor.input().paste(data.getData('text/plain'));
       this._revealSelection(true);
       this._revealCursors();
       event.preventDefault();
@@ -361,7 +361,7 @@ export class Renderer {
       if (!text)
         return;
       event.clipboardData.setData('text/plain', text);
-      this._editor.editing().deleteBefore();
+      this._editor.input().deleteBefore();
       this._revealSelection(true);
       this._revealCursors();
       event.preventDefault();

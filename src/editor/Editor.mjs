@@ -2,7 +2,7 @@ import { Document } from '../core/Document.mjs';
 import { Decorator } from '../core/Decorator.mjs';
 import { Selection } from './Selection.mjs';
 import { History } from './History.mjs';
-import { Editing } from './Editing.mjs';
+import { Input } from './Input.mjs';
 import { Search } from './Search.mjs';
 import { DefaultHighlighter } from '../default/DefaultHighlighter.mjs';
 import { DefaultTokenizer } from '../default/DefaultTokenizer.mjs';
@@ -42,7 +42,7 @@ export class Editor {
     this._selection = new Selection(this);
     this._search = new Search(this);
     this._history = new History(this);
-    this._editing = new Editing(this);
+    this._input = new Input(this);
 
     this.setHighlighter(new DefaultHighlighter(this));
   }
@@ -106,10 +106,10 @@ export class Editor {
   }
 
   /**
-   * @return {!Editing}
+   * @return {!Input}
    */
-  editing() {
-    return this._editing;
+  input() {
+    return this._input;
   }
 
   addHandle(from, to, onRemoved) {

@@ -12,10 +12,10 @@ import { Tokenizer } from "./Tokenizer.mjs";
  * @typedef {{
  *  edit: RangeEdit,
  *  cursorOffset: number
- * }} EditingOverride;
+ * }} InputOverride;
  */
 
-export class Editing {
+export class Input {
   /**
    * @param {!Editor} editor
    */
@@ -36,16 +36,16 @@ export class Editing {
   }
 
   /**
-   * @param {?function(!RangeEdit):?EditingOverride} override
+   * @param {?function(!RangeEdit):?InputOverride} override
    */
-  addEditingOverride(override) {
+  addInputOverride(override) {
     this._overrides.add(override);
   }
 
   /**
-   * @param {?function(!RangeEdit):?EditingOverride} override
+   * @param {?function(!RangeEdit):?InputOverride} override
    */
-  removeEditingOverride(override) {
+  removeInputOverride(override) {
     this._overrides.delete(override);
   }
 
@@ -142,7 +142,7 @@ export class Editing {
     if (!ranges.length)
       return false;
     this._history.beginOperation();
-    this._document.beginOperation('editing');
+    this._document.beginOperation('input');
     let savedSelection = this._selection.freeze();
     let newRanges = [];
     let delta = 0;
@@ -172,7 +172,7 @@ export class Editing {
         newRanges.push({from: from + this._indent.length, to: to + delta});
       }
     }
-    this._document.endOperation('editing');
+    this._document.endOperation('input');
     this._selection.unfreeze(savedSelection, newRanges);
     this._history.endOperation();
     return true;
@@ -183,7 +183,7 @@ export class Editing {
     if (!ranges.length)
       return false;
     this._history.beginOperation();
-    this._document.beginOperation('editing');
+    this._document.beginOperation('input');
     let savedSelection = this._selection.freeze();
     let newRanges = [];
     let delta = 0;
@@ -208,7 +208,7 @@ export class Editing {
       }
       newRanges.push({from: from + startDelta, to: to + delta});
     }
-    this._document.endOperation('editing');
+    this._document.endOperation('input');
     this._selection.unfreeze(savedSelection, newRanges);
     this._history.endOperation();
     return true;
@@ -224,7 +224,7 @@ export class Editing {
     if (!ranges.length)
       return false;
     this._history.beginOperation();
-    this._document.beginOperation('editing');
+    this._document.beginOperation('input');
     let savedSelection = this._selection.freeze();
     let newRanges = [];
     let delta = 0;
@@ -245,7 +245,7 @@ export class Editing {
       newRanges.push({from: cursorOffset, to: cursorOffset});
       delta += replaced.s.length - (replaced.to - replaced.from);
     }
-    this._document.endOperation('editing');
+    this._document.endOperation('input');
     this._selection.unfreeze(savedSelection, newRanges);
     this._history.endOperation();
     return true;

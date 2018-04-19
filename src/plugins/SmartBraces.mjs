@@ -3,19 +3,18 @@ export class SmartBraces {
    * @param {!Editor} editor
    */
   constructor(editor) {
-    this._editing = editor.editing();
     this._document = editor.document();
     this._pairs = [
       '()',
       '{}',
       '[]',
     ];
-    this._editing.addEditingOverride(this._onEdit.bind(this));
+    editor.input().addInputOverride(this._onEdit.bind(this));
   }
 
   /**
    * @param {!RangeEdit} edit
-   * @return {?EditingOverride}
+   * @return {?InputOverride}
    */
   _onEdit(edit) {
     if (edit.from === edit.to)
@@ -28,7 +27,7 @@ export class SmartBraces {
   /**
    * @param {number} offset
    * @param {string} text
-   * @return {?EditingOverride}
+   * @return {?InputOverride}
    */
   _handleInsert(offset, inserted) {
     for (const pair of this._pairs) {
@@ -50,7 +49,7 @@ export class SmartBraces {
   /**
    * @param {number} offset
    * @param {string} text
-   * @return {?EditingOverride}
+   * @return {?InputOverride}
    */
   _handleRemove(from, to) {
     if (from + 1 !== to)
