@@ -1,0 +1,107 @@
+import { EventEmitter } from '../core/EventEmitter.mjs';
+
+export class SearchToolbar {
+  /**
+   * @param {!Renderer} renderer
+   */
+  constructor(renderer) {
+    const document = renderer.element().ownerDocument;
+    this._element = document.createElement('search-toolbar');
+    this._element.innerHTML = `
+      <search-container>
+        <search-focus-ring>
+          <input></input>
+          <search-details>0/0</search-details>
+        </search-focus-ring>
+        <search-btn class=prev><span>❮</span></search-btn>
+        <search-btn class=next><span>❯</span></search-btn>
+      </search-container>
+      <search-cancel>×</search-cancel>
+    `;
+    this._input = this._element.querySelector('input');
+    this._input.addEventListener('input', this._onSearchInput.bind(this), false);
+    this._element.querySelector('search-btn.prev').addEventListener('click', () => {
+      this._onCommand('search.prev');
+    }, false);
+    this._element.querySelector('search-btn.next').addEventListener('click', () => {
+      this._onCommand('search.next');
+    }, false);
+    this._element.querySelector('search-cancel').addEventListener('click', () => {
+      this._onCommand('search.hide');
+    }, false);
+    this._searchDetails = this._element.querySelector('search-details');
+
+    this._renderer = renderer;
+    this._renderer.addKeymap({
+      'Cmd/Ctrl-f': 'search.show',
+      'Escape': 'search.hide',
+      'Enter': 'search.next',
+      'Shift-Enter': 'search.prev',
+    }, this._onCommand.bind(this));
+
+    this._eventListeners = [];
+
+    renderer.element().appendChild(this._element);
+  }
+
+  /**
+   * @param {string} command
+   */
+  _onCommand(command) {
+    const editor = this._renderer.editor();
+    if (!editor)
+      return false;
+    if (command === 'search.show') {
+      const range = editor.selection().ranges()[0];
+      if (range && range.from !== range.to) {
+        this._input.value = editor.document().content(range.from, range.to);
+      }
+      this._element.style.setProperty('display', 'flex');
+      this._input.focus();
+      this._input.select();
+      this._onSearchInput();
+      EventEmitter.removeEventListeners(this._eventListeners);
+      this._eventListeners = [
+        editor.search().on('changed', this._onSearchChanged.bind(this))
+      ];
+      return true;
+    }
+    if (!editor.search().enabled())
+      return false;
+    if (command === 'search.hide') {
+      editor.search().cancel();
+      this._element.style.setProperty('display', 'none');
+      this._renderer.focus();
+      EventEmitter.removeEventListeners(this._eventListeners);
+      return true;
+    }
+    if (command === 'search.prev') {
+      editor.search().previousMatch();
+      return true;
+    }
+    if (command === 'search.next') {
+      editor.search().nextMatch();
+      return true;
+    }
+    return false;
+  }
+
+  _onSearchInput() {
+    const editor = this._renderer.editor();
+    if (!editor)
+      return;
+    if (!this._input.value)
+      editor.search().cancel();
+    else
+      editor.search().find(this._input.value);
+  }
+
+  _onSearchChanged({currentMatchIndex, matchesCount}) {
+    if (matchesCount === 0) {
+      this._searchDetails.textContent = '0/0';
+    } else {
+      currentMatchIndex += 1;
+      this._searchDetails.textContent = currentMatchIndex + '/' + matchesCount;
+    }
+  }
+}

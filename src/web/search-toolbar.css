@@ -1,0 +1,105 @@
+search-toolbar {
+  cursor: default;
+  position: absolute;
+  right: 25px;
+  display: none; /* will be "flex" once shown. */
+  align-items: center;
+  justify-content: center;
+  background-color: #eee;
+  padding: 4px;
+  font-family: arial;
+  font-size: 14px;
+  border-radius: 0 0 5px 5px;
+}
+
+search-toolbar
+search-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  --border-radius: 5px;
+  --height: 25px;
+  --border-color: lightgrey;
+}
+
+search-toolbar search-focus-ring {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 130px;
+  height: var(--height);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius) 0px 0px var(--border-radius);
+  background-color: white;
+}
+
+search-toolbar search-focus-ring:focus-within {
+  border-color: #2196F3;
+}
+
+search-toolbar input {
+  flex-grow: 1;
+  flex-shrink: 1;
+  font-size: 14px;
+  min-width: 10px;
+  margin: 4px 2px 4px 2px;
+  border: none;
+  outline: none;
+}
+
+search-toolbar input:focus {
+}
+
+search-toolbar search-details {
+  flex-grow: 0;
+  flex-shrink: 0;
+  color: #aaa;
+  margin: 0 4px 0 0px;
+}
+
+search-toolbar search-btn {
+  color: #555;
+  height: var(--height);
+  width: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+search-toolbar search-btn.prev {
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+search-toolbar search-btn.next {
+  border-right: 1px solid var(--border-color);
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  border-radius: 0px var(--border-radius) var(--border-radius) 0px;
+}
+
+search-toolbar search-btn:active {
+  background-color: grey;
+}
+
+search-toolbar search-btn span {
+  transform: rotate(90deg);
+}
+
+search-toolbar search-cancel {
+  transition: all 0.1s ease-out;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  margin: 0 4px 0 4px;
+  border-radius: 15px;
+  border: 1px solid transparent;
+}
+
+search-toolbar search-cancel:hover {
+  color: white;
+  background-color: rgba(255, 0, 0, 0.5);
+  border: 1px solid #eee;
+}

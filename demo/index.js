@@ -10,6 +10,8 @@ import { SelectedWordHighlighter } from '../src/plugins/SelectedWordHighlighter.
 import { SmartBraces } from '../src/plugins/SmartBraces.mjs';
 import { BlockIndentation } from '../src/plugins/BlockIndentation.mjs';
 
+import { SearchToolbar } from '../src/web/SearchToolbar.mjs';
+
 import { trace } from "../src/core/Trace.mjs";
 trace.setup();
 
@@ -52,57 +54,6 @@ function addHighlights(editor) {
   select.addEventListener('input', () => tokenHighlighter.setToken(select.value), false);
 }
 
-function addSearch(renderer) {
-  const editor = renderer.editor();
-  const input = document.querySelector('.search');
-  input.addEventListener('input', event => {
-    if (!input.value)
-      editor.search().cancel();
-    else
-      editor.search().find(input.value);
-  }, false);
-  input.addEventListener('keydown', event => {
-    if (event.key === 'Enter') {
-      if (event.shiftKey)
-        editor.search().previousMatch();
-      else
-        editor.search().nextMatch();
-      event.preventDefault();
-      event.stopPropagation();
-    } else if (event.key === 'Escape') {
-      editor.search().cancel();
-      renderer.focus();
-      input.value = '';
-      event.preventDefault();
-      event.stopPropagation();
-    }
-  }, false);
-  document.querySelector('.next').addEventListener('click', event => {
-    editor.search().nextMatch();
-  }, false);
-  document.querySelector('.prev').addEventListener('click', event => {
-    editor.search().previousMatch();
-  }, false);
-  const info = document.querySelector('.search-info');
-  editor.search().on('changed', ({currentMatchIndex, matchesCount}) => {
-    if (currentMatchIndex === -1)
-      info.textContent = `${matchesCount} matches`;
-    else
-      info.textContent = `${currentMatchIndex + 1} of ${matchesCount} matches`;
-  });
-
-  const isMac = navigator.platform.toUpperCase().indexOf('MAC') !== -1;
-
-  document.addEventListener('keydown', event => {
-    let isSearchTriggered = (isMac ? event.metaKey : event.ctrlKey) && event.key === 'f';
-    if (isSearchTriggered) {
-      input.focus();
-      event.preventDefault();
-      event.stopPropagation();
-    }
-  }, true);
-}
-
 function addRangeHandle(editor) {
   const rangeText = document.querySelector('.range');
   rangeText.addEventListener('click', updateRangeHandle.bind(null, editor));
@@ -141,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderer.setEditor(editor);
   addExamples(renderer);
   addHighlights(editor);
-  addSearch(renderer);
+  const searchToolbar = new SearchToolbar(renderer);
   document.querySelector('.ismonospace').addEventListener('change', event => {
     renderer.setUseMonospaceFont(event.target.checked);
   }, false);

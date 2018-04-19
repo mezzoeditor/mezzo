@@ -79,6 +79,7 @@ export class Renderer {
    * @param {!Document} domDocument
    */
   constructor(domDocument) {
+    this._domDocument = domDocument;
     this._element = domDocument.createElement('div');
     this._element.style.cssText = `
       position: relative;
@@ -103,7 +104,7 @@ export class Renderer {
       left: 0;
     `;
     this._input.addEventListener('input', this._onInputInput.bind(this), false);
-    this._input.addEventListener('keydown', this._onInputKeydown.bind(this), false);
+    this._element.addEventListener('keydown', this._onInputKeydown.bind(this), false);
 
     this._element.appendChild(this._input);
 
@@ -126,7 +127,7 @@ export class Renderer {
     this._canvas.addEventListener('mouseup', event => this._onMouseUp(event));
     this._canvas.addEventListener('mouseout', event => this._onMouseOut(event));
     this._canvas.addEventListener('wheel', event => this._onScroll(event));
-    this._element.addEventListener('click', event => this._input.focus());
+    this._element.addEventListener('click', event => this._onClick(event));
 
     // Rects are in css pixels, in canvas coordinates.
     this._gutterRect = {
@@ -163,9 +164,9 @@ export class Renderer {
 
     this._setupSelection();
     this._setupEventListeners();
-    this._keymap = new Map();
 
-    this._installKeyMap({
+    this._keymaps = [];
+    this.addKeymap({
       'Up': 'selection.move.up',
       'Down': 'selection.move.down',
       'Left': 'selection.move.left',
@@ -204,7 +205,7 @@ export class Renderer {
 
       'Cmd/Ctrl-z': 'history.undo',
       'Cmd/Ctrl-Shift-z': 'history.redo',
-    });
+    }, this._performCommand.bind(this));
   }
 
   measurer() {
@@ -247,10 +248,14 @@ export class Renderer {
   _onInputKeydown(event) {
     if (!this._editor)
       return;
+    const eventHash = eventToHash(event);
     let handled = false;
-    let command = this._keymap.get(eventToHash(event));
-    if (command)
-      handled = this._performCommand(command);
+    for (let i = this._keymaps.length - 1; i >= 0 && !handled; i--) {
+      const {keymap, handler} = this._keymaps[i];
+      let command = keymap.get(eventHash);
+      if (command)
+        handled = handler.call(null, command);
+    }
     if (handled) {
       this._revealCursors();
       event.preventDefault();
@@ -258,16 +263,21 @@ export class Renderer {
     }
   }
 
-  _installKeyMap(keyMap) {
-    this._keymap.clear();
-    for (let key in keyMap) {
-      let value = keyMap[key];
-      this._keymap.set(stringToHash(key), value);
+  addKeymap(rawKeymap, handler) {
+    const keymap = new Map();
+    for (let key in rawKeymap) {
+      let value = rawKeymap[key];
+      keymap.set(stringToHash(key), value);
     }
+    this._keymaps.push({
+      keymap, handler
+    });
   }
 
   _performCommand(command) {
     if (!this._editor)
+      return false;
+    if (this._domDocument.activeElement !== this._input)
       return false;
     switch (command) {
       case 'history.undo':
@@ -374,6 +384,8 @@ export class Renderer {
     this._element.addEventListener('mousedown', event => {
       if (!this._editor)
         return;
+      if (event.target !== this._canvas && event.target !== this._element)
+        return;
       lastMouseEvent = event;
       let offset = this._mouseEventToTextOffset(event);
       if (event.detail === 2) {
@@ -418,7 +430,7 @@ export class Renderer {
       }
       event.stopPropagation();
       event.preventDefault();
-    });
+    }, false);
     this._element.addEventListener('mousemove', event => {
       if (!this._editor)
         return;
@@ -477,11 +489,11 @@ export class Renderer {
         delete theme['selection.focus'];
       this.invalidate();
     };
-    this._element.addEventListener('focusin', event => {
+    this._input.addEventListener('focusin', event => {
       toggleCursors();
       cursorsTimeout = window.setInterval(toggleCursors, 500);
     });
-    this._element.addEventListener('focusout', event => {
+    this._input.addEventListener('focusout', event => {
       if (cursorsVisible)
         toggleCursors();
       if (cursorsTimeout) {
@@ -596,6 +608,12 @@ export class Renderer {
       return;
     this._editor.viewport().advanceScroll(event.deltaY, event.deltaX);
     event.preventDefault();
+  }
+
+  _onClick(event) {
+    if (event.target !== this._canvas && event.target !== this._element)
+      return;
+    this._input.focus();
   }
 
   _onMouseDown(event) {
