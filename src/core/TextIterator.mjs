@@ -163,14 +163,20 @@ export class TextIterator {
    * cannot be found, advances to the end and returns false.
    *
    * @param {string} query
+   * @param {{caseInsensetive: boolean}} options
    * @return {boolean}
    */
-  find(query) {
+  find(query, options = {}) {
     if (this.outOfBounds())
       return false;
 
+    const caseInsensetive = !!options.caseInsensetive;
+
+    if (caseInsensetive)
+      query = query.toLowerCase();
+
     // fast-path: search in current chunk.
-    let index = this._chunk.indexOf(query, this._pos);
+    let index = caseInsensetive ? this._chunk.toLowerCase().indexOf(query, this._pos) :  this._chunk.indexOf(query, this._pos);
     if (index !== -1) {
       index -= this._pos;
       if (this.offset + index + query.length > this._to)
@@ -181,6 +187,8 @@ export class TextIterator {
     }
 
     let searchWindow = this._chunk.substring(this._pos);
+    if (caseInsensetive)
+      searchWindow = searchWindow.toLowerCase();
     let endIterator = this._iterator.clone();
 
     while (true) {
@@ -189,7 +197,10 @@ export class TextIterator {
       while (searchWindow.length - skip < query.length - 1) {
         if (!endIterator.next())
           break;
-        searchWindow += endIterator.data;
+        if (caseInsensetive)
+          searchWindow += endIterator.data.toLowerCase();
+        else
+          searchWindow += endIterator.data;
       }
 
       let index = searchWindow.indexOf(query);

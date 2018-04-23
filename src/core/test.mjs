@@ -261,6 +261,15 @@ describe('TextIterator', () => {
     expect(iterator.current).toBe('w');
   });
 
+  it('TextIterator.find case-insensetive', () => {
+    let document = new Document();
+    document.reset('HELLO, WORLD');
+    let iterator = document.iterator(0);
+    expect(iterator.find('world', {caseInsensetive: true})).toBe(true);
+    expect(iterator.offset).toBe(7);
+    expect(iterator.current).toBe('W');
+  });
+
   it('TextIterator.find manual chunks 1', () => {
     let document = new Document();
     Document.test.setChunks(document, ['hello, w', 'o', 'r', 'ld!!!']);
