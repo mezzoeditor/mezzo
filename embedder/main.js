@@ -7,18 +7,6 @@ import { TabStripComponent } from './TabStripComponent.mjs';
 
 window.fs = new FileSystem();
 
-/*
-(() => {
-  const params = new URLSearchParams(location.search);
-  for (const entry of params) {
-    if (entry[0] === 'folder') {
-      window.fs.initialize(entry[1]);
-      return;
-    }
-  }
-})();
-*/
-
 window.addEventListener('DOMContentLoaded', () => {
   document.body.classList.add('vbox');
 
