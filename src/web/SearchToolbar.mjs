@@ -7,8 +7,10 @@ export class SearchToolbar {
   constructor(renderer) {
     const document = renderer.element().ownerDocument;
     this._element = document.createElement('search-toolbar');
+    this._caseInsensetive = true;
     this._element.innerHTML = `
       <search-container>
+        <search-btn class=case ${this._caseInsensetive ? '' : 'toggled'}><span>Aa</span></search-btn>
         <search-focus-ring>
           <input></input>
           <search-details>0/0</search-details>
@@ -20,6 +22,17 @@ export class SearchToolbar {
     `;
     this._input = this._element.querySelector('input');
     this._input.addEventListener('input', this._onSearchInput.bind(this), false);
+    this._element.querySelector('search-btn.case').addEventListener('click', event => {
+      let target = event.target;
+      while (target && target.tagName !== 'SEARCH-BTN')
+        target = target.parentElement;
+      this._caseInsensetive = !this._caseInsensetive;
+      if (this._caseInsensetive)
+        target.removeAttribute('toggled');
+      else
+        target.setAttribute('toggled', true);
+      this._onSearchInput();
+    }, false);
     this._element.querySelector('search-btn.prev').addEventListener('click', () => {
       this._onCommand('search.prev');
     }, false);
@@ -96,7 +109,7 @@ export class SearchToolbar {
     if (!this._input.value)
       editor.search().cancel();
     else
-      editor.search().find(this._input.value);
+      editor.search().find(this._input.value, {caseInsensetive: this._caseInsensetive});
   }
 
   _onSearchChanged({currentMatchIndex, matchesCount}) {

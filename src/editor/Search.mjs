@@ -61,10 +61,11 @@ export class Search extends EventEmitter {
 
   /**
    * @param {string} query
+   * @param {{caseInsensetive: boolean}=} options
    */
-  find(query) {
+  find(query, options = {caseInsensetive: true}) {
     this._cancel();
-    this._options = {query};
+    this._options = {query, caseInsensetive: !!options.caseInsensetive};
     this._needsProcessing({from: 0, to: this._document.length() - query.length});
     this._shouldUpdateSelection = true;
     this._viewport.raf();
@@ -286,9 +287,10 @@ export class Search extends EventEmitter {
   _searchRange(range, selectCurrentMatch, revealCurrentMatch) {
     let {from, to} = range;
     let query = this._options.query;
+    const findOptions = { caseInsensetive: !!this._options.caseInsensetive };
     this._decorator.clearStarting(Start(from), End(to));
     let iterator = this._document.iterator(from, from, to + query.length);
-    while (iterator.find(query)) {
+    while (iterator.find(query, findOptions)) {
       this._decorator.add(Start(iterator.offset), Start(iterator.offset + query.length));
       if (!this._currentMatch)
         this._updateCurrentMatch({from: iterator.offset, to: iterator.offset + query.length}, selectCurrentMatch, revealCurrentMatch);

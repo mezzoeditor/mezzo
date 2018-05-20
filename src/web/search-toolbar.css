@@ -66,6 +66,17 @@ search-toolbar search-btn {
   justify-content: center;
 }
 
+search-toolbar search-btn.case {
+  margin-right: 3px;
+  width: 25px;
+  border-radius: var(--border-radius);
+  box-shadow: inset 0px 0px 1px 0px grey;
+}
+
+search-toolbar search-btn.case[toggled] {
+  background-color: white;
+}
+
 search-toolbar search-btn.prev {
   border-top: 1px solid var(--border-color);
   border-bottom: 1px solid var(--border-color);
@@ -82,7 +93,7 @@ search-toolbar search-btn:active {
   background-color: grey;
 }
 
-search-toolbar search-btn span {
+search-toolbar search-btn.prev span, search-toolbar search-btn.next span {
   transform: rotate(90deg);
 }
 
