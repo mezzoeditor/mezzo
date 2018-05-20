@@ -31,7 +31,7 @@ const mimeTypes = {
     handleSIGINT: false,
     args: [
       '--allow-file-access-from-files',
-      `--app=http://localhost:${port}/embedder/main.html?folder=${workingFolder}`
+      `--app=http://localhost:${port}/embedder/main.html`
     ]
   });
   let browser = null;
@@ -60,13 +60,13 @@ const mimeTypes = {
   });
 
   const page = (await browser.pages())[0];
-  page.exposeFunction('_bindingReadFile', async (filePath) => {
+  await page.exposeFunction('_bindingReadFile', async (filePath) => {
     return await readFileAsync(filePath, 'utf8');
   });
-  page.exposeFunction('_bindingSaveFile', async (filePath, content) => {
+  await page.exposeFunction('_bindingSaveFile', async (filePath, content) => {
     return await writeFileAsync(filePath, content, 'utf8');
   });
-  page.exposeFunction('_bindingInitializeFS', (watchPath, callbackName) => {
+  await page.exposeFunction('_bindingInitializeFS', (watchPath, callbackName) => {
     watchPath = path.resolve(watchPath);
     console.log('Adding folder: ' + watchPath);
     let fsWatcher = watchers.get(watchPath);
@@ -101,6 +101,8 @@ const mimeTypes = {
       }, 100);
     }
   });
+  page.evaluate(dir => window.fs.initialize(dir), workingFolder);
+  page.bringToFront();
 })();
 
 /**
