@@ -10,7 +10,7 @@ export class SearchToolbar {
     this._caseInsensetive = true;
     this._element.innerHTML = `
       <search-container>
-        <search-btn class=case ${this._caseInsensetive ? '' : 'toggled'}><span>Aa</span></search-btn>
+        <search-btn class=case>${this._caseInsensetive ? 'aa' : 'Aa'}</search-btn>
         <search-focus-ring>
           <input></input>
           <search-details>0/0</search-details>
@@ -24,13 +24,11 @@ export class SearchToolbar {
     this._input.addEventListener('input', this._onSearchInput.bind(this), false);
     this._element.querySelector('search-btn.case').addEventListener('click', event => {
       let target = event.target;
-      while (target && target.tagName !== 'SEARCH-BTN')
-        target = target.parentElement;
       this._caseInsensetive = !this._caseInsensetive;
       if (this._caseInsensetive)
-        target.removeAttribute('toggled');
+        target.textContent = 'aa';
       else
-        target.setAttribute('toggled', true);
+        target.textContent = 'Aa';
       this._onSearchInput();
     }, false);
     this._element.querySelector('search-btn.prev').addEventListener('click', () => {
