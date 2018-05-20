@@ -101,14 +101,17 @@ const mimeTypes = {
       }, 100);
     }
   });
-  page.evaluate(dir => {
-    if (window.fs) {
+  // On initial run, there's a race between app being loaded by chrome
+  // and embedder bindings initialization.
+  // Instead of serializing the race (and slowing down initial load),
+  // we handle both race outcomes here.
+  await page.evaluateOnNewDocument(dir => window._bindingInitialDirectory = dir, workingFolder);
+  await page.evaluate(dir => {
+    // Initialize filesystem right away if it is already defined.
+    if (window.fs)
       window.fs.initialize(dir);
-      return;
-    }
-    window.addEventListener('DOMContentLoaded', () => {
-      window.fs.initialize(dir);
-    }, false);
+    else
+      window._bindingInitialDirectory = dir;
   }, workingFolder);
   page.bringToFront();
 })();

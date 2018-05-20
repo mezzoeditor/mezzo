@@ -7,6 +7,9 @@ import { TabStripComponent } from './TabStripComponent.mjs';
 
 window.fs = new FileSystem();
 
+if (window._bindingInitialDirectory)
+  window.fs.initialize(window._bindingInitialDirectory);
+
 window.addEventListener('DOMContentLoaded', () => {
   document.body.classList.add('vbox');
 
