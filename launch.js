@@ -101,7 +101,15 @@ const mimeTypes = {
       }, 100);
     }
   });
-  page.evaluate(dir => window.fs.initialize(dir), workingFolder);
+  page.evaluate(dir => {
+    if (window.fs) {
+      window.fs.initialize(dir);
+      return;
+    }
+    window.addEventListener('DOMContentLoaded', () => {
+      window.fs.initialize(dir);
+    }, false);
+  }, workingFolder);
   page.bringToFront();
 })();
 
