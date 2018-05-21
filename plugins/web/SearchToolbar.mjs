@@ -43,7 +43,7 @@ export class SearchToolbar {
     this._searchDetails = this._element.querySelector('search-details');
 
     this._renderer = renderer;
-    this._renderer.addKeymap({
+    this._renderer.keymapHandler().addKeymap({
       'Cmd/Ctrl-f': 'search.show',
       'Escape': 'search.hide',
       'Enter': 'search.next',
