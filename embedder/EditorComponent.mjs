@@ -62,10 +62,14 @@ export class EditorComponent extends HTMLElement {
     EventEmitter.removeEventListeners(this._eventListeners);
     this._editor = editor;
     this._renderer.setEditor(editor);
-    this._eventListeners = [
-      this._editor.selection().on(Selection.Events.Changed, this._onSelectionChanged.bind(this))
-    ];
-    this._onSelectionChanged();
+    if (this._editor) {
+      this._eventListeners = [
+        this._editor.selection().on(Selection.Events.Changed, this._onSelectionChanged.bind(this))
+      ];
+      this._onSelectionChanged();
+    } else {
+      this._selectionDescription.textContent = '';
+    }
   }
 
   text() {
