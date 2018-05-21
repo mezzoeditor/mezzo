@@ -29,10 +29,29 @@ export class TabStripComponent extends HTMLElement {
     this._tabs.set(id, tab);
   }
 
+  closeTab(id) {
+    const tab = this._tabs.get(id);
+    if (!tab)
+      return;
+    let nextId = null;
+    if (this._tabs.size !== 1) {
+      // Find next tab id to select.
+      const ids = Array.from(this._tabs.keys());
+      const index = ids.indexOf(id);
+      nextId = index === ids.length - 1 ? ids[index - 1] : ids[index + 1];
+    }
+    this.selectTab(nextId);
+    this._tabs.delete(id);
+    tab.element.remove();
+  }
+
   hasTab(id) {
     return this._tabs.has(id);
   }
 
+  /**
+   * @return {?string}
+   */
   selectedTab() {
     return this._selectedTabId;
   }
@@ -43,11 +62,10 @@ export class TabStripComponent extends HTMLElement {
     if (this._selectedTabId)
       this._tabs.get(this._selectedTabId).element.classList.remove('selected');
     this._selectedTabId = id;
-    if (this._selectedTabId) {
+    if (this._selectedTabId)
       this._tabs.get(this._selectedTabId).element.classList.add('selected');
-      if (this._selectedCallback)
-        this._selectedCallback.call(null, id);
-    }
+    if (this._selectedCallback)
+      this._selectedCallback.call(null, id);
   }
 }
 

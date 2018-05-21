@@ -40,6 +40,12 @@ window.addEventListener('DOMContentLoaded', () => {
     tabstrip.selectTab(path);
   });
   tabstrip.setSelectedCallback(async path => {
+    // No tab is selected (all tabs got closed).
+    if (!path) {
+      renderer.setEditor(null);
+      statusbar.rightElement().textContent = '';
+      return;
+    }
     let mimeType = window.fs.mimeType(path);
     let editor = editors.get(path);
     if (!editor) {
@@ -56,9 +62,14 @@ window.addEventListener('DOMContentLoaded', () => {
   keymapHandler.addKeymap({
     'Cmd/Ctrl-s': 'save',
     'Cmd/Ctrl-p': 'ignore',
+    'Cmd/Ctrl-w': 'close-tab',
     'Cmd/Ctrl-,': 'ignore',
   }, command => {
-    if (command === 'save') {
+    if (command === 'close-tab') {
+      let path = tabstrip.selectedTab();
+      tabstrip.closeTab(path);
+      return true;
+    } else if (command === 'save') {
       let editor = editors.get(path);
       if (!editor)
         return false;

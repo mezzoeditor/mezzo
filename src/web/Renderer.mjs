@@ -227,8 +227,10 @@ export class Renderer {
         this._editor.viewport().on(Viewport.Events.Raf, this.raf.bind(this)),
         this._editor.selection().on(Selection.Events.Changed, () => this.raf())
       ];
+      this.invalidate();
+    } else {
+      this.raf();
     }
-    this.invalidate();
   }
 
   editor() {
@@ -746,8 +748,13 @@ export class Renderer {
   _render() {
     this._animationFrameId = 0;
 
-    if (!this._editor)
+    if (!this._editor) {
+      const ctx = this._canvas.getContext('2d');
+      ctx.setTransform(this._ratio, 0, 0, this._ratio, 0, 0);
+      ctx.clearRect(0, 0, this._cssWidth, this._cssHeight);
       return;
+    }
+
     trace.beginGroup('render');
     this._rendering = true;
 
