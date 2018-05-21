@@ -6,6 +6,7 @@ import { SidebarComponent } from './SidebarComponent.mjs';
 import { EditorComponent } from './EditorComponent.mjs';
 import { StatusbarComponent } from './StatusbarComponent.mjs';
 import { TabStripComponent } from './TabStripComponent.mjs';
+import { FileFilterItem, FilterDialogComponent } from './FilterDialogComponent.mjs';
 
 window.fs = new FileSystem();
 
@@ -31,6 +32,8 @@ window.addEventListener('DOMContentLoaded', () => {
   statusbar.leftElement().appendChild(renderer.selectionDescriptionElement());
   statusbar.rightElement().textContent = '';
   document.body.appendChild(statusbar);
+
+  const filterDialog = new FilterDialogComponent();
 
   /** @type {!Map<string, !Editor>} */
   let editors = new Map();
@@ -61,13 +64,33 @@ window.addEventListener('DOMContentLoaded', () => {
   const keymapHandler = new KeymapHandler();
   keymapHandler.addKeymap({
     'Cmd/Ctrl-s': 'save',
-    'Cmd/Ctrl-p': 'ignore',
+    'Cmd/Ctrl-p': 'open-file',
     'Cmd/Ctrl-w': 'close-tab',
     'Cmd/Ctrl-,': 'ignore',
   }, command => {
     if (command === 'close-tab') {
       let path = tabstrip.selectedTab();
       tabstrip.closeTab(path);
+      return true;
+    } else if (command === 'open-file') {
+      if (filterDialog.isVisible()) {
+        filterDialog.setVisible(false);
+      } else {
+        const callback = path => {
+          if (!tabstrip.hasTab(path))
+            tabstrip.addTab(path, window.fs.fileName(path));
+          tabstrip.selectTab(path);
+        };
+        const items = [];
+        for (const root of window.fs.roots()) {
+          const relPaths = [];
+          relPaths.push(...window.fs.relativeRootPaths(root));
+          items.push(...relPaths.map(path => new FileFilterItem(root, path, callback)));
+        }
+        filterDialog.setItems(items);
+        filterDialog.setVisible(true);
+        filterDialog.setQuery('');
+      }
       return true;
     } else if (command === 'save') {
       let editor = editors.get(path);
@@ -79,6 +102,7 @@ window.addEventListener('DOMContentLoaded', () => {
     } else if (command === 'ignore') {
       return true;
     }
+    return false;
   });
 
   document.addEventListener('keydown', (event) => {
