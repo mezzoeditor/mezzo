@@ -1,3 +1,5 @@
+import { Icons } from './Icons.mjs';
+
 const NavigatorTreeNodeSymbol = Symbol('NavigatorTreeNodeSymbol');
 
 export class SidebarComponent extends HTMLElement {
@@ -160,13 +162,6 @@ export class SidebarComponent extends HTMLElement {
 
 customElements.define('sidebar-component', SidebarComponent);
 
-const filetypeClasses = {
-  'text/javascript': 'mime-js',
-  'text/css': 'mime-css',
-  'text/html': 'mime-html',
-  'text/plain': 'mime-plain',
-};
-
 class NavigatorTreeNode {
   constructor(name, parent) {
     this.name = name;
@@ -194,12 +189,10 @@ class NavigatorTreeNode {
 
       const content = document.createElement('file-entry-content');
 
-      if (this.isFile) {
-        this._icon = document.createElement('filetype-icon');
-        this._icon.classList.add(filetypeClasses[this.mimeType]);
-      } else {
-        this._icon = document.createElement('expand-icon');
-      }
+      if (this.isFile)
+        this._icon = Icons.mimeTypeIcon(this.mimeType);
+      else
+        this._icon = Icons.expandIcon();
       content.appendChild(this._icon);
       content.appendChild(document.createTextNode(this.name));
       nodeEntry.appendChild(content);

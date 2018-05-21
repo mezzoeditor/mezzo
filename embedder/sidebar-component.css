@@ -51,18 +51,6 @@ expand-icon.expanded {
 }
 
 sidebar-component
-filetype-icon {
-  -webkit-mask-image: url(./filetype-icon.svg);
-  -webkit-mask-size: var(--icon-size) var(--icon-size);
-  -webkit-mask-position: 0 0;
-  width: var(--icon-size);
-  height: var(--icon-size);
-  margin-right: 4px;
-  flex-shrink: 0;
-  margin-left: 2px;
-}
-
-sidebar-component
 file-entry:hover:not(.selected) {
   cursor: pointer;
   background-color: #ddd;
@@ -71,16 +59,4 @@ file-entry:hover:not(.selected) {
 sidebar-component
 file-navigator {
   min-width: max-content;
-}
-
-sidebar-component .mime-js {
-  background-color: #FDD835;
-}
-
-sidebar-component .mime-css {
-  background-color: #CE93D8;
-}
-
-sidebar-component .mime-html {
-  background-color: #BBDEFB;
 }

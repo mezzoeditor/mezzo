@@ -46,3 +46,26 @@ body {
   flex-direction: row;
   align-items: stretch;
 }
+
+filetype-icon {
+  -webkit-mask-image: url(./filetype-icon.svg);
+  -webkit-mask-size: var(--icon-size, 9px) var(--icon-size, 9px);
+  -webkit-mask-position: 0 0;
+  width: var(--icon-size, 9px);
+  height: var(--icon-size, 9px);
+  margin-right: 4px;
+  flex-shrink: 0;
+  margin-left: 2px;
+}
+
+filetype-icon.mime-js {
+  background-color: #FDD835;
+}
+
+filtype-icon.mime-css {
+  background-color: #CE93D8;
+}
+
+filtype-icon.mime-html {
+  background-color: #BBDEFB;
+}

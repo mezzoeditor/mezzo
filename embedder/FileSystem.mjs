@@ -59,6 +59,8 @@ export class FileSystem {
   }
 
   mimeType(path) {
+    if (!this.isFilePath(path))
+      return '';
     if (path.endsWith('.mjs') || path.endsWith('.js'))
       return 'text/javascript';
     if (path.endsWith('.css'))
