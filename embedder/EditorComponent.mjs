@@ -2,13 +2,13 @@ import { EventEmitter } from '../src/core/EventEmitter.mjs';
 import { Editor } from '../src/editor/Editor.mjs';
 import { Selection } from '../src/editor/Selection.mjs';
 import { Renderer, PlatformSupport } from '../src/web/Renderer.mjs';
-import { SearchToolbar } from '../src/web/SearchToolbar.mjs';
 import { JSHighlighter } from '../src/javascript/JSHighlighter.mjs';
 import { DefaultHighlighter } from '../src/default/DefaultHighlighter.mjs';
 
-import { SelectedWordHighlighter } from '../src/plugins/SelectedWordHighlighter.mjs';
-import { SmartBraces } from '../src/plugins/SmartBraces.mjs';
-import { BlockIndentation } from '../src/plugins/BlockIndentation.mjs';
+import { SelectedWordHighlighter } from '../plugins/SelectedWordHighlighter.mjs';
+import { SmartBraces } from '../plugins/SmartBraces.mjs';
+import { BlockIndentation } from '../plugins/BlockIndentation.mjs';
+import { SearchToolbar } from '../plugins/web/SearchToolbar.mjs';
 
 export class EditorComponent extends HTMLElement {
   constructor() {

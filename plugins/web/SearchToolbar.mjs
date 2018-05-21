@@ -1,4 +1,4 @@
-import { EventEmitter } from '../core/EventEmitter.mjs';
+import { EventEmitter } from '../../src/core/EventEmitter.mjs';
 
 export class SearchToolbar {
   /**

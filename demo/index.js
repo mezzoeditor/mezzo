@@ -6,11 +6,10 @@ import { Random } from "../src/core/Random.mjs";
 import { JSHighlighter } from "../src/javascript/JSHighlighter.mjs";
 import { DefaultHighlighter } from "../src/default/DefaultHighlighter.mjs";
 
-import { SelectedWordHighlighter } from '../src/plugins/SelectedWordHighlighter.mjs';
-import { SmartBraces } from '../src/plugins/SmartBraces.mjs';
-import { BlockIndentation } from '../src/plugins/BlockIndentation.mjs';
-
-import { SearchToolbar } from '../src/web/SearchToolbar.mjs';
+import { SelectedWordHighlighter } from '../plugins/SelectedWordHighlighter.mjs';
+import { SmartBraces } from '../plugins/SmartBraces.mjs';
+import { BlockIndentation } from '../plugins/BlockIndentation.mjs';
+import { SearchToolbar } from '../plugins/web/SearchToolbar.mjs';
 
 import { trace } from "../src/core/Trace.mjs";
 trace.setup();

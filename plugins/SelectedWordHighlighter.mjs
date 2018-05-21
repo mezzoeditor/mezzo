@@ -1,8 +1,8 @@
-import { Start } from '../core/Anchor.mjs';
-import { TextDecorator } from '../core/Decorator.mjs';
-import { Tokenizer } from "../editor/Tokenizer.mjs";
-import { Selection } from "../editor/Selection.mjs";
-import { Search } from "../editor/Search.mjs";
+import { Start } from '../src/core/Anchor.mjs';
+import { TextDecorator } from '../src/core/Decorator.mjs';
+import { Tokenizer } from "../src/editor/Tokenizer.mjs";
+import { Selection } from "../src/editor/Selection.mjs";
+import { Search } from "../src/editor/Search.mjs";
 
 export class SelectedWordHighlighter {
   /**
