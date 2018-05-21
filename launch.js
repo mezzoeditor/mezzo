@@ -74,7 +74,10 @@ const mimeTypes = {
     if (fsWatcher)
       fsWatcher.close();
     fsWatcher = chokidar.watch(watchPath, {
-      ignored: /(^|[\/\\])\../,
+      ignored: [
+        /node_modules/,
+        /(^|[\/\\])\../,
+      ],
       persistent: true
     });
     watchers.set(watchPath, fsWatcher);
