@@ -143,28 +143,6 @@ export class SidebarComponent extends HTMLElement {
       }
     }
   }
-
-  _flatNodes(from, to) {
-    const result = [];
-    dfs(this._root, -1, from, to);
-    return result;
-
-    function dfs(u, current, from, to) {
-      if (current >= to)
-        return current;
-      if (current + u.subtreeSize < from)
-        return current + u.subtreeSize;
-      if (from <= current && current < to)
-        result.push(u);
-      current += 1;
-      if (!u.collapsed || !u.parent) {
-        u.ensureSortedChildren();
-        for (const child of u.sortedChildren)
-          current = dfs(child, current, from, to);
-      }
-      return current;
-    }
-  }
 }
 
 customElements.define('sidebar-component', SidebarComponent);
