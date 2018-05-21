@@ -1,3 +1,5 @@
+import { KeymapHandler } from '../src/web/KeymapHandler.mjs';
+
 import { FileSystem } from './FileSystem.mjs';
 import { SplitComponent } from './SplitComponent.mjs';
 import { SidebarComponent } from './SidebarComponent.mjs';
@@ -50,14 +52,29 @@ window.addEventListener('DOMContentLoaded', () => {
     statusbar.rightElement().textContent = mimeType;
   });
 
-  document.addEventListener('keydown', (event) => {
-    let path = tabstrip.selectedTab();
-    let editor = editors.get(path);
-    if (editor && event.key === 's' && event.metaKey) {
+  const keymapHandler = new KeymapHandler();
+  keymapHandler.addKeymap({
+    'Cmd/Ctrl-s': 'save',
+    'Cmd/Ctrl-p': 'ignore',
+    'Cmd/Ctrl-,': 'ignore',
+  }, command => {
+    if (command === 'save') {
+      let editor = editors.get(path);
+      if (!editor)
+        return false;
+      let path = tabstrip.selectedTab();
       window.fs.saveFile(path, editor.document().content());
+      return true;
+    } else if (command === 'ignore') {
+      return true;
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (keymapHandler.handleKeyDown(event)) {
       event.stopPropagation();
       event.preventDefault();
     }
-  });
+  }, false);
 });
 
