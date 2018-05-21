@@ -19,11 +19,13 @@ export class SidebarComponent extends HTMLElement {
 
     this._treeElement.appendChild(this._footer);
     this.appendChild(this._treeElement);
-    this._root = new NavigatorTreeNode('', null);
+    /* @type {!Map<string, !NavigatorTreeNode>} */
+    this._roots = new Map();
     this.addEventListener('click', this._onClick.bind(this), false);
 
     this._onRootsChanged(this._fs.roots(), []);
-    this._onFilesChanged(this._fs.paths(), []);
+    for (const root of this._fs.roots())
+      this._onFilesChanged(root, this._fs.relativeRootPaths(root), []);
     this._render();
   }
 
@@ -55,7 +57,11 @@ export class SidebarComponent extends HTMLElement {
   }
 
   _render() {
-    const elements = this._flatNodes(0, Infinity).map(node => node.render()).concat(this._footer);
+    const elements = [];
+    for (const root of this._roots.values())
+      elements.push(...this._flatNodes(root, 0, Infinity).map(node => node.render()));
+    elements.push(this._footer);
+
     let last = this._treeElement.firstChild;
     for (const element of elements) {
       if (element.parentElement === this._treeElement) {
@@ -71,20 +77,28 @@ export class SidebarComponent extends HTMLElement {
     }
   }
 
-  _onFilesChanged(added, removed) {
-    this._addNodes(added, false /* createExpanded */);
-    this._removeNodes(removed);
+  _onFilesChanged(rootPath, added, removed) {
+    const root = this._roots.get(rootPath);
+    this._addNodes(root, added, false /* createExpanded */);
+    this._removeNodes(root, removed);
     this._render();
   }
 
   _onRootsChanged(added, removed) {
-    this._addNodes(added, true /* createExpanded */);
-    this._removeNodes(removed);
+    for (const path of removed) {
+      this._roots.delete(path);
+    }
+    for (const path of added) {
+      const root = new NavigatorTreeNode(path.split('/').pop());
+      root.fullName = path;
+      root.collapsed = false;
+      this._roots.set(path, root);
+    }
   }
 
-  _flatNodes(from, to) {
+  _flatNodes(root, from, to) {
     const result = [];
-    dfs(this._root, -1, from, to);
+    dfs(root, 0, from, to);
     return result;
 
     function dfs(u, current, from, to) {
@@ -95,7 +109,7 @@ export class SidebarComponent extends HTMLElement {
       if (from <= current && current < to)
         result.push(u);
       current += 1;
-      if (!u.collapsed || !u.parent) {
+      if (!u.collapsed) {
         u.ensureSortedChildren();
         for (const child of u.sortedChildren)
           current = dfs(child, current, from, to);
@@ -104,10 +118,10 @@ export class SidebarComponent extends HTMLElement {
     }
   }
 
-  _addNodes(paths, createExpanded) {
+  _addNodes(root, paths, createExpanded) {
     for (const path of paths) {
       const tokens = path.split('/').filter(token => !!token);
-      let wp = this._root;
+      let wp = root;
       const mimeType = this._fs.mimeType(path);
       for (const token of tokens) {
         if (wp.children.has(token)) {
@@ -117,7 +131,6 @@ export class SidebarComponent extends HTMLElement {
         }
         const node = new NavigatorTreeNode(token, wp);
         node.collapsed = !createExpanded;
-        node.subtreeSize += 1;
         node.mimeType = mimeType;
         wp.children.set(node.name, node);
         wp.sortedChildren.length = 0;
@@ -127,10 +140,10 @@ export class SidebarComponent extends HTMLElement {
     }
   }
 
-  _removeNodes(paths) {
+  _removeNodes(root, paths) {
     for (const path of paths) {
       const tokens = path.split('/').filter(token => !!token);
-      let wp = this._root;
+      let wp = root;
       for (const token of tokens) {
         wp.subtreeSize -= 1;
         const child = wp.children.get(token);
@@ -160,7 +173,7 @@ class NavigatorTreeNode {
     this.fullName = parent ? parent.fullName + '/' + name : '';
     this.parent = parent;
     this.depth = parent ? parent.depth + 1 : 0;
-    this.subtreeSize = 0;
+    this.subtreeSize = 1;
     this.collapsed = false;
     this.children = new Map();
     this.isFile = false;

@@ -16,7 +16,7 @@ header {
 sidebar-component
 file-entry {
   padding: 4px;
-  padding-left: calc(var(--depth) * 11px);
+  padding-left: calc(var(--depth) * 11px + 11px);
   display: block;
 }
 

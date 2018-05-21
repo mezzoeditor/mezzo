@@ -2,46 +2,60 @@ let id = 1;
 
 export class FileSystem {
   constructor() {
-    this._roots = new Set();
     this._filesChangedCallbacks = [];
     this._rootsChangedCallbacks = [];
-    this._paths = new Set();
+    /** @type {!Map<string, !Set<string>>} */
+    this._relativeRootPaths = new Map();
   }
 
   initialize(path) {
-    this._roots.add(path);
+    this._relativeRootPaths.set(path, new Set());
     const callbackName = '_bindingFilesChanged' + (id++);
-    window[callbackName] = this._bindingFilesChanged.bind(this);
+    window[callbackName] = this._bindingFilesChanged.bind(this, path);
     window._bindingInitializeFS(path, callbackName);
     for (const callback of this._rootsChangedCallbacks)
       callback.call(null, [path], []);
   }
 
-  _bindingFilesChanged(added, removed, changed) {
-    const removedPaths = [];
-    const changedPaths = [];
+  _bindingFilesChanged(root, added, removed, changed) {
+    const removedRelativePaths = [];
+    const changedRelativePaths = [];
+    const addedRelativePaths = [];
+    const relativePaths = this._relativeRootPaths.get(root);
     for (const path of removed) {
-      if (this._paths.has(path)) {
-        this._paths.delete(path);
-        removedPaths.push(path);
+      const relPath = relify(root, path);
+      if (relativePaths.has(relPath)) {
+        relativePaths.delete(relPath);
+        removedRelativePaths.push(relPath);
       }
     }
     for (const path of changed) {
-      if (this._paths.has(path))
-        changedPaths.push(path);
+      const relPath = relify(root, path);
+      if (relativePaths.has(relPath))
+        changedRelativePaths.push(relPath);
     }
-    for (const path of added)
-      this._paths.add(path);
+    for (const path of added) {
+      const relPath = relify(root, path);
+      relativePaths.add(relPath);
+      addedRelativePaths.push(relPath);
+    }
     for (const callback of this._filesChangedCallbacks)
-      callback.call(null, added, removedPaths, changedPaths);
-  }
+      callback.call(null, root, addedRelativePaths, removedRelativePaths, changedRelativePaths);
 
-  paths() {
-    return this._paths;
+    function relify(root, path) {
+      path = path.substring(root.length);
+      if (path.startsWith('/'))
+        path = path.substring(1);
+      return path;
+    }
   }
 
   roots() {
-    return Array.from(this._roots);
+    return Array.from(this._relativeRootPaths.keys());
+  }
+
+  relativeRootPaths(root) {
+    return Array.from(this._relativeRootPaths.get(root));
   }
 
   mimeType(path) {
