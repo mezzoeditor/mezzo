@@ -135,6 +135,7 @@ export class SidebarComponent extends HTMLElement {
         node.collapsed = !createExpanded;
         node.mimeType = mimeType;
         wp.children.set(node.name, node);
+        wp.subtreeSize += 1;
         wp.sortedChildren.length = 0;
         wp = node;
       }
