@@ -2,6 +2,9 @@ import { Start, End, Range } from '../core/Anchor.mjs';
 import { LineDecorator } from '../core/Decorator.mjs';
 import { Selection } from './Selection.mjs';
 import { EventEmitter } from '../core/EventEmitter.mjs';
+import { WorkAllocator } from '../core/WorkAllocator.mjs';
+
+const CHUNK_SIZE = 20000;
 
 export class Search extends EventEmitter {
   /**
@@ -9,13 +12,15 @@ export class Search extends EventEmitter {
    */
   constructor(editor) {
     super();
+    this._chunkSize = CHUNK_SIZE;
     this._editor = editor;
     this._viewport = editor.viewport();
     this._viewport.addDecorationCallback(this._onDecorate.bind(this));
     this._document = editor.document();
     this._document.addReplaceCallback(this._onReplace.bind(this));
-    this._chunkSize = 20000;
-    this._rangeToProcess = null;  // [from, to] inclusive.
+
+    this._allocator = new WorkAllocator(0);
+
     this._selection = editor.selection();
     this._selection.on(Selection.Events.Changed, () => { this._shouldUpdateSelection = false; });
     this._decorator = new LineDecorator('search.match');
@@ -66,7 +71,8 @@ export class Search extends EventEmitter {
   find(query, options = {caseInsensetive: true}) {
     this._cancel();
     this._options = {query, caseInsensetive: !!options.caseInsensetive};
-    this._needsProcessing({from: 0, to: this._document.length() - query.length});
+    this._allocator = new WorkAllocator(this._document.length() - query.length + 1);
+    this._needsProcessing(0, this._document.length());
     this._shouldUpdateSelection = true;
     this._viewport.raf();
     this._emitUpdatedIfNeeded();
@@ -132,15 +138,18 @@ export class Search extends EventEmitter {
    */
   _searchChunk() {
     this._jobId = 0;
-    if (!this._rangeToProcess)
-      return;
+    let budget = this._chunkSize;
+    let range = null;
+    while (budget > 0 && (range = this._allocator.workRange())) {
+      if (range.to - range.from > budget)
+        range.to = range.from + budget;
+      range = this._searchRange(range, this._shouldUpdateSelection, this._shouldUpdateSelection);
+      this._allocator.done(range.from, range.to);
+      budget -= range.to - range.from;
+    }
 
-    let from = this._rangeToProcess.from;
-    let to = Math.min(this._rangeToProcess.to, from + this._chunkSize);
-    this._searchRange({from, to}, this._shouldUpdateSelection, this._shouldUpdateSelection);
-    this._processed({from, to});
     this._viewport.raf();
-    if (this._rangeToProcess)
+    if (this._allocator.hasWork())
       this._jobId = this._editor.platformSupport().requestIdleCallback(this._searchChunk.bind(this));
     this._emitUpdatedIfNeeded();
   }
@@ -149,23 +158,21 @@ export class Search extends EventEmitter {
 
   /**
    * @param {!Viewport.VisibleContent} visibleContent
-   * @return {!Viewpor.DecorationResult}
+   * @return {?Viewpor.DecorationResult}
    */
   _onDecorate(visibleContent) {
-    if (this._rangeToProcess &&
-        this._rangeToProcess.from <= visibleContent.range.to &&
-        this._rangeToProcess.to >= visibleContent.range.from - this._options.query.length) {
-      let hadCurrentMatch = !!this._currentMatch;
-      for (let range of visibleContent.ranges) {
-        let from = Math.max(0, range.from - this._options.query.length);
-        let to = Math.min(range.to, this._document.length() - this._options.query.length);
-        to = Math.max(from, to);
-        this._searchRange({from, to}, this._shouldUpdateSelection, false);
-        this._processed({from, to});
+    if (!this._options)
+      return null;
+    const hadCurrentMatch = !!this._currentMatch;
+    for (let range of visibleContent.ranges) {
+      let searchRange = null;
+      while (searchRange = this._allocator.workRange(range.from, range.to)) {
+        const searchedRange = this._searchRange(searchRange, this._shouldUpdateSelection, false);
+        this._allocator.done(searchedRange.from, searchedRange.to);
       }
-      if (!hadCurrentMatch && this._currentMatch)
-        this._selection._onDecorate(visibleContent);
     }
+    if (!hadCurrentMatch && this._currentMatch)
+      this._selection._onDecorate(visibleContent);
 
     this._emitUpdatedIfNeeded();
     return {background: [this._decorator, this._currentMatchDecorator], lines: [this._decorator]};
@@ -187,11 +194,14 @@ export class Search extends EventEmitter {
    * @param {!Replacements} replacements
    */
   _onReplace(replacements) {
+    if (!this._options)
+      return;
     for (let replacement of replacements) {
       let from = replacement.offset;
       let to = from + replacement.removed.length();
       let inserted = replacement.inserted.length();
       this._decorator.replace(from, to, inserted);
+      this._allocator.replace(from, to, inserted);
       if (this._currentMatch && this._currentMatch.from >= to) {
         let delta = inserted - (to - from);
         this._updateCurrentMatch({from: this._currentMatch.from + delta, to: this._currentMatch.to + delta}, false, false);
@@ -200,19 +210,13 @@ export class Search extends EventEmitter {
       } else if (this._currentMatch) {
         this._updateCurrentMatch(this._currentMatch, false, false);
       }
-      if (this._options) {
-        this._processed({from: from - this._options.query.length, to});
-        this._needsProcessing({
-          from: Math.max(from - this._options.query.length, 0),
-          to: Math.min(from + inserted, replacement.after.length())
-        });
-      }
+      if (this._options)
+        this._needsProcessing(from - this._options.query.length, from + inserted);
     }
     this._emitUpdatedIfNeeded();
   }
 
   _cancel() {
-    this._rangeToProcess = null;
     this._decorator.clearAll();
     this._currentMatchDecorator.clearAll();
     this._currentMatch = null;
@@ -237,45 +241,25 @@ export class Search extends EventEmitter {
       // TODO: this probably should not go into history, or it messes up with undo.
       if (select)
         this._selection.setRanges([this._currentMatch]);
-      if (reveal)
+      if (reveal) {
         this._viewport.reveal(this._currentMatch, {
           left: 10,
           right: 10,
           top: this._viewport.height() / 2,
           bottom: this._viewport.height() / 2,
         });
+      }
     }
   }
 
   /**
-   * @param {!Range} range
+   * @param {number} from
+   * @param {number} to
    */
-  _needsProcessing(range) {
-    let {from, to} = range;
-    if (this._rangeToProcess) {
-      from = Math.min(from, this._rangeToProcess.from);
-      to = Math.max(to, this._rangeToProcess.to);
-    }
-    this._rangeToProcess = {from, to};
-    if (!this._jobId)
+  _needsProcessing(from, to) {
+    this._allocator.undone(from, to);
+    if (!this._jobId && this._allocator.hasWork())
       this._jobId = this._editor.platformSupport().requestIdleCallback(this._searchChunk.bind(this));
-  }
-
-  /**
-   * @param {!Range} range
-   */
-  _processed(range) {
-    if (!this._rangeToProcess)
-      return;
-    let {from, to} = range;
-    if (from <= this._rangeToProcess.from && to >= this._rangeToProcess.to) {
-      this._rangeToProcess = null;
-      return;
-    }
-    if (from <= this._rangeToProcess.from && to >= this._rangeToProcess.from)
-      this._rangeToProcess.from = to;
-    else if (from <= this._rangeToProcess.to && to >= this._rangeToProcess.to)
-      this._rangeToProcess.to = from;
   }
 
   /**
@@ -288,18 +272,26 @@ export class Search extends EventEmitter {
     let {from, to} = range;
     let query = this._options.query;
     const findOptions = { caseInsensetive: !!this._options.caseInsensetive };
-    this._decorator.clearStarting(Start(from), End(to));
-    let iterator = this._document.iterator(from, from, to + query.length);
+    this._decorator.clearStarting(Start(from), Start(to));
+    // NB: iterator constraints are inclusive.
+    let iterator = this._document.iterator(from, from, to + query.length - 1);
     while (iterator.find(query, findOptions)) {
       this._decorator.add(Start(iterator.offset), Start(iterator.offset + query.length));
-      if (!this._currentMatch)
+      to = Math.max(to, iterator.offset + query.length);
+      if (!this._currentMatch) {
         this._updateCurrentMatch({from: iterator.offset, to: iterator.offset + query.length}, selectCurrentMatch, revealCurrentMatch);
+      }
       iterator.advance(query.length);
     }
-    return range;
+    return {from, to};
   }
 };
 
 Search.Events = {
   Changed: 'changed'
 };
+
+Search.test = {};
+Search.test.setChunkSize = function(search, chunkSize) {
+  search._chunkSize = chunkSize;
+}

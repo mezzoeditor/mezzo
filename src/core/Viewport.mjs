@@ -100,7 +100,7 @@ export class Measurer {
    *
    * @return {?RegExp}
    */
-  defaultRegex() {
+  defaultWidthRegex() {
   }
 
   /**

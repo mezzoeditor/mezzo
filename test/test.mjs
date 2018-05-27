@@ -15,10 +15,15 @@ console.log(import.meta.url);
   (await import('../src/core/Metrics.spec.mjs')).addTests(runner, expect);
   (await import('../src/core/Tree.spec.mjs')).addTests(runner, expect);
   (await import('../src/core/Text.spec.mjs')).addTests(runner, expect);
+  (await import('../src/core/WorkAllocator.spec.mjs')).addTests(runner, expect);
+
+  // Editor tests.
+  (await import('../src/editor/Search.spec.mjs')).addTests(runner, expect);
 
   // JSLexer unit tests
   (await import('../src/javascript/jslexer/tokenizer.spec.mjs')).addTests(runner, expect);
   (await import('../src/javascript/jslexer/recovery.spec.mjs')).addTests(runner, expect);
+
 
   new Reporter(runner);
   runner.run();
