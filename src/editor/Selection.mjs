@@ -203,11 +203,9 @@ export class Selection extends EventEmitter {
     return this._operation(range => {
       let offset = Math.min(range.anchor, range.focus);
       let upDownX = range.upDownX;
-      if (range.anchor === range.focus) {
-        let upResult = this._lineUp(range.focus, range.upDownX);
-        offset = upResult.offset;
-        upDownX = upResult.upDownX;
-      }
+      let upResult = this._lineUp(range.focus, range.upDownX);
+      offset = upResult.offset;
+      upDownX = upResult.upDownX;
       return {id: range.id, upDownX, anchor: offset, focus: offset};
     });
   }
@@ -219,11 +217,9 @@ export class Selection extends EventEmitter {
     return this._operation(range => {
       let offset = Math.max(range.anchor, range.focus);
       let upDownX = range.upDownX;
-      if (range.anchor === range.focus) {
-        let upResult = this._lineDown(range.focus, range.upDownX);
-        offset = upResult.offset;
-        upDownX = upResult.upDownX;
-      }
+      let upResult = this._lineDown(range.focus, range.upDownX);
+      offset = upResult.offset;
+      upDownX = upResult.upDownX;
       return {id: range.id, upDownX, anchor: offset, focus: offset};
     });
   }
