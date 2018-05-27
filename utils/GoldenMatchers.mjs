@@ -16,7 +16,9 @@
 import path from 'path';
 import fs from 'fs';
 import Diff from 'text-diff';
-import __dirname from './__dirname';
+import url from 'url';
+
+const __dirname = path.dirname(new url.URL(import.meta.url).pathname);
 
 export class GoldenMatchers {
   constructor(goldenDir, outputDir, resetResults) {

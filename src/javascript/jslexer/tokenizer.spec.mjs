@@ -17,10 +17,11 @@ import {GoldenMatchers} from '../../../utils/GoldenMatchers';
 import {Document} from '../../core/Document.mjs';
 import fs from 'fs';
 import path from 'path';
-import __dirname from './__dirname.js';
 import {Parser, TokenTypes} from './index.mjs';
+import url from 'url';
 
 export function addTests(runner) {
+  const __dirname = path.dirname(new url.URL(import.meta.url).pathname);
   const TESTDIR = path.join(__dirname, 'test');
 
   const resetResults = process.argv.includes('--reset-results');

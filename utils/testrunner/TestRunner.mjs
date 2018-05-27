@@ -17,8 +17,9 @@
 import path from 'path';
 import EventEmitter from 'events';
 import {Multimap} from './Multimap';
-import __dirname from './__dirname';
+import url from 'url';
 
+const __dirname = path.dirname(new url.URL(import.meta.url).pathname);
 const TimeoutError = new Error('Timeout');
 const TerminatedError = new Error('Terminated');
 
