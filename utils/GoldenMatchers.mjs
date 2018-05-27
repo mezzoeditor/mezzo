@@ -33,7 +33,8 @@ export class GoldenMatchers {
       return;
     }
     const result = compare(this._goldenDir, this._outputDir, actual, goldenName, plainTextComparator);
-    console.assert(result.pass, result.message);
+    if (!result.pass)
+      throw new Error(result.message);
   }
 
   _overwrite(actual, goldenName) {
