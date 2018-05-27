@@ -93,10 +93,10 @@ window.addEventListener('DOMContentLoaded', () => {
       }
       return true;
     } else if (command === 'save') {
+      let path = tabstrip.selectedTab();
       let editor = editors.get(path);
       if (!editor)
         return false;
-      let path = tabstrip.selectedTab();
       window.fs.saveFile(path, editor.document().content());
       return true;
     } else if (command === 'ignore') {
