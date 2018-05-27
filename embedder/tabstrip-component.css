@@ -1,6 +1,7 @@
 tabstrip-component {
   flex: 0 0 30px;
   contain: content;
+  user-select: none;
   border-bottom: 1px solid var(--divider-color);
 }
 
