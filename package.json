@@ -4,11 +4,10 @@
   "description": "Editor",
   "main": "index.js",
   "engines": {
-    "node": ">=9.2.0"
+    "node": ">=10.0.0"
   },
   "scripts": {
-    "unit-jslexer": "node --experimental-modules src/javascript/jslexer/test.mjs",
-    "unit-core": "node --experimental-modules src/core/test.mjs",
+    "unit": "node --experimental-modules test/test.mjs",
     "serve": "static . -p 9123"
   },
   "repository": {

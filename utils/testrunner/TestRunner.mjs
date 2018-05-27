@@ -37,6 +37,8 @@ class UserCallback {
     const timeoutPromise = new Promise(resolve => {
       setTimeout(resolve.bind(null, TimeoutError), this.timeout);
     });
+    // Let us some time to handle SIGINT / SIGHUP etc.
+    await new Promise(x => setTimeout(x, 0));
     try {
       return await Promise.race([
         Promise.resolve().then(this._callback.bind(null, ...args)).then(() => null).catch(e => e),
