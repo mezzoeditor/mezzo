@@ -36,13 +36,13 @@ export function addTests(runner) {
       tokenTypeNames.set(type, typeName);
   }
 
-  const files = fs.readdirSync(TESTDIR);
-  for (let fileName of files) {
-    if (!fileName.endsWith('.js'))
-      continue;
-    runner.it(fileName, async () => {
+  runner.it('should work', async () => {
+    const files = fs.readdirSync(TESTDIR);
+    let document = new Document();
+    for (let fileName of files) {
+      if (!fileName.endsWith('.js'))
+        continue;
       let text = await readFile(path.join(TESTDIR, fileName));
-      let document = new Document();
       document.reset(text);
       let tt = new Parser(document.iterator(0), Parser.defaultState());
       const tokens = [];
@@ -51,8 +51,8 @@ export function addTests(runner) {
       // Add trailing new line to be friendly with editors.
       tokens.push('');
       goldenMatchers.expectText(tokens.join('\n'), fileName.replace(/\.js$/, '-result.txt'));
-    });
-  }
+    }
+  });
 
   function readFile(filePath) {
     return new Promise((resolve, reject) => {
