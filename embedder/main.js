@@ -67,6 +67,7 @@ window.addEventListener('DOMContentLoaded', () => {
     'Cmd/Ctrl-p': 'open-file',
     'Cmd/Ctrl-w': 'close-tab',
     'Cmd/Ctrl-,': 'ignore',
+    'Cmd/Ctrl-f': 'ignore',
   }, command => {
     if (command === 'close-tab') {
       let path = tabstrip.selectedTab();
