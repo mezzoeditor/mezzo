@@ -60,6 +60,13 @@ export class Selection extends EventEmitter {
   /**
    * @return {boolean}
    */
+  hasRanges() {
+    return !!this._ranges.length;
+  }
+
+  /**
+   * @return {boolean}
+   */
   hasSingleRange() {
     return this._ranges.length === 1;
   }
