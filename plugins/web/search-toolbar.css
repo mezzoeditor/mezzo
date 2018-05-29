@@ -64,6 +64,12 @@ search-toolbar search-btn {
   display: flex;
   align-items: center;
   justify-content: center;
+  outline: none;
+}
+
+
+search-toolbar search-btn:focus-within {
+  outline: 1px solid #2196F3;
 }
 
 search-toolbar search-btn.case {

@@ -15,8 +15,8 @@ export class SearchToolbar {
           <input></input>
           <search-details>0/0</search-details>
         </search-focus-ring>
-        <search-btn class=prev><span>❮</span></search-btn>
-        <search-btn class=next><span>❯</span></search-btn>
+        <search-btn class=prev tabIndex=0><span>❮</span></search-btn>
+        <search-btn class=next tabIndex=0><span>❯</span></search-btn>
       </search-container>
       <search-cancel>×</search-cancel>
     `;
@@ -89,11 +89,11 @@ export class SearchToolbar {
       this._isShown = false;
       return true;
     }
-    if (command === 'search.prev' && document.activeElement === this._input) {
+    if (command === 'search.prev' && this._element.contains(document.activeElement)) {
       editor.search().previousMatch();
       return true;
     }
-    if (command === 'search.next' && document.activeElement === this._input) {
+    if (command === 'search.next' && this._element.contains(document.activeElement)) {
       editor.search().nextMatch();
       return true;
     }
