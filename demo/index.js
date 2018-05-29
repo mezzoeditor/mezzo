@@ -1,6 +1,7 @@
 import { Start, End } from "../src/core/Anchor.mjs";
 import { TextDecorator } from "../src/core/Decorator.mjs";
-import { Renderer, PlatformSupport } from "../src/web/Renderer.mjs";
+import { Renderer } from "../src/web/Renderer.mjs";
+import { WebPlatformSupport } from "../src/web/WebPlatformSupport.mjs";
 import { Editor } from "../src/editor/Editor.mjs";
 import { Random } from "../src/core/Random.mjs";
 import { JSHighlighter } from "../src/javascript/JSHighlighter.mjs";
@@ -82,7 +83,7 @@ function updateRangeHandle(editor) {
 
 document.addEventListener('DOMContentLoaded', () => {
   const renderer = new Renderer(document);
-  const editor = new Editor(renderer.measurer(), PlatformSupport.instance());
+  const editor = new Editor(renderer.measurer(), WebPlatformSupport.instance());
 
   const selectedWordHighlighter = new SelectedWordHighlighter(editor);
   const smartBraces = new SmartBraces(editor);

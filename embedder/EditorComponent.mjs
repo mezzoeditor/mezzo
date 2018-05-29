@@ -1,7 +1,8 @@
 import { EventEmitter } from '../src/core/EventEmitter.mjs';
 import { Editor } from '../src/editor/Editor.mjs';
 import { Selection } from '../src/editor/Selection.mjs';
-import { Renderer, PlatformSupport } from '../src/web/Renderer.mjs';
+import { Renderer } from '../src/web/Renderer.mjs';
+import { WebPlatformSupport } from '../src/web/WebPlatformSupport.mjs';
 import { JSHighlighter } from '../src/javascript/JSHighlighter.mjs';
 import { DefaultHighlighter } from '../src/default/DefaultHighlighter.mjs';
 
@@ -97,7 +98,7 @@ export class EditorComponent extends HTMLElement {
   }
 
   createEditor(mimeType) {
-    const editor = new Editor(this._renderer.measurer(), PlatformSupport.instance());
+    const editor = new Editor(this._renderer.measurer(), WebPlatformSupport.instance());
     editor.selection().setRanges([{from: 0, to: 0}]);
 
     const selectedWordHighlighter = new SelectedWordHighlighter(editor);
