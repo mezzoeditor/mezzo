@@ -89,11 +89,11 @@ export class SearchToolbar {
       this._isShown = false;
       return true;
     }
-    if (command === 'search.prev') {
+    if (command === 'search.prev' && document.activeElement === this._input) {
       editor.search().previousMatch();
       return true;
     }
-    if (command === 'search.next') {
+    if (command === 'search.next' && document.activeElement === this._input) {
       editor.search().nextMatch();
       return true;
     }
