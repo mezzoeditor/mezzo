@@ -47,7 +47,7 @@ input:focus {
 
 filter-dialog
 search-results {
-  max-height: 700px;
+  max-height: 70%;
   background: white;
   overflow: auto;
   position: relative;
@@ -96,8 +96,8 @@ filter-dialog search-item.selected {
 }
 
 filter-dialog search-item-custom:hover,
-filter-dialog search-item:hover {
-  background-color: var(--hover-color);
+filter-dialog search-item:hover:not(.selected) {
+  background-color: #e3f2fda8;
 }
 
 filter-dialog
