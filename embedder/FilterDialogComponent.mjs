@@ -274,7 +274,7 @@ export class GoToLineItem extends FilterDialogComponent.Item {
   }
 
   select() {
-    this._callback.call(null, this._lineNumber);
+    this._callback.call(null, this._lineNumber - 1);
   }
 
   /**
