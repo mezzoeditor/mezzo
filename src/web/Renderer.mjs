@@ -128,8 +128,14 @@ export class Renderer {
     this._canvas.addEventListener('mousemove', event => this._onMouseMove(event));
     this._canvas.addEventListener('mouseup', event => this._onMouseUp(event));
     this._canvas.addEventListener('mouseout', event => this._onMouseOut(event));
+    this._canvas.addEventListener('mousein', event => this._onMouseIn(event));
     this._canvas.addEventListener('wheel', event => this._onScroll(event));
     this._element.addEventListener('click', event => this._onClick(event));
+
+    this._windowListeners = {
+      mousemove: this._onMouseMove.bind(this),
+      mouseup: this._onMouseUp.bind(this),
+    };
 
     // Rects are in css pixels, in canvas coordinates.
     this._gutterRect = {
@@ -670,15 +676,28 @@ export class Renderer {
   }
 
   _onMouseOut(event) {
-    const canvasPosition = this._mouseEventToCanvas(event);
-    this._lastCoordinates.mouseUp = canvasPosition;
-    this._mouseDownState.name = null;
-    this._mouseDownState.insideThumb = null;
-    this._vScrollbar.dragged = false;
-    this._hScrollbar.dragged = false;
-    this._vScrollbar.hovered = false;
-    this._hScrollbar.hovered = false;
-    this.raf();
+    if (this._mouseDownState.name !== MouseDownStates.VSCROLL_DRAG &&
+        this._mouseDownState.name !== MouseDownStates.HSCROLL_DRAG) {
+      const canvasPosition = this._mouseEventToCanvas(event);
+      this._lastCoordinates.mouseUp = canvasPosition;
+      this._mouseDownState.name = null;
+      this._mouseDownState.insideThumb = null;
+      this._vScrollbar.dragged = false;
+      this._hScrollbar.dragged = false;
+      this._vScrollbar.hovered = false;
+      this._hScrollbar.hovered = false;
+      this.raf();
+    } else {
+      window.removeEventListener('mousemove', this._windowListeners.mousemove, false);
+      window.removeEventListener('mouseup', this._windowListeners.mouseup, false);
+      window.addEventListener('mousemove', this._windowListeners.mousemove, false);
+      window.addEventListener('mouseup', this._windowListeners.mouseup, false);
+    }
+  }
+
+  _onMouseIn(event) {
+    window.removeEventListener('mousemove', this._windowListeners.mousemove, false);
+    window.removeEventListener('mouseup', this._windowListeners.mouseup, false);
   }
 
   invalidate() {
