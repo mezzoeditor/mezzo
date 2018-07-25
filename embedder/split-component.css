@@ -18,13 +18,20 @@ split-right {
 
 split-component
 split-divider {
-  flex: 0 0 4px;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 100px;
+  width: 8px;
   z-index: 10;
-  border-left: 1px solid var(--divider-color);
-  border-right: 1px solid var(--divider-color);
 }
 
 split-component
 split-divider:hover {
   cursor: col-resize;
+}
+
+split-divider.dragging {
+  width: 100px;
+  margin-left: -50px;
 }

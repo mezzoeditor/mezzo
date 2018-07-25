@@ -61,7 +61,7 @@ export class FileSystem {
   mimeType(path) {
     if (!this.isFilePath(path))
       return '';
-    if (path.endsWith('.mjs') || path.endsWith('.js'))
+    if (path.endsWith('.mjs') || path.endsWith('.js') || path.endsWith('json'))
       return 'text/javascript';
     if (path.endsWith('.css'))
       return 'text/css';

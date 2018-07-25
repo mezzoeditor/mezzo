@@ -22,6 +22,7 @@ export class SplitComponent extends HTMLElement {
 
   setLeftWidth(width) {
     this._left.style.setProperty('width', width + 'px');
+    this._divider.style.setProperty('left', width - 4 + 'px');
     this._leftWidth = width;
   }
 
@@ -30,6 +31,7 @@ export class SplitComponent extends HTMLElement {
       return;
     this._mouseDownPosition = this._mouseCoordinates(event);
     this._mouseDownWidth = this._leftWidth;
+    this._divider.classList.add('dragging');
   }
 
   _onMouseMove(event) {
@@ -42,6 +44,7 @@ export class SplitComponent extends HTMLElement {
 
   _onMouseUp(event) {
     this._mouseDownPosition = null;
+    this._divider.classList.remove('dragging');
   }
 
   _mouseCoordinates(event) {

@@ -1,6 +1,7 @@
 sidebar-component {
   flex: auto;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   user-select: none;
   contain: content;
   white-space: nowrap;
@@ -8,9 +9,11 @@ sidebar-component {
 
 sidebar-component
 header {
-  padding: 10px 10px 2px 10px;
-  font-weight: 700;
+  padding: 0 11px;
   color: #969696;
+  height: 30px;
+  align-items: center;
+  display: flex;
 }
 
 sidebar-component
@@ -26,6 +29,7 @@ file-entry-content {
   position: relative;
   display: flex;
   align-items: center;
+  overflow: hidden;
 }
 
 sidebar-component

@@ -18,7 +18,7 @@ class ContextBasedMeasurer {
     const fontHeight = 20;
     const charHeight = fontHeight - 5;
 
-    ctx.font = monospace ? '14px monospace' : '14px sans-serif';
+    ctx.font = monospace ? '12px Menlo' : '12px BlinkMacSystemFont';
     ctx.textBaseline = 'top';
 
     this.textOffset = fontHeight - (3 + charHeight);
@@ -50,7 +50,8 @@ class ContextBasedMeasurer {
 };
 
 const MIN_THUMB_SIZE = 30;
-const GUTTER_PADDING_LEFT_RIGHT = 4;
+const GUTTER_PADDING_LEFT = 4;
+const GUTTER_PADDING_RIGHT = 12;
 const SCROLLBAR_WIDTH = 15;
 const isMac = navigator.platform.toUpperCase().indexOf('MAC') !== -1;
 
@@ -686,7 +687,7 @@ export class Renderer {
     // To properly handle input events, we have to update rects synchronously.
     const gutterLength = (Math.max(this._editor.document().lineCount(), 100) + '').length;
     const gutterWidth = this._measurer.width9 * gutterLength;
-    this._gutterRect.width = gutterWidth + 2 * GUTTER_PADDING_LEFT_RIGHT;
+    this._gutterRect.width = gutterWidth + GUTTER_PADDING_LEFT + GUTTER_PADDING_RIGHT;
     this._gutterRect.height = this._cssHeight;
 
     this._editorRect.x = this._gutterRect.width;
@@ -800,7 +801,7 @@ export class Renderer {
   }
 
   _drawGutter(ctx, lines) {
-    ctx.fillStyle = '#eee';
+    ctx.fillStyle = 'white';
     ctx.fillRect(0, 0, this._gutterRect.width, this._gutterRect.height);
     ctx.strokeStyle = 'rgb(187, 187, 187)';
     ctx.lineWidth = 1 / this._ratio;
@@ -812,7 +813,7 @@ export class Renderer {
     ctx.textAlign = 'right';
     ctx.fillStyle = 'rgb(128, 128, 128)';
     const textOffset = this._measurer.textOffset;
-    const textX = this._gutterRect.width - GUTTER_PADDING_LEFT_RIGHT;
+    const textX = this._gutterRect.width - GUTTER_PADDING_RIGHT;
     for (let {first, y} of lines) {
       // TODO: show "first..last" range instead
       const number = (first + 1) + '';
