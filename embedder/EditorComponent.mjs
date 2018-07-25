@@ -23,6 +23,10 @@ export class EditorComponent extends HTMLElement {
     this._selectionChangedCallback = null;
     this._selectionDescription = document.createElement('span');
 
+    const isMac = navigator.platform.toUpperCase().indexOf('MAC') !== -1;
+    this._stubMessage = document.createElement('stub-message');
+    this._stubMessage.textContent = `Hit ${isMac ? '⌘' : 'Ctrl'}-P to open files.`;
+    this.appendChild(this._stubMessage);
     this._rafId = 0;
   }
 
@@ -68,8 +72,10 @@ export class EditorComponent extends HTMLElement {
         this._editor.selection().on(Selection.Events.Changed, this._onSelectionChanged.bind(this))
       ];
       this._onSelectionChanged();
+      this._stubMessage.remove();
     } else {
       this._selectionDescription.textContent = '';
+      this.appendChild(this._stubMessage);
     }
   }
 
