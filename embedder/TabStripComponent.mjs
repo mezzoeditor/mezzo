@@ -22,8 +22,17 @@ export class TabStripComponent extends HTMLElement {
   addTab(id) {
     const title = window.fs.fileName(id);
     const element = document.createElement('tabstrip-tab');
+    const closeIcon = document.createElement('div');
+    closeIcon.classList.add('close-icon');
+    closeIcon.addEventListener('click', event => {
+      this.closeTab(id);
+      event.stopPropagation();
+    });
     element[TabIdSymbol] = id;
-    element.textContent = title;
+    const titleElement = document.createElement('span');
+    titleElement.textContent = title;
+    element.appendChild(titleElement);
+    element.appendChild(closeIcon);
     this.appendChild(element);
 
     const tab = {title, element};

@@ -2,22 +2,41 @@ tabstrip-component {
   flex: 0 0 30px;
   contain: content;
   user-select: none;
+  --icon-size: 12px;
 }
 
 tabstrip-tab {
-  padding: 2px 7px;
+  padding: 2px 5px 2px 7px;
+  min-width: 90px;
   flex: none;
-  display: flex;
   align-items: center;
+  cursor: pointer;
 }
 
 tabstrip-tab {
   border-right: 1px solid white;
+  display: flex;
 }
 
-tabstrip-tab:hover {
-  cursor: pointer;
-  background-color: #ddd;
+tabstrip-tab span {
+  padding: 0 0 0 10px;
+  flex: auto;
+}
+
+tabstrip-tab .close-icon {
+  -webkit-mask-image: url(./close-icon.svg);
+  -webkit-mask-size: var(--icon-size) var(--icon-size);
+  -webkit-mask-position: 0 0;
+  background-color: #333;
+  width: var(--icon-size);
+  height: var(--icon-size);
+  margin-left: 3px;
+  flex-shrink: 0;
+  visibility: hidden;
+}
+
+tabstrip-tab:hover .close-icon {
+  visibility: visible;
 }
 
 tabstrip-tab.selected {
