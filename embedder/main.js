@@ -39,7 +39,7 @@ window.addEventListener('DOMContentLoaded', () => {
   let editors = new Map();
   sidebar.setSelectedCallback(async path => {
     if (!tabstrip.hasTab(path))
-      tabstrip.addTab(path, window.fs.fileName(path));
+      tabstrip.addTab(path);
     tabstrip.selectTab(path);
   });
   tabstrip.setSelectedCallback(async path => {
@@ -60,6 +60,7 @@ window.addEventListener('DOMContentLoaded', () => {
     renderer.setEditor(editor);
     statusbar.rightElement().textContent = mimeType;
   });
+  tabstrip.restoreTabs();
 
   const keymapHandler = new KeymapHandler();
   keymapHandler.addKeymap({
@@ -79,7 +80,7 @@ window.addEventListener('DOMContentLoaded', () => {
       } else {
         const callback = path => {
           if (!tabstrip.hasTab(path))
-            tabstrip.addTab(path, window.fs.fileName(path));
+            tabstrip.addTab(path);
           tabstrip.selectTab(path);
         };
         const items = [];

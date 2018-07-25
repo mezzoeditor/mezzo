@@ -19,7 +19,8 @@ export class TabStripComponent extends HTMLElement {
     this._selectedCallback = callback;
   }
 
-  addTab(id, title) {
+  addTab(id) {
+    const title = window.fs.fileName(id);
     const element = document.createElement('tabstrip-tab');
     element[TabIdSymbol] = id;
     element.textContent = title;
@@ -27,6 +28,7 @@ export class TabStripComponent extends HTMLElement {
 
     const tab = {title, element};
     this._tabs.set(id, tab);
+    this._persistTabs();
   }
 
   closeTab(id) {
@@ -43,6 +45,23 @@ export class TabStripComponent extends HTMLElement {
     this.selectTab(nextId);
     this._tabs.delete(id);
     tab.element.remove();
+    this._persistTabs();
+  }
+
+  _persistTabs() {
+    const entries = Array.from(this._tabs.keys()).map(id => ({id, selected: id === this._selectedTabId}));
+    window.localStorage['tabs'] = JSON.stringify(entries);
+  }
+
+  restoreTabs() {
+    try {
+      for (const entry of JSON.parse(window.localStorage['tabs'])) {
+        this.addTab(entry.id);
+        if (entry.selected)
+          this.selectTab(entry.id);
+      }
+    } catch (e) {
+    }
   }
 
   hasTab(id) {
@@ -66,6 +85,7 @@ export class TabStripComponent extends HTMLElement {
       this._tabs.get(this._selectedTabId).element.classList.add('selected');
     if (this._selectedCallback)
       this._selectedCallback.call(null, id);
+    this._persistTabs();
   }
 }
 
