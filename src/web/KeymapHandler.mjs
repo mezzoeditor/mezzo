@@ -18,12 +18,61 @@ export class KeymapHandler {
 
   handleKeyDown(event) {
     const eventHash = eventToHash(event);
+
+    if (event.repeat && this._shortcutBeingHeld && eventHash == this._shortcutBeingHeld.eventHash) {
+      event.stopPropagation();
+      event.preventDefault();
+      ++this._shortcutBeingHeld.repeatCount;
+
+      // First time repeat event is generated, capture time.
+      if (!this._shortcutBeingHeld.repeatStart) {
+        this._shortcutBeingHeld.repeatStart = performance.now();
+        this._shortcutBeingHeld.handle();
+        return;
+      }
+
+      // Second time repeat event is generated, capture repeat cadence.
+      if (!this._shortcutBeingHeld.repeatCadence) {
+        this._shortcutBeingHeld.repeatCadence = performance.now() - this._shortcutBeingHeld.repeatStart;
+        this._shortcutBeingHeld.handle();
+        return;
+      }
+
+      // First 5 repeats - standard repeat cadence.
+      if (this._shortcutBeingHeld.repeatCount < 5) {
+        this._shortcutBeingHeld.handle();
+        return;
+      }
+
+      // Latter repeats - turborepeat using raf.
+      const deadline = performance.now() + 1.5 * this._shortcutBeingHeld.repeatCadence;
+      const rafLoop = () => {
+        if (performance.now() >= deadline) {
+          this._shortcutBeingHeld = null;
+          return;
+        }
+        this._shortcutBeingHeld.handle();
+        this._shortcutBeingHeld.rafLoop = requestAnimationFrame(rafLoop);
+      };
+      // Restart loop for every event.repeat.
+      cancelAnimationFrame(this._shortcutBeingHeld.rafLoop);
+      rafLoop();
+      return;
+
+    }
+
     let handled = false;
     for (let i = this._keymaps.length - 1; i >= 0 && !handled; i--) {
       const {keymap, handler} = this._keymaps[i];
       let command = keymap.get(eventHash);
       if (command)
         handled = handler.call(null, command);
+      if (handled) {
+        event.stopPropagation();
+        event.preventDefault();
+        this._shortcutBeingHeld = { eventHash, command, handle: handler.bind(null, command), repeatCount: 0 };
+        break;
+      }
     }
     return handled;
   }

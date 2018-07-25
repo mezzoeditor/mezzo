@@ -137,12 +137,7 @@ window.addEventListener('DOMContentLoaded', () => {
     return false;
   });
 
-  document.addEventListener('keydown', (event) => {
-    if (keymapHandler.handleKeyDown(event)) {
-      event.stopPropagation();
-      event.preventDefault();
-    }
-  }, false);
+  document.addEventListener('keydown', event => keymapHandler.handleKeyDown(event), false);
 
   function createStubMessage() {
     const isMac = navigator.platform.toUpperCase().indexOf('MAC') !== -1;

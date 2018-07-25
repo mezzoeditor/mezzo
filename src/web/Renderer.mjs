@@ -258,11 +258,8 @@ export class Renderer {
   _onInputKeydown(event) {
     if (!this._editor)
       return;
-    if (this._keymapHandler.handleKeyDown(event)) {
+    if (this._keymapHandler.handleKeyDown(event))
       this._revealCursors();
-      event.preventDefault();
-      event.stopPropagation();
-    }
   }
 
   keymapHandler() {
