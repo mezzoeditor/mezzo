@@ -20,7 +20,7 @@ export class FilterDialogComponent extends HTMLElement {
 
     this._searchResultsElements = document.createElement('search-results');
     this._content.appendChild(this._searchResultsElements);
-    this._items = [];
+    this._itemProviders = [];
     this._visible = false;
 
     this._showOtherItem = document.createElement('search-item-custom');
@@ -72,8 +72,8 @@ export class FilterDialogComponent extends HTMLElement {
     }, false);
   }
 
-  setItems(items) {
-    this._items = items;
+  setItemProviders(itemProviders) {
+    this._itemProviders = itemProviders;
   }
 
   setVisible(visible) {
@@ -97,36 +97,51 @@ export class FilterDialogComponent extends HTMLElement {
     this._search(query);
   }
 
+  _findItemProvider(query) {
+    for (const provider of this._itemProviders) {
+      if (!provider.regex || provider.regex.test(query))
+        return provider;
+    }
+    return null;
+  }
+
   _search(query) {
     const results = []
     this._remainingResults = [];
 
-    if (query) {
-      const fuzzySearch = new FuzzySearch(query);
-      for (const item of this._items) {
-        let matches = [];
-        let score = fuzzySearch.score(item.filterText(), matches);
-        if (score !== 0) {
-          results.push({item, score, matches});
+    const provider = this._findItemProvider(query);
+    if (provider) {
+      const items = provider.items(query);
+      if (query && provider.fuzzySearch) {
+        const fuzzySearch = new FuzzySearch(query);
+        for (const item of items) {
+          let matches = [];
+          let score = fuzzySearch.score(item.filterText(), matches);
+          if (score !== 0) {
+            results.push({item, score, matches});
+          }
         }
+        if (results.length === 0) {
+          this._searchResultsElements.innerHTML = ``;
+          return;
+        }
+        results.sort((a, b) => {
+          const scoreDiff = b.score - a.score;
+          if (scoreDiff)
+            return scoreDiff;
+          // Prefer left-most search results.
+          const startDiff = a.matches[0] - b.matches[0];
+          if (startDiff)
+            return startDiff;
+          return a.item.filterText().length - b.item.filterText().length;
+        });
+      } else {
+        for (const item of items)
+          results.push({item, score: 0, matches: []});
       }
-      if (results.length === 0) {
-        this._searchResultsElements.innerHTML = `<search-item-custom>No Results</search-item-custom>`;
-        return;
-      }
-      results.sort((a, b) => {
-        const scoreDiff = b.score - a.score;
-        if (scoreDiff)
-          return scoreDiff;
-        // Prefer left-most search results.
-        const startDiff = a.matches[0] - b.matches[0];
-        if (startDiff)
-          return startDiff;
-        return a.item.filterText().length - b.item.filterText().length;
-      });
     } else {
-      for (const item of this._items)
-        results.push({item, score: 0, matches: []});
+      this._searchResultsElements.innerHTML = `<search-item-custom>No Results</search-item-custom>`;
+      return;
     }
     this._searchResultsElements.innerHTML = '';
     this._searchResultsElements.scrollTop = 0;
@@ -243,6 +258,33 @@ export class FileFilterItem extends FilterDialogComponent.Item {
     ]);
     const title = subtitle.lastChild.cloneNode(true);
     return {icon, title, subtitle};
+  }
+}
+
+export class GoToLineItem extends FilterDialogComponent.Item {
+  constructor(lineNumber, callback) {
+    super();
+    this._lineNumber = parseInt(lineNumber.substring(1), 10);
+    this._callback = callback;
+  }
+
+  filterText() {
+    // Not called.
+    return '';
+  }
+
+  select() {
+    this._callback.call(null, this._lineNumber);
+  }
+
+  /**
+   * @param {!Array<number>} matches
+   * @return {{icon: ?Element, title: ?Element, subtitle: ?Element}}
+   */
+  render(matches) {
+    const title = document.createElement('span');
+    title.textContent = 'Go to line ' + this._lineNumber;
+    return {icon: null, title, subtitle: null};
   }
 }
 

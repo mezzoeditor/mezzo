@@ -6,7 +6,7 @@ import { SidebarComponent } from './SidebarComponent.mjs';
 import { EditorComponent } from './EditorComponent.mjs';
 import { StatusbarComponent } from './StatusbarComponent.mjs';
 import { TabStripComponent } from './TabStripComponent.mjs';
-import { FileFilterItem, FilterDialogComponent } from './FilterDialogComponent.mjs';
+import { FileFilterItem, GoToLineItem, FilterDialogComponent } from './FilterDialogComponent.mjs';
 
 window.fs = new FileSystem();
 
@@ -59,7 +59,6 @@ window.addEventListener('DOMContentLoaded', () => {
       editor.selection().setRanges([{from: 0, to: 0}]);
     }
     renderer.setEditor(editor);
-    const cursor = editor.selection().focus();
     editor.revealOffset(editor.selection().focus());
     renderer.focus();
     statusbar.rightElement().textContent = mimeType;
@@ -94,7 +93,28 @@ window.addEventListener('DOMContentLoaded', () => {
           relPaths.push(...window.fs.relativeRootPaths(root));
           items.push(...relPaths.map(path => new FileFilterItem(root, path, callback)));
         }
-        filterDialog.setItems(items);
+        const itemProviders = [];
+        let path = tabstrip.selectedTab();
+        let editor = editors.get(path);
+        if (editor) {
+          const gotoLineCallback = line => {
+            const offset = editor.document().positionToOffset({line, column: 0});
+            editor.selection().setRanges([{from: offset, to: offset}]);
+            editor.revealOffset(offset);
+            renderer.focus();
+          };
+          itemProviders.push({
+            fuzzySearch: false,
+            regex: /^:\d+$/,
+            items: query => [new GoToLineItem(query, gotoLineCallback)]
+          });
+        }
+        // Adding default.
+        itemProviders.push({
+          fuzzySearch: true,
+          items: query => items,
+        });
+        filterDialog.setItemProviders(itemProviders);
         filterDialog.setVisible(true);
         filterDialog.setQuery('');
       }
