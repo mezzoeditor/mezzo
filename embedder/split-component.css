@@ -8,12 +8,14 @@ split-left {
   width: 300px;
   flex-shrink: 0;
   overflow: hidden;
+  position: relative;
 }
 
 split-component
 split-right {
   flex-grow: 1;
   overflow: hidden;
+  position: relative;
 }
 
 split-component

@@ -30,6 +30,17 @@ body {
   align-items: stretch;
 }
 
+stub-message {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 60%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 filetype-icon {
   -webkit-mask-image: url(./filetype-icon.svg);
   -webkit-mask-size: var(--icon-size, 9px) var(--icon-size, 9px);

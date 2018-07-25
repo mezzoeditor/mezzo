@@ -28,6 +28,9 @@ window.addEventListener('DOMContentLoaded', () => {
   const renderer = new EditorComponent();
   split.rightElement().appendChild(renderer);
 
+  const stubMessage = createStubMessage();
+  split.rightElement().appendChild(stubMessage);
+
   const statusbar = new StatusbarComponent();
   statusbar.leftElement().appendChild(renderer.selectionDescriptionElement());
   statusbar.rightElement().textContent = '';
@@ -46,9 +49,11 @@ window.addEventListener('DOMContentLoaded', () => {
     // No tab is selected (all tabs got closed).
     if (!path) {
       renderer.setEditor(null);
+      split.rightElement().appendChild(stubMessage);
       statusbar.rightElement().textContent = '';
       return;
     }
+    stubMessage.remove();
     let mimeType = window.fs.mimeType(path);
     let editor = editors.get(path);
     if (!editor) {
@@ -138,5 +143,12 @@ window.addEventListener('DOMContentLoaded', () => {
       event.preventDefault();
     }
   }, false);
+
+  function createStubMessage() {
+    const isMac = navigator.platform.toUpperCase().indexOf('MAC') !== -1;
+    const stubMessage = document.createElement('stub-message');
+    stubMessage.textContent = `Hit ${isMac ? '⌘' : 'Ctrl'}-P to open files.`;
+    return stubMessage;
+  }
 });
 
