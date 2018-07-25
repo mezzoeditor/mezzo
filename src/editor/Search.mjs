@@ -4,7 +4,7 @@ import { Selection } from './Selection.mjs';
 import { EventEmitter } from '../core/EventEmitter.mjs';
 import { WorkAllocator } from '../core/WorkAllocator.mjs';
 
-const CHUNK_SIZE = 20000;
+const CHUNK_SIZE = 200000;
 
 export class Search extends EventEmitter {
   /**
