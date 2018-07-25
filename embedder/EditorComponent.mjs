@@ -30,6 +30,10 @@ export class EditorComponent extends HTMLElement {
     this._rafId = 0;
   }
 
+  focus() {
+    this._renderer.focus();
+  }
+
   _onSelectionChanged() {
     if (this._rafId)
       return;

@@ -59,6 +59,15 @@ export class Editor {
     return this._platformSupport;
   }
 
+  revealOffset(offset) {
+    this._viewport.reveal({from: offset, to: offset}, {
+      left: 10,
+      right: 10,
+      top: this._viewport.height() / 2,
+      bottom: this._viewport.height() / 2,
+    });
+  }
+
   /**
    * @return {?Tokenizer}
    */

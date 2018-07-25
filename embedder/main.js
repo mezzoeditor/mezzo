@@ -56,8 +56,12 @@ window.addEventListener('DOMContentLoaded', () => {
       editors.set(path, editor);
       const content = await window.fs.readFile(path);
       editor.reset(content);
+      editor.selection().setRanges([{from: 0, to: 0}]);
     }
     renderer.setEditor(editor);
+    const cursor = editor.selection().focus();
+    editor.revealOffset(editor.selection().focus());
+    renderer.focus();
     statusbar.rightElement().textContent = mimeType;
   });
   tabstrip.restoreTabs();
