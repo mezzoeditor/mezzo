@@ -269,8 +269,17 @@ export class Renderer {
   _performCommand(command) {
     if (!this._editor)
       return false;
+
+    // Actions that don't require focus.
+    switch (command) {
+      case 'selection.addnext':
+        return this._revealSelection(this._editor.selection().addNextOccurence(), true /* center */) || true;
+    }
+
     if (this._domDocument.activeElement !== this._input)
       return false;
+
+    // Actions that require focus.
     switch (command) {
       case 'history.undo':
         return this._editor.history().undo() || true;
@@ -292,8 +301,6 @@ export class Renderer {
       case 'input.unindent':
         return this._revealSelection(this._editor.input().removeIndent());
 
-      case 'selection.addnext':
-        return this._revealSelection(this._editor.selection().addNextOccurence(), true /* center */) || true;
       case 'selection.move.up':
         return this._revealSelection(this._editor.selection().moveUp());
       case 'selection.move.down':
