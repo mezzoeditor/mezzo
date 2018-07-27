@@ -176,23 +176,27 @@ export class Metrics {
    * starting with |x| at position |from|.
    *
    * @param {!Float32Array} xmap
+   * @param {!Int8Array} breaks
    * @param {string} s
    * @param {number} from
    * @param {number} to
    * @param {number} x
    * @param {number} multiplier
    */
-  fillXMap(xmap, s, from, to, x, multiplier) {
+  fillXMap(xmap, breaks, s, from, to, x, multiplier) {
     for (let i = from; i < to; ) {
       let charCode = s.charCodeAt(i);
       if (charCode >= 0xD800 && charCode <= 0xDBFF && i + 1 < to) {
         xmap[i + 1] = x;
         let codePoint = s.codePointAt(i);
+        breaks[i] = Metrics.isRtlCodePoint(codePoint) ? 1 : 0;
+        breaks[i + 1] = 0;
         if (this._supplementary[codePoint] === undefined)
           this._supplementary[codePoint] = this._measureSupplementary(s.substring(i, i + 2));
         x += this._supplementary[codePoint] * multiplier;
         i += 2;
       } else {
+        breaks[i] = Metrics.isRtlCodePoint(charCode) ? 1 : 0;
         if (this._bmp[charCode] === -1)
           this._bmp[charCode] = this._measureBMP(s[i]);
         x += this._bmp[charCode] * multiplier;
@@ -214,6 +218,21 @@ export class Metrics {
       return true;
     let charCode = s.charCodeAt(offset - 1);
     return charCode < 0xD800 || charCode > 0xDBFF;
+  }
+
+  /**
+   * Returns  whether a specific code point is RTL.
+   *
+   * @param {number} codePoint
+   * @return {boolean}
+   */
+  static isRtlCodePoint(codePoint) {
+    return (codePoint >= 0x0590 && codePoint <= 0x089F) ||
+        (codePoint === 0x200F) ||
+        (codePoint >= 0xFB1D && codePoint <= 0xFDFF) ||
+        (codePoint >= 0xFE70 && codePoint <= 0xFEFF) ||
+        (codePoint >= 0x10800 && codePoint <= 0x10FFF) ||
+        (codePoint >= 0x1E800 && codePoint <= 0x1EFFF);
   }
 
   /**

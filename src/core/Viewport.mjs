@@ -557,6 +557,7 @@ export class Viewport extends EventEmitter {
 
     for (let line of lines) {
       let offsetToX = new Float32Array(line.to - line.from + 1);
+      let needsRtlBreakAfter = new Int8Array(line.to - line.from + 1);
       let lineContent = this._document.content(line.from, line.to);
 
       let iterator = this._tree.iterator();
@@ -567,6 +568,7 @@ export class Viewport extends EventEmitter {
       let x = line.x;
       let offset = line.from;
       offsetToX[0] = x;
+      needsRtlBreakAfter[line.to - line.from] = 0;
       while (true) {
         if (iterator.data && iterator.data.inlineWidget) {
           inlineWidgets.push({x: x, y: line.y, inlineWidget: iterator.data.inlineWidget});
@@ -575,7 +577,7 @@ export class Viewport extends EventEmitter {
             offsetToX[offset - line.from] = x;
         } else {
           let after = Math.min(line.to, iterator.after ? iterator.after.offset : offset);
-          this._metrics.fillXMap(offsetToX, lineContent, offset - line.from, after - line.from, x, this._defaultWidth);
+          this._metrics.fillXMap(offsetToX, needsRtlBreakAfter, lineContent, offset - line.from, after - line.from, x, this._defaultWidth);
           x = offsetToX[after - line.from];
 
           for (let decorator of textDecorators) {
@@ -583,13 +585,17 @@ export class Viewport extends EventEmitter {
               trace.count('decorations');
               let from = Math.max(offset, decoration.from.offset);
               let to = Math.min(after, decoration.to.offset);
-              if (from < to) {
+              while (from < to) {
+                let end = from + 1;
+                while (end < to && !needsRtlBreakAfter[end - line.from])
+                  end++;
                 text.push({
                   x: offsetToX[from - line.from],
                   y: line.y,
-                  content: lineContent.substring(from - line.from, to - line.from),
+                  content: lineContent.substring(from - line.from, end - line.from),
                   style: decoration.data
                 });
+                from = end;
               }
             });
           }
