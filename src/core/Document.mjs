@@ -11,13 +11,6 @@ import { EventEmitter } from './EventEmitter.mjs';
  * }} Replacement;
  */
 
-/**
- * @typedef {{
- *   line: number,
- *   column: number,
- * }} Position;
- */
-
 export class Document extends EventEmitter {
   constructor() {
     super();

@@ -2,6 +2,13 @@ import { Metrics } from './Metrics.mjs';
 import { Tree } from './Tree.mjs';
 import { TextIterator } from './TextIterator.mjs';
 
+/**
+ * @typedef {{
+ *   line: number,
+ *   column: number,
+ * }} Position;
+ */
+
 export class Text {
   /**
    * Creates an empty text.
