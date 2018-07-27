@@ -2,6 +2,7 @@ import { Start, End } from '../core/Anchor.mjs';
 import { TextDecorator, Decorator} from '../core/Decorator.mjs';
 import { Parser, TokenTypes, KeywordTypes } from './jslexer/index.mjs';
 import { trace } from '../core/Trace.mjs';
+import { Document } from '../core/Document.mjs';
 
 const HIGHLIGHT_CHUNK = 20000;
 const STATE_CHUNK = 2000;
@@ -20,7 +21,7 @@ export class JSHighlighter {
     this._viewport = editor.viewport();
     this._viewport.addDecorationCallback(this._onDecorateCallback);
     this._document = editor.document();
-    this._document.addReplaceCallback(this._onReplaceCallback);
+    this._document.on(Document.Events.Replaced, this._onReplaceCallback);
 
     this._parser = new Parser(this._document.iterator(0), Parser.defaultState());
     this._highlightStates.clearAll();
@@ -58,7 +59,7 @@ export class JSHighlighter {
    */
   dispose() {
     this._viewport.removeDecorationCallback(this._onDecorateCallback);
-    this._document.removeReplaceCallback(this._onReplaceCallback);
+    this._document.off(Document.Events.Replaced, this._onReplaceCallback);
     if (this._jobId) {
       this._platformSupport.cancelIdleCallback(this._jobId);
       this._jobId = 0;
@@ -66,31 +67,30 @@ export class JSHighlighter {
   }
 
   /**
-   * @param {!Replacements} replacements
+   * @param {!Replacement} replacement
    */
-  _onReplace(replacements) {
+  _onReplace(replacement) {
     // TODO: we should probably create parser just once at the end.
-    for (let replacement of replacements) {
-      let from = replacement.offset;
-      let to = from + replacement.removed.length();
+    let from = replacement.offset;
+    let to = from + replacement.removed.length();
 
-      this._highlightStates.clearTouching(Start(from), End(to));
-      this._highlightStates.replace(from, to, replacement.inserted.length());
-      if (from === 0)
-        this._highlightStates.add(Start(0), Start(0), Parser.defaultState());
-      if (this._highlightOffset <= from) {
-        this._parser.setIterator(replacement.after.iterator(this._highlightOffset));
-        continue;
-      }
+    this._highlightStates.clearTouching(Start(from), End(to));
+    this._highlightStates.replace(from, to, replacement.inserted.length());
+    if (from === 0)
+      this._highlightStates.add(Start(0), Start(0), Parser.defaultState());
+    if (this._highlightOffset <= from) {
+      this._parser.setIterator(replacement.after.iterator(this._highlightOffset));
+      this._scheduleHighlight();
+      return;
+    }
 
-      let decoration = this._highlightStates.lastTouching(Start(0), End(from));
-      if (decoration) {
-        this._highlightOffset = decoration.from.offset;
-        this._parser = new Parser(replacement.after.iterator(this._highlightOffset), decoration.data);
-      } else {
-        this._highlightOffset = 0;
-        this._parser = new Parser(replacement.after.iterator(this._highlightOffset), Parser.defaultState());
-      }
+    let decoration = this._highlightStates.lastTouching(Start(0), End(from));
+    if (decoration) {
+      this._highlightOffset = decoration.from.offset;
+      this._parser = new Parser(replacement.after.iterator(this._highlightOffset), decoration.data);
+    } else {
+      this._highlightOffset = 0;
+      this._parser = new Parser(replacement.after.iterator(this._highlightOffset), Parser.defaultState());
     }
     this._scheduleHighlight();
   }

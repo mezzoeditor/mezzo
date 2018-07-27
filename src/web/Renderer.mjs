@@ -282,9 +282,9 @@ export class Renderer {
     // Actions that require focus.
     switch (command) {
       case 'history.undo':
-        return this._editor.history().undo() || true;
+        return true;
       case 'history.redo':
-        return this._editor.history().redo() || true;
+        return true;
 
       case 'input.backspace':
         return this._revealSelection(this._editor.input().deleteBefore());

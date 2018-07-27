@@ -3,6 +3,7 @@ import { LineDecorator } from '../core/Decorator.mjs';
 import { Tokenizer } from './Tokenizer.mjs';
 import { RoundMode } from '../core/Metrics.mjs';
 import { EventEmitter } from '../core/EventEmitter.mjs';
+import { Document } from '../core/Document.mjs';
 
 /**
  * @typedef {{
@@ -34,7 +35,7 @@ export class Selection extends EventEmitter {
     this._viewport = editor.viewport();
     this._viewport.addDecorationCallback(this._onDecorate.bind(this));
     this._document = editor.document();
-    this._document.addReplaceCallback(this._onReplace.bind(this));
+    this._document.on(Document.Events.Replaced, this._onReplace.bind(this));
     this._rangeDecorator = new LineDecorator('selection.range');
     this._focusDecorator = new LineDecorator('selection.focus');
     this._ranges = [];
@@ -553,40 +554,38 @@ export class Selection extends EventEmitter {
   }
 
   /**
-   * @param {!Replacements} replacements
+   * @param {!Replacement} replacement
    */
-  _onReplace(replacements) {
+  _onReplace(replacement) {
     if (this._frozen)
       return;
 
-    for (let replacement of replacements) {
-      let from = replacement.offset;
-      let to = from + replacement.removed.length();
-      let inserted = replacement.inserted.length();
-      let ranges = [];
-      for (let range of this._ranges) {
-        let start = Math.min(range.anchor, range.focus);
-        let end = Math.max(range.anchor, range.focus);
-        if (from < start && to > start)
-          continue;
+    let from = replacement.offset;
+    let to = from + replacement.removed.length();
+    let inserted = replacement.inserted.length();
+    let ranges = [];
+    for (let range of this._ranges) {
+      let start = Math.min(range.anchor, range.focus);
+      let end = Math.max(range.anchor, range.focus);
+      if (from < start && to > start)
+        continue;
 
-        if (from <= start)
-          start = to >= start ? from : start - (to - from);
-        if (from <= end)
-          end = to >= end ? from : end - (to - from);
+      if (from <= start)
+        start = to >= start ? from : start - (to - from);
+      if (from <= end)
+        end = to >= end ? from : end - (to - from);
 
-        if (from <= start)
-          start += inserted;
-        if (from <= end)
-          end += inserted;
+      if (from <= start)
+        start += inserted;
+      if (from <= end)
+        end += inserted;
 
-        if (range.anchor > range.focus)
-          ranges.push({id: range.id, upDownX: -1, anchor: end, focus: start});
-        else
-          ranges.push({id: range.id, upDownX: -1, anchor: start, focus: end});
-      }
-      this._ranges = this._rebuild(ranges);
+      if (range.anchor > range.focus)
+        ranges.push({id: range.id, upDownX: -1, anchor: end, focus: start});
+      else
+        ranges.push({id: range.id, upDownX: -1, anchor: start, focus: end});
     }
+    this._ranges = this._rebuild(ranges);
     this._notifyChanged();
   }
 

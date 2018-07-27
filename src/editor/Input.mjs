@@ -23,7 +23,6 @@ export class Input {
     this._editor = editor;
     this._document = editor.document();
     this._selection = editor.selection();
-    this._history = editor.history();
     this._indent = ' '.repeat(2);
     this._overrides = new Set();
   }
@@ -141,8 +140,6 @@ export class Input {
     let ranges = this._selection.ranges();
     if (!ranges.length)
       return false;
-    this._history.beginOperation();
-    this._document.beginOperation('input');
     let savedSelection = this._selection.freeze();
     let newRanges = [];
     let delta = 0;
@@ -172,9 +169,7 @@ export class Input {
         newRanges.push({from: from + this._indent.length, to: to + delta});
       }
     }
-    this._document.endOperation('input');
     this._selection.unfreeze(savedSelection, newRanges);
-    this._history.endOperation();
     return true;
   }
 
@@ -182,8 +177,6 @@ export class Input {
     let ranges = this._selection.ranges();
     if (!ranges.length)
       return false;
-    this._history.beginOperation();
-    this._document.beginOperation('input');
     let savedSelection = this._selection.freeze();
     let newRanges = [];
     let delta = 0;
@@ -208,9 +201,7 @@ export class Input {
       }
       newRanges.push({from: from + startDelta, to: to + delta});
     }
-    this._document.endOperation('input');
     this._selection.unfreeze(savedSelection, newRanges);
-    this._history.endOperation();
     return true;
   }
 
@@ -223,8 +214,6 @@ export class Input {
     let ranges = this._selection.ranges();
     if (!ranges.length)
       return false;
-    this._history.beginOperation();
-    this._document.beginOperation('input');
     let savedSelection = this._selection.freeze();
     let newRanges = [];
     let delta = 0;
@@ -245,9 +234,7 @@ export class Input {
       newRanges.push({from: cursorOffset, to: cursorOffset});
       delta += replaced.s.length - (replaced.to - replaced.from);
     }
-    this._document.endOperation('input');
     this._selection.unfreeze(savedSelection, newRanges);
-    this._history.endOperation();
     return true;
   }
 };

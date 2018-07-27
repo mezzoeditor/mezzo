@@ -1,5 +1,6 @@
 import { Start, End, Before, After } from './Anchor.mjs';
 import { Decorator } from './Decorator.mjs';
+import { Document } from './Document.mjs';
 import { RoundMode, Metrics } from './Metrics.mjs';
 import { Tree } from './Tree.mjs';
 import { trace } from './Trace.mjs';
@@ -147,7 +148,7 @@ export class Viewport extends EventEmitter {
   constructor(document, measurer) {
     super();
     this._document = document;
-    this._document.addReplaceCallback(this._onReplace.bind(this));
+    this._document.on(Document.Events.Replaced, this._onReplace.bind(this));
 
     this._width = 0;
     this._height = 0;
@@ -777,24 +778,22 @@ export class Viewport extends EventEmitter {
   }
 
   /**
-   * @param {!Replacements} replacements
+   * @param {!Replacement} replacement
    */
-  _onReplace(replacements) {
+  _onReplace(replacement) {
     if (this._frozen)
       throw new Error('Document modification during decoration is prohibited');
 
-    for (let replacement of replacements) {
-      let from = replacement.offset;
-      let to = from + replacement.removed.length();
-      let inserted = replacement.inserted.length();
+    let from = replacement.offset;
+    let to = from + replacement.removed.length();
+    let inserted = replacement.inserted.length();
 
-      for (let inlineWidget of this._inlineWidgets.replace(from, to, inserted)) {
-        delete inlineWidget[kWidgetSymbol];
-        this.emit(Viewport.Events.InlineWidgetRemoved, inlineWidget);
-      }
-
-      this._rechunk(replacement.after, from, to, inserted);
+    for (let inlineWidget of this._inlineWidgets.replace(from, to, inserted)) {
+      delete inlineWidget[kWidgetSymbol];
+      this.emit(Viewport.Events.InlineWidgetRemoved, inlineWidget);
     }
+
+    this._rechunk(replacement.after, from, to, inserted);
   }
 
   /**

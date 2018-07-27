@@ -1,7 +1,6 @@
 import { Document } from '../core/Document.mjs';
 import { Decorator } from '../core/Decorator.mjs';
 import { Selection } from './Selection.mjs';
-import { History } from './History.mjs';
 import { Input } from './Input.mjs';
 import { Search } from './Search.mjs';
 import { DefaultHighlighter } from '../default/DefaultHighlighter.mjs';
@@ -30,7 +29,7 @@ export class Editor {
   constructor(measurer, platformSupport) {
     this._handles = new Decorator(true /* createHandles */);
     this._document = new Document();
-    this._document.addReplaceCallback(this._onReplace.bind(this));
+    this._document.on(Document.Events.Replaced, this._onReplace.bind(this));
     this._platformSupport = platformSupport;
 
     this._viewport = new Viewport(this._document, measurer);
@@ -41,7 +40,6 @@ export class Editor {
 
     this._selection = new Selection(this);
     this._search = new Search(this);
-    this._history = new History(this);
     this._input = new Input(this);
 
     this.setHighlighter(new DefaultHighlighter(this));
@@ -49,7 +47,6 @@ export class Editor {
 
   reset(text) {
     this._document.reset(text);
-    this._history.reset();
   }
 
   /**
@@ -101,13 +98,6 @@ export class Editor {
   }
 
   /**
-   * @return {!History}
-   */
-  history() {
-    return this._history;
-  }
-
-  /**
    * @return {!Search}
    */
   search() {
@@ -133,11 +123,9 @@ export class Editor {
     this._highlighter = highlighter;
   }
 
-  _onReplace(replacements) {
-    for (let {offset, removed, inserted} of replacements) {
-      for (let removedHandle of this._handles.replace(offset, offset + removed.length(), inserted.length()))
-        removedHandle[RangeHandle._symbol]._wasRemoved();
-    }
+  _onReplace({offset, removed, inserted}) {
+    for (let removedHandle of this._handles.replace(offset, offset + removed.length(), inserted.length()))
+      removedHandle[RangeHandle._symbol]._wasRemoved();
   }
 }
 

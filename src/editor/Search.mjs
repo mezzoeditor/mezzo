@@ -3,6 +3,7 @@ import { LineDecorator } from '../core/Decorator.mjs';
 import { Selection } from './Selection.mjs';
 import { EventEmitter } from '../core/EventEmitter.mjs';
 import { WorkAllocator } from '../core/WorkAllocator.mjs';
+import { Document } from '../core/Document.mjs';
 
 const CHUNK_SIZE = 200000;
 
@@ -17,7 +18,7 @@ export class Search extends EventEmitter {
     this._viewport = editor.viewport();
     this._viewport.addDecorationCallback(this._onDecorate.bind(this));
     this._document = editor.document();
-    this._document.addReplaceCallback(this._onReplace.bind(this));
+    this._document.on(Document.Events.Replaced, this._onReplace.bind(this));
 
     this._allocator = new WorkAllocator(0);
 
@@ -203,28 +204,26 @@ export class Search extends EventEmitter {
   }
 
   /**
-   * @param {!Replacements} replacements
+   * @param {!Replacement} replacement
    */
-  _onReplace(replacements) {
+  _onReplace(replacement) {
     if (!this._options)
       return;
-    for (let replacement of replacements) {
-      let from = replacement.offset;
-      let to = from + replacement.removed.length();
-      let inserted = replacement.inserted.length();
-      this._decorator.replace(from, to, inserted);
-      this._allocator.replace(from, to, inserted);
-      if (this._currentMatch && this._currentMatch.from >= to) {
-        let delta = inserted - (to - from);
-        this._updateCurrentMatch({from: this._currentMatch.from + delta, to: this._currentMatch.to + delta}, false, false);
-      } else if (this._currentMatch && this._currentMatch.to > from) {
-        this._updateCurrentMatch(null, false, false);
-      } else if (this._currentMatch) {
-        this._updateCurrentMatch(this._currentMatch, false, false);
-      }
-      if (this._options)
-        this._needsProcessing(from - this._options.query.length, from + inserted);
+    let from = replacement.offset;
+    let to = from + replacement.removed.length();
+    let inserted = replacement.inserted.length();
+    this._decorator.replace(from, to, inserted);
+    this._allocator.replace(from, to, inserted);
+    if (this._currentMatch && this._currentMatch.from >= to) {
+      let delta = inserted - (to - from);
+      this._updateCurrentMatch({from: this._currentMatch.from + delta, to: this._currentMatch.to + delta}, false, false);
+    } else if (this._currentMatch && this._currentMatch.to > from) {
+      this._updateCurrentMatch(null, false, false);
+    } else if (this._currentMatch) {
+      this._updateCurrentMatch(this._currentMatch, false, false);
     }
+    if (this._options)
+      this._needsProcessing(from - this._options.query.length, from + inserted);
     this._emitUpdatedIfNeeded();
   }
 
