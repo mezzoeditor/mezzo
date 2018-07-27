@@ -137,3 +137,30 @@ Typical plugin can be integrated at multiple points:
 * Do asynchronous work with `idleCallback`.
 * Provide content-dependent data with `setHighlighter` or `setTokenizer`.
 * Use public APIs of other plugins, e.g. `selection.setRanges`.
+
+---
+
+### Class diagram for history
+
+Text==string
+
+Selection
+* array
+* change
+* event: changed
+
+Document
+* Text
+* replace
+* event: replaced
+  
+Editor
+* Document
+* Selection
+* Metadata (e.g. generation)
+* history api: push, pop, amend, undo, redo, softUndo, softRedo
+* Viewport
+  
+  
+  
+
