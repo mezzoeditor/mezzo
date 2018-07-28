@@ -140,7 +140,6 @@ export class Input {
     let ranges = this._selection.ranges();
     if (!ranges.length)
       return false;
-    let savedSelection = this._selection.freeze();
     let newRanges = [];
     let delta = 0;
     for (let range of ranges) {
@@ -169,7 +168,7 @@ export class Input {
         newRanges.push({from: from + this._indent.length, to: to + delta});
       }
     }
-    this._selection.unfreeze(savedSelection, newRanges);
+    this._selection.setRanges(newRanges);
     return true;
   }
 
@@ -177,7 +176,6 @@ export class Input {
     let ranges = this._selection.ranges();
     if (!ranges.length)
       return false;
-    let savedSelection = this._selection.freeze();
     let newRanges = [];
     let delta = 0;
     for (let range of ranges) {
@@ -201,7 +199,7 @@ export class Input {
       }
       newRanges.push({from: from + startDelta, to: to + delta});
     }
-    this._selection.unfreeze(savedSelection, newRanges);
+    this._selection.setRanges(newRanges);
     return true;
   }
 
@@ -214,7 +212,6 @@ export class Input {
     let ranges = this._selection.ranges();
     if (!ranges.length)
       return false;
-    let savedSelection = this._selection.freeze();
     let newRanges = [];
     let delta = 0;
     for (let range of ranges) {
@@ -234,7 +231,7 @@ export class Input {
       newRanges.push({from: cursorOffset, to: cursorOffset});
       delta += replaced.s.length - (replaced.to - replaced.from);
     }
-    this._selection.unfreeze(savedSelection, newRanges);
+    this._selection.setRanges(newRanges);
     return true;
   }
 };

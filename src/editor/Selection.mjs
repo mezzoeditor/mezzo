@@ -3,7 +3,6 @@ import { LineDecorator } from '../core/Decorator.mjs';
 import { Tokenizer } from './Tokenizer.mjs';
 import { RoundMode } from '../core/Metrics.mjs';
 import { EventEmitter } from '../core/EventEmitter.mjs';
-import { Document } from '../core/Document.mjs';
 
 /**
  * @typedef {{
@@ -35,11 +34,9 @@ export class Selection extends EventEmitter {
     this._viewport = editor.viewport();
     this._viewport.addDecorationCallback(this._onDecorate.bind(this));
     this._document = editor.document();
-    this._document.on(Document.Events.Replaced, this._onReplace.bind(this));
     this._rangeDecorator = new LineDecorator('selection.range');
     this._focusDecorator = new LineDecorator('selection.focus');
     this._ranges = [];
-    this._frozen = 0;
     this._lastId = 0;
     this._staleDecorations = true;
 
@@ -100,8 +97,6 @@ export class Selection extends EventEmitter {
    * @param {!Array<!Range>} ranges
    */
   setRanges(ranges) {
-    if (this._frozen)
-      throw new Error('Cannot change selection while frozen');
     this._ranges = this._rebuild(ranges.map(range => ({
       id: ++this._lastId,
       upDownX: -1,
@@ -115,8 +110,6 @@ export class Selection extends EventEmitter {
    * @param {!Range} range
    */
   setLastRange(range) {
-    if (this._frozen)
-      throw new Error('Cannot change selection while frozen');
     let maxRange = this._maxRange();
     if (!maxRange) {
       this._ranges = [{
@@ -138,8 +131,6 @@ export class Selection extends EventEmitter {
    * @param {!Range} range
    */
   addRange(range) {
-    if (this._frozen)
-      throw new Error('Cannot change selection while frozen');
     this._ranges.push({
       id: ++this._lastId,
       upDownX: -1,
@@ -148,24 +139,6 @@ export class Selection extends EventEmitter {
     });
     this._ranges = this._rebuild(this._ranges);
     this._notifyChanged();
-  }
-
-  /**
-   * @return {*}
-   */
-  freeze() {
-    this._frozen++;
-    return this.save();
-  }
-
-  /**
-   * @param {*} data
-   * @param {!Array<!Range>=} ranges
-   */
-  unfreeze(data, ranges) {
-    this._frozen--;
-    if (!this._frozen)
-      this.restore(data, ranges);
   }
 
   /**
@@ -182,8 +155,6 @@ export class Selection extends EventEmitter {
    * @return {boolean}
    */
   collapse() {
-    if (this._frozen)
-      throw new Error('Cannot change selection while frozen');
     if (this._ranges.length === 0)
       return false;
     if (this._ranges.length > 1) {
@@ -390,8 +361,6 @@ export class Selection extends EventEmitter {
   }
 
   addNextOccurence() {
-    if (this._frozen)
-      throw new Error('Cannot change selection while frozen');
     let tokenizer = this._editor.tokenizer();
     if (!this._ranges.length || !tokenizer)
       return false;
@@ -497,35 +466,7 @@ export class Selection extends EventEmitter {
   }
 
   selectAll() {
-    if (this._frozen)
-      throw new Error('Cannot change selection while frozen');
     this._ranges = [{anchor: 0, focus: this._document.length(), upDownX: -1, id: ++this._lastId}];
-    this._notifyChanged();
-  }
-
-  /**
-   * @return {*}
-   */
-  save() {
-    return this._ranges;
-  }
-
-  /**
-   * @param {*} data
-   * @param {!Array<!Range>=} ranges
-   */
-  restore(data, ranges) {
-    if (this._frozen)
-      throw new Error('Cannot change selection while frozen');
-    this._ranges = data || [];
-    if (ranges) {
-      if (ranges.length !== this._ranges.length)
-        throw new Error('Wrong number of ranges to update');
-      let newRanges = [];
-      for (let i = 0; i < ranges.length; i++)
-        newRanges.push({id: this._ranges[i].id, upDownX: -1, anchor: ranges[i].from, focus: ranges[i].to});
-      this._ranges = this._rebuild(newRanges);
-    }
     this._notifyChanged();
   }
 
@@ -551,42 +492,6 @@ export class Selection extends EventEmitter {
       }
     }
     return {background: [this._rangeDecorator, this._focusDecorator], lines: [this._rangeDecorator]};
-  }
-
-  /**
-   * @param {!Replacement} replacement
-   */
-  _onReplace(replacement) {
-    if (this._frozen)
-      return;
-
-    let from = replacement.offset;
-    let to = from + replacement.removed.length();
-    let inserted = replacement.inserted.length();
-    let ranges = [];
-    for (let range of this._ranges) {
-      let start = Math.min(range.anchor, range.focus);
-      let end = Math.max(range.anchor, range.focus);
-      if (from < start && to > start)
-        continue;
-
-      if (from <= start)
-        start = to >= start ? from : start - (to - from);
-      if (from <= end)
-        end = to >= end ? from : end - (to - from);
-
-      if (from <= start)
-        start += inserted;
-      if (from <= end)
-        end += inserted;
-
-      if (range.anchor > range.focus)
-        ranges.push({id: range.id, upDownX: -1, anchor: end, focus: start});
-      else
-        ranges.push({id: range.id, upDownX: -1, anchor: start, focus: end});
-    }
-    this._ranges = this._rebuild(ranges);
-    this._notifyChanged();
   }
 
   /**
