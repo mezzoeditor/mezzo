@@ -1,5 +1,5 @@
 import {Random} from './Random.mjs';
-import {Document} from './Document.mjs';
+import {Text} from './Text.mjs';
 
 export function addTests(runner, expect) {
   const {describe, xdescribe, fdescribe} = runner;
@@ -8,9 +8,8 @@ export function addTests(runner, expect) {
 
   describe('TextIterator', () => {
     it('TextIterator basics', () => {
-      let document = new Document();
-      document.reset('world');
-      let iterator = document.iterator(0);
+      let text = Text.fromString('world');
+      let iterator = text.iterator(0);
       expect(iterator.current).toBe('w');
       expect(iterator.offset).toBe(0);
       iterator.next();
@@ -22,9 +21,8 @@ export function addTests(runner, expect) {
     });
 
     it('TextIterator.advance', () => {
-      let document = new Document();
-      document.reset('world');
-      let iterator = document.iterator(0);
+      let text = Text.fromString('world');
+      let iterator = text.iterator(0);
       iterator.advance(4);
       expect(iterator.current).toBe('d');
       iterator.advance(-2);
@@ -32,9 +30,8 @@ export function addTests(runner, expect) {
     });
 
     it('TextIterator.read', () => {
-      let document = new Document();
-      document.reset('world');
-      let iterator = document.iterator(0);
+      let text = Text.fromString('world');
+      let iterator = text.iterator(0);
       expect(iterator.read(4)).toBe('worl');
       expect(iterator.current).toBe('d');
       expect(iterator.rread(2)).toBe('rl');
@@ -42,9 +39,8 @@ export function addTests(runner, expect) {
     });
 
     it('TextIterator.charAt', () => {
-      let document = new Document();
-      document.reset('world');
-      let iterator = document.iterator(2);
+      let text = Text.fromString('world');
+      let iterator = text.iterator(2);
       expect(iterator.charAt(0)).toBe('r');
       expect(iterator.offset).toBe(2);
       expect(iterator.charAt(1)).toBe('l');
@@ -66,68 +62,61 @@ export function addTests(runner, expect) {
     });
 
     it('TextIterator.find successful', () => {
-      let document = new Document();
-      document.reset('hello, world');
-      let iterator = document.iterator(0);
+      let text = Text.fromString('hello, world');
+      let iterator = text.iterator(0);
       expect(iterator.find('world')).toBe(true);
       expect(iterator.offset).toBe(7);
       expect(iterator.current).toBe('w');
     });
 
     it('TextIterator.find case-insensetive', () => {
-      let document = new Document();
-      document.reset('HELLO, WORLD');
-      let iterator = document.iterator(0);
+      let text = Text.fromString('HELLO, WORLD');
+      let iterator = text.iterator(0);
       expect(iterator.find('world', {caseInsensetive: true})).toBe(true);
       expect(iterator.offset).toBe(7);
       expect(iterator.current).toBe('W');
     });
 
     it('TextIterator.find manual chunks 1', () => {
-      let document = new Document();
-      Document.test.setChunks(document, ['hello, w', 'o', 'r', 'ld!!!']);
-      let iterator = document.iterator(0);
+      let text = Text.fromChunks(['hello, w', 'o', 'r', 'ld!!!']);
+      let iterator = text.iterator(0);
       expect(iterator.find('world')).toBe(true);
       expect(iterator.offset).toBe(7);
       expect(iterator.current).toBe('w');
     });
 
     it('TextIterator.find manual chunks 2', () => {
-      let document = new Document();
-      Document.test.setChunks(document, ['hello', ',', ' ', 'w', 'orl', 'd!!!']);
-      let iterator = document.iterator(0);
+      let text = Text.fromChunks(['hello', ',', ' ', 'w', 'orl', 'd!!!']);
+      let iterator = text.iterator(0);
       expect(iterator.find('world')).toBe(true);
       expect(iterator.offset).toBe(7);
       expect(iterator.current).toBe('w');
     });
 
     it('TextIterator.find manual chunks 3', () => {
-      let document = new Document();
-      Document.test.setChunks(document, ['hello, w', 'or', 'ld', '!!!']);
-      let iterator = document.iterator(0);
+      let text = Text.fromChunks(['hello, w', 'or', 'ld', '!!!']);
+      let iterator = text.iterator(0);
       expect(iterator.find('world')).toBe(true);
       expect(iterator.offset).toBe(7);
       expect(iterator.current).toBe('w');
     });
 
     it('TextIterator.find unsuccessful', () => {
-      let document = new Document();
-      document.reset('hello, world');
-      let iterator = document.iterator(0);
+      let text = Text.fromString('hello, world');
+      let iterator = text.iterator(0);
       expect(iterator.find('eee')).toBe(false);
       expect(iterator.offset).toBe(12);
       expect(iterator.current).toBe(undefined);
 
-      iterator = document.iterator(0, 0, 3);
+      iterator = text.iterator(0, 0, 3);
       expect(iterator.find('hello')).toBe(false);
       expect(iterator.offset).toBe(3);
       expect(iterator.current).toBe(undefined);
     });
 
     it('TextIteratof.find unsuccessful across chunks', () => {
-      let document = new Document();
-      Document.test.setContent(document, '/*abcdefghijklmonpqrsuvwxyz0123456789@!*/', 5);
-      let iterator = document.iterator(0, 0, 8);
+      let text = Text.fromStringChunked('/*abcdefghijklmonpqrsuvwxyz0123456789@!*/', 5);
+      let iterator = text.iterator(0, 0, 8);
       expect(iterator.find('*/')).toBe(false);
       expect(iterator.offset).toBe(8);
       expect(iterator.outOfBounds()).toBe(true);
@@ -139,9 +128,8 @@ export function addTests(runner, expect) {
     });
 
     it('TextIterator constraints', () => {
-      let document = new Document();
-      document.reset('hello');
-      let iterator = document.iterator(0, 0, 2);
+      let text = Text.fromString('hello');
+      let iterator = text.iterator(0, 0, 2);
       expect(iterator.offset).toBe(0);
       expect(iterator.current).toBe('h');
 
@@ -175,9 +163,8 @@ export function addTests(runner, expect) {
     });
 
     it('TextIterator out-of-bounds API', () => {
-      let document = new Document();
-      document.reset('abcdefg');
-      let iterator = document.iterator(4, 2, 4);
+      let text = Text.fromString('abcdefg');
+      let iterator = text.iterator(4, 2, 4);
       expect(iterator.offset).toBe(4);
       expect(iterator.current).toBe(undefined);
       expect(iterator.charCodeAt(0)).toBe(NaN);
@@ -186,9 +173,8 @@ export function addTests(runner, expect) {
     });
 
     it('TextIterator.setConstraints', () => {
-      let document = new Document();
-      document.reset('012');
-      let iterator = document.iterator(0, 0, 1);
+      let text = Text.fromString('012');
+      let iterator = text.iterator(0, 0, 1);
       expect(iterator.outOfBounds()).toBe(false);
       expect(iterator.offset).toBe(0);
       expect(iterator.current).toBe('0');
@@ -231,10 +217,9 @@ export function addTests(runner, expect) {
       let content = chunks.join('');
 
       for (let chunkSize = 1; chunkSize <= 101; chunkSize += 10) {
-        let document = new Document();
-        Document.test.setContent(document, content, chunkSize);
+        let text = Text.fromStringChunked(content, chunkSize);
         for (let from = 0; from <= content.length; from++) {
-          let iterator = document.iterator(from, from, content.length);
+          let iterator = text.iterator(from, from, content.length);
           let length = content.length - from;
           expect(iterator.length()).toBe(length);
           let s = content.substring(from, content.length);

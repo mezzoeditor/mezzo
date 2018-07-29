@@ -189,7 +189,7 @@ export class Viewport extends EventEmitter {
     this._defaultWidth = measurer.defaultWidth();
     let measure = s => measurer.measureString(s) / this._defaultWidth;
     this._metrics = new Metrics(measurer.defaultWidthRegex(), measure, measure);
-    let nodes = this._createNodes(this._document.text(), 0, this._document.length(), kDefaultChunkSize);
+    let nodes = this._createNodes(this._document.text(), 0, this._document.text().length(), kDefaultChunkSize);
     this._setTree(Tree.build(nodes));
   }
 
@@ -559,7 +559,7 @@ export class Viewport extends EventEmitter {
     for (let line of lines) {
       let offsetToX = new Float32Array(line.to - line.from + 1);
       let needsRtlBreakAfter = new Int8Array(line.to - line.from + 1);
-      let lineContent = this._document.content(line.from, line.to);
+      let lineContent = this._document.text().content(line.from, line.to);
 
       let iterator = this._tree.iterator();
       iterator.locateByOffset(line.from);
@@ -617,8 +617,8 @@ export class Viewport extends EventEmitter {
           lineStyles.push(decorator.style());
       }
       lineInfos.push({
-        first: this._document.offsetToPosition(line.start).line,
-        last: this._document.offsetToPosition(line.end).line,
+        first: this._document.text().offsetToPosition(line.start).line,
+        last: this._document.text().offsetToPosition(line.end).line,
         y: line.y,
         styles: lineStyles
       });
@@ -706,7 +706,7 @@ export class Viewport extends EventEmitter {
     if (iterator.data === undefined)
       return iterator.before ? iterator.before.offset : 0;
     let from = iterator.before.offset;
-    let textChunk = this._document.content(from, from + iterator.metrics.length);
+    let textChunk = this._document.text().content(from, from + iterator.metrics.length);
     return this._metrics.locateByPoint(textChunk, iterator.before, clamped, roundMode, strict).offset;
   }
 
@@ -721,7 +721,7 @@ export class Viewport extends EventEmitter {
     if (iterator.data === undefined)
       return iterator.before || {x: 0, y: 0};
     let from = iterator.before.offset;
-    let textChunk = this._document.content(from, from + iterator.metrics.length);
+    let textChunk = this._document.text().content(from, from + iterator.metrics.length);
     return this._metrics.locateByOffset(textChunk, iterator.before, offset);
   }
 
@@ -873,11 +873,11 @@ Viewport.VisibleRange = class {
  */
 function cachedContent(document, from, to, cache, left, right) {
   left = Math.min(left, from);
-  right = Math.min(right, document.length() - to);
+  right = Math.min(right, document.text().length() - to);
   if (cache._content === undefined || cache._left < left || cache._right < right) {
     cache._left = Math.max(left, cache._left || 0);
     cache._right = Math.max(right, cache._right || 0);
-    cache._content = document.content(from - cache._left, to + cache._right);
+    cache._content = document.text().content(from - cache._left, to + cache._right);
   }
   return cache._content.substring(cache._left - left,
                                   cache._content.length - (cache._right - right));
@@ -894,6 +894,6 @@ Viewport.test = {};
  * @param {number} chunkSize
  */
 Viewport.test.rechunk = function(viewport, chunkSize) {
-  let nodes = viewport._createNodes(viewport._document.text(), 0, viewport._document.length(), chunkSize);
+  let nodes = viewport._createNodes(viewport._document.text(), 0, viewport._document.text().length(), chunkSize);
   viewport._setTree(Tree.build(nodes));
 };

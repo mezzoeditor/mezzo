@@ -45,13 +45,13 @@ export class SelectedWordHighlighter {
     let selectionRange = this._selection.ranges()[0];
     if (selectionRange.from === selectionRange.to)
       return;
-    let startPosition = this._document.offsetToPosition(selectionRange.from);
-    let endPosition = this._document.offsetToPosition(selectionRange.to);
+    let startPosition = this._document.text().offsetToPosition(selectionRange.from);
+    let endPosition = this._document.text().offsetToPosition(selectionRange.to);
     if (startPosition.line !== endPosition.line)
       return;
     if (!Tokenizer.isWord(this._document, this._editor.tokenizer(), selectionRange))
       return;
-    this._selectedWord = this._document.content(selectionRange.from, selectionRange.to);
+    this._selectedWord = this._document.text().content(selectionRange.from, selectionRange.to);
     this._selectedWordRange = selectionRange;
   }
 
@@ -66,7 +66,7 @@ export class SelectedWordHighlighter {
     const decorator = new TextDecorator();
     let word = this._selectedWord;
     for (let range of visibleContent.ranges) {
-      let iterator = this._document.iterator(range.from - word.length, range.from - word.length, range.to + word.length);
+      let iterator = this._document.text().iterator(range.from - word.length, range.from - word.length, range.to + word.length);
       while (iterator.find(word)) {
         if (iterator.offset === this._selectedWordRange.from) {
           iterator.next();

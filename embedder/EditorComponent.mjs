@@ -47,12 +47,12 @@ export class EditorComponent extends HTMLElement {
       }
       const range = ranges[0];
       if (range.from === range.to) {
-        const position = this._editor.document().offsetToPosition(range.from);
+        const position = this._editor.document().text().offsetToPosition(range.from);
         this._selectionDescription.textContent = `Line ${position.line + 1}, Column ${position.column + 1}`;
         return;
       }
-      const fromPosition = this._editor.document().offsetToPosition(range.from);
-      const toPosition = this._editor.document().offsetToPosition(range.to);
+      const fromPosition = this._editor.document().text().offsetToPosition(range.from);
+      const toPosition = this._editor.document().text().offsetToPosition(range.to);
       // TODO: this should measure columns, not offsets.
       const charDelta = Math.abs(range.from - range.to);
       const lineDelta = Math.abs(fromPosition.line - toPosition.line);
@@ -79,7 +79,7 @@ export class EditorComponent extends HTMLElement {
   }
 
   text() {
-    return this._editor.document().content();
+    return this._editor.document().text().content();
   }
 
   selectionDescriptionElement() {

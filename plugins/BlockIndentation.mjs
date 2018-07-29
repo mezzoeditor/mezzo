@@ -17,7 +17,7 @@ export class BlockIndentation {
       return null;
     if (!edit.s.length || edit.s[0] !== '\n')
       return null;
-    let it = this._document.iterator(edit.from - 1);
+    let it = this._document.text().iterator(edit.from - 1);
     if (it.current !== '{')
       return null;
     let s = edit.s + this._input.indent();

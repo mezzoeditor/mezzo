@@ -35,7 +35,7 @@ export class Tokenizer {
  */
 Tokenizer.leftBoundary = function(document, tokenizer, offset) {
   // TODO: this is not aware of code points.
-  let it = document.iterator(offset);
+  let it = document.text().iterator(offset);
   if (it.current === '\n')
     return offset;
   while (it.offset && tokenizer.isSpaceChar(it.current) && it.current !== '\n')
@@ -62,7 +62,7 @@ Tokenizer.leftBoundary = function(document, tokenizer, offset) {
  */
 Tokenizer.rightBoundary = function(document, tokenizer, offset) {
   // TODO: this is not aware of code points.
-  let it = document.iterator(offset);
+  let it = document.text().iterator(offset);
   if (it.current === '\n')
     return offset + 1;
   while (!it.outOfBounds() && it.curreent !== '\n' && tokenizer.isSpaceChar(it.current))
@@ -88,7 +88,7 @@ Tokenizer.rightBoundary = function(document, tokenizer, offset) {
  * @return {!Range}
  */
 Tokenizer.characterGroupRange = function(document, tokenizer, offset) {
-  let from = document.iterator(offset);
+  let from = document.text().iterator(offset);
   if (from.current === '\n')
     from.prev();
   let to = from.clone();
@@ -120,7 +120,7 @@ Tokenizer.isWord = function(document, tokenizer, range) {
     return false;
   if (Tokenizer.rightBoundary(document, tokenizer, range.to - 1) !== range.to)
     return false;
-  let it = document.iterator(range.from, range.from, range.to);
+  let it = document.text().iterator(range.from, range.from, range.to);
   for (it; !it.outOfBounds(); it.next()) {
     if (!tokenizer.isWordChar(it.current))
       return false;

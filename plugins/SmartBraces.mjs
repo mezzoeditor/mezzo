@@ -36,7 +36,7 @@ export class SmartBraces {
           edit: { from: offset, to: offset, s: pair },
           cursorOffset: offset + 1,
         };
-      } else if (pair[1] === inserted && this._document.iterator(offset).current === inserted) {
+      } else if (pair[1] === inserted && this._document.text().iterator(offset).current === inserted) {
         return {
           edit: { from: offset, to: offset, s: '' },
           cursorOffset: offset + 1,
@@ -54,7 +54,7 @@ export class SmartBraces {
   _handleRemove(from, to) {
     if (from + 1 !== to)
       return null;
-    let pair = this._document.content(from, to + 1);
+    let pair = this._document.text().content(from, to + 1);
     let index = this._pairs.indexOf(pair);
     if (index === -1)
       return null;

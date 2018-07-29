@@ -23,7 +23,7 @@ export class JSHighlighter {
     this._document = editor.document();
     this._document.on(Document.Events.Replaced, this._onReplaceCallback);
 
-    this._parser = new Parser(this._document.iterator(0), Parser.defaultState());
+    this._parser = new Parser(this._document.text().iterator(0), Parser.defaultState());
     this._highlightStates.clearAll();
     this._highlightStates.add(Start(0), Start(0), Parser.defaultState());
     this._highlightOffset = 0;
@@ -32,20 +32,20 @@ export class JSHighlighter {
 
   _doHighlight() {
     this._jobId = 0;
-    if (this._highlightOffset >= this._document.length())
+    if (this._highlightOffset >= this._document.text().length())
       return;
-    let to = Math.min(this._highlightOffset + HIGHLIGHT_CHUNK, this._document.length());
+    let to = Math.min(this._highlightOffset + HIGHLIGHT_CHUNK, this._document.text().length());
     this._highlightStates.clearTouching(Start(this._highlightOffset), End(to));
     for (; this._highlightOffset < to; this._highlightOffset += STATE_CHUNK) {
       this._parser.it.setConstraints(0, this._highlightOffset);
       for (let token of this._parser);
       this._highlightStates.add(Start(this._highlightOffset), Start(this._highlightOffset), this._parser.state());
     }
-    if (this._highlightOffset < this._document.length()) {
+    if (this._highlightOffset < this._document.text().length()) {
       this._jobId = this._platformSupport.requestIdleCallback(this._doHighlight.bind(this));
       this._viewport.raf();
     } else {
-      this._highlightOffset = this._document.length();
+      this._highlightOffset = this._document.text().length();
     }
   }
 
@@ -108,7 +108,7 @@ export class JSHighlighter {
         decorator.add(Start(range.from), Start(range.to), 'syntax.default');
         continue;
       }
-      let parser = new Parser(visibleContent.document.iterator(decoration.to.offset, 0, range.to), decoration.data);
+      let parser = new Parser(visibleContent.document.text().iterator(decoration.to.offset, 0, range.to), decoration.data);
       for (let token of parser) {
         if (token.end <= range.from)
           continue;

@@ -103,7 +103,7 @@ window.addEventListener('DOMContentLoaded', () => {
         let editor = editors.get(path);
         if (editor) {
           const gotoLineCallback = line => {
-            const offset = editor.document().positionToOffset({line, column: 0});
+            const offset = editor.document().text().positionToOffset({line, column: 0});
             editor.selection().setRanges([{from: offset, to: offset}]);
             editor.revealOffset(offset);
             renderer.focus();
@@ -129,7 +129,7 @@ window.addEventListener('DOMContentLoaded', () => {
       let editor = editors.get(path);
       if (!editor)
         return false;
-      window.fs.saveFile(path, editor.document().content());
+      window.fs.saveFile(path, editor.document().text().content());
       return true;
     } else if (command === 'ignore') {
       return true;

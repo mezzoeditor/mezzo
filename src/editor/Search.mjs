@@ -72,8 +72,8 @@ export class Search extends EventEmitter {
   find(query, options = {caseInsensetive: true}) {
     this._cancel();
     this._options = {query, caseInsensetive: !!options.caseInsensetive};
-    this._allocator = new WorkAllocator(this._document.length() - query.length + 1);
-    this._needsProcessing(0, this._document.length());
+    this._allocator = new WorkAllocator(this._document.text().length() - query.length + 1);
+    this._needsProcessing(0, this._document.text().length());
     this._shouldUpdateSelection = true;
     this._viewport.raf();
     this._emitUpdatedIfNeeded();
@@ -102,7 +102,7 @@ export class Search extends EventEmitter {
       offset = this._currentMatch.to;
     if (offset === null)
       return false;
-    let match = this._decorator.firstStarting(Start(offset), End(this._document.length()));
+    let match = this._decorator.firstStarting(Start(offset), End(this._document.text().length()));
     if (!match)
       match = this._decorator.firstAll();
     if (!match)
@@ -151,7 +151,7 @@ export class Search extends EventEmitter {
     if (!this._currentMatch && this._decorator.countAll() > 0) {
       let fromSelection = this._selection.hasRanges() ? Math.min(this._selection.focus(), this._selection.anchor()) : 0;
       // Prefer matches after cursor if possible.
-      let match = this._decorator.firstStarting(Start(fromSelection), Start(this._document.length())) ||
+      let match = this._decorator.firstStarting(Start(fromSelection), Start(this._document.text().length())) ||
           this._decorator.firstStarting(Start(0), Start(fromSelection));
       this._updateCurrentMatch(Range(match), this._shouldUpdateSelection, this._shouldUpdateSelection);
     }
@@ -181,7 +181,7 @@ export class Search extends EventEmitter {
     if (!this._currentMatch && this._decorator.countAll() > 0) {
       let fromSelection = this._selection.hasRanges() ? Math.min(this._selection.focus(), this._selection.anchor()) : 0;
       // Prefer matches after cursor if possible.
-      let match = this._decorator.firstStarting(Start(fromSelection), Start(this._document.length())) ||
+      let match = this._decorator.firstStarting(Start(fromSelection), Start(this._document.text().length())) ||
           this._decorator.firstStarting(Start(0), Start(fromSelection));
       this._updateCurrentMatch(Range(match), this._shouldUpdateSelection, false);
       this._selection._onDecorate(visibleContent);
@@ -283,7 +283,7 @@ export class Search extends EventEmitter {
     const findOptions = { caseInsensetive: !!this._options.caseInsensetive };
     this._decorator.clearStarting(Start(from), Start(to));
     // NB: iterator constraints are inclusive.
-    let iterator = this._document.iterator(from, from, to + query.length - 1);
+    let iterator = this._document.text().iterator(from, from, to + query.length - 1);
     while (iterator.find(query, findOptions)) {
       this._decorator.add(Start(iterator.offset), Start(iterator.offset + query.length));
       to = Math.max(to, iterator.offset + query.length);

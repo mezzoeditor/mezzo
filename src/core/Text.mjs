@@ -76,21 +76,26 @@ export class Text {
   }
 
   /**
-   * @param {number} from
-   * @param {number} to
+   * @param {number=} from
+   * @param {number=} to
    * @return {string}
    */
   content(from, to) {
+    from = Math.max(0, from || 0);
+    to = Math.min(this._length, to === undefined ? this._length : to);
     return this.iterator(from, from, to).substr(to - from);
   }
 
   /**
    * @param {number} offset
-   * @param {number} from
-   * @param {number} to
+   * @param {number=} from
+   * @param {number=} to
    * @return {!TextIterator}
    */
   iterator(offset, from, to) {
+    from = Math.max(0, from || 0);
+    to = Math.min(this._length, to === undefined ? this._length : to);
+    offset = Math.min(to, Math.max(from, offset));
     let iterator = this._build().iterator();
     iterator.locateByOffset(offset);
     return new TextIterator(iterator, offset, from, to, this._length);

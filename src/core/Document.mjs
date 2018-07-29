@@ -27,78 +27,10 @@ export class Document extends EventEmitter {
   }
 
   /**
-   * @param {number=} fromOffset
-   * @param {number=} toOffset
-   * @return {string}
-   */
-  content(fromOffset, toOffset) {
-    let {from, to} = this._clamp(fromOffset, toOffset);
-    return this._text.content(from, to);
-  }
-
-  /**
-   * @param {number} offset
-   * @param {number=} fromOffset
-   * @param {number=} toOffset
-   * @return {!TextIterator}
-   */
-  iterator(offset, fromOffset, toOffset) {
-    let {from, to} = this._clamp(fromOffset, toOffset);
-    offset = Math.max(from, offset);
-    offset = Math.min(to, offset);
-    return this._text.iterator(offset, from, to);
-  }
-
-  /**
-   * @param {number} offset
-   * @return {?Position}
-   */
-  offsetToPosition(offset) {
-    return this._text.offsetToPosition(offset);
-  }
-
-  /**
-   * @param {!Position} position
-   * @param {boolean=} strict
-   * @return {number}
-   */
-  positionToOffset(position, strict) {
-    return this._text.positionToOffset(position, strict);
-  }
-
-  /**
-   * @return {number}
-   */
-  lineCount() {
-    return this._text.lineCount();
-  }
-
-  /**
-   * @return {number}
-   */
-  length() {
-    return this._text.length();
-  }
-
-  /**
    * @param {!Text|string} text
    */
   reset(text) {
-    if (this._dispatchingOnReplace)
-      throw new Error('Cannot replace from replacement callback');
-    if (typeof text === 'string')
-      text = Text.fromString(text);
-    let replacement = {
-      before: this._text,
-      offset: 0,
-      inserted: text,
-      removed: this._text,
-      after: text
-    };
-    this._text = text;
-    this._dispatchingOnReplace = true;
-    this.emit(Document.Events.Replaced, replacement);
-    this._dispatchingOnReplace = false;
+    this.replace(0, this._text.length(), text);
   }
 
   /**

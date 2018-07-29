@@ -75,8 +75,8 @@ function updateRangeHandle(editor) {
     rangeText.textContent = 'Range removed';
   } else {
     const {from, to} = rangeHandle.resolve();
-    let fromPosition = editor.document().offsetToPosition(from.offset);
-    let toPosition = editor.document().offsetToPosition(to.offset);
+    let fromPosition = editor.document().text().offsetToPosition(from.offset);
+    let toPosition = editor.document().text().offsetToPosition(to.offset);
     rangeText.textContent = `Range {${from.offset}/${fromPosition.line},${fromPosition.column}} : {${to.offset}/${toPosition.line},${toPosition.column}}`;
   }
 }
@@ -165,7 +165,7 @@ async function setupEditor(renderer, exampleName) {
 
   let ranges = [];
   for (let i = 0; i < 20; i++) {
-    let offset = editor.document().positionToOffset({line: 4 * i, column: 3});
+    let offset = editor.document().text().positionToOffset({line: 4 * i, column: 3});
     ranges.push({from: offset, to: offset});
   }
   //let ranges = [{from: 0, to: 0}, {from: 9, to: 9}];

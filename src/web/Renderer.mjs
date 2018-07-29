@@ -397,12 +397,12 @@ export class Renderer {
         return;
       }
       if (event.detail > 2) {
-        let position = this._editor.document().offsetToPosition(offset);
-        let from = this._editor.document().positionToOffset({
+        let position = this._editor.document().text().offsetToPosition(offset);
+        let from = this._editor.document().text().positionToOffset({
           line: position.line,
           column: 0
         });
-        let to = this._editor.document().positionToOffset({
+        let to = this._editor.document().text().positionToOffset({
           line: position.line + 1,
           column: 0
         });
@@ -708,7 +708,7 @@ export class Renderer {
     if (!this._editor || !this._cssWidth || !this._cssHeight || this._rendering)
       return;
     // To properly handle input events, we have to update rects synchronously.
-    const gutterLength = (Math.max(this._editor.document().lineCount(), 100) + '').length;
+    const gutterLength = (Math.max(this._editor.document().text().lineCount(), 100) + '').length;
     const gutterWidth = this._measurer.width9 * gutterLength;
     this._gutterRect.width = gutterWidth + GUTTER_PADDING_LEFT + GUTTER_PADDING_RIGHT;
     this._gutterRect.height = this._cssHeight;

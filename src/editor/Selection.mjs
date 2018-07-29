@@ -147,7 +147,7 @@ export class Selection extends EventEmitter {
   selectedText() {
     let lines = [];
     for (let range of this._ranges)
-      lines.push(this._document.content(Math.min(range.anchor, range.focus), Math.max(range.anchor, range.focus)));
+      lines.push(this._document.text().content(Math.min(range.anchor, range.focus), Math.max(range.anchor, range.focus)));
     return lines.join('\n');
   }
 
@@ -262,7 +262,7 @@ export class Selection extends EventEmitter {
    */
   moveDocumentEnd() {
     return this._operation(range => {
-      let offset = this._document.length();
+      let offset = this._document.text().length();
       return {id: range.id, upDownX: -1, anchor: offset, focus: offset};
     });
   }
@@ -282,7 +282,7 @@ export class Selection extends EventEmitter {
    */
   selectDocumentEnd() {
     return this._operation(range => {
-      let offset = this._document.length();
+      let offset = this._document.text().length();
       return {id: range.id, upDownX: -1, anchor: range.anchor, focus: offset};
     });
   }
@@ -293,7 +293,7 @@ export class Selection extends EventEmitter {
   moveLineStart() {
     return this._operation(range => {
       let offset = this._lineStart(range.focus);
-      let it = this._document.iterator(offset);
+      let it = this._document.text().iterator(offset);
       while (it.current === ' ') it.next();
       if (offset === range.focus)
         offset = it.offset;
@@ -374,7 +374,7 @@ export class Selection extends EventEmitter {
         if (range.anchor === range.focus) {
           let offset = range.anchor;
           // Gravitate towards word selection in borderline cases for collapsed cursors.
-          if (offset > 0 && tokenizer.isWordChar(this._document.iterator(offset - 1).current))
+          if (offset > 0 && tokenizer.isWordChar(this._document.text().iterator(offset - 1).current))
             --offset;
           let {from, to} = Tokenizer.characterGroupRange(this._document, this._editor.tokenizer(), offset);
           ranges.push({id: range.id, anchor: from, focus: to, upDownX: range.upDownX});
@@ -396,7 +396,7 @@ export class Selection extends EventEmitter {
         if (range.anchor > lastRange.anchor)
           lastRange = range;
       }
-      this._nextOccurenceText = this._document.content(Math.min(lastRange.anchor, lastRange.focus), Math.max(lastRange.anchor, lastRange.focus));
+      this._nextOccurenceText = this._document.text().content(Math.min(lastRange.anchor, lastRange.focus), Math.max(lastRange.anchor, lastRange.focus));
       this._nextOccurenceSearchOffset = Math.max(lastRange.anchor, lastRange.focus);
       this._nextOccurenceSearchEnd = Math.min(lastRange.anchor, lastRange.focus);
     }
@@ -405,9 +405,9 @@ export class Selection extends EventEmitter {
       let it = null;
       // Decide which half we should search.
       if (this._nextOccurenceSearchOffset < this._nextOccurenceSearchEnd)
-        it = this._document.iterator(this._nextOccurenceSearchOffset, this._nextOccurenceSearchOffset, this._nextOccurenceSearchEnd);
+        it = this._document.text().iterator(this._nextOccurenceSearchOffset, this._nextOccurenceSearchOffset, this._nextOccurenceSearchEnd);
       else
-        it = this._document.iterator(this._nextOccurenceSearchOffset);
+        it = this._document.text().iterator(this._nextOccurenceSearchOffset);
       let result = it.find(this._nextOccurenceText);
       if (!result) {
         this._nextOccurenceSearchOffset = it.offset > this._nextOccurenceSearchEnd ? 0 : it.offset;
@@ -446,7 +446,7 @@ export class Selection extends EventEmitter {
   selectLineStart() {
     return this._operation(range => {
       let offset = this._lineStart(range.focus);
-      let it = this._document.iterator(offset);
+      let it = this._document.text().iterator(offset);
       while (it.current === ' ') it.next();
       if (offset === range.focus)
         offset = it.offset;
@@ -466,7 +466,7 @@ export class Selection extends EventEmitter {
   }
 
   selectAll() {
-    this._ranges = [{anchor: 0, focus: this._document.length(), upDownX: -1, id: ++this._lastId}];
+    this._ranges = [{anchor: 0, focus: this._document.text().text().length(), upDownX: -1, id: ++this._lastId}];
     this._notifyChanged();
   }
 
@@ -549,7 +549,7 @@ export class Selection extends EventEmitter {
    * @return {!Array<!SelectionRange>}
    */
   _rebuild(ranges) {
-    let length = this._document.length();
+    let length = this._document.text().length();
     for (let range of ranges) {
       range.anchor = Math.max(0, Math.min(range.anchor, length));
       range.focus = Math.max(0, Math.min(range.focus, length));
@@ -580,9 +580,9 @@ export class Selection extends EventEmitter {
    * @return {number}
    */
   _left(offset) {
-    let position = this._document.offsetToPosition(offset);
+    let position = this._document.text().offsetToPosition(offset);
     if (position.column)
-      return this._document.positionToOffset({line: position.line, column: position.column - 1});
+      return this._document.text().positionToOffset({line: position.line, column: position.column - 1});
     return Math.max(offset - 1, 0);
   }
 
@@ -591,10 +591,10 @@ export class Selection extends EventEmitter {
    * @return {number}
    */
   _right(offset) {
-    let position = this._document.offsetToPosition(offset);
-    let right = this._document.positionToOffset({line: position.line, column: position.column + 1});
+    let position = this._document.text().offsetToPosition(offset);
+    let right = this._document.text().positionToOffset({line: position.line, column: position.column + 1});
     if (right === offset)
-      return Math.min(offset + 1, this._document.length());
+      return Math.min(offset + 1, this._document.text().length());
     return right;
   }
 
@@ -603,8 +603,8 @@ export class Selection extends EventEmitter {
    * @return {number}
    */
   _lineStart(offset) {
-    let position = this._document.offsetToPosition(offset);
-    return this._document.positionToOffset({line: position.line, column: 0});
+    let position = this._document.text().offsetToPosition(offset);
+    return this._document.text().positionToOffset({line: position.line, column: 0});
   }
 
   /**
@@ -612,10 +612,10 @@ export class Selection extends EventEmitter {
    * @return {number}
    */
   _lineEnd(offset) {
-    let position = this._document.offsetToPosition(offset);
-    if (position.line == this._document.lineCount() - 1)
-      return this._document.length();
-    return this._document.positionToOffset({line: position.line + 1, column: 0}) - 1;
+    let position = this._document.text().offsetToPosition(offset);
+    if (position.line == this._document.text().lineCount() - 1)
+      return this._document.text().length();
+    return this._document.text().positionToOffset({line: position.line + 1, column: 0}) - 1;
   }
 
   /**

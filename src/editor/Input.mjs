@@ -63,10 +63,10 @@ export class Input {
     return this._replace('', range => {
       if (range.from !== range.to)
         return range;
-      let {line, column} = this._document.offsetToPosition(range.from);
+      let {line, column} = this._document.text().offsetToPosition(range.from);
       if (!column)
         return {s: range.s, from: Math.max(0, range.from - 1), to: range.to};
-      return {s: range.s, from: this._document.positionToOffset({line, column: column - 1}), to: range.to};
+      return {s: range.s, from: this._document.text().positionToOffset({line, column: column - 1}), to: range.to};
     });
   }
 
@@ -87,9 +87,9 @@ export class Input {
    */
   deleteLineBefore() {
     return this._replace('', range => {
-      let position = this._document.offsetToPosition(range.from);
+      let position = this._document.text().offsetToPosition(range.from);
       let linePosition = {line: position.line, column: 0};
-      let startOffset = this._document.positionToOffset(linePosition);
+      let startOffset = this._document.text().positionToOffset(linePosition);
       return {s: range.s, from: startOffset, to: range.from};
     });
   }
@@ -101,10 +101,10 @@ export class Input {
     return this._replace('', range => {
       if (range.from !== range.to)
         return range;
-      let {line, column} = this._document.offsetToPosition(range.to);
-      let next = this._document.positionToOffset({line, column: column + 1});
+      let {line, column} = this._document.text().offsetToPosition(range.to);
+      let next = this._document.text().positionToOffset({line, column: column + 1});
       if (next === range.to)
-        return {s: range.s, from: range.from, to: Math.min(this._document.length(), range.to + 1)};
+        return {s: range.s, from: range.from, to: Math.min(this._document.text().length(), range.to + 1)};
       return {s: range.s, from: range.from, to: next};
     });
   }
@@ -122,10 +122,10 @@ export class Input {
    */
   insertNewLine() {
     return this._replace('\n', range => {
-      let position = this._document.offsetToPosition(range.from);
+      let position = this._document.text().offsetToPosition(range.from);
       let linePosition = {line: position.line, column: 0};
-      let startOffset = this._document.positionToOffset(linePosition);
-      let it = this._document.iterator(startOffset, 0, startOffset + 1000);
+      let startOffset = this._document.text().positionToOffset(linePosition);
+      let it = this._document.text().iterator(startOffset, 0, startOffset + 1000);
       while (it.current === ' ' && !it.outOfBounds())
         it.next();
       let indent = ' '.repeat(it.offset - startOffset);
@@ -143,10 +143,10 @@ export class Input {
     let newRanges = [];
     let delta = 0;
     for (let range of ranges) {
-      let from = Math.max(0, Math.min(range.from + delta, this._document.length()));
-      let to = Math.max(0, Math.min(range.to + delta, this._document.length()));
-      let startPosition = {line: this._document.offsetToPosition(from).line, column: 0};
-      let startOffset = this._document.positionToOffset(startPosition);
+      let from = Math.max(0, Math.min(range.from + delta, this._document.text().length()));
+      let to = Math.max(0, Math.min(range.to + delta, this._document.text().length()));
+      let startPosition = {line: this._document.text().offsetToPosition(from).line, column: 0};
+      let startOffset = this._document.text().positionToOffset(startPosition);
       if (from === to) {
         let pendingIndent = (from - startOffset) % this._indent.length;
         let indent = ' '.repeat(this._indent.length - pendingIndent);
@@ -154,13 +154,13 @@ export class Input {
         newRanges.push({from: from + indent.length, to: from + indent.length});
         delta += indent.length;
       } else {
-        let endPosition = {line: this._document.offsetToPosition(to).line, column: 0};
-        let endOffset = this._document.positionToOffset(endPosition);
+        let endPosition = {line: this._document.text().offsetToPosition(to).line, column: 0};
+        let endOffset = this._document.text().positionToOffset(endPosition);
         if (endOffset === to)
           --endPosition.line;
         for (let line = startPosition.line; line <= endPosition.line; ++line) {
-          let offset = this._document.positionToOffset({line, column: 0});
-          if (this._document.iterator(offset).current === '\n')
+          let offset = this._document.text().positionToOffset({line, column: 0});
+          if (this._document.text().iterator(offset).current === '\n')
             continue;
           this._document.replace(offset, offset, this._indent);
           delta += this._indent.length;
@@ -179,17 +179,17 @@ export class Input {
     let newRanges = [];
     let delta = 0;
     for (let range of ranges) {
-      let from = Math.max(0, Math.min(range.from + delta, this._document.length()));
-      let to = Math.max(0, Math.min(range.to + delta, this._document.length()));
-      let startPosition = this._document.offsetToPosition(from);
-      let endPosition = this._document.offsetToPosition(to);
-      let endOffset = this._document.positionToOffset({line: endPosition.line, column: 0});
+      let from = Math.max(0, Math.min(range.from + delta, this._document.text().length()));
+      let to = Math.max(0, Math.min(range.to + delta, this._document.text().length()));
+      let startPosition = this._document.text().offsetToPosition(from);
+      let endPosition = this._document.text().offsetToPosition(to);
+      let endOffset = this._document.text().positionToOffset({line: endPosition.line, column: 0});
       if (endOffset === to)
         --endPosition.line;
       let startDelta = 0;
       for (let line = startPosition.line; line <= endPosition.line; ++line) {
-        let offset = this._document.positionToOffset({line, column: 0});
-        let it = this._document.iterator(offset);
+        let offset = this._document.text().positionToOffset({line, column: 0});
+        let it = this._document.text().iterator(offset);
         while (it.current === ' ' && it.offset - offset < this._indent.length)
           it.next();
         this._document.replace(offset, it.offset, '');
@@ -215,8 +215,8 @@ export class Input {
     let newRanges = [];
     let delta = 0;
     for (let range of ranges) {
-      let from = Math.max(0, Math.min(range.from + delta, this._document.length()));
-      let to = Math.max(0, Math.min(range.to + delta, this._document.length()));
+      let from = Math.max(0, Math.min(range.from + delta, this._document.text().length()));
+      let to = Math.max(0, Math.min(range.to + delta, this._document.text().length()));
       let replaced = rangeCallback({from, to, s});
       let cursorOffset = replaced.from + replaced.s.length;
       for (let override of this._overrides) {

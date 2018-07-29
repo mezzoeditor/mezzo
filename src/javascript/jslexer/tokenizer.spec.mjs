@@ -44,7 +44,7 @@ export function addTests(runner) {
         continue;
       let text = await readFile(path.join(TESTDIR, fileName));
       document.reset(text);
-      let tt = new Parser(document.iterator(0), Parser.defaultState());
+      let tt = new Parser(document.text().iterator(0), Parser.defaultState());
       const tokens = [];
       for (let token of tt)
         tokens.push(tokenTypeNames.get(token.type));
