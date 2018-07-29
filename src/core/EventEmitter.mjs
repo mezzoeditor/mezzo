@@ -36,6 +36,14 @@ export class EventEmitter {
 
   /**
    * @param {string} eventName
+   * @param {function(*)} listener
+   */
+  off(eventName, listener) {
+    this.removeListener(eventName, listener);
+  }
+
+  /**
+   * @param {string} eventName
    * @param {...*} args
    */
   emit(eventName, ...args) {
