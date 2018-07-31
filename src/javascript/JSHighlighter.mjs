@@ -1,4 +1,4 @@
-import { Start, End } from '../core/Anchor.mjs';
+import { Start, End, Offset } from '../core/Anchor.mjs';
 import { TextDecorator, Decorator} from '../core/Decorator.mjs';
 import { Parser, TokenTypes, KeywordTypes } from './jslexer/index.mjs';
 import { trace } from '../core/Trace.mjs';
@@ -86,7 +86,7 @@ export class JSHighlighter {
 
     let decoration = this._highlightStates.lastTouching(Start(0), End(from));
     if (decoration) {
-      this._highlightOffset = decoration.from.offset;
+      this._highlightOffset = Offset(decoration.from);
       this._parser = new Parser(replacement.after.iterator(this._highlightOffset), decoration.data);
     } else {
       this._highlightOffset = 0;
@@ -108,7 +108,7 @@ export class JSHighlighter {
         decorator.add(Start(range.from), Start(range.to), 'syntax.default');
         continue;
       }
-      let parser = new Parser(visibleContent.document.text().iterator(decoration.to.offset, 0, range.to), decoration.data);
+      let parser = new Parser(visibleContent.document.text().iterator(Offset(decoration.to), 0, range.to), decoration.data);
       for (let token of parser) {
         if (token.end <= range.from)
           continue;

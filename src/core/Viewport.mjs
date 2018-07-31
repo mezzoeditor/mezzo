@@ -1,4 +1,4 @@
-import { Start, End, Before, After } from './Anchor.mjs';
+import { Start, End, Before, After, Offset } from './Anchor.mjs';
 import { Decorator } from './Decorator.mjs';
 import { Document } from './Document.mjs';
 import { RoundMode, Metrics } from './Metrics.mjs';
@@ -155,7 +155,6 @@ export class Viewport extends EventEmitter {
     this._padding = { left: 0, right: 0, top: 0, bottom: 0};
     this._frozen = false;
     this._decorateCallbacks = [];
-    this._inlineWidgets = new Decorator(true /* createHandles */);
 
     this._onTextViewChanged = () => {
       let metrics = this._textView.metrics();
@@ -568,8 +567,8 @@ export class Viewport extends EventEmitter {
           for (let decorator of textDecorators) {
             decorator.visitTouching(Start(offset), End(after), decoration => {
               trace.count('decorations');
-              let from = Math.max(offset, decoration.from.offset);
-              let to = Math.min(after, decoration.to.offset);
+              let from = Math.max(offset, Offset(decoration.from));
+              let to = Math.min(after, Offset(decoration.to));
               while (from < to) {
                 let end = from + 1;
                 while (end < to && !needsRtlBreakAfter[end - line.from])
@@ -611,8 +610,8 @@ export class Viewport extends EventEmitter {
         decorator.visitTouching(Start(line.from - 1), End(line.to + 1), decoration => {
           trace.count('decorations');
           // TODO: note that some editors only show selection up to line length. Setting?
-          let from = decoration.from.offset < line.from ? paddingLeft : offsetToX[decoration.from.offset - line.from];
-          let to = decoration.to.offset > line.to ? this._width - paddingRight : offsetToX[decoration.to.offset - line.from];
+          let from = Offset(decoration.from) < line.from ? paddingLeft : offsetToX[Offset(decoration.from) - line.from];
+          let to = Offset(decoration.to) > line.to ? this._width - paddingRight : offsetToX[Offset(decoration.to) - line.from];
           if (from <= to) {
             background.push({
               x: from,
@@ -641,8 +640,8 @@ export class Viewport extends EventEmitter {
       let lastBottom = -1;
       decorator.sparseVisitAll(decoration => {
         trace.count('decorations');
-        const from = this.offsetToContentPoint(decoration.from.offset).y;
-        const to = this.offsetToContentPoint(decoration.to.offset).y;
+        const from = this.offsetToContentPoint(Offset(decoration.from)).y;
+        const to = this.offsetToContentPoint(Offset(decoration.to)).y;
 
         let top = from * ratio;
         let bottom = (to + lineHeight) * ratio;
@@ -658,7 +657,7 @@ export class Viewport extends EventEmitter {
         }
 
         let nextOffset = this.contentPointToOffset({x: 0, y: bottom / ratio });
-        return Start(Math.max(decoration.to.offset, nextOffset));
+        return Start(Math.max(Offset(decoration.to), nextOffset));
       });
       if (lastTop >= 0)
         scrollbar.push({y: lastTop, height: lastBottom - lastTop, style: decorator.style()});

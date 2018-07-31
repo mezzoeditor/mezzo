@@ -1,4 +1,4 @@
-import { CompareAnchors, NextAnchor, MaxAnchor, Start, End } from './Anchor.mjs';
+import { CompareAnchors, NextAnchor, MaxAnchor, Start, End, Offset } from './Anchor.mjs';
 import { Random } from './Random.mjs';
 let random = Random(25);
 
@@ -38,8 +38,8 @@ let random = Random(25);
 function normalize(node) {
   if (!node.add)
     return node;
-  node.from = {offset: node.from.offset + node.add, end: node.from.end};
-  node.to = {offset: node.to.offset + node.add, end: node.to.end};
+  node.from += node.add;
+  node.to += node.add;
   if (node.left)
     node.left.add = (node.left.add || 0) + node.add;
   if (node.right)
@@ -649,8 +649,8 @@ export class Decorator {
    * @return {!TreeNode}
    */
   _process(root, from, to, inserted, removed) {
-    let less = (offset, anchor) => anchor.end ? offset <= anchor.offset : offset < anchor.offset;
-    let more = (offset, anchor) => anchor.end ? offset > anchor.offset : offset >= anchor.offset;
+    let less = (offset, anchor) => offset < anchor;
+    let more = (offset, anchor) => offset >= anchor;
 
     let all = [];
     visit(root, all.push.bind(all));
@@ -667,16 +667,18 @@ export class Decorator {
       }
 
       if (!less(from, start) && !more(to, end)) {
-        end.offset += inserted - (to - from);
+        end += inserted - (to - from);
       } else if (!more(from, start) && !less(to, start)) {
-        start.offset = from + inserted;
-        end.offset = from + inserted + (end.offset - to);
+        start = from + inserted;
+        end = from + inserted + (end - to);
       } else if (!more(from, end) && !less(to, end)) {
-        end.offset = from;
+        end = from;
       } else if (!more(to, start)) {
-        start.offset += inserted - (to - from);
-        end.offset += inserted - (to - from);
+        start += inserted - (to - from);
+        end += inserted - (to - from);
       }
+      node.from = start;
+      node.to = end;
 
       delete node.left;
       delete node.right;

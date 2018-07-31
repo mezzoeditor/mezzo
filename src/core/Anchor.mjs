@@ -1,8 +1,9 @@
 /**
- * @typedef {{
- *   offset: number,
- *   end: number
- * }} Anchor
+ * @typedef {number} Anchor
+ *
+ * Anchor represents a position between two characters which is aligned
+ * either to the left (stored as integer offset) or to the right (stored
+ * as any non-integer between |offset| and |offset + 1|).
  */
 
 /**
@@ -12,8 +13,8 @@
  * @param {number} offset
  * @return {!Anchor}
  */
-export let Start = offset => ({offset, end: 0});
-export let Left = offset => ({offset, end: 0});
+export let Start = offset => offset;
+export let Left = offset => offset;
 
 /**
  * End anchor at |x| stays immediately before character at offset |x|. When
@@ -22,8 +23,8 @@ export let Left = offset => ({offset, end: 0});
  * @param {number} offset
  * @return {!Anchor}
  */
-export let End = offset => ({offset, end: 1});
-export let Right = offset => ({offset, end: 1});
+export let End = offset => offset + 0.5;
+export let Right = offset => offset + 0.5;
 
 /**
  * Before anchor at |x| stays immediately before character at offset |x|. When
@@ -32,7 +33,7 @@ export let Right = offset => ({offset, end: 1});
  * @param {number} offset
  * @return {!Anchor}
  */
-export let Before = offset => ({offset: offset, end: 1});
+export let Before = offset => offset + 0.5;
 
 /**
  * After anchor at |x| stays immediately after character at offset |x|. When
@@ -41,42 +42,38 @@ export let Before = offset => ({offset: offset, end: 1});
  * @param {number} offset
  * @return {!Anchor}
  */
-export let After = offset => ({offset: offset + 1, end: 0});
+export let After = offset => offset + 1;
 
 /**
  * @param {!Anchor} a
  * @param {!Anchor} b
  * @return {boolean}
  */
-export let CompareAnchors = (a, b) => {
-  return (a.offset - b.offset) || (a.end - b.end);
-};
+export let CompareAnchors = (a, b) => a - b;
 
 /**
  * @param {!Anchor} a
  * @param {!Anchor} b
  * @return {!Anchor}
  */
-export let MaxAnchor = (a, b) => {
-  return CompareAnchors(a, b) > 0 ? a : b;
-};
+export let MaxAnchor = (a, b) => Math.max(a, b);
 
 /**
  * @param {!Anchor} anchor
  * @return {!Anchor}
  */
 export let NextAnchor = anchor => {
-  return anchor.end ? {offset: anchor.offset + 1, end: 0} : {offset: anchor.offset, end: 1};
+  return anchor === Math.floor(anchor) ? anchor + 0.5 : Math.floor(anchor + 1);
 };
 
 /**
  * @param {!Anchor} anchor
  * @return {number}
  */
-export let Offset = anchor => anchor.offset;
+export let Offset = anchor => Math.floor(anchor);
 
 /**
- * @param {!{from: !Anchor, to: !Anchor}} anchor
+ * @param {!{from: !Anchor, to: !Anchor}} anchorRange
  * @return {!Range}
  */
-export let Range = anchorRange => ({from: anchorRange.from.offset, to: anchorRange.to.offset});
+export let Range = anchorRange => ({from: Math.floor(anchorRange.from), to: Math.floor(anchorRange.to)});
