@@ -47,5 +47,14 @@ export function addTests(runner, expect) {
         }
       }
     });
+    it('Document.reset should preserve text instance', () => {
+      let document = new Document();
+      document.reset('hello, world');
+      const initialText = document.text();
+      document.replace(0, 5, 'HELLO');
+      expect(document.text().content()).toBe('HELLO, world');
+      document.reset(initialText);
+      expect(document.text()).toBe(initialText);
+    });
   });
 }

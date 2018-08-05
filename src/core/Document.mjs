@@ -30,7 +30,22 @@ export class Document extends EventEmitter {
    * @param {!Text|string} text
    */
   reset(text) {
-    this.replace(0, this._text.length(), text);
+    if (this._dispatchingOnReplace)
+      throw new Error('Cannot replace from replacement callback');
+    if (typeof text === 'string')
+      text = Text.fromString(text);
+    let replacement = {
+      before: this._text,
+      offset: 0,
+      removed: this._text,
+      inserted: text,
+      after: text
+    };
+    this._text = text;
+    this._dispatchingOnReplace = true;
+    this.emit(Document.Events.Replaced, replacement);
+    this._dispatchingOnReplace = false;
+    return replacement.removed;
   }
 
   /**
