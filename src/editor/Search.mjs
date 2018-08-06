@@ -69,7 +69,7 @@ export class Search extends EventEmitter {
   find(query, options = {caseInsensetive: true}) {
     this._cancel();
     this._options = {query, caseInsensetive: !!options.caseInsensetive};
-    this._allocator = new WorkAllocator(this._document.text().length() - query.length + 1);
+    this._allocator = new WorkAllocator(Math.max(0, this._document.text().length() - query.length + 1));
     this._needsProcessing(0, this._document.text().length());
     this._shouldUpdateSelection = true;
     this._viewport.raf();

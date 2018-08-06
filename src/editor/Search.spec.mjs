@@ -40,5 +40,15 @@ export function addTests(runner, expect) {
         expect(editor.search().matches().length).toBe(Math.floor(1000 / size));
       }
     });
+
+    it('should work with query longer than text', () => {
+      const platform = new TestPlatformSupport();
+      const editor = new Editor(new TestMeasurer(), platform);
+      editor.reset('');
+
+      editor.search().find('world');
+      platform.runUntilIdle();
+      expect(editor.search().matches().length).toBe(0);
+    });
   });
 }
