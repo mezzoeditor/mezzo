@@ -39,6 +39,13 @@ export class Document extends EventEmitter {
   }
 
   /**
+   * @return {!Array<!SelectionRange>}
+   */
+  sortedSelection() {
+    return this._selection.slice().sort(rangeComparator);
+  }
+
+  /**
    * @param {!Array<!SelectionRange>} ranges
    */
   setSelection(ranges) {

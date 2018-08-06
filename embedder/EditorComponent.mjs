@@ -36,7 +36,7 @@ export class EditorComponent extends HTMLElement {
       return;
     this._rafId = requestAnimationFrame(() => {
       this._rafId = 0;
-      const ranges = this._editor.selection().sortedRanges();
+      const ranges = this._editor.selection().ranges();
       if (!ranges.length) {
         this._selectionDescription.textContent = ``;
         return;

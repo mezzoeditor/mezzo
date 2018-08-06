@@ -64,7 +64,7 @@ export class SearchToolbar {
     if (!editor)
       return false;
     if (command === 'search.show') {
-      const range = editor.selection().sortedRanges()[0];
+      const range = editor.selection().ranges()[0];
       if (range && range.from !== range.to) {
         this._input.value = editor.document().text().content(range.from, range.to);
       }

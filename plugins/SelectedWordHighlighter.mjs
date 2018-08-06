@@ -42,7 +42,7 @@ export class SelectedWordHighlighter {
     this._selectedWord = '';
     if (!this._enabled || !this._selection.hasSingleRange())
       return;
-    let selectionRange = this._selection.sortedRanges()[0];
+    let selectionRange = this._selection.ranges()[0];
     if (selectionRange.from === selectionRange.to)
       return;
     let startPosition = this._document.text().offsetToPosition(selectionRange.from);
