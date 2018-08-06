@@ -8,6 +8,7 @@ import { DefaultHighlighter } from '../src/default/DefaultHighlighter.mjs';
 
 import { SelectedWordHighlighter } from '../plugins/SelectedWordHighlighter.mjs';
 import { SmartBraces } from '../plugins/SmartBraces.mjs';
+import { AddNextOccurence } from '../plugins/AddNextOccurence.mjs';
 import { BlockIndentation } from '../plugins/BlockIndentation.mjs';
 import { SearchToolbar } from '../plugins/web/SearchToolbar.mjs';
 
@@ -109,6 +110,7 @@ export class EditorComponent extends HTMLElement {
     const selectedWordHighlighter = new SelectedWordHighlighter(editor);
     const smartBraces = new SmartBraces(editor);
     const blockIndentation = new BlockIndentation(editor);
+    const addNextOccurence = new AddNextOccurence(editor);
     if (mimeType === 'text/javascript') {
       const highlighter = new JSHighlighter(editor);
       editor.setHighlighter(highlighter);

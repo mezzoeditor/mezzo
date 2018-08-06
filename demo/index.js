@@ -88,6 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const selectedWordHighlighter = new SelectedWordHighlighter(editor);
   const smartBraces = new SmartBraces(editor);
   const blockIndentation = new BlockIndentation(editor);
+  const addNextOccurence = new AddNextOccurence(editor);
 
   renderer.setEditor(editor);
   addExamples(renderer);

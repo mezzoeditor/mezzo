@@ -273,7 +273,7 @@ export class Renderer {
     // Actions that don't require focus.
     switch (command) {
       case 'selection.addnext':
-        return this._revealSelection(this._editor.selection().addNextOccurence(), true /* center */) || true;
+        return this._revealSelection(this._editor.input().runCommand('selection.addnext'), true /* center */) || true;
     }
 
     if (this._domDocument.activeElement !== this._input)

@@ -25,6 +25,7 @@ export class Input {
     this._selection = editor.selection();
     this._indent = ' '.repeat(2);
     this._overrides = new Set();
+    this._commands = new Map();
   }
 
   /**
@@ -39,6 +40,17 @@ export class Input {
    */
   addInputOverride(override) {
     this._overrides.add(override);
+  }
+
+  addCommand(command, handler) {
+    this._commands.set(command, handler);
+  }
+
+  runCommand(command) {
+    const handler = this._commands.get(command);
+    if (!handler)
+      return false;
+    return handler.call(null);
   }
 
   /**
