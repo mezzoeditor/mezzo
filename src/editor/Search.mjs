@@ -22,8 +22,6 @@ export class Search extends EventEmitter {
 
     this._allocator = new WorkAllocator(0);
 
-    this._selection = editor.selection();
-    this._selection.on(Selection.Events.Changed, () => { this._shouldUpdateSelection = false; });
     this._decorator = new LineDecorator('search.match');
     this._currentMatchDecorator = new LineDecorator('search.match.current');
     this._options = null;
@@ -97,7 +95,8 @@ export class Search extends EventEmitter {
    * @return {boolean}
    */
   nextMatch() {
-    let offset = this._selection.focus();
+    const lastCursor = this._document.lastCursor();
+    let offset = lastCursor ? lastCursor.focus : null;
     if (offset === null && this._currentMatch)
       offset = this._currentMatch.to;
     if (offset === null)
@@ -118,7 +117,8 @@ export class Search extends EventEmitter {
    * @return {boolean}
    */
   previousMatch() {
-    let offset = this._selection.focus();
+    const lastCursor = this._document.lastCursor();
+    let offset = lastCursor ? lastCursor.focus : null;
     if (offset === null && this._currentMatch)
       offset = this._currentMatch.from;
     if (offset === null)
@@ -149,7 +149,8 @@ export class Search extends EventEmitter {
       budget -= range.to - range.from;
     }
     if (!this._currentMatch && this._decorator.countAll() > 0) {
-      let fromSelection = this._selection.hasRanges() ? Math.min(this._selection.focus(), this._selection.anchor()) : 0;
+      const lastCursor = this._document.lastCursor();
+      let fromSelection = lastCursor ? Math.min(lastCursor.anchor, lastCursor.focus) : 0;
       // Prefer matches after cursor if possible.
       let match = this._decorator.firstStarting(Start(fromSelection), Start(this._document.text().length())) ||
           this._decorator.firstStarting(Start(0), Start(fromSelection));
@@ -179,12 +180,12 @@ export class Search extends EventEmitter {
       }
     }
     if (!this._currentMatch && this._decorator.countAll() > 0) {
-      let fromSelection = this._selection.hasRanges() ? Math.min(this._selection.focus(), this._selection.anchor()) : 0;
+      const lastCursor = this._document.lastCursor();
+      let fromSelection = lastCursor ? Math.min(lastCursor.anchor, lastCursor.focus) : 0;
       // Prefer matches after cursor if possible.
       let match = this._decorator.firstStarting(Start(fromSelection), Start(this._document.text().length())) ||
           this._decorator.firstStarting(Start(0), Start(fromSelection));
       this._updateCurrentMatch(Range(match), this._shouldUpdateSelection, false);
-      this._selection._onDecorate(visibleContent);
     }
 
     this._emitUpdatedIfNeeded();
@@ -204,9 +205,11 @@ export class Search extends EventEmitter {
   }
 
   /**
-   * @param {!Array<!Replacement>} replacements
+   * @param {{replacements: !Array<!Replacement>, selectionChanged: boolean}} object
    */
-  _onReplace({replacements}) {
+  _onReplace({replacements, selectionChanged}) {
+    if (selectionChanged)
+      this._shouldUpdateSelection = false;
     if (!this._options)
       return;
     for (const replacement of replacements) {
@@ -253,7 +256,7 @@ export class Search extends EventEmitter {
       this._currentMatchDecorator.add(Start(this._currentMatch.from), Start(this._currentMatch.to));
       // TODO: this probably should not go into history, or it messes up with undo.
       if (select) {
-        this._selection.setRanges([{
+        this._document.setSelection([{
           anchor: this._currentMatch.from,
           focus: this._currentMatch.to,
         }]);

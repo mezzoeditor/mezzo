@@ -170,7 +170,7 @@ async function setupEditor(renderer, exampleName) {
     ranges.push({anchor: offset, focus: offset});
   }
   //let ranges = [{from: 0, to: 0}, {from: 9, to: 9}];
-  editor.selection().setRanges(ranges);
+  editor.document().setSelection(ranges);
 
   rangeHandle = editor.addHandle(Start(20), Start(40), updateRangeHandle);
   updateRangeHandle(editor);

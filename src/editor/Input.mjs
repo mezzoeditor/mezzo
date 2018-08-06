@@ -22,7 +22,6 @@ export class Input {
   constructor(editor) {
     this._editor = editor;
     this._document = editor.document();
-    this._selection = editor.selection();
     this._indent = ' '.repeat(2);
     this._overrides = new Set();
     this._commands = new Map();
@@ -149,7 +148,7 @@ export class Input {
    * @return {boolean}
    */
   insertIndent() {
-    let ranges = this._selection.sortedRanges();
+    let ranges = this._document.sortedSelection();
     if (!ranges.length)
       return false;
     let newRanges = [];
@@ -180,12 +179,12 @@ export class Input {
         newRanges.push({anchor: from + this._indent.length, focus: to + delta});
       }
     }
-    this._selection.setRanges(newRanges);
+    this._document.setSelection(newRanges);
     return true;
   }
 
   removeIndent() {
-    let ranges = this._selection.sortedRanges();
+    let ranges = this._document.sortedSelection();
     if (!ranges.length)
       return false;
     let newRanges = [];
@@ -211,7 +210,7 @@ export class Input {
       }
       newRanges.push({anchor: from + startDelta, focus: to + delta});
     }
-    this._selection.setRanges(newRanges);
+    this._document.setSelection(newRanges);
     return true;
   }
 
@@ -221,7 +220,7 @@ export class Input {
    * @return {boolean}
    */
   _replace(s, rangeCallback) {
-    let ranges = this._selection.sortedRanges();
+    let ranges = this._document.sortedSelection();
     if (!ranges.length)
       return false;
     let newRanges = [];
@@ -243,7 +242,7 @@ export class Input {
       newRanges.push({anchor: cursorOffset, focus: cursorOffset});
       delta += replaced.s.length - (replaced.to - replaced.from);
     }
-    this._selection.setRanges(newRanges);
+    this._document.setSelection(newRanges);
     return true;
   }
 };

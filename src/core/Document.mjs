@@ -72,6 +72,23 @@ export class Document extends EventEmitter {
   }
 
   /**
+   * @return {?SelectionRange}
+   */
+  lastCursor() {
+    return this._selection.length ? this._selection[this._selection.length - 1] : null;
+  }
+
+  /**
+   * @return {~SelectionRange} range
+   */
+  setLastCursor(range) {
+    if (this._selection.length)
+      this._selection.pop();
+    this._selection.push(range);
+    this.setSelection(this._selection);
+  }
+
+  /**
    * @return {!Text}
    */
   text() {
@@ -107,7 +124,7 @@ export class Document extends EventEmitter {
     this._oldSelection = null;
 
     this._dispatchingChangedEvent = true;
-    this.emit(Document.Events.Changed, {replacements, oldSelection});
+    this.emit(Document.Events.Changed, {replacements, oldSelection, selectionChanged: !!oldSelection});
     this._dispatchingChangedEvent = false;
   }
 

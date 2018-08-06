@@ -61,10 +61,11 @@ window.addEventListener('DOMContentLoaded', () => {
       editors.set(path, editor);
       const content = await window.fs.readFile(path);
       editor.reset(content);
-      editor.selection().setRanges([{focus: 0, anchor: 0}]);
+      editor.document().setSelection([{focus: 0, anchor: 0}]);
     }
     renderer.setEditor(editor);
-    editor.revealOffset(editor.selection().focus());
+    const lastCursor = editor.document().lastCursor();
+    editor.revealOffset(lastCursor ? lastCursor.focus : 0);
     renderer.focus();
     statusbar.rightElement().textContent = mimeType;
   });
@@ -104,7 +105,7 @@ window.addEventListener('DOMContentLoaded', () => {
         if (editor) {
           const gotoLineCallback = line => {
             const offset = editor.document().text().positionToOffset({line, column: 0});
-            editor.selection().setRanges([{focus: offset, anchor: offset}]);
+            editor.document().setSelection([{focus: offset, anchor: offset}]);
             editor.revealOffset(offset);
             renderer.focus();
           };

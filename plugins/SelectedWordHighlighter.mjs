@@ -1,7 +1,7 @@
 import { Start } from '../src/core/Anchor.mjs';
 import { TextDecorator } from '../src/core/Decorator.mjs';
 import { Tokenizer } from "../src/editor/Tokenizer.mjs";
-import { Selection } from "../src/editor/Selection.mjs";
+import { Document } from "../src/core/Document.mjs';
 import { Search } from "../src/editor/Search.mjs";
 
 export class SelectedWordHighlighter {
@@ -13,8 +13,10 @@ export class SelectedWordHighlighter {
     this._viewport = editor.viewport();
     this._document = editor.document();
     this._viewport.addDecorationCallback(this._onDecorate.bind(this));
-    this._selection = editor.selection();
-    this._selection.on(Selection.Events.Changed, this._onSelectionChanged.bind(this));
+    this._document.on(Document.Events.Changed, ({selectionChanged}) => {
+      if (selectionChanged)
+        this._onSelectionChanged();
+    });
     editor.search().on(Search.Events.Changed, this._onSearchChanged.bind(this));
     this._selectedWord = '';
     this._selectedWordRange = null;
@@ -40,9 +42,9 @@ export class SelectedWordHighlighter {
 
   _onSelectionChanged() {
     this._selectedWord = '';
-    if (!this._enabled || !this._selection.hasSingleRange())
+    if (!this._enabled || !this._document.hasSingleCursor())
       return;
-    let selectionRange = this._selection.ranges()[0];
+    let selectionRange = this._document.selection()[0];
     if (selectionRange.focus === selectionRange.anchor)
       return;
     let startPosition = this._document.text().offsetToPosition(selectionRange.anchor);

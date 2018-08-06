@@ -1,6 +1,6 @@
 import { EventEmitter } from '../src/core/EventEmitter.mjs';
 import { Editor } from '../src/editor/Editor.mjs';
-import { Selection } from '../src/editor/Selection.mjs';
+import { Document } from '../src/core/Document.mjs';
 import { Renderer } from '../src/web/Renderer.mjs';
 import { WebPlatformSupport } from '../src/web/WebPlatformSupport.mjs';
 import { JSHighlighter } from '../src/javascript/JSHighlighter.mjs';
@@ -32,12 +32,12 @@ export class EditorComponent extends HTMLElement {
     this._renderer.focus();
   }
 
-  _onSelectionChanged() {
-    if (this._rafId)
+  _onSelectionChanged({selectionChanged}) {
+    if (this._rafId || !selectionChanged)
       return;
     this._rafId = requestAnimationFrame(() => {
       this._rafId = 0;
-      const ranges = this._editor.selection().ranges();
+      const ranges = this._editor.document().selection();
       if (!ranges.length) {
         this._selectionDescription.textContent = ``;
         return;
@@ -71,7 +71,7 @@ export class EditorComponent extends HTMLElement {
     this._renderer.setEditor(editor);
     if (this._editor) {
       this._eventListeners = [
-        this._editor.selection().on(Selection.Events.Changed, this._onSelectionChanged.bind(this))
+        this._editor.document().on(Document.Events.Changed, this._onSelectionChanged.bind(this))
       ];
       this._onSelectionChanged();
     } else {
@@ -105,7 +105,7 @@ export class EditorComponent extends HTMLElement {
 
   createEditor(mimeType) {
     const editor = new Editor(this._renderer.measurer(), WebPlatformSupport.instance());
-    editor.selection().setRanges([{anchor: 0, focus: 0}]);
+    editor.document().setSelection([{anchor: 0, focus: 0}]);
 
     const selectedWordHighlighter = new SelectedWordHighlighter(editor);
     const smartBraces = new SmartBraces(editor);

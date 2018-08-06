@@ -4,7 +4,6 @@ import { trace } from '../core/Trace.mjs';
 import { Document } from '../core/Document.mjs';
 import { DefaultTheme } from '../default/DefaultTheme.mjs';
 import { Tokenizer } from '../editor/Tokenizer.mjs';
-import { Selection } from '../editor/Selection.mjs';
 import { EventEmitter } from '../core/EventEmitter.mjs';
 import { KeymapHandler } from './KeymapHandler.mjs';
 
@@ -232,7 +231,10 @@ export class Renderer {
             this.invalidate(this);
         }),
         this._editor.viewport().on(Viewport.Events.Raf, this.raf.bind(this)),
-        this._editor.selection().on(Selection.Events.Changed, () => this.raf())
+        this._editor.document().on(Document.Events.Changed, ({selectionChanged}) => {
+          if (selectionChanged)
+            this.raf();
+        }),
       ];
       this.invalidate();
     } else {
