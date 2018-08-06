@@ -10,6 +10,7 @@ import { DefaultHighlighter } from "../src/default/DefaultHighlighter.mjs";
 import { SelectedWordHighlighter } from '../plugins/SelectedWordHighlighter.mjs';
 import { SmartBraces } from '../plugins/SmartBraces.mjs';
 import { BlockIndentation } from '../plugins/BlockIndentation.mjs';
+import { AddNextOccurence } from '../plugins/AddNextOccurence.mjs';
 import { SearchToolbar } from '../plugins/web/SearchToolbar.mjs';
 
 import { trace } from "../src/core/Trace.mjs";
