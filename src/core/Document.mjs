@@ -46,6 +46,16 @@ export class Document extends EventEmitter {
   }
 
   /**
+   * @return {string}
+   */
+  selectedText() {
+    let lines = [];
+    for (let range of this._selection)
+      lines.push(this._text.content(Math.min(range.anchor, range.focus), Math.max(range.anchor, range.focus)));
+    return lines.join('\n');
+  }
+
+  /**
    * @return {!Array<!SelectionRange>}
    */
   selection() {
@@ -82,10 +92,11 @@ export class Document extends EventEmitter {
    * @return {~SelectionRange} range
    */
   setLastCursor(range) {
-    if (this._selection.length)
-      this._selection.pop();
-    this._selection.push(range);
-    this.setSelection(this._selection);
+    const ranges = this._selection.slice();
+    if (ranges.length)
+      ranges.pop();
+    ranges.push(range);
+    this.setSelection(ranges);
   }
 
   /**

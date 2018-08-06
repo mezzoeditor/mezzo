@@ -1,7 +1,7 @@
 import { Start } from '../src/core/Anchor.mjs';
 import { TextDecorator } from '../src/core/Decorator.mjs';
 import { Tokenizer } from "../src/editor/Tokenizer.mjs";
-import { Document } from "../src/core/Document.mjs';
+import { Document } from "../src/core/Document.mjs";
 import { Search } from "../src/editor/Search.mjs";
 
 export class SelectedWordHighlighter {

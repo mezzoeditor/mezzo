@@ -697,6 +697,9 @@ export class Viewport extends EventEmitter {
    * @param {!Array<!Replacement>} replacements
    */
   _onReplace({replacements}) {
+    if (!replacements.length)
+      return;
+
     if (this._frozen)
       throw new Error('Document modification during decoration is prohibited');
     for (const replacement of replacements)

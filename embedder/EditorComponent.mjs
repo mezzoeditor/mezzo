@@ -32,8 +32,8 @@ export class EditorComponent extends HTMLElement {
     this._renderer.focus();
   }
 
-  _onSelectionChanged({selectionChanged}) {
-    if (this._rafId || !selectionChanged)
+  _onSelectionChanged() {
+    if (this._rafId)
       return;
     this._rafId = requestAnimationFrame(() => {
       this._rafId = 0;
@@ -71,7 +71,10 @@ export class EditorComponent extends HTMLElement {
     this._renderer.setEditor(editor);
     if (this._editor) {
       this._eventListeners = [
-        this._editor.document().on(Document.Events.Changed, this._onSelectionChanged.bind(this))
+        this._editor.document().on(Document.Events.Changed, ({selectionChanged}) => {
+          if (selectionChanged)
+            this._onSelectionChanged();
+        })
       ];
       this._onSelectionChanged();
     } else {

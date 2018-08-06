@@ -64,7 +64,7 @@ export class SearchToolbar {
     if (!editor)
       return false;
     if (command === 'search.show') {
-      const selectionRange = editor.selection().ranges()[0]
+      const selectionRange = editor.document().selection()[0];
       const range = {
         from: Math.min(selectionRange.anchor, selectionRange.focus),
         to: Math.max(selectionRange.anchor, selectionRange.focus),

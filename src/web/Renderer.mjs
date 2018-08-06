@@ -271,85 +271,20 @@ export class Renderer {
   _performCommand(command) {
     if (!this._editor)
       return false;
-
     // Actions that don't require focus.
-    switch (command) {
-      case 'selection.addnext':
-        return this._revealSelection(this._editor.input().runCommand('selection.addnext'), true /* center */) || true;
-    }
+    if (command === 'selection.addnext')
+        return this._revealSelection(this._editor.input().runCommand(command, this._editor.viewport()), true /* center */) || true;
 
     if (this._domDocument.activeElement !== this._input)
       return false;
 
-    // Actions that require focus.
-    switch (command) {
-      case 'history.undo':
-        return true;
-      case 'history.redo':
-        return true;
-
-      case 'input.backspace':
-        return this._revealSelection(this._editor.input().deleteBefore());
-      case 'input.backspace.word':
-        return this._revealSelection(this._editor.input().deleteWordBefore());
-      case 'input.backspace.line':
-        return this._revealSelection(this._editor.input().deleteLineBefore());
-      case 'input.delete':
-        return this._revealSelection(this._editor.input().deleteAfter());
-      case 'input.newline':
-        return this._revealSelection(this._editor.input().insertNewLine());
-      case 'input.indent':
-        return this._revealSelection(this._editor.input().insertIndent());
-      case 'input.unindent':
-        return this._revealSelection(this._editor.input().removeIndent());
-
-      case 'selection.move.up':
-        return this._revealSelection(this._editor.selection().moveUp(this._editor.viewport()));
-      case 'selection.move.down':
-        return this._revealSelection(this._editor.selection().moveDown(this._editor.viewport()));
-      case 'selection.move.documentstart':
-        return this._revealSelection(this._editor.selection().moveDocumentStart());
-      case 'selection.move.documentend':
-        return this._revealSelection(this._editor.selection().moveDocumentEnd());
-      case 'selection.move.left':
-        return this._revealSelection(this._editor.selection().moveLeft());
-      case 'selection.move.right':
-        return this._revealSelection(this._editor.selection().moveRight());
-      case 'selection.move.word.left':
-        return this._revealSelection(this._editor.selection().moveWordLeft());
-      case 'selection.move.word.right':
-        return this._revealSelection(this._editor.selection().moveWordRight());
-      case 'selection.move.linestart':
-        return this._revealSelection(this._editor.selection().moveLineStart());
-      case 'selection.move.lineend':
-        return this._revealSelection(this._editor.selection().moveLineEnd());
-      case 'selection.select.up':
-        return this._revealSelection(this._editor.selection().selectUp(this._editor.viewport()));
-      case 'selection.select.down':
-        return this._revealSelection(this._editor.selection().selectDown(this._editor.viewport()));
-      case 'selection.select.documentstart':
-        return this._revealSelection(this._editor.selection().selectDocumentStart());
-      case 'selection.select.documentend':
-        return this._revealSelection(this._editor.selection().selectDocumentEnd());
-      case 'selection.select.left':
-        return this._revealSelection(this._editor.selection().selectLeft());
-      case 'selection.select.right':
-        return this._revealSelection(this._editor.selection().selectRight());
-      case 'selection.select.word.left':
-        return this._revealSelection(this._editor.selection().selectWordLeft());
-      case 'selection.select.word.right':
-        return this._revealSelection(this._editor.selection().selectWordRight());
-      case 'selection.select.linestart':
-        return this._revealSelection(this._editor.selection().selectLineStart());
-      case 'selection.select.lineend':
-        return this._revealSelection(this._editor.selection().selectLineEnd());
-      case 'selection.select.all':
-        this._editor.selection().selectAll();
-        return this._revealSelection(true);
-      case 'selection.collapse':
-        return this._revealSelection(this._editor.selection().collapse(), true /* center */);
+    if (command === 'selection.select.all') {
+      this._editor.input().selectAll();
+      return this._revealSelection(true);
     }
-    return false;
+    if (command === 'selection.collapse')
+      return this._revealSelection(this._editor.input().collapseSelection(), true /* center */);
+    return this._revealSelection(this._editor.input().runCommand(command, this._editor.viewport()));
   }
 
   _setupEventListeners() {
@@ -368,7 +303,7 @@ export class Renderer {
     this._element.addEventListener('cut', event => {
       if (!this._editor)
         return;
-      const text = this._editor.selection().selectedText();
+      const text = this._editor.document().selectedText();
       if (!text)
         return;
       event.clipboardData.setData('text/plain', text);
@@ -393,7 +328,7 @@ export class Renderer {
         let range = Tokenizer.characterGroupRange(this._editor.document(), this._editor.tokenizer(), offset);
         mouseRangeStartOffset = range.from;
         mouseRangeEndOffset = range.to;
-        this._editor.selection().setLastRange({anchor: mouseRangeStartOffset, focus: mouseRangeEndOffset});
+        this._editor.document().setLastCursor({anchor: mouseRangeStartOffset, focus: mouseRangeEndOffset});
         event.preventDefault();
         event.stopPropagation();
         return;
@@ -409,7 +344,7 @@ export class Renderer {
           column: 0
         });
 
-        this._editor.selection().setLastRange({anchor: from, focus: to});
+        this._editor.document().setLastCursor({anchor: from, focus: to});
         mouseRangeStartOffset = from;
         mouseRangeEndOffset = to;
         event.preventDefault();
@@ -417,15 +352,18 @@ export class Renderer {
         return;
       }
       if (event.shiftKey) {
-        mouseRangeStartOffset = this._editor.selection().anchor();
+        const lastCursor = this._editor.document().lastCursor();
+        mouseRangeStartOffset = lastCursor ? lastCursor.anchor : 0;
         mouseRangeEndOffset = offset;
-        this._editor.selection().setRanges([{anchor: mouseRangeStartOffset, focus: mouseRangeEndOffset}]);
+        this._editor.document().setSelection([{anchor: mouseRangeStartOffset, focus: mouseRangeEndOffset}]);
       } else if ((isMac && event.metaKey) || (!isMac && event.ctrlKey)) {
-        this._editor.selection().addRange({anchor: offset, focus: offset});
+        const selection = this._editor.document().selection();
+        selection.push({anchor: offset, focus: offset});
+        this._editor.document().setSelection(selection);
         mouseRangeStartOffset = offset;
         mouseRangeEndOffset = offset;
       } else {
-        this._editor.selection().setRanges([{anchor: offset, focus: offset}]);
+        this._editor.document().setSelection([{anchor: offset, focus: offset}]);
         mouseRangeStartOffset = offset;
         mouseRangeEndOffset = offset;
       }
@@ -440,11 +378,11 @@ export class Renderer {
       lastMouseEvent = event;
       let offset = this._mouseEventToTextOffset(event);
       if (offset <= mouseRangeStartOffset)
-        this._editor.selection().setLastRange({anchor: mouseRangeEndOffset, focus: offset});
+        this._editor.document().setLastCursor({anchor: mouseRangeEndOffset, focus: offset});
       else if (offset >= mouseRangeEndOffset)
-        this._editor.selection().setLastRange({anchor: mouseRangeStartOffset, focus: offset});
+        this._editor.document().setLastCursor({anchor: mouseRangeStartOffset, focus: offset});
       else
-        this._editor.selection().setLastRange({anchor: mouseRangeStartOffset, focus: mouseRangeEndOffset});
+        this._editor.document().setLastCursor({anchor: mouseRangeStartOffset, focus: mouseRangeEndOffset});
       this._revealCursors();
     });
     this._element.addEventListener('wheel', event => {
@@ -454,11 +392,11 @@ export class Renderer {
         return;
       let offset = this._mouseEventToTextOffset(lastMouseEvent);
       if (offset <= mouseRangeStartOffset)
-        this._editor.selection().setLastRange({anchor: mouseRangeEndOffset, focus: offset});
+        this._editor.document().setLastCursor({anchor: mouseRangeEndOffset, focus: offset});
       else if (offset >= mouseRangeEndOffset)
-        this._editor.selection().setLastRange({anchor: mouseRangeStartOffset, focus: offset});
+        this._editor.document().setLastCursor({anchor: mouseRangeStartOffset, focus: offset});
       else
-        this._editor.selection().setLastRange({anchor: mouseRangeStartOffset, focus: mouseRangeEndOffset});
+        this._editor.document().setLastCursor({anchor: mouseRangeStartOffset, focus: mouseRangeEndOffset});
       this._revealCursors();
     });
     this._element.addEventListener('mouseup', event => {
@@ -468,7 +406,7 @@ export class Renderer {
     this._element.addEventListener('copy', event => {
       if (!this._editor)
         return;
-      let text = this._editor.selection().selectedText();
+      let text = this._editor.document().selectedText();
       if (text) {
         event.clipboardData.setData('text/plain', text);
         event.preventDefault();
@@ -516,7 +454,8 @@ export class Renderer {
   _revealSelection(success, center = false) {
     if (!this._editor)
       return false;
-    let focus = this._editor.selection().focus();
+    const lastCursor = this._editor.document().lastCursor();
+    let focus = lastCursor ? lastCursor.focus : null;
     if (success && focus !== null) {
       let vPadding = center ? this._editor.viewport().height() / 2 : 0;
       this._editor.viewport().reveal({from: focus, to: focus}, {top: vPadding, bottom: vPadding});
