@@ -694,12 +694,13 @@ export class Viewport extends EventEmitter {
   }
 
   /**
-   * @param {!Replacement} replacement
+   * @param {!Array<!Replacement>} replacements
    */
-  _onReplace(replacement) {
+  _onReplace(replacements) {
     if (this._frozen)
       throw new Error('Document modification during decoration is prohibited');
-    this._textView.replace(replacement);
+    for (const replacement of replacements)
+      this._textView.replace(replacement);
   }
 }
 

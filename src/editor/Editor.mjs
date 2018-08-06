@@ -129,9 +129,11 @@ export class Editor {
     this._highlighter = highlighter;
   }
 
-  _onReplace({offset, removed, inserted}) {
-    for (let removedHandle of this._handles.replace(offset, offset + removed.length(), inserted.length()))
-      removedHandle[RangeHandle._symbol]._wasRemoved();
+  _onReplace(replacements) {
+    for (const {offset, removed, inserted} of replacements) {
+      for (let removedHandle of this._handles.replace(offset, offset + removed.length(), inserted.length()))
+        removedHandle[RangeHandle._symbol]._wasRemoved();
+    }
   }
 }
 

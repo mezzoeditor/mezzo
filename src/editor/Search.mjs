@@ -204,26 +204,28 @@ export class Search extends EventEmitter {
   }
 
   /**
-   * @param {!Replacement} replacement
+   * @param {!Array<!Replacement>} replacements
    */
-  _onReplace(replacement) {
+  _onReplace(replacements) {
     if (!this._options)
       return;
-    let from = replacement.offset;
-    let to = from + replacement.removed.length();
-    let inserted = replacement.inserted.length();
-    this._decorator.replace(from, to, inserted);
-    this._allocator.replace(from, to, inserted);
-    if (this._currentMatch && this._currentMatch.from >= to) {
-      let delta = inserted - (to - from);
-      this._updateCurrentMatch({from: this._currentMatch.from + delta, to: this._currentMatch.to + delta}, false, false);
-    } else if (this._currentMatch && this._currentMatch.to > from) {
-      this._updateCurrentMatch(null, false, false);
-    } else if (this._currentMatch) {
-      this._updateCurrentMatch(this._currentMatch, false, false);
+    for (const replacement of replacements) {
+      let from = replacement.offset;
+      let to = from + replacement.removed.length();
+      let inserted = replacement.inserted.length();
+      this._decorator.replace(from, to, inserted);
+      this._allocator.replace(from, to, inserted);
+      if (this._currentMatch && this._currentMatch.from >= to) {
+        let delta = inserted - (to - from);
+        this._updateCurrentMatch({from: this._currentMatch.from + delta, to: this._currentMatch.to + delta}, false, false);
+      } else if (this._currentMatch && this._currentMatch.to > from) {
+        this._updateCurrentMatch(null, false, false);
+      } else if (this._currentMatch) {
+        this._updateCurrentMatch(this._currentMatch, false, false);
+      }
+      if (this._options)
+        this._needsProcessing(from - this._options.query.length, from + inserted);
     }
-    if (this._options)
-      this._needsProcessing(from - this._options.query.length, from + inserted);
     this._emitUpdatedIfNeeded();
   }
 

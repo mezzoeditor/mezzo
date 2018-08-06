@@ -16,6 +16,9 @@ export class Document extends EventEmitter {
     super();
     this._text = new Text();
     this._dispatchingOnReplace = false;
+
+    this._operation = 0;
+    this._operationReplacements = [];
   }
 
   /**
@@ -26,6 +29,26 @@ export class Document extends EventEmitter {
   }
 
   /**
+   * @param {function()} fun
+   */
+  operation(fun) {
+    ++this._operation;
+    const result = fun();
+    --this._operation;
+    this._maybeEmit();
+  }
+
+  _maybeEmit() {
+    if (this._operation)
+      return;
+    const replacements = this._operationReplacements;
+    this._operationReplacements = [];
+    this._dispatchingOnReplace = true;
+    this.emit(Document.Events.Replaced, replacements);
+    this._dispatchingOnReplace = false;
+  }
+
+  /**
    * @param {!Text|string} text
    */
   reset(text) {
@@ -33,18 +56,17 @@ export class Document extends EventEmitter {
       throw new Error('Cannot replace from replacement callback');
     if (typeof text === 'string')
       text = Text.fromString(text);
-    let replacement = {
+    const removed = this._text;
+    this._operationReplacements.push({
       before: this._text,
       offset: 0,
       removed: this._text,
       inserted: text,
       after: text
-    };
+    });
     this._text = text;
-    this._dispatchingOnReplace = true;
-    this.emit(Document.Events.Replaced, replacement);
-    this._dispatchingOnReplace = false;
-    return replacement.removed;
+    this._maybeEmit();
+    return removed;
   }
 
   /**
@@ -59,17 +81,15 @@ export class Document extends EventEmitter {
     if (typeof insertion === 'string')
       insertion = Text.fromString(insertion);
     let {result, removed} = this._text.replace(from, to, insertion);
-    let replacement = {
+    this._operationReplacements.push({
       before: this._text,
       offset: from,
       removed: removed,
       inserted: insertion,
       after: result
-    };
+    });
     this._text = result;
-    this._dispatchingOnReplace = true;
-    this.emit(Document.Events.Replaced, replacement);
-    this._dispatchingOnReplace = false;
+    this._maybeEmit();
     return removed;
   }
 };
