@@ -89,17 +89,6 @@ export class Document extends EventEmitter {
   }
 
   /**
-   * @return {~SelectionRange} range
-   */
-  setLastCursor(range) {
-    const ranges = this._selection.slice();
-    if (ranges.length)
-      ranges.pop();
-    ranges.push(range);
-    this.setSelection(ranges);
-  }
-
-  /**
    * @return {!Text}
    */
   text() {
@@ -134,6 +123,8 @@ export class Document extends EventEmitter {
     this._operationReplacements = [];
     this._oldSelection = null;
 
+    if (this._dispatchingChangedEvent)
+      throw new Error('Cannot modify document from-inside change event');
     this._dispatchingChangedEvent = true;
     this.emit(Document.Events.Changed, {replacements, oldSelection, selectionChanged: !!oldSelection});
     this._dispatchingChangedEvent = false;
@@ -143,8 +134,6 @@ export class Document extends EventEmitter {
    * @param {!Text|string} text
    */
   reset(text) {
-    if (this._dispatchingChangedEvent)
-      throw new Error('Cannot replace from replacement callback');
     if (typeof text === 'string')
       text = Text.fromString(text);
     const removed = this._text;
@@ -167,8 +156,6 @@ export class Document extends EventEmitter {
    * @return {!Text}
    */
   replace(from, to, insertion) {
-    if (this._dispatchingChangedEvent)
-      throw new Error('Cannot replace from replacement callback');
     if (typeof insertion === 'string')
       insertion = Text.fromString(insertion);
     let {result, removed} = this._text.replace(from, to, insertion);

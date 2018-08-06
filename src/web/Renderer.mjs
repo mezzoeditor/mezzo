@@ -328,7 +328,7 @@ export class Renderer {
         let range = Tokenizer.characterGroupRange(this._editor.document(), this._editor.tokenizer(), offset);
         mouseRangeStartOffset = range.from;
         mouseRangeEndOffset = range.to;
-        this._editor.document().setLastCursor({anchor: mouseRangeStartOffset, focus: mouseRangeEndOffset});
+        this._editor.input().setLastCursor({anchor: mouseRangeStartOffset, focus: mouseRangeEndOffset});
         event.preventDefault();
         event.stopPropagation();
         return;
@@ -344,7 +344,7 @@ export class Renderer {
           column: 0
         });
 
-        this._editor.document().setLastCursor({anchor: from, focus: to});
+        this._editor.input().setLastCursor({anchor: from, focus: to});
         mouseRangeStartOffset = from;
         mouseRangeEndOffset = to;
         event.preventDefault();
@@ -378,11 +378,11 @@ export class Renderer {
       lastMouseEvent = event;
       let offset = this._mouseEventToTextOffset(event);
       if (offset <= mouseRangeStartOffset)
-        this._editor.document().setLastCursor({anchor: mouseRangeEndOffset, focus: offset});
+        this._editor.input().setLastCursor({anchor: mouseRangeEndOffset, focus: offset});
       else if (offset >= mouseRangeEndOffset)
-        this._editor.document().setLastCursor({anchor: mouseRangeStartOffset, focus: offset});
+        this._editor.input().setLastCursor({anchor: mouseRangeStartOffset, focus: offset});
       else
-        this._editor.document().setLastCursor({anchor: mouseRangeStartOffset, focus: mouseRangeEndOffset});
+        this._editor.input().setLastCursor({anchor: mouseRangeStartOffset, focus: mouseRangeEndOffset});
       this._revealCursors();
     });
     this._element.addEventListener('wheel', event => {
@@ -392,11 +392,11 @@ export class Renderer {
         return;
       let offset = this._mouseEventToTextOffset(lastMouseEvent);
       if (offset <= mouseRangeStartOffset)
-        this._editor.document().setLastCursor({anchor: mouseRangeEndOffset, focus: offset});
+        this._editor.input().setLastCursor({anchor: mouseRangeEndOffset, focus: offset});
       else if (offset >= mouseRangeEndOffset)
-        this._editor.document().setLastCursor({anchor: mouseRangeStartOffset, focus: offset});
+        this._editor.input().setLastCursor({anchor: mouseRangeStartOffset, focus: offset});
       else
-        this._editor.document().setLastCursor({anchor: mouseRangeStartOffset, focus: mouseRangeEndOffset});
+        this._editor.input().setLastCursor({anchor: mouseRangeStartOffset, focus: mouseRangeEndOffset});
       this._revealCursors();
     });
     this._element.addEventListener('mouseup', event => {

@@ -503,6 +503,19 @@ export class Input {
   }
 
   /**
+   * @return {~SelectionRange} range
+   */
+  setLastCursor(range) {
+    const selection = this._document.selection();
+    if (selection.length)
+      selection.pop();
+    selection.push(range);
+    this._document.setSelection(selection);
+  }
+
+  // -------- Internals --------
+
+  /**
    * @param {function(!SelectionRange):?SelectionRange} rangeCallback
    * @return {boolean}
    */
@@ -521,8 +534,6 @@ export class Input {
     this._document.setSelection(ranges);
     return true;
   }
-
-  // -------- Internals --------
 
   /**
    * @param {string} s
