@@ -15,7 +15,6 @@ export class Document extends EventEmitter {
   constructor() {
     super();
     this._text = new Text();
-    this._tokenizer = null;
     this._dispatchingOnReplace = false;
   }
 
@@ -72,21 +71,6 @@ export class Document extends EventEmitter {
     this.emit(Document.Events.Replaced, replacement);
     this._dispatchingOnReplace = false;
     return removed;
-  }
-
-  /**
-   * @param {number=} from
-   * @param {number=} to
-   * @return {!Range}
-   */
-  _clamp(from, to) {
-    if (from === undefined)
-      from = 0;
-    from = Math.max(0, from);
-    if (to === undefined)
-      to = this._text.length();
-    to = Math.min(this._text.length(), to);
-    return {from, to};
   }
 };
 

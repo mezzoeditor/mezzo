@@ -11,16 +11,16 @@ import { EventEmitter } from '../core/EventEmitter.mjs';
  * }} SelectionRange;
  */
 
- /**
-  * @param {!SelectionRange} range
-  * @return {!Range}
-  */
- function toRange(range) {
-   return {
-     from: Math.min(range.focus, range.anchor),
-     to: Math.max(range.focus, range.anchor)
-   };
- }
+/**
+ * @param {!SelectionRange} range
+ * @return {!Range}
+ */
+function toRange(range) {
+  return {
+    from: Math.min(range.focus, range.anchor),
+    to: Math.max(range.focus, range.anchor)
+  };
+}
 
 export class Selection extends EventEmitter {
   /**
