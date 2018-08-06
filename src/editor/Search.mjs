@@ -1,6 +1,5 @@
 import { Start, End, Range } from '../core/Anchor.mjs';
 import { LineDecorator } from '../core/Decorator.mjs';
-import { Selection } from './Selection.mjs';
 import { EventEmitter } from '../core/EventEmitter.mjs';
 import { WorkAllocator } from '../core/WorkAllocator.mjs';
 import { Document } from '../core/Document.mjs';

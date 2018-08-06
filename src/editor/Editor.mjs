@@ -1,6 +1,5 @@
 import { Document } from '../core/Document.mjs';
 import { Decorator } from '../core/Decorator.mjs';
-import { Selection } from './Selection.mjs';
 import { Input } from './Input.mjs';
 import { Search } from './Search.mjs';
 import { DefaultHighlighter } from '../default/DefaultHighlighter.mjs';
@@ -40,7 +39,6 @@ export class Editor {
     this.setTokenizer(new DefaultTokenizer());
     this._highlighter = null;
 
-    this._selection = new Selection(this);
     this._search = new Search(this);
     this._input = new Input(this);
 
@@ -94,13 +92,6 @@ export class Editor {
 
   viewport() {
     return this._viewport;
-  }
-
-  /**
-   * @return {!Selection}
-   */
-  selection() {
-    return this._selection;
   }
 
   /**
