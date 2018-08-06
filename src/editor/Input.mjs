@@ -472,7 +472,7 @@ export class Input {
   selectAll() {
     this._document.setSelection([{
       anchor: 0,
-      focus: this._document.text().text().length()
+      focus: this._document.text().length()
     }]);
   }
 
