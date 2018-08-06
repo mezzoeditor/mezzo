@@ -137,7 +137,7 @@ export class Input {
    * @return {boolean}
    */
   insertIndent() {
-    let ranges = this._selection.ranges();
+    let ranges = this._selection.sortedRanges();
     if (!ranges.length)
       return false;
     let newRanges = [];
@@ -173,7 +173,7 @@ export class Input {
   }
 
   removeIndent() {
-    let ranges = this._selection.ranges();
+    let ranges = this._selection.sortedRanges();
     if (!ranges.length)
       return false;
     let newRanges = [];
@@ -209,7 +209,7 @@ export class Input {
    * @return {boolean}
    */
   _replace(s, rangeCallback) {
-    let ranges = this._selection.ranges();
+    let ranges = this._selection.sortedRanges();
     if (!ranges.length)
       return false;
     let newRanges = [];

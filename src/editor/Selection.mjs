@@ -44,8 +44,30 @@ export class Selection extends EventEmitter {
   /**
    * @return {!Array<!Range>}
    */
-  ranges() {
+  sortedRanges() {
     return this._ranges.map(toRange);
+  }
+
+  /**
+   * @return {!Array<!Range>}
+   */
+  ranges() {
+    const ranges = this._ranges.slice();
+    ranges.sort((range1, range2) => range1.id - range2.id);
+    return ranges.map(toRange);
+  }
+
+  /**
+   * @param {!Array<!Range>} ranges
+   */
+  setRanges(ranges) {
+    this._ranges = this._rebuild(ranges.map(range => ({
+      id: ++this._lastId,
+      upDownX: -1,
+      anchor: range.from,
+      focus: range.to
+    })));
+    this._notifyChanged();
   }
 
   /**
@@ -81,22 +103,9 @@ export class Selection extends EventEmitter {
   /**
    * @return {?Range}
    */
-  range() {
+  lastRange() {
     let range = this._maxRange();
     return range ? toRange(range) : null;
-  }
-
-  /**
-   * @param {!Array<!Range>} ranges
-   */
-  setRanges(ranges) {
-    this._ranges = this._rebuild(ranges.map(range => ({
-      id: ++this._lastId,
-      upDownX: -1,
-      anchor: range.from,
-      focus: range.to
-    })));
-    this._notifyChanged();
   }
 
   /**
