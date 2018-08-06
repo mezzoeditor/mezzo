@@ -302,9 +302,9 @@ export class Renderer {
         return this._revealSelection(this._editor.input().removeIndent());
 
       case 'selection.move.up':
-        return this._revealSelection(this._editor.selection().moveUp());
+        return this._revealSelection(this._editor.selection().moveUp(this._editor.viewport()));
       case 'selection.move.down':
-        return this._revealSelection(this._editor.selection().moveDown());
+        return this._revealSelection(this._editor.selection().moveDown(this._editor.viewport()));
       case 'selection.move.documentstart':
         return this._revealSelection(this._editor.selection().moveDocumentStart());
       case 'selection.move.documentend':
@@ -322,9 +322,9 @@ export class Renderer {
       case 'selection.move.lineend':
         return this._revealSelection(this._editor.selection().moveLineEnd());
       case 'selection.select.up':
-        return this._revealSelection(this._editor.selection().selectUp());
+        return this._revealSelection(this._editor.selection().selectUp(this._editor.viewport()));
       case 'selection.select.down':
-        return this._revealSelection(this._editor.selection().selectDown());
+        return this._revealSelection(this._editor.selection().selectDown(this._editor.viewport()));
       case 'selection.select.documentstart':
         return this._revealSelection(this._editor.selection().selectDocumentStart());
       case 'selection.select.documentend':

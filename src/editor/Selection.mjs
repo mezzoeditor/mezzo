@@ -1,5 +1,3 @@
-import { Start, End } from '../core/Anchor.mjs';
-import { LineDecorator } from '../core/Decorator.mjs';
 import { Tokenizer } from './Tokenizer.mjs';
 import { RoundMode } from '../core/Metrics.mjs';
 import { EventEmitter } from '../core/EventEmitter.mjs';
@@ -31,14 +29,9 @@ export class Selection extends EventEmitter {
   constructor(editor) {
     super();
     this._editor = editor;
-    this._viewport = editor.viewport();
-    this._viewport.addDecorationCallback(this._onDecorate.bind(this));
     this._document = editor.document();
-    this._rangeDecorator = new LineDecorator('selection.range');
-    this._focusDecorator = new LineDecorator('selection.focus');
     this._ranges = [];
     this._lastId = 0;
-    this._staleDecorations = true;
 
     this._nextOccurenceText = null;
     this._nextOccurenceGroupOnly = false;
@@ -176,13 +169,14 @@ export class Selection extends EventEmitter {
   }
 
   /**
+   * @param {!Viewport} viewport
    * @return {boolean}
    */
-  moveUp() {
+  moveUp(viewport) {
     return this._operation(range => {
       let offset = Math.min(range.anchor, range.focus);
       let upDownX = range.upDownX;
-      let upResult = this._lineUp(range.focus, range.upDownX);
+      let upResult = this._lineUp(viewport, range.focus, range.upDownX);
       offset = upResult.offset;
       upDownX = upResult.upDownX;
       return {id: range.id, upDownX, anchor: offset, focus: offset};
@@ -190,13 +184,14 @@ export class Selection extends EventEmitter {
   }
 
   /**
+   * @param {!Viewport} viewport
    * @return {boolean}
    */
-  moveDown() {
+  moveDown(viewport) {
     return this._operation(range => {
       let offset = Math.max(range.anchor, range.focus);
       let upDownX = range.upDownX;
-      let upResult = this._lineDown(range.focus, range.upDownX);
+      let upResult = this._lineDown(viewport, range.focus, range.upDownX);
       offset = upResult.offset;
       upDownX = upResult.upDownX;
       return {id: range.id, upDownX, anchor: offset, focus: offset};
@@ -314,21 +309,23 @@ export class Selection extends EventEmitter {
   }
 
   /**
+   * @param {!Viewport} viewport
    * @return {boolean}
    */
-  selectUp() {
+  selectUp(viewport) {
     return this._operation(range => {
-      let {offset, upDownX} = this._lineUp(range.focus, range.upDownX);
+      let {offset, upDownX} = this._lineUp(viewport, range.focus, range.upDownX);
       return {id: range.id, upDownX, anchor: range.anchor, focus: offset};
     });
   }
 
   /**
+   * @param {!Viewport} viewport
    * @return {boolean}
    */
-  selectDown() {
+  selectDown(viewport) {
     return this._operation(range => {
-      let {offset, upDownX} = this._lineDown(range.focus, range.upDownX);
+      let {offset, upDownX} = this._lineDown(viewport, range.focus, range.upDownX);
       return {id: range.id, upDownX, anchor: range.anchor, focus: offset};
     });
   }
@@ -473,28 +470,6 @@ export class Selection extends EventEmitter {
   // -------- Internals --------
 
   /**
-   * @param {!Viewport.VisibleContent} visibleContent
-   * @return {!Viewport.DecorationResult}
-   */
-  _onDecorate(visibleContent) {
-    if (this._staleDecorations) {
-      this._staleDecorations = false;
-      this._rangeDecorator.clearAll();
-      this._focusDecorator.clearAll();
-      for (let range of this._ranges) {
-        this._focusDecorator.add(Start(range.focus), Start(range.focus));
-        let from = Math.min(range.focus, range.anchor);
-        let to = Math.max(range.focus, range.anchor);
-        if (range.focus === range.anchor)
-          this._rangeDecorator.add(Start(from), End(to));
-        else
-          this._rangeDecorator.add(Start(from), Start(to));
-      }
-    }
-    return {background: [this._rangeDecorator, this._focusDecorator], lines: [this._rangeDecorator]};
-  }
-
-  /**
    * @param {function(!SelectionRange):?SelectionRange} rangeCallback
    * @return {boolean}
    */
@@ -571,7 +546,6 @@ export class Selection extends EventEmitter {
       this._nextOccurenceSearchEnd = 0;
       this._nextOccurenceSearchOffset = 0;
     }
-    this._staleDecorations = true;
     this.emit(Selection.Events.Changed);
   }
 
@@ -619,28 +593,30 @@ export class Selection extends EventEmitter {
   }
 
   /**
+   * @param {!Viewport} viewport
    * @param {number} offset
    * @param {number} upDownX
    * @return {!{offset: number, upDownX: number}}
    */
-  _lineUp(offset, upDownX) {
-    let point = this._viewport.offsetToContentPoint(offset);
+  _lineUp(viewport, offset, upDownX) {
+    let point = viewport.offsetToContentPoint(offset);
     if (upDownX === -1)
       upDownX = point.x;
-    offset = this._viewport.contentPointToOffset({x: upDownX, y: point.y - this._viewport.lineHeight()}, RoundMode.Round);
+    offset = viewport.contentPointToOffset({x: upDownX, y: point.y - viewport.lineHeight()}, RoundMode.Round);
     return {offset, upDownX};
   }
 
   /**
+   * @param {!Viewport} viewport
    * @param {number} offset
    * @param {number} upDownX
    * @return {!{offset: number, upDownX: number}}
    */
-  _lineDown(offset, upDownX) {
-    let point = this._viewport.offsetToContentPoint(offset);
+  _lineDown(viewport, offset, upDownX) {
+    let point = viewport.offsetToContentPoint(offset);
     if (upDownX === -1)
       upDownX = point.x;
-    offset = this._viewport.contentPointToOffset({x: upDownX, y: point.y + this._viewport.lineHeight()}, RoundMode.Round);
+    offset = viewport.contentPointToOffset({x: upDownX, y: point.y + viewport.lineHeight()}, RoundMode.Round);
     return {offset, upDownX};
   }
 

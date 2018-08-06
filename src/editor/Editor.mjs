@@ -7,6 +7,8 @@ import { DefaultHighlighter } from '../default/DefaultHighlighter.mjs';
 import { DefaultTokenizer } from '../default/DefaultTokenizer.mjs';
 import { Viewport, Measurer } from '../core/Viewport.mjs';
 import { EventEmitter } from '../core/EventEmitter.mjs';
+import { LineDecorator } from '../core/Decorator.mjs';
+import { Start, End } from '../core/Anchor.mjs';
 
 export class PlatformSupport {
   /**
@@ -41,6 +43,10 @@ export class Editor {
     this._selection = new Selection(this);
     this._search = new Search(this);
     this._input = new Input(this);
+
+    // Add viewport decorator to style viewport.
+    this._selectionDecorator = new SelectionDecorator(this._selection);
+    this._selectionDecorator.decorate(this._viewport);
 
     this.setHighlighter(new DefaultHighlighter(this));
   }
@@ -163,6 +169,47 @@ class RangeHandle {
   removed() {
     return !this._onRemoved;
   }
+}
+
+class SelectionDecorator {
+  constructor(selection) {
+    this._selection = selection;
+    this._rangeDecorator = new LineDecorator('selection.range');
+    this._focusDecorator = new LineDecorator('selection.focus');
+    this._staleDecorations = true;
+
+    selection.on(Selection.Events.Changed, () => this._staleDecorations = true);
+  }
+
+  /**
+   * @param {!Viewport} viewport
+   */
+  decorate(viewport) {
+    viewport.addDecorationCallback(this._onDecorate.bind(this));
+  }
+
+  /**
+   * @param {!Viewport.VisibleContent} visibleContent
+   * @return {!Viewport.DecorationResult}
+   */
+  _onDecorate(visibleContent) {
+    if (this._staleDecorations) {
+      this._staleDecorations = false;
+      this._rangeDecorator.clearAll();
+      this._focusDecorator.clearAll();
+      for (let range of this._selection._ranges) {
+        this._focusDecorator.add(Start(range.focus), Start(range.focus));
+        let from = Math.min(range.focus, range.anchor);
+        let to = Math.max(range.focus, range.anchor);
+        if (range.focus === range.anchor)
+          this._rangeDecorator.add(Start(from), End(to));
+        else
+          this._rangeDecorator.add(Start(from), Start(to));
+      }
+    }
+    return {background: [this._rangeDecorator, this._focusDecorator], lines: [this._rangeDecorator]};
+  }
+
 }
 
 RangeHandle._symbol = Symbol('RangeHandle');
