@@ -61,7 +61,7 @@ window.addEventListener('DOMContentLoaded', () => {
       editors.set(path, editor);
       const content = await window.fs.readFile(path);
       editor.reset(content);
-      editor.selection().setRanges([{from: 0, to: 0}]);
+      editor.selection().setRanges([{focus: 0, anchor: 0}]);
     }
     renderer.setEditor(editor);
     editor.revealOffset(editor.selection().focus());
@@ -104,7 +104,7 @@ window.addEventListener('DOMContentLoaded', () => {
         if (editor) {
           const gotoLineCallback = line => {
             const offset = editor.document().text().positionToOffset({line, column: 0});
-            editor.selection().setRanges([{from: offset, to: offset}]);
+            editor.selection().setRanges([{focus: offset, anchor: offset}]);
             editor.revealOffset(offset);
             renderer.focus();
           };

@@ -32,6 +32,20 @@ export class Document extends EventEmitter {
   }
 
   /**
+   * @return {boolean}
+   */
+  hasSelection() {
+    return !!this._selection.length;
+  }
+
+  /**
+   * @return {boolean}
+   */
+  hasSingleCursor() {
+    return this._selection.length === 1;
+  }
+
+  /**
    * @return {!Array<!SelectionRange>}
    */
   selection() {
@@ -49,7 +63,7 @@ export class Document extends EventEmitter {
    * @param {!Array<!SelectionRange>} ranges
    */
   setSelection(ranges) {
-    ranges = normalizeSelection(ranges);
+    ranges = normalizeSelection(this._text, ranges);
     if (checkSelectionsEqual(ranges, this._selection))
       return;
     this._oldSelection = this._selection;
@@ -79,7 +93,7 @@ export class Document extends EventEmitter {
       return;
     // If there are some edits, make sure selection is consistent with document.
     if (this._operationReplacements.length) {
-      const ranges = normalizeSelection(this._selection);
+      const ranges = normalizeSelection(this._text, this._selection);
       if (!checkSelectionsEqual(ranges, this._selection)) {
         if (!this._oldSelection)
           this._oldSelection = this._selection;
@@ -175,18 +189,19 @@ function rangeComparator(a, b) {
 }
 
 /**
+ * @return {!Text}
  * @param {!Array<!SelectionRange>} ranges
  * @return {!Array<!SelectionRange>}
  */
-function normalizeSelection(ranges) {
+function normalizeSelection(text, ranges) {
   if (!ranges.length)
     return [];
 
   // 1. Clamp ranges to document size.
   ranges = ranges.map(range => {
     return {
-      anchor: Math.max(0, Math.min(range.anchor, this._text.length())),
-      focus: Math.max(0, Math.min(range.focus, this._text.length())),
+      anchor: Math.max(0, Math.min(range.anchor, text.length())),
+      focus: Math.max(0, Math.min(range.focus, text.length())),
       upDownX: range.upDownX
     };
   });
@@ -197,7 +212,7 @@ function normalizeSelection(ranges) {
   // 2. Memorize range ordering.
   const ordering = new Map();
   for (let i = 0; i < ranges.length; ++i)
-    ordering.set(range[i], i);
+    ordering.set(ranges[i], i);
 
   // 3. Sort ranges in ascending order.
   ranges.sort(rangeComparator);

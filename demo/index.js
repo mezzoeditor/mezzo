@@ -166,7 +166,7 @@ async function setupEditor(renderer, exampleName) {
   let ranges = [];
   for (let i = 0; i < 20; i++) {
     let offset = editor.document().text().positionToOffset({line: 4 * i, column: 3});
-    ranges.push({from: offset, to: offset});
+    ranges.push({anchor: offset, focus: offset});
   }
   //let ranges = [{from: 0, to: 0}, {from: 9, to: 9}];
   editor.selection().setRanges(ranges);

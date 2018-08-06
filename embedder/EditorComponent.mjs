@@ -46,15 +46,15 @@ export class EditorComponent extends HTMLElement {
         return;
       }
       const range = ranges[0];
-      if (range.from === range.to) {
-        const position = this._editor.document().text().offsetToPosition(range.from);
+      if (range.anchor === range.focus) {
+        const position = this._editor.document().text().offsetToPosition(range.focus);
         this._selectionDescription.textContent = `Line ${position.line + 1}, Column ${position.column + 1}`;
         return;
       }
-      const fromPosition = this._editor.document().text().offsetToPosition(range.from);
-      const toPosition = this._editor.document().text().offsetToPosition(range.to);
+      const fromPosition = this._editor.document().text().offsetToPosition(Math.min(range.anchor, range.focus));
+      const toPosition = this._editor.document().text().offsetToPosition(Math.max(range.anchor, range.focus));
       // TODO: this should measure columns, not offsets.
-      const charDelta = Math.abs(range.from - range.to);
+      const charDelta = Math.abs(range.focus - range.anchor);
       const lineDelta = Math.abs(fromPosition.line - toPosition.line);
       if (!lineDelta) {
         this._selectionDescription.textContent = `${charDelta} character${charDelta > 1 ? 's' : ''} selected`;
@@ -104,7 +104,7 @@ export class EditorComponent extends HTMLElement {
 
   createEditor(mimeType) {
     const editor = new Editor(this._renderer.measurer(), WebPlatformSupport.instance());
-    editor.selection().setRanges([{from: 0, to: 0}]);
+    editor.selection().setRanges([{anchor: 0, focus: 0}]);
 
     const selectedWordHighlighter = new SelectedWordHighlighter(editor);
     const smartBraces = new SmartBraces(editor);

@@ -2,26 +2,6 @@ import { Tokenizer } from './Tokenizer.mjs';
 import { RoundMode } from '../core/Metrics.mjs';
 import { EventEmitter } from '../core/EventEmitter.mjs';
 
-/**
- * @typedef {{
- *   anchor: number,
- *   focus: number,
- *   id: number,
- *   upDownX: number
- * }} SelectionRange;
- */
-
-/**
- * @param {!SelectionRange} range
- * @return {!Range}
- */
-function toRange(range) {
-  return {
-    from: Math.min(range.focus, range.anchor),
-    to: Math.max(range.focus, range.anchor)
-  };
-}
-
 export class Selection extends EventEmitter {
   /**
    * @param {!Viewport} viewport
@@ -30,8 +10,6 @@ export class Selection extends EventEmitter {
     super();
     this._editor = editor;
     this._document = editor.document();
-    this._ranges = [];
-    this._lastId = 0;
 
     this._nextOccurenceText = null;
     this._nextOccurenceGroupOnly = false;
@@ -42,46 +20,38 @@ export class Selection extends EventEmitter {
   // -------- Public API --------
 
   /**
-   * @return {!Array<!Range>}
+   * @return {!Array<!SelectionRange>}
    */
   sortedRanges() {
-    return this._ranges.map(toRange);
+    return this._document.sortedSelection();
   }
 
   /**
-   * @return {!Array<!Range>}
+   * @return {!Array<!SelectionRange>}
    */
   ranges() {
-    const ranges = this._ranges.slice();
-    ranges.sort((range1, range2) => range1.id - range2.id);
-    return ranges.map(toRange);
+    return this._document.selection();
   }
 
   /**
-   * @param {!Array<!Range>} ranges
+   * @param {!Array<!SelectionRange>} ranges
    */
   setRanges(ranges) {
-    this._ranges = this._rebuild(ranges.map(range => ({
-      id: ++this._lastId,
-      upDownX: -1,
-      anchor: range.from,
-      focus: range.to
-    })));
-    this._notifyChanged();
+    this._document.setSelection(ranges);
   }
 
   /**
    * @return {boolean}
    */
   hasRanges() {
-    return !!this._ranges.length;
+    return this._document.hasSelection();
   }
 
   /**
    * @return {boolean}
    */
   hasSingleRange() {
-    return this._ranges.length === 1;
+    return this._document.hasSingleCursor();
   }
 
   /**
@@ -104,42 +74,40 @@ export class Selection extends EventEmitter {
    * @return {?Range}
    */
   lastRange() {
-    let range = this._maxRange();
-    return range ? toRange(range) : null;
+    return this._maxRange();
   }
 
   /**
-   * @param {!Range} range
+   * @param {!SelectionRange} range
    */
   setLastRange(range) {
+    const selection = this._document.selection();
     let maxRange = this._maxRange();
-    if (!maxRange) {
-      this._ranges = [{
-        id: ++this._lastId,
-        upDownX: -1,
-        anchor: range.from,
-        focus: range.to
-      }];
+    if (!selection.length) {
+      selection.push({
+        anchor: range.anchor,
+        focus: range.focus
+      });
     } else {
-      maxRange.anchor = range.from;
-      maxRange.focus = range.to;
-      maxRange.upDownX = -1;
+      selection[selection.length - 1] = {
+        anchor: range.anchor,
+        focus: range.focus
+      };
     }
-    this._ranges = this._rebuild(this._ranges);
+    this._document.setSelection(selection);
     this._notifyChanged();
   }
 
   /**
-   * @param {!Range} range
+   * @param {!SelectionRange} range
    */
   addRange(range) {
-    this._ranges.push({
-      id: ++this._lastId,
-      upDownX: -1,
-      anchor: range.from,
-      focus: range.to
+    const selection = this._document.selection();
+    selection.push({
+      anchor: range.anchor,
+      focus: range.focus
     });
-    this._ranges = this._rebuild(this._ranges);
+    this._document.setSelection(selection);
     this._notifyChanged();
   }
 
@@ -148,7 +116,7 @@ export class Selection extends EventEmitter {
    */
   selectedText() {
     let lines = [];
-    for (let range of this._ranges)
+    for (let range of this._document.selection())
       lines.push(this._document.text().content(Math.min(range.anchor, range.focus), Math.max(range.anchor, range.focus)));
     return lines.join('\n');
   }
@@ -157,22 +125,26 @@ export class Selection extends EventEmitter {
    * @return {boolean}
    */
   collapse() {
-    if (this._ranges.length === 0)
+    const selection = this._document.sortedSelection();
+    if (selection.length === 0)
       return false;
-    if (this._ranges.length > 1) {
-      let minRange = null;
-      for (let range of this._ranges) {
-        if (!minRange || minRange.anchor > range.anchor)
-          minRange = range;
-      }
-      this._ranges = [minRange];
+    if (selection.length > 1) {
+      const min = Math.min(selection[0].anchor, selection[0].focus);
+      const range = {
+        anchor: min,
+        focus: min
+      };
+      this._document.setSelection([range]);
       this._notifyChanged();
       return true;
     }
-    let range = this._ranges[0];
+    let range = selection[0];
     if (range.anchor === range.focus)
       return false;
-    range.focus = range.anchor;
+    this._document.setSelection([{
+      anchor: range.anchor,
+      focus: range.anchor
+    }]);
     this._notifyChanged();
     return true;
   }
@@ -188,7 +160,7 @@ export class Selection extends EventEmitter {
       let upResult = this._lineUp(viewport, range.focus, range.upDownX);
       offset = upResult.offset;
       upDownX = upResult.upDownX;
-      return {id: range.id, upDownX, anchor: offset, focus: offset};
+      return {upDownX, anchor: offset, focus: offset};
     });
   }
 
@@ -203,7 +175,7 @@ export class Selection extends EventEmitter {
       let upResult = this._lineDown(viewport, range.focus, range.upDownX);
       offset = upResult.offset;
       upDownX = upResult.upDownX;
-      return {id: range.id, upDownX, anchor: offset, focus: offset};
+      return {upDownX, anchor: offset, focus: offset};
     });
   }
 
@@ -215,7 +187,7 @@ export class Selection extends EventEmitter {
       let offset = Math.min(range.anchor, range.focus);
       if (range.anchor === range.focus)
         offset = this._left(range.focus);
-      return {id: range.id, upDownX: -1, anchor: offset, focus: offset};
+      return {anchor: offset, focus: offset};
     });
   }
 
@@ -227,7 +199,7 @@ export class Selection extends EventEmitter {
       let offset = Math.max(range.anchor, range.focus);
       if (range.anchor === range.focus)
         offset = this._right(range.focus);
-      return {id: range.id, upDownX: -1, anchor: offset, focus: offset};
+      return {anchor: offset, focus: offset};
     });
   }
 
@@ -237,7 +209,7 @@ export class Selection extends EventEmitter {
   moveWordLeft() {
     return this._operation(range => {
       let offset = Tokenizer.leftBoundary(this._document, this._editor.tokenizer(), range.focus - 1);
-      return {id: range.id, upDownX: -1, anchor: offset, focus: offset};
+      return {anchor: offset, focus: offset};
     });
   }
 
@@ -247,7 +219,7 @@ export class Selection extends EventEmitter {
   moveWordRight() {
     return this._operation(range => {
       let offset = Tokenizer.rightBoundary(this._document, this._editor.tokenizer(), range.focus);
-      return {id: range.id, upDownX: -1, anchor: offset, focus: offset};
+      return {anchor: offset, focus: offset};
     });
   }
 
@@ -257,7 +229,7 @@ export class Selection extends EventEmitter {
   moveDocumentStart() {
     return this._operation(range => {
       let offset = 0;
-      return {id: range.id, upDownX: -1, anchor: offset, focus: offset};
+      return {anchor: offset, focus: offset};
     });
   }
 
@@ -267,7 +239,7 @@ export class Selection extends EventEmitter {
   moveDocumentEnd() {
     return this._operation(range => {
       let offset = this._document.text().length();
-      return {id: range.id, upDownX: -1, anchor: offset, focus: offset};
+      return {anchor: offset, focus: offset};
     });
   }
 
@@ -277,7 +249,7 @@ export class Selection extends EventEmitter {
   selectDocumentStart() {
     return this._operation(range => {
       let offset = 0;
-      return {id: range.id, upDownX: -1, anchor: range.anchor, focus: offset};
+      return {anchor: range.anchor, focus: offset};
     });
   }
 
@@ -287,7 +259,7 @@ export class Selection extends EventEmitter {
   selectDocumentEnd() {
     return this._operation(range => {
       let offset = this._document.text().length();
-      return {id: range.id, upDownX: -1, anchor: range.anchor, focus: offset};
+      return {anchor: range.anchor, focus: offset};
     });
   }
 
@@ -303,7 +275,7 @@ export class Selection extends EventEmitter {
         offset = it.offset;
       else if (range.focus > it.offset)
         offset = it.offset;
-      return {id: range.id, upDownX: -1, anchor: offset, focus: offset};
+      return {anchor: offset, focus: offset};
     });
   }
 
@@ -313,7 +285,7 @@ export class Selection extends EventEmitter {
   moveLineEnd() {
     return this._operation(range => {
       let offset = this._lineEnd(range.focus);
-      return {id: range.id, upDownX: -1, anchor: offset, focus: offset};
+      return {anchor: offset, focus: offset};
     });
   }
 
@@ -324,7 +296,7 @@ export class Selection extends EventEmitter {
   selectUp(viewport) {
     return this._operation(range => {
       let {offset, upDownX} = this._lineUp(viewport, range.focus, range.upDownX);
-      return {id: range.id, upDownX, anchor: range.anchor, focus: offset};
+      return {upDownX, anchor: range.anchor, focus: offset};
     });
   }
 
@@ -335,7 +307,7 @@ export class Selection extends EventEmitter {
   selectDown(viewport) {
     return this._operation(range => {
       let {offset, upDownX} = this._lineDown(viewport, range.focus, range.upDownX);
-      return {id: range.id, upDownX, anchor: range.anchor, focus: offset};
+      return {upDownX, anchor: range.anchor, focus: offset};
     });
   }
 
@@ -344,7 +316,7 @@ export class Selection extends EventEmitter {
    */
   selectLeft() {
     return this._operation(range => {
-      return {id: range.id, upDownX: -1, anchor: range.anchor, focus: this._left(range.focus)};
+      return {anchor: range.anchor, focus: this._left(range.focus)};
     });
   }
 
@@ -353,7 +325,7 @@ export class Selection extends EventEmitter {
    */
   selectRight() {
     return this._operation(range => {
-      return {id: range.id, upDownX: -1, anchor: range.anchor, focus: this._right(range.focus)};
+      return {anchor: range.anchor, focus: this._right(range.focus)};
     });
   }
 
@@ -362,43 +334,44 @@ export class Selection extends EventEmitter {
    */
   selectWordLeft() {
     return this._operation(range => {
-      return {id: range.id, upDownX: -1, anchor: range.anchor, focus: Tokenizer.leftBoundary(this._document, this._editor.tokenizer(), range.focus - 1)};
+      return {anchor: range.anchor, focus: Tokenizer.leftBoundary(this._document, this._editor.tokenizer(), range.focus - 1)};
     });
   }
 
   addNextOccurence() {
     let tokenizer = this._editor.tokenizer();
-    if (!this._ranges.length || !tokenizer)
+    const selection = this._document.selection();
+    if (!selection.length || !tokenizer)
       return false;
     let hasCollapsedRange = false;
-    for (let range of this._ranges)
+    for (let range of selection)
       hasCollapsedRange = hasCollapsedRange || range.anchor === range.focus;
     // Step 1: if at least one range is collapased, then expand to boundaries every where
     if (hasCollapsedRange) {
       let ranges = [];
-      for (let range of this._ranges) {
+      for (let range of selection) {
         if (range.anchor === range.focus) {
           let offset = range.anchor;
           // Gravitate towards word selection in borderline cases for collapsed cursors.
           if (offset > 0 && tokenizer.isWordChar(this._document.text().iterator(offset - 1).current))
             --offset;
           let {from, to} = Tokenizer.characterGroupRange(this._document, this._editor.tokenizer(), offset);
-          ranges.push({id: range.id, anchor: from, focus: to, upDownX: range.upDownX});
+          ranges.push({anchor: from, focus: to, upDownX: range.upDownX});
         } else {
           let anchor = Tokenizer.leftBoundary(this._document, this._editor.tokenizer(), Math.min(range.anchor, range.focus));
           let focus = Tokenizer.rightBoundary(this._document, this._editor.tokenizer(), Math.max(range.anchor, range.focus) - 1);
-          ranges.push({id: range.id, anchor, focus, upDownX: range.upDownX});
+          ranges.push({anchor, focus, upDownX: range.upDownX});
         }
       }
-      this._ranges = this._rebuild(ranges);
+      this._document.setSelection(ranges);
       this._nextOccurenceGroupOnly = true;
       this._notifyChanged(true /* keepNextOccurenceState */);
       return true;
     }
     // Step 2: if all ranges are non-collapsed, figure the text to search for.
     if (!this._nextOccurenceText) {
-      let lastRange = this._ranges[0];
-      for (let range of this._ranges) {
+      let lastRange = selection[0];
+      for (let range of selection) {
         if (range.anchor > lastRange.anchor)
           lastRange = range;
       }
@@ -425,11 +398,12 @@ export class Selection extends EventEmitter {
         if (range.from !== it.offset || range.to !== it.offset + this._nextOccurenceText.length)
           continue;
       }
-      let initialLength = this._ranges.length;
-      this._ranges.push({id: ++this._lastId, upDownX: -1, anchor: it.offset, focus: it.offset + this._nextOccurenceText.length});
-      this._ranges = this._rebuild(this._ranges);
+      let initialLength = selection.length;
+      selection.push({anchor: it.offset, focus: it.offset + this._nextOccurenceText.length});
+      this._document.setSelection(selection);
+
       // If we managed to add a new range - return. Otherwise, continue searching.
-      if (this._ranges.length > initialLength) {
+      if (this._document.selection().length > initialLength) {
         this._notifyChanged(true /* keepNextOccurenceState */);
         return true;
       }
@@ -442,7 +416,7 @@ export class Selection extends EventEmitter {
    */
   selectWordRight() {
     return this._operation(range => {
-      return {id: range.id, upDownX: -1, anchor: range.anchor, focus: Tokenizer.rightBoundary(this._document, this._editor.tokenizer(), range.focus)};
+      return {anchor: range.anchor, focus: Tokenizer.rightBoundary(this._document, this._editor.tokenizer(), range.focus)};
     });
   }
 
@@ -458,7 +432,7 @@ export class Selection extends EventEmitter {
         offset = it.offset;
       else if (range.focus > it.offset)
         offset = it.offset;
-      return {id: range.id, upDownX: -1, anchor: range.anchor, focus: offset};
+      return {anchor: range.anchor, focus: offset};
     });
   }
 
@@ -467,12 +441,15 @@ export class Selection extends EventEmitter {
    */
   selectLineEnd() {
     return this._operation(range => {
-      return {id: range.id, upDownX: -1, anchor: range.anchor, focus: this._lineEnd(range.focus)};
+      return {anchor: range.anchor, focus: this._lineEnd(range.focus)};
     });
   }
 
   selectAll() {
-    this._ranges = [{anchor: 0, focus: this._document.text().text().length(), upDownX: -1, id: ++this._lastId}];
+    this._document.setSelection([{
+      anchor: 0,
+      focus: this._document.text().text().length()
+    }]);
     this._notifyChanged();
   }
 
@@ -485,67 +462,18 @@ export class Selection extends EventEmitter {
   _operation(rangeCallback) {
     if (this._frozen)
       throw new Error('Cannot change selection while frozen');
-    if (!this._ranges.length)
+    const selection = this._document.selection();
+    if (!selection.length)
       return false;
     let ranges = [];
-    for (let range of this._ranges) {
+    for (let range of selection) {
       let updated = rangeCallback(range);
       if (updated)
         ranges.push(updated);
     }
-    this._ranges = this._join(ranges);
+    this._document.setSelection(ranges);
     this._notifyChanged();
     return true;
-  }
-
-  /**
-   * @param {!Array<!SelectionRange>} ranges
-   * @return {!Array<!SelectionRange>}
-   */
-  _join(ranges) {
-    if (!ranges.length)
-      return ranges;
-    let length = 1;
-    for (let i = 1; i < ranges.length; i++) {
-      let last = ranges[length - 1];
-      let lastTo = Math.max(last.anchor, last.focus);
-      let next = ranges[i];
-      let nextFrom = Math.min(next.anchor, next.focus);
-      let nextTo = Math.max(next.anchor, next.focus);
-      if (nextTo < lastTo)
-        throw new Error('Inconsistent');
-      if (nextFrom < lastTo || lastTo === nextTo) {
-        if (last.anchor > last.focus)
-          last.anchor = nextTo;
-        else
-          last.focus = nextTo;
-      } else {
-        ranges[length++] = next;
-      }
-    }
-    if (length !== ranges.length)
-      ranges.splice(length, ranges.length - length);
-    return ranges;
-  }
-
-  /**
-   * @param {!Array<!SelectionRange>} ranges
-   * @return {!Array<!SelectionRange>}
-   */
-  _rebuild(ranges) {
-    let length = this._document.text().length();
-    for (let range of ranges) {
-      range.anchor = Math.max(0, Math.min(range.anchor, length));
-      range.focus = Math.max(0, Math.min(range.focus, length));
-    }
-    ranges.sort((a, b) => {
-      let aFrom = Math.min(a.focus, a.anchor);
-      let aTo = Math.max(a.focus, a.anchor);
-      let bFrom = Math.min(b.focus, b.anchor);
-      let bTo = Math.max(b.focus, b.anchor);
-      return (aFrom - bFrom) || (aTo - bTo);
-    });
-    return this._join(ranges);
   }
 
   _notifyChanged(keepNextOccurenceState = false) {
@@ -609,7 +537,7 @@ export class Selection extends EventEmitter {
    */
   _lineUp(viewport, offset, upDownX) {
     let point = viewport.offsetToContentPoint(offset);
-    if (upDownX === -1)
+    if (upDownX === undefined)
       upDownX = point.x;
     offset = viewport.contentPointToOffset({x: upDownX, y: point.y - viewport.lineHeight()}, RoundMode.Round);
     return {offset, upDownX};
@@ -623,7 +551,7 @@ export class Selection extends EventEmitter {
    */
   _lineDown(viewport, offset, upDownX) {
     let point = viewport.offsetToContentPoint(offset);
-    if (upDownX === -1)
+    if (upDownX === undefined)
       upDownX = point.x;
     offset = viewport.contentPointToOffset({x: upDownX, y: point.y + viewport.lineHeight()}, RoundMode.Round);
     return {offset, upDownX};
@@ -633,12 +561,8 @@ export class Selection extends EventEmitter {
    * @return {?SelectionRange}
    */
   _maxRange() {
-    let max = null;
-    for (let range of this._ranges) {
-      if (max === null || max.id < range.id)
-        max = range;
-    }
-    return max;
+    const selection = this._document.selection();
+    return selection.length ? selection[selection.length - 1] : null;
   }
 };
 
@@ -646,4 +570,3 @@ Selection.Events = {
   Changed: 'changed'
 };
 
-Selection.Decorations = new Set(['selection.range', 'selection.focus', 'selection.focus.current']);

@@ -43,16 +43,20 @@ export class SelectedWordHighlighter {
     if (!this._enabled || !this._selection.hasSingleRange())
       return;
     let selectionRange = this._selection.ranges()[0];
-    if (selectionRange.from === selectionRange.to)
+    if (selectionRange.focus === selectionRange.anchor)
       return;
-    let startPosition = this._document.text().offsetToPosition(selectionRange.from);
-    let endPosition = this._document.text().offsetToPosition(selectionRange.to);
+    let startPosition = this._document.text().offsetToPosition(selectionRange.anchor);
+    let endPosition = this._document.text().offsetToPosition(selectionRange.focus);
     if (startPosition.line !== endPosition.line)
       return;
-    if (!Tokenizer.isWord(this._document, this._editor.tokenizer(), selectionRange))
+    const range = {
+      from: Math.min(selectionRange.anchor, selectionRange.focus),
+      to: Math.max(selectionRange.anchor, selectionRange.focus)
+    };
+    if (!Tokenizer.isWord(this._document, this._editor.tokenizer(), range))
       return;
-    this._selectedWord = this._document.text().content(selectionRange.from, selectionRange.to);
-    this._selectedWordRange = selectionRange;
+    this._selectedWord = this._document.text().content(range.from, range.to);
+    this._selectedWordRange = range;
   }
 
   /**

@@ -143,15 +143,15 @@ export class Input {
     let newRanges = [];
     let delta = 0;
     for (let range of ranges) {
-      let from = Math.max(0, Math.min(range.from + delta, this._document.text().length()));
-      let to = Math.max(0, Math.min(range.to + delta, this._document.text().length()));
+      let from = Math.max(0, Math.min(Math.min(range.anchor, range.focus) + delta, this._document.text().length()));
+      let to = Math.max(0, Math.min(Math.max(range.anchor, range.focus) + delta, this._document.text().length()));
       let startPosition = {line: this._document.text().offsetToPosition(from).line, column: 0};
       let startOffset = this._document.text().positionToOffset(startPosition);
       if (from === to) {
         let pendingIndent = (from - startOffset) % this._indent.length;
         let indent = ' '.repeat(this._indent.length - pendingIndent);
         this._document.replace(from, from, indent);
-        newRanges.push({from: from + indent.length, to: from + indent.length});
+        newRanges.push({anchor: from + indent.length, focus: from + indent.length});
         delta += indent.length;
       } else {
         let endPosition = {line: this._document.text().offsetToPosition(to).line, column: 0};
@@ -165,7 +165,7 @@ export class Input {
           this._document.replace(offset, offset, this._indent);
           delta += this._indent.length;
         }
-        newRanges.push({from: from + this._indent.length, to: to + delta});
+        newRanges.push({anchor: from + this._indent.length, focus: to + delta});
       }
     }
     this._selection.setRanges(newRanges);
@@ -179,8 +179,8 @@ export class Input {
     let newRanges = [];
     let delta = 0;
     for (let range of ranges) {
-      let from = Math.max(0, Math.min(range.from + delta, this._document.text().length()));
-      let to = Math.max(0, Math.min(range.to + delta, this._document.text().length()));
+      let from = Math.max(0, Math.min(Math.min(range.focus, range.anchor) + delta, this._document.text().length()));
+      let to = Math.max(0, Math.min(Math.max(range.focus, range.anchor) + delta, this._document.text().length()));
       let startPosition = this._document.text().offsetToPosition(from);
       let endPosition = this._document.text().offsetToPosition(to);
       let endOffset = this._document.text().positionToOffset({line: endPosition.line, column: 0});
@@ -197,7 +197,7 @@ export class Input {
         if (line === startPosition.line)
           startDelta -= Math.min(it.offset - offset, startPosition.column);
       }
-      newRanges.push({from: from + startDelta, to: to + delta});
+      newRanges.push({anchor: from + startDelta, focus: to + delta});
     }
     this._selection.setRanges(newRanges);
     return true;
@@ -215,8 +215,8 @@ export class Input {
     let newRanges = [];
     let delta = 0;
     for (let range of ranges) {
-      let from = Math.max(0, Math.min(range.from + delta, this._document.text().length()));
-      let to = Math.max(0, Math.min(range.to + delta, this._document.text().length()));
+      let from = Math.max(0, Math.min(Math.min(range.anchor, range.focus) + delta, this._document.text().length()));
+      let to = Math.max(0, Math.min(Math.max(range.anchor, range.focus) + delta, this._document.text().length()));
       let replaced = rangeCallback({from, to, s});
       let cursorOffset = replaced.from + replaced.s.length;
       for (let override of this._overrides) {
@@ -228,7 +228,7 @@ export class Input {
         }
       }
       this._document.replace(replaced.from, replaced.to, replaced.s);
-      newRanges.push({from: cursorOffset, to: cursorOffset});
+      newRanges.push({anchor: cursorOffset, focus: cursorOffset});
       delta += replaced.s.length - (replaced.to - replaced.from);
     }
     this._selection.setRanges(newRanges);

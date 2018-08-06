@@ -45,7 +45,7 @@ export class Editor {
     this._input = new Input(this);
 
     // Add viewport decorator to style viewport.
-    this._selectionDecorator = new SelectionDecorator(this._selection);
+    this._selectionDecorator = new SelectionDecorator(this._document);
     this._selectionDecorator.decorate(this._viewport);
 
     this.setHighlighter(new DefaultHighlighter(this));
@@ -174,13 +174,13 @@ class RangeHandle {
 }
 
 class SelectionDecorator {
-  constructor(selection) {
-    this._selection = selection;
+  constructor(document) {
+    this._document = document;
     this._rangeDecorator = new LineDecorator('selection.range');
     this._focusDecorator = new LineDecorator('selection.focus');
     this._staleDecorations = true;
 
-    selection.on(Selection.Events.Changed, () => this._staleDecorations = true);
+    document.on(Document.Events.Changed, () => this._staleDecorations = true);
   }
 
   /**
@@ -199,7 +199,7 @@ class SelectionDecorator {
       this._staleDecorations = false;
       this._rangeDecorator.clearAll();
       this._focusDecorator.clearAll();
-      for (let range of this._selection._ranges) {
+      for (let range of this._document.selection()) {
         this._focusDecorator.add(Start(range.focus), Start(range.focus));
         let from = Math.min(range.focus, range.anchor);
         let to = Math.max(range.focus, range.anchor);

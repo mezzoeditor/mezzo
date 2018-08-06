@@ -252,8 +252,12 @@ export class Search extends EventEmitter {
     if (this._currentMatch) {
       this._currentMatchDecorator.add(Start(this._currentMatch.from), Start(this._currentMatch.to));
       // TODO: this probably should not go into history, or it messes up with undo.
-      if (select)
-        this._selection.setRanges([this._currentMatch]);
+      if (select) {
+        this._selection.setRanges([{
+          anchor: this._currentMatch.from,
+          focus: this._currentMatch.to,
+        }]);
+      }
       if (reveal) {
         this._viewport.reveal(this._currentMatch, {
           left: 10,

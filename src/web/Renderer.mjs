@@ -391,7 +391,7 @@ export class Renderer {
         let range = Tokenizer.characterGroupRange(this._editor.document(), this._editor.tokenizer(), offset);
         mouseRangeStartOffset = range.from;
         mouseRangeEndOffset = range.to;
-        this._editor.selection().setLastRange({from: mouseRangeStartOffset, to: mouseRangeEndOffset});
+        this._editor.selection().setLastRange({anchor: mouseRangeStartOffset, focus: mouseRangeEndOffset});
         event.preventDefault();
         event.stopPropagation();
         return;
@@ -407,7 +407,7 @@ export class Renderer {
           column: 0
         });
 
-        this._editor.selection().setLastRange({from, to});
+        this._editor.selection().setLastRange({anchor: from, focus: to});
         mouseRangeStartOffset = from;
         mouseRangeEndOffset = to;
         event.preventDefault();
@@ -417,13 +417,13 @@ export class Renderer {
       if (event.shiftKey) {
         mouseRangeStartOffset = this._editor.selection().anchor();
         mouseRangeEndOffset = offset;
-        this._editor.selection().setRanges([{from: mouseRangeStartOffset, to: mouseRangeEndOffset}]);
+        this._editor.selection().setRanges([{anchor: mouseRangeStartOffset, focus: mouseRangeEndOffset}]);
       } else if ((isMac && event.metaKey) || (!isMac && event.ctrlKey)) {
-        this._editor.selection().addRange({from: offset, to: offset});
+        this._editor.selection().addRange({anchor: offset, focus: offset});
         mouseRangeStartOffset = offset;
         mouseRangeEndOffset = offset;
       } else {
-        this._editor.selection().setRanges([{from: offset, to: offset}]);
+        this._editor.selection().setRanges([{anchor: offset, focus: offset}]);
         mouseRangeStartOffset = offset;
         mouseRangeEndOffset = offset;
       }
@@ -438,11 +438,11 @@ export class Renderer {
       lastMouseEvent = event;
       let offset = this._mouseEventToTextOffset(event);
       if (offset <= mouseRangeStartOffset)
-        this._editor.selection().setLastRange({from: mouseRangeEndOffset, to: offset});
+        this._editor.selection().setLastRange({anchor: mouseRangeEndOffset, focus: offset});
       else if (offset >= mouseRangeEndOffset)
-        this._editor.selection().setLastRange({from: mouseRangeStartOffset, to: offset});
+        this._editor.selection().setLastRange({anchor: mouseRangeStartOffset, focus: offset});
       else
-        this._editor.selection().setLastRange({from: mouseRangeStartOffset, to: mouseRangeEndOffset});
+        this._editor.selection().setLastRange({anchor: mouseRangeStartOffset, focus: mouseRangeEndOffset});
       this._revealCursors();
     });
     this._element.addEventListener('wheel', event => {
@@ -452,11 +452,11 @@ export class Renderer {
         return;
       let offset = this._mouseEventToTextOffset(lastMouseEvent);
       if (offset <= mouseRangeStartOffset)
-        this._editor.selection().setLastRange({from: mouseRangeEndOffset, to: offset});
+        this._editor.selection().setLastRange({anchor: mouseRangeEndOffset, focus: offset});
       else if (offset >= mouseRangeEndOffset)
-        this._editor.selection().setLastRange({from: mouseRangeStartOffset, to: offset});
+        this._editor.selection().setLastRange({anchor: mouseRangeStartOffset, focus: offset});
       else
-        this._editor.selection().setLastRange({from: mouseRangeStartOffset, to: mouseRangeEndOffset});
+        this._editor.selection().setLastRange({anchor: mouseRangeStartOffset, focus: mouseRangeEndOffset});
       this._revealCursors();
     });
     this._element.addEventListener('mouseup', event => {
