@@ -21,7 +21,7 @@ export class JSHighlighter {
     this._viewport = editor.viewport();
     this._viewport.addDecorationCallback(this._onDecorateCallback);
     this._document = editor.document();
-    this._document.on(Document.Events.Replaced, this._onReplaceCallback);
+    this._document.on(Document.Events.Changed, this._onReplaceCallback);
 
     this._parser = new Parser(this._document.text().iterator(0), Parser.defaultState());
     this._highlightStates.clearAll();
@@ -59,7 +59,7 @@ export class JSHighlighter {
    */
   dispose() {
     this._viewport.removeDecorationCallback(this._onDecorateCallback);
-    this._document.off(Document.Events.Replaced, this._onReplaceCallback);
+    this._document.off(Document.Events.Changed, this._onReplaceCallback);
     if (this._jobId) {
       this._platformSupport.cancelIdleCallback(this._jobId);
       this._jobId = 0;
@@ -69,7 +69,7 @@ export class JSHighlighter {
   /**
    * @param {!Array<!Replacement>} replacements
    */
-  _onReplace(replacements) {
+  _onReplace({replacements}) {
     for (const replacement of replacements) {
       // TODO: we should probably create parser just once at the end.
       let from = replacement.offset;

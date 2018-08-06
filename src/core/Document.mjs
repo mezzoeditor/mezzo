@@ -15,10 +15,10 @@ export class Document extends EventEmitter {
   constructor() {
     super();
     this._text = new Text();
-    this._dispatchingOnReplace = false;
 
     this._operation = 0;
     this._operationReplacements = [];
+    this._dispatchingChangedEvent = false;
   }
 
   /**
@@ -43,16 +43,16 @@ export class Document extends EventEmitter {
       return;
     const replacements = this._operationReplacements;
     this._operationReplacements = [];
-    this._dispatchingOnReplace = true;
-    this.emit(Document.Events.Replaced, replacements);
-    this._dispatchingOnReplace = false;
+    this._dispatchingChangedEvent = true;
+    this.emit(Document.Events.Changed, {replacements});
+    this._dispatchingChangedEvent = false;
   }
 
   /**
    * @param {!Text|string} text
    */
   reset(text) {
-    if (this._dispatchingOnReplace)
+    if (this._dispatchingChangedEvent)
       throw new Error('Cannot replace from replacement callback');
     if (typeof text === 'string')
       text = Text.fromString(text);
@@ -76,7 +76,7 @@ export class Document extends EventEmitter {
    * @return {!Text}
    */
   replace(from, to, insertion) {
-    if (this._dispatchingOnReplace)
+    if (this._dispatchingChangedEvent)
       throw new Error('Cannot replace from replacement callback');
     if (typeof insertion === 'string')
       insertion = Text.fromString(insertion);
@@ -95,7 +95,7 @@ export class Document extends EventEmitter {
 };
 
 Document.Events = {
-  Replaced: 'Replaced'
+  Changed: 'changed'
 };
 
 Document.test = {};
