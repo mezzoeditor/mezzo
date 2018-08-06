@@ -533,26 +533,28 @@ export class Input {
     let ranges = this._document.sortedSelection();
     if (!ranges.length)
       return false;
-    let newRanges = [];
-    let delta = 0;
-    for (let range of ranges) {
-      let from = Math.max(0, Math.min(Math.min(range.anchor, range.focus) + delta, this._document.text().length()));
-      let to = Math.max(0, Math.min(Math.max(range.anchor, range.focus) + delta, this._document.text().length()));
-      let replaced = rangeCallback({from, to, s});
-      let cursorOffset = replaced.from + replaced.s.length;
-      for (let override of this._overrides) {
-        let result = override.call(null, replaced);
-        if (result) {
-          replaced = result.edit;
-          cursorOffset = result.cursorOffset;
-          break;
+    this._document.operation(() => {
+      let newRanges = [];
+      let delta = 0;
+      for (let range of ranges) {
+        let from = Math.max(0, Math.min(Math.min(range.anchor, range.focus) + delta, this._document.text().length()));
+        let to = Math.max(0, Math.min(Math.max(range.anchor, range.focus) + delta, this._document.text().length()));
+        let replaced = rangeCallback({from, to, s});
+        let cursorOffset = replaced.from + replaced.s.length;
+        for (let override of this._overrides) {
+          let result = override.call(null, replaced);
+          if (result) {
+            replaced = result.edit;
+            cursorOffset = result.cursorOffset;
+            break;
+          }
         }
+        this._document.replace(replaced.from, replaced.to, replaced.s);
+        newRanges.push({anchor: cursorOffset, focus: cursorOffset});
+        delta += replaced.s.length - (replaced.to - replaced.from);
       }
-      this._document.replace(replaced.from, replaced.to, replaced.s);
-      newRanges.push({anchor: cursorOffset, focus: cursorOffset});
-      delta += replaced.s.length - (replaced.to - replaced.from);
-    }
-    this._document.setSelection(newRanges);
+      this._document.setSelection(newRanges);
+    });
     return true;
   }
 
