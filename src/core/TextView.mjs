@@ -159,11 +159,10 @@ export class TextView extends EventEmitter {
     split.right = tmp.right;
 
     let nodes;
-    if (newFrom - from + inserted + to - newTo > kDefaultChunkSize &&
-        newFrom - from + inserted <= kDefaultChunkSize) {
+    if (newTo - newFrom > kDefaultChunkSize && from - newFrom + inserted <= kDefaultChunkSize) {
       // For typical editing scenarios, we are most likely to replace at the
       // end of insertion next time.
-      nodes = this._createNodes(text, newFrom, newTo, kDefaultChunkSize, newFrom - from + inserted);
+      nodes = this._createNodes(text, newFrom, newTo, kDefaultChunkSize, from - newFrom + inserted);
     } else {
       nodes = this._createNodes(text, newFrom, newTo, kDefaultChunkSize);
     }

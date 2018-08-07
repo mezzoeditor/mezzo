@@ -22,6 +22,15 @@ export function addTests(runner, expect) {
   }
 
   describe('Viewport', () => {
+    it('replace at chunk boundary should not hang', () => {
+      let content = 'a'.repeat(6835);
+      let document = new Document();
+      document.reset(content);
+      let viewport = new Viewport(document, createTestMeasurer());
+      document.replace(1674, 6835, '');
+      expect(viewport.contentWidth()).toBe(1674 * 1);
+    });
+
     it('Viewport points API all chunk sizes', () => {
       let testMetrics = createTestMetrics();
       let random = Random(143);
