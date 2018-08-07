@@ -544,16 +544,16 @@ export class Viewport extends EventEmitter {
       let needsRtlBreakAfter = new Int8Array(line.to - line.from + 1);
       let lineContent = this._document.text().content(line.from, line.to);
 
-      let iterator = this._textView.iterator();
-      iterator.locateByOffset(line.from);
-      if (!iterator.before)
-        continue;
-
       let x = line.x;
       let offset = line.from;
       offsetToX[0] = x;
       needsRtlBreakAfter[line.to - line.from] = 0;
-      while (true) {
+
+      let iterator = this._textView.iterator();
+      iterator.locateByOffset(line.from);
+      // Skip processing text if we are scrolled past the end of the line, in which case
+      // locateByOffset will point to undefined location.
+      while (iterator.before) {
         if (iterator.data && iterator.data.inlineWidget) {
           inlineWidgets.push({x: x, y: line.y, inlineWidget: iterator.data.inlineWidget});
           x += iterator.data.inlineWidget.width;
