@@ -19,6 +19,14 @@ import { EventEmitter } from './EventEmitter.mjs';
  * }} SelectionRange;
  */
 
+/**
+ * @typedef {{
+ *  replacements: !Array<Replacement>,
+ *  oldSelection: ?Array<SelectionRange>,
+ *  selectionChanged: boolean,
+ * }} DocumentChangedEvent
+ */
+
 export class Document extends EventEmitter {
   constructor() {
     super();
@@ -56,6 +64,8 @@ export class Document extends EventEmitter {
   }
 
   /**
+   * Returns selection ranges sorted in an ascending order wrt order
+   * of insertion.
    * @return {!Array<!SelectionRange>}
    */
   selection() {
@@ -63,6 +73,8 @@ export class Document extends EventEmitter {
   }
 
   /**
+   * Returns selection ranges sorted in an ascending order wrt offsets
+   * in the document.
    * @return {!Array<!SelectionRange>}
    */
   sortedSelection() {
@@ -73,6 +85,8 @@ export class Document extends EventEmitter {
    * @param {!Array<!SelectionRange>} ranges
    */
   setSelection(ranges) {
+    if (this._dispatchingChangedEvent)
+      throw new Error('Cannot modify document from-inside change event');
     ranges = normalizeSelection(this._text, ranges);
     if (checkSelectionsEqual(ranges, this._selection))
       return;
@@ -99,6 +113,8 @@ export class Document extends EventEmitter {
    * @param {function()} fun
    */
   operation(fun) {
+    if (this._dispatchingChangedEvent)
+      throw new Error('Cannot modify document from-inside change event');
     ++this._operation;
     const result = fun();
     --this._operation;
@@ -134,6 +150,8 @@ export class Document extends EventEmitter {
    * @param {!Text|string} text
    */
   reset(text) {
+    if (this._dispatchingChangedEvent)
+      throw new Error('Cannot modify document from-inside change event');
     if (typeof text === 'string')
       text = Text.fromString(text);
     const removed = this._text;
@@ -156,6 +174,8 @@ export class Document extends EventEmitter {
    * @return {!Text}
    */
   replace(from, to, insertion) {
+    if (this._dispatchingChangedEvent)
+      throw new Error('Cannot modify document from-inside change event');
     if (typeof insertion === 'string')
       insertion = Text.fromString(insertion);
     let {result, removed} = this._text.replace(from, to, insertion);

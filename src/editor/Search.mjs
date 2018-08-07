@@ -17,7 +17,7 @@ export class Search extends EventEmitter {
     this._viewport = editor.viewport();
     this._viewport.addDecorationCallback(this._onDecorate.bind(this));
     this._document = editor.document();
-    this._document.on(Document.Events.Changed, this._onReplace.bind(this));
+    this._document.on(Document.Events.Changed, this._onDocumentChanged.bind(this));
 
     this._allocator = new WorkAllocator(0);
 
@@ -204,9 +204,9 @@ export class Search extends EventEmitter {
   }
 
   /**
-   * @param {{replacements: !Array<!Replacement>, selectionChanged: boolean}} object
+   * @param {!DocumentChangedEvent} event
    */
-  _onReplace({replacements, selectionChanged}) {
+  _onDocumentChanged({replacements, selectionChanged}) {
     if (selectionChanged)
       this._shouldUpdateSelection = false;
     if (!this._options)

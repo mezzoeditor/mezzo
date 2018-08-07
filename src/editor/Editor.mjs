@@ -30,7 +30,7 @@ export class Editor {
   constructor(measurer, platformSupport) {
     this._handles = new Decorator(true /* createHandles */);
     this._document = new Document();
-    this._document.on(Document.Events.Changed, this._onReplace.bind(this));
+    this._document.on(Document.Events.Changed, this._onDocumentChanged.bind(this));
     this._platformSupport = platformSupport;
 
     this._viewport = new Viewport(this._document, measurer);
@@ -120,7 +120,10 @@ export class Editor {
     this._highlighter = highlighter;
   }
 
-  _onReplace({replacements}) {
+  /**
+   * @param {!DocumentChangedEvent} event
+   */
+  _onDocumentChanged({replacements}) {
     for (const {offset, removed, inserted} of replacements) {
       for (let removedHandle of this._handles.replace(offset, offset + removed.length(), inserted.length()))
         removedHandle[RangeHandle._symbol]._wasRemoved();

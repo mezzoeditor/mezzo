@@ -142,7 +142,7 @@ export class Viewport extends EventEmitter {
   constructor(document, measurer) {
     super();
     this._document = document;
-    this._document.on(Document.Events.Changed, this._onReplace.bind(this));
+    this._document.on(Document.Events.Changed, this._onDocumentChanged.bind(this));
 
     this._width = 0;
     this._height = 0;
@@ -694,9 +694,9 @@ export class Viewport extends EventEmitter {
   }
 
   /**
-   * @param {!Array<!Replacement>} replacements
+   * @param {!DocumentChangedEvent} event
    */
-  _onReplace({replacements}) {
+  _onDocumentChanged({replacements}) {
     if (!replacements.length)
       return;
 

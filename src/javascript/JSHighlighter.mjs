@@ -3,6 +3,7 @@ import { TextDecorator, Decorator} from '../core/Decorator.mjs';
 import { Parser, TokenTypes, KeywordTypes } from './jslexer/index.mjs';
 import { trace } from '../core/Trace.mjs';
 import { Document } from '../core/Document.mjs';
+import { EventEmitter } from '../core/EventEmitter.mjs';
 
 const HIGHLIGHT_CHUNK = 20000;
 const STATE_CHUNK = 2000;
@@ -15,13 +16,15 @@ export class JSHighlighter {
     this._jobId = 0;
     this._parser = null;
 
-    this._onReplaceCallback = this._onReplace.bind(this);
     this._onDecorateCallback = this._onDecorate.bind(this);
 
     this._viewport = editor.viewport();
     this._viewport.addDecorationCallback(this._onDecorateCallback);
     this._document = editor.document();
-    this._document.on(Document.Events.Changed, this._onReplaceCallback);
+
+    this._eventListeners = [
+      this._document.on(Document.Events.Changed, this._onDocumentChanged.bind(this))
+    ];
 
     this._parser = new Parser(this._document.text().iterator(0), Parser.defaultState());
     this._highlightStates.clearAll();
@@ -59,6 +62,7 @@ export class JSHighlighter {
    */
   dispose() {
     this._viewport.removeDecorationCallback(this._onDecorateCallback);
+    EventEmitter.removeEventListeners(this._eventListeners);
     this._document.off(Document.Events.Changed, this._onReplaceCallback);
     if (this._jobId) {
       this._platformSupport.cancelIdleCallback(this._jobId);
@@ -67,9 +71,9 @@ export class JSHighlighter {
   }
 
   /**
-   * @param {!Array<!Replacement>} replacements
+   * @param {!DocumentChangedEvent} event
    */
-  _onReplace({replacements}) {
+  _onDocumentChanged({replacements}) {
     for (const replacement of replacements) {
       // TODO: we should probably create parser just once at the end.
       let from = replacement.offset;

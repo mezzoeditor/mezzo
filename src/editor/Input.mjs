@@ -503,7 +503,7 @@ export class Input {
   }
 
   /**
-   * @return {~SelectionRange} range
+   * @return {!SelectionRange} range
    */
   setLastCursor(range) {
     const selection = this._document.selection();
