@@ -560,9 +560,11 @@ export class Input {
             break;
           }
         }
-        this._document.replace(replaced.from, replaced.to, replaced.s);
         newRanges.push({anchor: cursorOffset, focus: cursorOffset});
-        delta += replaced.s.length - (replaced.to - replaced.from);
+        if (replaced) {
+          this._document.replace(replaced.from, replaced.to, replaced.s);
+          delta += replaced.s.length - (replaced.to - replaced.from);
+        }
       }
       this._document.setSelection(newRanges);
     });

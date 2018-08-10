@@ -26,7 +26,7 @@ export class SmartBraces {
 
   /**
    * @param {number} offset
-   * @param {string} text
+   * @param {string} inserted
    * @return {?InputOverride}
    */
   _handleInsert(offset, inserted) {
@@ -38,7 +38,7 @@ export class SmartBraces {
         };
       } else if (pair[1] === inserted && this._document.text().iterator(offset).current === inserted) {
         return {
-          edit: { from: offset, to: offset, s: '' },
+          edit: null,
           cursorOffset: offset + 1,
         };
       }
