@@ -2,6 +2,7 @@ import { Document } from '../core/Document.mjs';
 import { Decorator } from '../core/Decorator.mjs';
 import { Input } from './Input.mjs';
 import { Search } from './Search.mjs';
+import { History } from './History.mjs';
 import { DefaultHighlighter } from '../default/DefaultHighlighter.mjs';
 import { DefaultTokenizer } from '../default/DefaultTokenizer.mjs';
 import { Viewport, Measurer } from '../core/Viewport.mjs';
@@ -47,10 +48,17 @@ export class Editor {
     this._selectionDecorator.decorate(this._viewport);
 
     this.setHighlighter(new DefaultHighlighter(this));
+
+    this._history = new History(this._document);
   }
 
   reset(text) {
     this._document.reset(text);
+    this._history.reset();
+  }
+
+  history() {
+    return this._history;
   }
 
   /**

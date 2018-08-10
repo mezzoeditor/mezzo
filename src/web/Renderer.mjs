@@ -6,6 +6,7 @@ import { DefaultTheme } from '../default/DefaultTheme.mjs';
 import { Tokenizer } from '../editor/Tokenizer.mjs';
 import { EventEmitter } from '../core/EventEmitter.mjs';
 import { KeymapHandler } from './KeymapHandler.mjs';
+import { History } from '../editor/History.mjs';
 
 /**
  * @implements Measurer
@@ -212,6 +213,8 @@ export class Renderer {
 
       'Cmd/Ctrl-z': 'history.undo',
       'Cmd/Ctrl-Shift-z': 'history.redo',
+      'Cmd/Ctrl-u': 'history.softundo',
+      'Cmd/Ctrl-Shift-u': 'history.softredo',
     }, this._performCommand.bind(this));
   }
 
@@ -251,7 +254,9 @@ export class Renderer {
       return;
     if (!this._input.value)
       return;
-    this._editor.input().type(this._input.value);
+    this._editor.history().arbitrate(() => {
+      this._editor.input().type(this._input.value);
+    }, keyboardHistory);
     this._revealSelection(true);
     this._revealCursors();
     this._input.value = '';
@@ -271,20 +276,42 @@ export class Renderer {
   _performCommand(command) {
     if (!this._editor)
       return false;
-    // Actions that don't require focus.
-    if (command === 'selection.addnext')
-        return this._revealSelection(this._editor.input().runCommand(command, this._editor.viewport()), true /* center */) || true;
+    return this._editor.history().arbitrate(() => {
+      // Actions that don't require focus.
+      if (command === 'selection.addnext')
+          return this._revealSelection(this._editor.input().runCommand(command, this._editor.viewport()), true /* center */) || true;
 
-    if (this._domDocument.activeElement !== this._input)
-      return false;
+      if (this._domDocument.activeElement !== this._input)
+        return false;
 
-    if (command === 'selection.select.all') {
-      this._editor.input().selectAll();
-      return this._revealSelection(true);
-    }
-    if (command === 'selection.collapse')
-      return this._revealSelection(this._editor.input().collapseSelection(), true /* center */);
-    return this._revealSelection(this._editor.input().runCommand(command, this._editor.viewport()));
+      if (command === 'history.undo') {
+        this._editor.history().undo();
+        return this._revealSelection(true);
+      }
+
+      if (command === 'history.redo') {
+        this._editor.history().redo();
+        return this._revealSelection(true);
+      }
+
+      if (command === 'history.softundo') {
+        this._editor.history().softUndo();
+        return this._revealSelection(true);
+      }
+
+      if (command === 'history.softredo') {
+        this._editor.history().softRedo();
+        return this._revealSelection(true);
+      }
+
+      if (command === 'selection.select.all') {
+        this._editor.input().selectAll();
+        return this._revealSelection(true);
+      }
+      if (command === 'selection.collapse')
+        return this._revealSelection(this._editor.input().collapseSelection(), true /* center */);
+      return this._revealSelection(this._editor.input().runCommand(command, this._editor.viewport()));
+    }, keyboardHistory);
   }
 
   _setupEventListeners() {
@@ -294,7 +321,12 @@ export class Renderer {
       let data = event.clipboardData;
       if (data.types.indexOf('text/plain') === -1)
         return;
-      this._editor.input().paste(data.getData('text/plain'));
+      this._editor.history().arbitrate(() => {
+        this._editor.input().paste(data.getData('text/plain'));
+      }, (entry, newEntry, event) => {
+        ensureHistoryEntryMetadata(newEntry, event, 'clipboard');
+        return History.Decisions.Push;
+      });
       this._revealSelection(true);
       this._revealCursors();
       event.preventDefault();
@@ -307,7 +339,12 @@ export class Renderer {
       if (!text)
         return;
       event.clipboardData.setData('text/plain', text);
-      this._editor.input().deleteBefore();
+      this._editor.history().arbitrate(() => {
+        this._editor.input().deleteBefore();
+      }, (entry, newEntry, event) => {
+        ensureHistoryEntryMetadata(newEntry, event, 'clipboard');
+        return History.Decisions.Push;
+      });
       this._revealSelection(true);
       this._revealCursors();
       event.preventDefault();
@@ -328,7 +365,12 @@ export class Renderer {
         let range = Tokenizer.characterGroupRange(this._editor.document(), this._editor.tokenizer(), offset);
         mouseRangeStartOffset = range.from;
         mouseRangeEndOffset = range.to;
-        this._editor.input().setLastCursor({anchor: mouseRangeStartOffset, focus: mouseRangeEndOffset});
+        this._editor.history().arbitrate(() => {
+          this._editor.input().setLastCursor({anchor: mouseRangeStartOffset, focus: mouseRangeEndOffset});
+        }, (entry, newEntry, event) => {
+          ensureHistoryEntryMetadata(newEntry, event, 'mouse');
+          return History.Decisions.Push;
+        });
         event.preventDefault();
         event.stopPropagation();
         return;
@@ -344,7 +386,12 @@ export class Renderer {
           column: 0
         });
 
-        this._editor.input().setLastCursor({anchor: from, focus: to});
+        this._editor.history().arbitrate(() => {
+          this._editor.input().setLastCursor({anchor: from, focus: to});
+        }, (entry, newEntry, event) => {
+          ensureHistoryEntryMetadata(newEntry, event, 'mouse');
+          return History.Decisions.Push;
+        });
         mouseRangeStartOffset = from;
         mouseRangeEndOffset = to;
         event.preventDefault();
@@ -355,15 +402,30 @@ export class Renderer {
         const lastCursor = this._editor.document().lastCursor();
         mouseRangeStartOffset = lastCursor ? lastCursor.anchor : 0;
         mouseRangeEndOffset = offset;
-        this._editor.document().setSelection([{anchor: mouseRangeStartOffset, focus: mouseRangeEndOffset}]);
+        this._editor.history().arbitrate(() => {
+          this._editor.document().setSelection([{anchor: mouseRangeStartOffset, focus: mouseRangeEndOffset}]);
+        }, (entry, newEntry, event) => {
+          ensureHistoryEntryMetadata(newEntry, event, 'mouse');
+          return History.Decisions.Push;
+        });
       } else if ((isMac && event.metaKey) || (!isMac && event.ctrlKey)) {
         const selection = this._editor.document().selection();
         selection.push({anchor: offset, focus: offset});
-        this._editor.document().setSelection(selection);
+        this._editor.history().arbitrate(() => {
+          this._editor.document().setSelection(selection);
+        }, (entry, newEntry, event) => {
+          ensureHistoryEntryMetadata(newEntry, event, 'mouse');
+          return History.Decisions.Push;
+        });
         mouseRangeStartOffset = offset;
         mouseRangeEndOffset = offset;
       } else {
-        this._editor.document().setSelection([{anchor: offset, focus: offset}]);
+        this._editor.history().arbitrate(() => {
+          this._editor.document().setSelection([{anchor: offset, focus: offset}]);
+        }, (entry, newEntry, event) => {
+          ensureHistoryEntryMetadata(newEntry, event, 'mouse');
+          return History.Decisions.Push;
+        });
         mouseRangeStartOffset = offset;
         mouseRangeEndOffset = offset;
       }
@@ -376,13 +438,18 @@ export class Renderer {
       if (mouseRangeStartOffset === null)
         return;
       lastMouseEvent = event;
-      let offset = this._mouseEventToTextOffset(event);
-      if (offset <= mouseRangeStartOffset)
-        this._editor.input().setLastCursor({anchor: mouseRangeEndOffset, focus: offset});
-      else if (offset >= mouseRangeEndOffset)
-        this._editor.input().setLastCursor({anchor: mouseRangeStartOffset, focus: offset});
-      else
-        this._editor.input().setLastCursor({anchor: mouseRangeStartOffset, focus: mouseRangeEndOffset});
+      this._editor.history().arbitrate(() => {
+        let offset = this._mouseEventToTextOffset(event);
+        if (offset <= mouseRangeStartOffset)
+          this._editor.input().setLastCursor({anchor: mouseRangeEndOffset, focus: offset});
+        else if (offset >= mouseRangeEndOffset)
+          this._editor.input().setLastCursor({anchor: mouseRangeStartOffset, focus: offset});
+        else
+          this._editor.input().setLastCursor({anchor: mouseRangeStartOffset, focus: mouseRangeEndOffset});
+      }, (entry, newEntry, event) => {
+        ensureHistoryEntryMetadata(newEntry, event, 'mouse');
+        return History.Decisions.Substitute;
+      });
       this._revealCursors();
     });
     this._element.addEventListener('wheel', event => {
@@ -390,13 +457,18 @@ export class Renderer {
         return;
       if (mouseRangeStartOffset === null)
         return;
-      let offset = this._mouseEventToTextOffset(lastMouseEvent);
-      if (offset <= mouseRangeStartOffset)
-        this._editor.input().setLastCursor({anchor: mouseRangeEndOffset, focus: offset});
-      else if (offset >= mouseRangeEndOffset)
-        this._editor.input().setLastCursor({anchor: mouseRangeStartOffset, focus: offset});
-      else
-        this._editor.input().setLastCursor({anchor: mouseRangeStartOffset, focus: mouseRangeEndOffset});
+      this._editor.history().arbitrate(() => {
+        let offset = this._mouseEventToTextOffset(lastMouseEvent);
+        if (offset <= mouseRangeStartOffset)
+          this._editor.input().setLastCursor({anchor: mouseRangeEndOffset, focus: offset});
+        else if (offset >= mouseRangeEndOffset)
+          this._editor.input().setLastCursor({anchor: mouseRangeStartOffset, focus: offset});
+        else
+          this._editor.input().setLastCursor({anchor: mouseRangeStartOffset, focus: mouseRangeEndOffset});
+      }, (entry, newEntry, event) => {
+        ensureHistoryEntryMetadata(newEntry, event, 'mouse');
+        return History.Decisions.Substitute;
+      });
       this._revealCursors();
     });
     this._element.addEventListener('mouseup', event => {
@@ -891,5 +963,55 @@ export class Renderer {
       ctx.fillRect(rect.x + left, rect.y + y, right - left, height);
     }
   }
+}
+
+const HistoryMetadata = Symbol('Renderer.HistoryMetadata');
+
+function keyboardHistory(entry, newEntry, event) {
+  const metadata = entry[HistoryMetadata];
+  const newMetadata = ensureHistoryEntryMetadata(newEntry, event, 'keyboard');
+
+  if (!metadata)
+    return History.Decisions.Push;
+
+  // If this is a selection-only change - push entry.
+  if (!event.replacements.length)
+    return History.Decisions.Push;
+
+  // If this is the first time we started to type after mouse action - push.
+  if (metadata.origin !== newMetadata.origin)
+    return History.Decisions.Push;
+
+  // If modification type is "mixed" or it has changed wrt the last entry - push a new entry
+  if (newMetadata.modificationType === 'mixed' || metadata.modificationType !== newMetadata.modificationType)
+    return History.Decisions.Push;
+  // If we started inserting/removing spaces - push a new entry.
+  if (newMetadata.allSpaces && !metadata.allSpaces)
+    return History.Decisions.Push;
+  // Otherwise, amend current entry.
+  return History.Decisions.Substitute;
+}
+
+function ensureHistoryEntryMetadata(entry, event, origin) {
+  let allInserted = true;
+  let allRemoved = true;
+  let allSpaces = true;
+  for (const replacement of event.replacements) {
+    allInserted = allInserted && replacement.inserted.length() > 0 && replacement.removed.length() === 0;
+    allRemoved = allRemoved && replacement.inserted.length() === 0 && replacement.removed.length() > 0;
+    // Limit space detection for performance reasons.
+    allSpaces = allSpaces && (replacement.inserted.length() < 100 && /^\s+/.test(replacement.inserted.content()))
+                || (replacement.removed.length() < 100 && /^\s+/.test(replacement.removed.content()));
+  }
+  let modificationType = 'mixed';
+  if (!event.replacements.length)
+    modificationType = 'none';
+  else if (allInserted)
+    modificationType = 'inserts';
+  else if (allRemoved)
+    modificationType = 'removes';
+  const metadata = {origin, modificationType, allSpaces};
+  entry[HistoryMetadata] = metadata;
+  return metadata;
 }
 
