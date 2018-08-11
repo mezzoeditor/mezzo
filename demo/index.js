@@ -1,22 +1,11 @@
 import { Start, End } from "../src/core/Anchor.mjs";
 import { TextDecorator } from "../src/core/Decorator.mjs";
-import { Renderer } from "../src/web/Renderer.mjs";
-import { WebPlatformSupport } from "../src/web/WebPlatformSupport.mjs";
-import { Editor } from "../src/editor/Editor.mjs";
-import { Random } from "../src/core/Random.mjs";
-import { JSHighlighter } from "../src/javascript/JSHighlighter.mjs";
-import { DefaultHighlighter } from "../src/default/DefaultHighlighter.mjs";
 
-import { SelectedWordHighlighter } from '../plugins/SelectedWordHighlighter.mjs';
-import { SmartBraces } from '../plugins/SmartBraces.mjs';
-import { BlockIndentation } from '../plugins/BlockIndentation.mjs';
-import { AddNextOccurence } from '../plugins/AddNextOccurence.mjs';
-import { SearchToolbar } from '../plugins/web/SearchToolbar.mjs';
+import { WebEmbedder } from "../webembedder/index.mjs";
+
 
 import { trace } from "../src/core/Trace.mjs";
 trace.setup();
-
-let random = Random(17);
 
 const examples = [
   'index.js',
@@ -29,20 +18,71 @@ const examples = [
   'unicodeperf.txt',
 ];
 
-let rangeHandle;
+document.addEventListener('DOMContentLoaded', () => {
+  const embedder = new WebEmbedder(document);
+  window.editor = embedder;
 
-function addExamples(renderer) {
+  document.querySelector('.ismonospace').addEventListener('change', event => {
+    embedder.setUseMonospaceFont(event.target.checked);
+  }, false);
+
+  document.body.appendChild(embedder.element());
+  embedder.element().classList.add('editor');
+
+  window.onresize = () => embedder.resize();
+  embedder.resize();
+
+  addExamples(embedder);
+  addHighlights(embedder);
+  addRangeHandle(embedder);
+});
+
+
+function addExamples(embedder) {
   const select = document.querySelector('.examples');
   for (const example of examples) {
     const option = document.createElement('option');
     option.textContent = example;
     select.appendChild(option);
   }
-  select.addEventListener('input', () => setupEditor(renderer, select.value), false);
+  select.addEventListener('input', () => setupExample(embedder, select.value), false);
+  setupExample(embedder, examples[0]);
+
+  async function setupExample(embedder, exampleName) {
+    const text = await fetch(exampleName).then(response => response.text());
+
+    embedder.setMimeType(exampleName.endsWith('.js') ? 'text/javascript' : 'text/plain');
+
+    if (exampleName.indexOf('jquery') !== -1)
+      embedder.setText(new Array(1000).fill(text).join(''));
+    else if (exampleName.indexOf('megacolumn') !== -1)
+      embedder.setText(new Array(10000).fill(text).join(''));
+    else if (exampleName.indexOf('unicodeperf') !== -1)
+      embedder.setText(new Array(100).fill(text).join(''));
+    else
+      embedder.setText(text);
+    embedder.focus();
+
+    const selection = [];
+    for (let i = 0; i < 20; i++) {
+      const offset = embedder.document().text().positionToOffset({line: 4 * i, column: 3});
+      selection.push({anchor: offset, focus: offset});
+    }
+    //let ranges = [{from: 0, to: 0}, {from: 9, to: 9}];
+    embedder.document().setSelection(selection);
+
+    embedder.viewport().addInlineWidget({width: 43}, Start(60));
+    embedder.viewport().addInlineWidget({width: 18}, End(60));
+    embedder.viewport().addInlineWidget({width: 43}, Start(70));
+    embedder.viewport().addInlineWidget({width: 18}, End(75));
+    embedder.viewport().addInlineWidget({width: 43}, Start(53));
+    embedder.viewport().addInlineWidget({width: 43}, End(51));
+    embedder.viewport().addInlineWidget({width: 18}, End(52));
+  }
 }
 
-function addHighlights(editor) {
-  const tokenHighlighter = new TokenHighlighter(editor);
+function addHighlights(embedder) {
+  const tokenHighlighter = new TokenHighlighter(embedder);
 
   const select = document.querySelector('.highlights');
   const highlights = ['', 'e', 'the', 'The', '('];
@@ -55,10 +95,10 @@ function addHighlights(editor) {
   select.addEventListener('input', () => tokenHighlighter.setToken(select.value), false);
 }
 
-function addRangeHandle(editor) {
-  const rangeText = document.querySelector('.range');
-  rangeText.addEventListener('click', updateRangeHandle.bind(null, editor));
-  editor.viewport().addDecorationCallback(() => {
+function addRangeHandle(embedder) {
+  const rangeHandle = embedder.editor().addHandle(Start(20), Start(40), updateRangeHandle);
+
+  embedder.viewport().addDecorationCallback(() => {
     if (!rangeHandle || rangeHandle.removed())
       return {};
     let decorator = new TextDecorator();
@@ -66,54 +106,29 @@ function addRangeHandle(editor) {
     decorator.add(Start(from.offset), Start(to.offset), 'the-range');
     return {background: [decorator]};
   });
-}
 
-function updateRangeHandle(editor) {
-  if (!rangeHandle)
-    return;
   const rangeText = document.querySelector('.range');
-  if (rangeHandle.removed()) {
-    rangeText.textContent = 'Range removed';
-  } else {
-    const {from, to} = rangeHandle.resolve();
-    let fromPosition = editor.document().text().offsetToPosition(from.offset);
-    let toPosition = editor.document().text().offsetToPosition(to.offset);
-    rangeText.textContent = `Range {${from.offset}/${fromPosition.line},${fromPosition.column}} : {${to.offset}/${toPosition.line},${toPosition.column}}`;
+  rangeText.addEventListener('click', updateRangeHandle.bind(null, embedder));
+  updateRangeHandle(embedder);
+
+  function updateRangeHandle(embedder) {
+    if (rangeHandle.removed()) {
+      rangeText.textContent = 'Range removed';
+    } else {
+      const {from, to} = rangeHandle.resolve();
+      let fromPosition = embedder.document().text().offsetToPosition(from.offset);
+      let toPosition = embedder.document().text().offsetToPosition(to.offset);
+      rangeText.textContent = `Range {${from}/${fromPosition.line},${fromPosition.column}} : {${to}/${toPosition.line},${toPosition.column}}`;
+    }
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  const renderer = new Renderer(document);
-  const editor = new Editor(renderer.measurer(), WebPlatformSupport.instance());
-
-  const selectedWordHighlighter = new SelectedWordHighlighter(editor);
-  const smartBraces = new SmartBraces(editor);
-  const blockIndentation = new BlockIndentation(editor);
-  const addNextOccurence = new AddNextOccurence(editor);
-
-  renderer.setEditor(editor);
-  addExamples(renderer);
-  addHighlights(editor);
-  const searchToolbar = new SearchToolbar(renderer);
-  document.querySelector('.ismonospace').addEventListener('change', event => {
-    renderer.setUseMonospaceFont(event.target.checked);
-  }, false);
-  addRangeHandle(editor);
-
-  renderer.element().classList.add('editor');
-  document.body.appendChild(renderer.element());
-  renderer.resize();
-  window.onresize = () => renderer.resize();
-  window.editor = renderer;
-
-  setupEditor(renderer, examples[0]);
-});
-
+//TODO(lushnikov): make this a proper plugin
 class TokenHighlighter {
-  constructor(editor) {
-    this._editor = editor;
+  constructor(embedder) {
+    this._editor = embedder.editor();
     this._token = '';
-    this._editor.viewport().addDecorationCallback(this._onDecorate.bind(this));
+    embedder.viewport().addDecorationCallback(this._onDecorate.bind(this));
   }
 
   setToken(token) {
@@ -144,43 +159,3 @@ class TokenHighlighter {
   }
 }
 
-async function setupEditor(renderer, exampleName) {
-  const editor = renderer.editor();
-  const response = await fetch(exampleName);
-  const text = await response.text();
-
-  const highlighter = exampleName.endsWith('.js') ? new JSHighlighter(editor) : new DefaultHighlighter(editor);
-  editor.setHighlighter(highlighter);
-
-  if (exampleName.indexOf('jquery') !== -1)
-    editor.reset(new Array(1000).fill(text).join(''));
-  else if (exampleName.indexOf('megacolumn') !== -1)
-    editor.reset(new Array(10000).fill(text).join(''));
-  else if (exampleName.indexOf('unicodeperf') !== -1)
-    editor.reset(new Array(100).fill(text).join(''));
-  else
-    editor.reset(text);
-  //editor.reset('abc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\nabc\nde\n');
-  //editor.reset('abc\nabc\nabc\nabc\n');
-  //editor.reset('abc\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nabc');
-  renderer.focus();
-
-  let ranges = [];
-  for (let i = 0; i < 20; i++) {
-    let offset = editor.document().text().positionToOffset({line: 4 * i, column: 3});
-    ranges.push({anchor: offset, focus: offset});
-  }
-  //let ranges = [{from: 0, to: 0}, {from: 9, to: 9}];
-  editor.document().setSelection(ranges);
-
-  rangeHandle = editor.addHandle(Start(20), Start(40), updateRangeHandle);
-  updateRangeHandle(editor);
-
-  editor._viewport.addInlineWidget({width: 43}, Start(60));
-  editor._viewport.addInlineWidget({width: 18}, End(60));
-  editor._viewport.addInlineWidget({width: 43}, Start(70));
-  editor._viewport.addInlineWidget({width: 18}, End(75));
-  editor._viewport.addInlineWidget({width: 43}, Start(53));
-  editor._viewport.addInlineWidget({width: 43}, End(51));
-  editor._viewport.addInlineWidget({width: 18}, End(52));
-}
