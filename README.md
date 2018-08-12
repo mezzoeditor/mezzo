@@ -30,13 +30,12 @@
     - [ ] async processing
 
 #### Tier 1 features
-* [ ] all kinds of editing commands
+* [x] all kinds of editing commands
 * [x] search/replace
 * [x] keyboard bindings
 * [x] auto-indent
 * [ ] line wrapping
 * [ ] interactive decorations
-* [ ] instant indent block
 * [ ] font settings
 * [ ] custom themes
 
@@ -58,6 +57,7 @@
 * [ ] minimap
 * [ ] variable line height
 * [ ] variable text metrics
+* [ ] instant indent block
 
 ---
 
@@ -105,29 +105,71 @@ Most of the code should work with `offsets`, and handle surrogate pairs if doing
 it's similar to working with a string. User-manipulated code should instead resolve to `positions` or `points`, which
 ensures that user never sees a broken code point.
 
-### Coordinate systems of different containers
+---
 
-* #### Document
-  - `offset`, `position`, `location`
+### Offsets and anchors
 
-  Document coordinates are relative to the document. This is default.
+```
+Code unit index        0       1       2       3       4
+                   |   H   |   E   |   L   |   I   |   O   |
+Anchor "before"  0 |     1 |     2 |     3 |     4 |     5 |
+Offset             0       1       2       3       4       5
+Anchor "after"     |0.5    |1.5    |2.5    |3.5    |4.5    |5.5
+Decoration                       [xxxxxxxxxxxx]
+  [2 - 3.5]
+```
 
-* #### Viewport
-  - `offset`, `point`
+After removal: HEIO
 
-  Coordinates relative to the viewport containing visible parts of the document. Note that `offsets`
-  between document and viewport match and should be used for conersions between them.
+```
+Code unit index        0       1       2       3
+                   |   H   |   E   |   I   |   O   |
+Anchor "before"  0 |     1 |     2 |    3  |     4 |
+Offset             0       1       2       3       4
+Anchor "after"     |0.5    |1.5    |2.5    |3.5    |4.5
+Decoration                       [xxxx]
+  [2 - 2.5]
+```
 
-* #### View
-  - `viewPoint`
+After insertion: HENIO
 
-  Coordinates relative to the view - something rendered as a part of editor.
-  This includes not only the viewport, but also (possibly) gutters, paddings, headers, footers, etc.
-  These may be different for different views, and what's included is context-dependent.
+```
+Code unit index        0       1       2       3       4
+                   |   H   |   E   |   N   |   I   |   O   |
+Anchor "before"  0 |     1 |     2 |     3 |     4 |     5 |
+Offset             0       1       2       3       4       5
+Anchor "after"     |0.5    |1.5    |2.5    |3.5    |4.5    |5.5
+Decoration                               [xxxx]
+  [3 - 3.5]
+```
+
+After replacment: HENBO
+
+```
+Code unit index        0       1       2       3       4
+                   |   H   |   E   |   N   |   B   |   O   |
+Anchor "before"  0 |     1 |     2 |     3 |     4 |     5 |
+Offset             0       1       2       3       4       5
+Anchor "after"     |0.5    |1.5    |2.5    |3.5    |4.5    |5.5
+Decoration                               [xxxx]
+  [3 - 3.5]
+```
+
+After insertion: HENIBO
+
+```
+Code unit index        0       1       2       3       4       5
+                   |   H   |   E   |   N   |   I   |   B   |   O   |
+Anchor "before"  0 |     1 |     2 |     3 |     4 |     5 |     6 |
+Offset             0       1       2       3       4       5       6
+Anchor "after"     |0.5    |1.5    |2.5    |3.5    |4.5    |5.5    |6.5
+Decoration                               [xxxxxxxxxxxx]
+  [3 - 4.5]
+```
 
 ---
 
-### Extensibility
+### Extensibility (TODO: rewrite)
 
 Typical plugin can be integrated at multiple points:
 * Edit document with `Document.replace`.
@@ -137,30 +179,4 @@ Typical plugin can be integrated at multiple points:
 * Do asynchronous work with `idleCallback`.
 * Provide content-dependent data with `setHighlighter` or `setTokenizer`.
 * Use public APIs of other plugins, e.g. `selection.setRanges`.
-
----
-
-### Class diagram for history
-
-Text==string
-
-Selection
-* array
-* change
-* event: changed
-
-Document
-* Text
-* replace
-* event: replaced
-  
-Editor
-* Document
-* Selection
-* Metadata (e.g. generation)
-* history api: push, pop, amend, undo, redo, softUndo, softRedo
-* Viewport
-  
-  
-  
 
