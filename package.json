@@ -7,8 +7,9 @@
     "node": ">=10.0.0"
   },
   "scripts": {
-    "unit": "node --experimental-modules test/test.mjs",
-    "serve": "static . -p 9123"
+    "unit": "node --experimental-modules test/unit.mjs",
+    "webtest": "node --experimental-modules test/webtest.mjs",
+    "serve": "node --experimental-modules utils/serve.mjs 9123"
   },
   "repository": {
     "type": "git",
@@ -21,7 +22,6 @@
   },
   "homepage": "https://github.com/dgozman/editor#readme",
   "devDependencies": {
-    "node-static": "^0.7.10",
     "text-diff": "^1.0.1"
   },
   "dependencies": {

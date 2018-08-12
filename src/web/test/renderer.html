@@ -1,0 +1,29 @@
+<style>
+html, body, .renderer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+}
+</style>
+<script type='module'>
+import { Renderer } from '../Renderer.mjs';
+import { WebPlatformSupport } from '../WebPlatformSupport.mjs';
+import { Editor } from '../../editor/Editor.mjs';
+import { DefaultHighlighter } from '../../default/DefaultHighlighter.mjs';
+
+const renderer = new Renderer(document);
+const editor = new Editor(renderer.measurer(), WebPlatformSupport.instance());
+renderer.setEditor(editor);
+
+renderer.element().classList.add('renderer');
+
+document.body.appendChild(renderer.element());
+renderer.resize();
+window.onresize = () => renderer.resize();
+
+// Expose renderer and editor on window.
+window.renderer = renderer;
+window.editor = editor;
+</script>
