@@ -26,7 +26,9 @@ const mimeTypes = {
   const server = createServer(port, path.join(__dirname));
   const workingFolder = process.argv.length < 3 ? path.resolve('.') : path.resolve(process.argv[2]);
   const browserPromise = pptr.launch({
-    appMode: true,
+    pipe: true,
+    headless: false,
+    defaultViewport: null,
     userDataDir: path.join(__dirname, '.embedder_profile'),
     handleSIGINT: false,
     args: [
