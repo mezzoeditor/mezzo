@@ -26,7 +26,7 @@ class ContextBasedMeasurer {
     this.width9 = ctx.measureText('9').width;
     this.widthM = ctx.measureText('M').width;
 
-    this._defaultWidth = monospace ? ctx.measureText('M').width : 0;
+    this._defaultWidth = monospace ? ctx.measureText('M').width : 1;
     this._defaultRegex = monospace ? Metrics.asciiRegex : null;
     this._lineHeight = fontHeight;
     this._ctx = ctx;
@@ -592,6 +592,7 @@ export class Renderer {
     this._measurer = new ContextBasedMeasurer(this._canvas.getContext('2d'), this._monospace);
     if (this._editor)
       this._editor.viewport().setMeasurer(this._measurer);
+    this.invalidate();
   }
 
   _mouseEventToCanvas(event) {

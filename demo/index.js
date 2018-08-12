@@ -34,7 +34,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   addExamples(embedder);
   addHighlights(embedder);
-  addRangeHandle(embedder);
 });
 
 
@@ -93,34 +92,6 @@ function addHighlights(embedder) {
   }
   tokenHighlighter.setToken(highlights[0]);
   select.addEventListener('input', () => tokenHighlighter.setToken(select.value), false);
-}
-
-function addRangeHandle(embedder) {
-  const rangeHandle = embedder.editor().addHandle(Start(20), Start(40), updateRangeHandle);
-
-  embedder.viewport().addDecorationCallback(() => {
-    if (!rangeHandle || rangeHandle.removed())
-      return {};
-    let decorator = new TextDecorator();
-    let {from, to} = rangeHandle.resolve();
-    decorator.add(Start(from.offset), Start(to.offset), 'the-range');
-    return {background: [decorator]};
-  });
-
-  const rangeText = document.querySelector('.range');
-  rangeText.addEventListener('click', updateRangeHandle.bind(null, embedder));
-  updateRangeHandle(embedder);
-
-  function updateRangeHandle(embedder) {
-    if (rangeHandle.removed()) {
-      rangeText.textContent = 'Range removed';
-    } else {
-      const {from, to} = rangeHandle.resolve();
-      let fromPosition = embedder.document().text().offsetToPosition(from.offset);
-      let toPosition = embedder.document().text().offsetToPosition(to.offset);
-      rangeText.textContent = `Range {${from}/${fromPosition.line},${fromPosition.column}} : {${to}/${toPosition.line},${toPosition.column}}`;
-    }
-  }
 }
 
 //TODO(lushnikov): make this a proper plugin

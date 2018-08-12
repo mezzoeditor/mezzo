@@ -79,9 +79,9 @@ import { TextView } from './TextView.mjs';
  */
 export class Measurer {
   /**
-   * The default width of a code point. Note that code points from Supplementary Planes
-   * cannot be given default width.
-   * Total width of a |string| with all default width code points will be
+   * The default width of a code point, should be a positive number.
+   * Note that code points from Supplementary Planes cannot be given default width.
+   * The total width of a |string| with all code points of default width will be
    * |string.length * defaultWidth|.
    *
    * @return {number}
