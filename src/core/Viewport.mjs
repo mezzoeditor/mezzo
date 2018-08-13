@@ -607,7 +607,7 @@ export class Viewport extends EventEmitter {
       });
 
       for (let decorator of backgroundDecorators) {
-        decorator.visitTouching(Start(line.from - 1), End(line.to + 1), decoration => {
+        decorator.visitTouching(Start(line.from - 1), Start(line.to + 1), decoration => {
           trace.count('decorations');
           // TODO: note that some editors only show selection up to line length. Setting?
           let from = Offset(decoration.from) < line.from ? paddingLeft : offsetToX[Offset(decoration.from) - line.from];

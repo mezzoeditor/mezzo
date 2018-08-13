@@ -69,14 +69,6 @@ function addExamples(embedder) {
     }
     //let ranges = [{from: 0, to: 0}, {from: 9, to: 9}];
     embedder.document().setSelection(selection);
-
-    embedder.viewport().addInlineWidget({width: 43}, Start(60));
-    embedder.viewport().addInlineWidget({width: 18}, End(60));
-    embedder.viewport().addInlineWidget({width: 43}, Start(70));
-    embedder.viewport().addInlineWidget({width: 18}, End(75));
-    embedder.viewport().addInlineWidget({width: 43}, Start(53));
-    embedder.viewport().addInlineWidget({width: 43}, End(51));
-    embedder.viewport().addInlineWidget({width: 18}, End(52));
   }
 }
 

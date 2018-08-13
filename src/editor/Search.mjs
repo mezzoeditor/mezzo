@@ -59,7 +59,7 @@ export class Search extends EventEmitter {
   currentMatchIndex() {
     if (!this._currentMatch)
       return -1;
-    return this._decorator.countStarting(Start(0), End(this._currentMatch.from)) - 1;
+    return this._decorator.countStarting(Start(0), Start(this._currentMatch.from));
   }
 
   /**
@@ -100,7 +100,7 @@ export class Search extends EventEmitter {
       offset = this._currentMatch.to;
     if (offset === null)
       return false;
-    let match = this._decorator.firstStarting(Start(offset), End(this._document.text().length()));
+    let match = this._decorator.firstStarting(Start(offset), Start(this._document.text().length()));
     if (!match)
       match = this._decorator.firstAll();
     if (!match)

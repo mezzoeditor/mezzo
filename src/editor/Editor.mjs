@@ -205,6 +205,8 @@ class SelectionDecorator {
         this._focusDecorator.add(Start(range.focus), Start(range.focus));
         let from = Math.min(range.focus, range.anchor);
         let to = Math.max(range.focus, range.anchor);
+        // The special case below is to support cursor line highlight.
+        // TODO: should be unnecessary?
         if (range.focus === range.anchor)
           this._rangeDecorator.add(Start(from), End(to));
         else
