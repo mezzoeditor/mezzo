@@ -596,6 +596,9 @@ export class Viewport extends EventEmitter {
 
       let lineStyles = [];
       for (let decorator of lineDecorators) {
+        // We deliberately do not include Start(line.start) here
+        // to allow line decorations to span the whole line without
+        // affecting the next one.
         if (decorator.countTouching(End(line.start), End(line.end)) > 0)
           lineStyles.push(decorator.style());
       }

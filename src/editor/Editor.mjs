@@ -205,12 +205,16 @@ class SelectionDecorator {
         this._focusDecorator.add(Start(range.focus), Start(range.focus));
         let from = Math.min(range.focus, range.anchor);
         let to = Math.max(range.focus, range.anchor);
-        // The special case below is to support cursor line highlight.
-        // TODO: should be unnecessary?
-        if (range.focus === range.anchor)
-          this._rangeDecorator.add(Start(from), End(to));
-        else
+        if (range.focus !== range.anchor) {
+          // This achieves a nice effect of line decorations spanning all the lines
+          // of selection range, but not touching the next line when the focus is at
+          // just at the start of it.
           this._rangeDecorator.add(Start(from), Start(to));
+        } else {
+          // On the contrary, collapsed selection at the start of the line
+          // wants a full line highlight.
+          this._rangeDecorator.add(Start(from), End(to));
+        }
       }
     }
     return {background: [this._rangeDecorator, this._focusDecorator], lines: [this._rangeDecorator]};
