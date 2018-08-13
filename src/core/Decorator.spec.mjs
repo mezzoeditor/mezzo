@@ -1,6 +1,3 @@
-import {Random} from './Random.mjs';
-import {Document} from './Document.mjs';
-import {CompareAnchors, Start, End} from './Anchor.mjs';
 import {Decorator} from './Decorator.mjs';
 
 export function addTests(runner, expect) {
@@ -33,16 +30,16 @@ export function addTests(runner, expect) {
 
     it('Decorator getters', () => {
       let dec = new Decorator(true /* createHandles */);
-      let a = {from: End(0), to: Start(1), data: 'a'};
-      let b = {from: Start(0), to: End(0), data: 'b'};
-      let c = {from: Start(2), to: Start(3), data: 'c'};
-      let d = {from: End(15), to: Start(33), data: 'd'};
-      let e = {from: End(8), to: End(12), data: 'e'};
-      let f = {from: Start(8), to: Start(8), data: 'f'};
-      let g = {from: End(12), to: End(12), data: 'g'};
-      let h = {from: Start(1), to: Start(1), data: 'h'};
-      let i = {from: End(1), to: End(1), data: 'i'};
-      let j = {from: End(1), to: End(1), data: 'j'};
+      let a = {from: 0.5, to: 1, data: 'a'};
+      let b = {from: 0, to: 0.5, data: 'b'};
+      let c = {from: 2, to: 3, data: 'c'};
+      let d = {from: 15.5, to: 33, data: 'd'};
+      let e = {from: 8.5, to: 12.5, data: 'e'};
+      let f = {from: 8, to: 8, data: 'f'};
+      let g = {from: 12.5, to: 12.5, data: 'g'};
+      let h = {from: 1, to: 1, data: 'h'};
+      let i = {from: 1.5, to: 1.5, data: 'i'};
+      let j = {from: 1.5, to: 1.5, data: 'j'};
       for (let x of [a, b, c, d, e, f, g, h, i, j])
         x.handle = dec.add(x.from, x.to, x.data);
 
@@ -58,7 +55,7 @@ export function addTests(runner, expect) {
       function checkStarting(from, to) {
         let list = [];
         for (let d of all) {
-          if (CompareAnchors(d.from, from) >= 0 && CompareAnchors(d.from, to) < 0)
+          if (d.from >= from && d.from < to)
             list.push(d);
         }
         checkList(dec.listStarting(from, to), list);
@@ -71,7 +68,7 @@ export function addTests(runner, expect) {
       function checkEnding(from, to) {
         let list = [];
         for (let d of all) {
-          if (CompareAnchors(d.to, from) >= 0 && CompareAnchors(d.to, to) < 0)
+          if (d.to >= from && d.to < to)
             list.push(d);
         }
         checkList(dec.listEnding(from, to), list);
@@ -84,7 +81,7 @@ export function addTests(runner, expect) {
       function checkTouching(from, to) {
         let list = [];
         for (let d of all) {
-          if (CompareAnchors(d.to, from) >= 0 && CompareAnchors(d.from, to) < 0)
+          if (d.to >= from && d.from < to)
             list.push(d);
         }
         checkList(dec.listTouching(from, to), list);
@@ -96,18 +93,18 @@ export function addTests(runner, expect) {
 
       for (let from = -1; from <= 34; from++) {
         for (let to = from; to <= 34; to++) {
-          checkStarting(Start(from), Start(to));
-          checkStarting(Start(from), End(to));
-          checkStarting(End(from), Start(to));
-          checkStarting(End(from), End(to));
-          checkEnding(Start(from), Start(to));
-          checkEnding(Start(from), End(to));
-          checkEnding(End(from), Start(to));
-          checkEnding(End(from), End(to));
-          checkTouching(Start(from), Start(to));
-          checkTouching(Start(from), End(to));
-          checkTouching(End(from), Start(to));
-          checkTouching(End(from), End(to));
+          checkStarting(from, to);
+          checkStarting(from, to + 0.5);
+          checkStarting(from + 0.5, to);
+          checkStarting(from + 0.5, to + 0.5);
+          checkEnding(from, to);
+          checkEnding(from, to + 0.5);
+          checkEnding(from + 0.5, to);
+          checkEnding(from + 0.5, to + 0.5);
+          checkTouching(from, to);
+          checkTouching(from, to + 0.5);
+          checkTouching(from + 0.5, to);
+          checkTouching(from + 0.5, to + 0.5);
         }
       }
     });
@@ -140,18 +137,18 @@ export function addTests(runner, expect) {
       for (let test of cases) {
         let {from, to, inserted, expected} = test;
         let dec = new Decorator(true /* createHandles */);
-        let handle = dec.add(Start(before.from), Start(before.to), '');
+        let handle = dec.add(before.from, before.to, '');
         let removed = dec.replace(from, to, inserted);
         let got = dec.listAll();
         expect(got.length).toBe(expected.length, `test: ${JSON.stringify(test)}`);
         for (let i = 0; i < got.length; i++) {
-          expect(got[i].from).toEqual(Start(expected[i].from), `test: ${JSON.stringify(test)}`);
-          expect(got[i].to).toEqual(Start(expected[i].to), `test: ${JSON.stringify(test)}`);
+          expect(got[i].from).toEqual(expected[i].from, `test: ${JSON.stringify(test)}`);
+          expect(got[i].to).toEqual(expected[i].to, `test: ${JSON.stringify(test)}`);
         }
         if (expected.length) {
           let range = dec.resolve(handle);
-          expect(range.from).toEqual(Start(expected[0].from));
-          expect(range.to).toEqual(Start(expected[0].to));
+          expect(range.from).toEqual(expected[0].from);
+          expect(range.to).toEqual(expected[0].to);
         } else {
           expect(removed.length).toBe(1);
           expect(removed[0]).toBe(handle);
@@ -163,24 +160,24 @@ export function addTests(runner, expect) {
       let dec = new Decorator();
       let count = 10000;
       for (let i = 0; i < count; i++)
-        dec.add(Start(i + 200), Start(i + 200), '');
+        dec.add(i+ 200, i+ 200, '');
       for (let i = 0; i < 99; i++)
         dec.replace(2 * i, 2 * i + 1, 2);
       let list = dec.listAll();
       expect(list.length).toBe(count);
       for (let i = 0; i < count; i++) {
-        expect(list[i].from).toEqual(Start(i + 200 + 99));
-        expect(list[i].to).toEqual(Start(i + 200 + 99));
+        expect(list[i].from).toEqual(i+ 200 + 99);
+        expect(list[i].to).toEqual(i+ 200 + 99);
       }
     });
 
     it('Decorator.editing', () => {
       let dec = new Decorator(true /* createHandles */);
-      let a = {from: Start(0), to: End(1), data: 'a'};
-      let b = {from: Start(2), to: Start(3), data: 'b'};
-      let c = {from: Start(3), to: End(3), data: 'c'};
-      let d = {from: Start(10), to: End(20), data: 'd'};
-      let e = {from: Start(21), to: End(100), data: 'e'};
+      let a = {from: 0, to: 1.5, data: 'a'};
+      let b = {from: 2, to: 3, data: 'b'};
+      let c = {from: 3, to: 3.5, data: 'c'};
+      let d = {from: 10, to: 20.5, data: 'd'};
+      let e = {from: 21, to: 100.5, data: 'e'};
 
       let cHandle = dec.add(c.from, c.to, c.data);
       let aHandle = dec.add(a.from, a.to, a.data);
@@ -194,13 +191,13 @@ export function addTests(runner, expect) {
       expect(dec.remove(eHandle)).toBe(undefined);
       checkList(dec.listAll(), [a, b, c, d]);
 
-      dec.clearStarting(Start(5), Start(15));
+      dec.clearStarting(5, 15);
       checkList(dec.listAll(), [a, b, c]);
 
       dec.add(e.from, e.to, e.data);
       checkList(dec.listAll(), [a, b, c, e]);
 
-      dec.clearEnding(Start(0), End(3));
+      dec.clearEnding(0, 3.5);
       checkList(dec.listAll(), [c, e]);
 
       aHandle = dec.add(a.from, a.to, a.data);
@@ -208,7 +205,7 @@ export function addTests(runner, expect) {
       dec.add(d.from, d.to, d.data);
       checkList(dec.listAll(), [a, b, c, d, e]);
 
-      dec.clearTouching(End(3), End(10));
+      dec.clearTouching(3.5, 10.5);
       checkList(dec.listAll(), [a, b, e]);
 
       dec.add(d.from, d.to, d.data);
@@ -222,11 +219,11 @@ export function addTests(runner, expect) {
 
     it('Decorator.multiple removals', () => {
       let dec = new Decorator(true /* createHandles */);
-      let a = {from: Start(1), to: Start(2), data: 'a'};
-      let b = {from: Start(2), to: Start(3), data: 'b'};
-      let c = {from: Start(3), to: Start(3), data: 'c'};
-      let d = {from: Start(10), to: Start(20), data: 'd'};
-      let e = {from: Start(21), to: Start(100), data: 'e'};
+      let a = {from: 1, to: 2, data: 'a'};
+      let b = {from: 2, to: 3, data: 'b'};
+      let c = {from: 3, to: 3, data: 'c'};
+      let d = {from: 10, to: 20, data: 'd'};
+      let e = {from: 21, to: 100, data: 'e'};
       let all = [a, b, c, d, e];
       for (let x of all)
         x.handle = dec.add(x.from, x.to, x.data);

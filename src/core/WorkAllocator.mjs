@@ -1,6 +1,6 @@
-import { Left, Right, CompareAnchors, Offset } from './Anchor.mjs';
 import { Decorator } from './Decorator.mjs';
 
+// TODO: do we even need anchors in this file?
 export class WorkAllocator {
   /**
    * @param {number} size
@@ -31,7 +31,7 @@ export class WorkAllocator {
     if (from === to)
       return;
     // Enforce all range to be |Left| anchors.
-    this._work.add(Left(from), Left(to));
+    this._work.add(from, to);
   }
 
   /**
@@ -40,18 +40,18 @@ export class WorkAllocator {
    */
   done(from = 0, to = this._size) {
     // Use |Left| and |Right| anchors to merge adjacent ranges.
-    from = Left(this._clamp(from));
-    to = Right(this._clamp(to));
-    const workRanges = this._work.listTouching(from, to);
-    this._work.clearTouching(from, to);
+    from = this._clamp(from);
+    to = this._clamp(to);
+    const workRanges = this._work.listTouching(from, to + 0.5);
+    this._work.clearTouching(from, to + 0.5);
     for (const workRange of workRanges) {
       // if dirty range belongs to the cleared range - drop it.
-      if (CompareAnchors(from, workRange.from) < 0 && CompareAnchors(workRange.to, to) < 0)
+      if (from < workRange.from && workRange.to < to)
         continue;
-      if (CompareAnchors(workRange.from, from) < 0)
-        this._addWork(Offset(workRange.from), Offset(from));
-      if (CompareAnchors(to, workRange.to) < 0)
-        this._addWork(Offset(to), Offset(workRange.to));
+      if (workRange.from < from)
+        this._addWork(workRange.from, from);
+      if (to < workRange.to)
+        this._addWork(to, workRange.to);
     }
   }
 
@@ -61,18 +61,18 @@ export class WorkAllocator {
    */
   undone(from = 0, to = this._size) {
     // Use |Left| and |Right| anchors to merge adjacent ranges.
-    from = Left(this._clamp(from));
-    to = Right(this._clamp(to));
-    const workRanges = this._work.listTouching(from, to);
-    this._work.clearTouching(from, to);
+    from = this._clamp(from);
+    to = this._clamp(to);
+    const workRanges = this._work.listTouching(from, to + 0.5);
+    this._work.clearTouching(from, to + 0.5);
 
     for (const range of workRanges) {
-      if (CompareAnchors(range.from, from) < 0)
+      if (range.from < from)
         from = range.from;
-      if (CompareAnchors(range.to, to) > 0)
+      if (range.to > to)
         to = range.to;
     }
-    this._addWork(Offset(from), Offset(to));
+    this._addWork(from, to);
   }
 
   /**
@@ -82,14 +82,14 @@ export class WorkAllocator {
    */
   workRange(from = 0, to = this._size) {
     // Use |Right| anchor to avoid zero-length ranges.
-    from = Right(this._clamp(from));
-    to = Left(this._clamp(to));
-    let workRange = this._work.firstTouching(from, to);
+    from = this._clamp(from);
+    to = this._clamp(to);
+    let workRange = this._work.firstTouching(from + 0.5, to);
     if (!workRange)
       return null;
     return {
-      from: Math.max(Offset(from), Offset(workRange.from)),
-      to: Math.min(Offset(to), Offset(workRange.to))
+      from: Math.max(from, workRange.from),
+      to: Math.min(to, workRange.to)
     };
   }
 

@@ -1,4 +1,3 @@
-import { Start, End, Range } from '../core/Anchor.mjs';
 import { LineDecorator } from '../core/Decorator.mjs';
 import { EventEmitter } from '../core/EventEmitter.mjs';
 import { WorkAllocator } from '../core/WorkAllocator.mjs';
@@ -43,7 +42,7 @@ export class Search extends EventEmitter {
    * @return {!Array<!Range>}
    */
   matches() {
-    return this._decorator.listAll().map(Range);
+    return this._decorator.listAll().map(d => ({from: d.from, to: d.to}));
   }
 
   /**
@@ -59,7 +58,7 @@ export class Search extends EventEmitter {
   currentMatchIndex() {
     if (!this._currentMatch)
       return -1;
-    return this._decorator.countStarting(Start(0), Start(this._currentMatch.from));
+    return this._decorator.countStarting(0, this._currentMatch.from);
   }
 
   /**
@@ -100,12 +99,12 @@ export class Search extends EventEmitter {
       offset = this._currentMatch.to;
     if (offset === null)
       return false;
-    let match = this._decorator.firstStarting(Start(offset), Start(this._document.text().length()));
+    let match = this._decorator.firstStarting(offset, this._document.text().length());
     if (!match)
       match = this._decorator.firstAll();
     if (!match)
       return false;
-    this._updateCurrentMatch(Range(match), true, true);
+    this._updateCurrentMatch(match, true, true);
     this._viewport.raf();
     this._emitUpdatedIfNeeded();
     return true;
@@ -122,12 +121,12 @@ export class Search extends EventEmitter {
       offset = this._currentMatch.from;
     if (offset === null)
       return false;
-    let match = this._decorator.lastEnding(Start(0), Start(offset));
+    let match = this._decorator.lastEnding(0, offset);
     if (!match)
       match = this._decorator.lastAll();
     if (!match)
       return false;
-    this._updateCurrentMatch(Range(match), true, true);
+    this._updateCurrentMatch(match, true, true);
     this._viewport.raf();
     this._emitUpdatedIfNeeded();
     return true;
@@ -151,9 +150,9 @@ export class Search extends EventEmitter {
       const lastCursor = this._document.lastCursor();
       let fromSelection = lastCursor ? Math.min(lastCursor.anchor, lastCursor.focus) : 0;
       // Prefer matches after cursor if possible.
-      let match = this._decorator.firstStarting(Start(fromSelection), Start(this._document.text().length())) ||
-          this._decorator.firstStarting(Start(0), Start(fromSelection));
-      this._updateCurrentMatch(Range(match), this._shouldUpdateSelection, this._shouldUpdateSelection);
+      let match = this._decorator.firstStarting(fromSelection, this._document.text().length()) ||
+          this._decorator.firstStarting(0, fromSelection);
+      this._updateCurrentMatch(match, this._shouldUpdateSelection, this._shouldUpdateSelection);
     }
 
     this._viewport.raf();
@@ -182,9 +181,9 @@ export class Search extends EventEmitter {
       const lastCursor = this._document.lastCursor();
       let fromSelection = lastCursor ? Math.min(lastCursor.anchor, lastCursor.focus) : 0;
       // Prefer matches after cursor if possible.
-      let match = this._decorator.firstStarting(Start(fromSelection), Start(this._document.text().length())) ||
-          this._decorator.firstStarting(Start(0), Start(fromSelection));
-      this._updateCurrentMatch(Range(match), this._shouldUpdateSelection, false);
+      let match = this._decorator.firstStarting(fromSelection, this._document.text().length()) ||
+          this._decorator.firstStarting(0, fromSelection);
+      this._updateCurrentMatch(match, this._shouldUpdateSelection, false);
     }
 
     this._emitUpdatedIfNeeded();
@@ -252,7 +251,7 @@ export class Search extends EventEmitter {
       this._currentMatchDecorator.clearAll();
     this._currentMatch = match;
     if (this._currentMatch) {
-      this._currentMatchDecorator.add(Start(this._currentMatch.from), Start(this._currentMatch.to));
+      this._currentMatchDecorator.add(this._currentMatch.from, this._currentMatch.to);
       // TODO: this probably should not go into history, or it messes up with undo.
       if (select) {
         this._document.setSelection([{
@@ -289,11 +288,11 @@ export class Search extends EventEmitter {
     let {from, to} = range;
     let query = this._options.query;
     const findOptions = { caseInsensetive: !!this._options.caseInsensetive };
-    this._decorator.clearStarting(Start(from), Start(to));
+    this._decorator.clearStarting(from, to);
     // NB: iterator constraints are inclusive.
     let iterator = this._document.text().iterator(from, from, to + query.length - 1);
     while (iterator.find(query, findOptions)) {
-      this._decorator.add(Start(iterator.offset), Start(iterator.offset + query.length));
+      this._decorator.add(iterator.offset, iterator.offset + query.length);
       to = Math.max(to, iterator.offset + query.length);
       iterator.advance(query.length);
     }

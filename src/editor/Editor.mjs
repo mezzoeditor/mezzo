@@ -8,7 +8,6 @@ import { DefaultTokenizer } from '../default/DefaultTokenizer.mjs';
 import { Viewport, Measurer } from '../core/Viewport.mjs';
 import { EventEmitter } from '../core/EventEmitter.mjs';
 import { LineDecorator } from '../core/Decorator.mjs';
-import { Start, End } from '../core/Anchor.mjs';
 
 export class PlatformSupport {
   /**
@@ -202,18 +201,18 @@ class SelectionDecorator {
       this._rangeDecorator.clearAll();
       this._focusDecorator.clearAll();
       for (let range of this._document.selection()) {
-        this._focusDecorator.add(Start(range.focus), Start(range.focus));
+        this._focusDecorator.add(range.focus, range.focus);
         let from = Math.min(range.focus, range.anchor);
         let to = Math.max(range.focus, range.anchor);
         if (range.focus !== range.anchor) {
           // This achieves a nice effect of line decorations spanning all the lines
           // of selection range, but not touching the next line when the focus is at
           // just at the start of it.
-          this._rangeDecorator.add(Start(from), Start(to));
+          this._rangeDecorator.add(from, to);
         } else {
           // On the contrary, collapsed selection at the start of the line
           // wants a full line highlight.
-          this._rangeDecorator.add(Start(from), End(to));
+          this._rangeDecorator.add(from, to + 0.5);
         }
       }
     }

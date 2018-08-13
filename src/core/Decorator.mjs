@@ -1,6 +1,23 @@
-import { CompareAnchors, NextAnchor, MaxAnchor, Start, End, Offset } from './Anchor.mjs';
 import { Random } from './Random.mjs';
 let random = Random(25);
+
+/**
+ * @typedef {number} Anchor
+ *
+ * Anchor represents a position between two code units which is aligned
+ * either to the left (stored as integer |offset|) or to the right (stored
+ * as a number |offset + 0.5|).
+ *
+ * Left-aligned anchor at |x| stays immediately before offset |x|
+ * and immediately after code unit at index |x - 1|.
+ * When inserting text at offset |x|, the anchor does not move.
+ *
+ * Right-aligned anchor at |x + 0.5| stays immediately after offset |x|
+ * and immediately before character at index |x|.
+ * When inserting text at offset |x|, the anchor moves to the right.
+ *
+ * See README.md for some examples.
+ */
 
 /**
  * @template T
@@ -29,6 +46,11 @@ let random = Random(25);
 /**
  * @typedef {*} Decorator.Handle
  */
+
+// This could be replaced by |anchor + 0.5|, but just to be on the safe side.
+function NextAnchor(anchor) {
+  return anchor === Math.floor(anchor) ? anchor + 0.5 : Math.floor(anchor + 1);
+}
 
 /**
  * @template T
@@ -105,7 +127,7 @@ function split(node, key, splitBy) {
   if (!node)
     return {};
   node = normalize(node);
-  let nodeToLeft = splitBy === kFrom ? CompareAnchors(node.from, key) < 0 : CompareAnchors(node.to, key) < 0;
+  let nodeToLeft = splitBy === kFrom ? node.from < key : node.to < key;
   if (nodeToLeft) {
     let tmp = split(node.right, key, splitBy);
     node.parent = undefined;
@@ -176,7 +198,7 @@ function find(node, key) {
   if (!node)
     return;
   node = normalize(node);
-  if (CompareAnchors(node.from, key) >= 0)
+  if (node.from >= key)
     return find(node.left, key) || node;
   return find(node.right, key);
 };
@@ -208,12 +230,12 @@ export class Decorator {
    * @return {!Decorator.Handle|undefined}
    */
   add(from, to, data) {
-    if (CompareAnchors(from, to) > 0)
+    if (from > to)
       throw new Error('Reversed decorations are not allowed');
     let tmp = split(this._root, NextAnchor(from), kTo);
-    if (tmp.left && CompareAnchors(last(tmp.left).to, from) > 0)
+    if (tmp.left && last(tmp.left).to > from)
       throw new Error('Decorations must be disjoint');
-    if (tmp.right && CompareAnchors(first(tmp.right).from, to) < 0)
+    if (tmp.right && first(tmp.right).from < to)
       throw new Error('Decorations must be disjoint');
     let node = {data, from, to, h: random(), size: 1};
     this._root = merge(merge(tmp.left, node), tmp.right);
@@ -233,7 +255,7 @@ export class Decorator {
     let tmp = split(this._root, decoration.from, kTo);
     let tmp2 = split(tmp.right, decoration.to, kFrom);
     let removed = tmp2.left;
-    if (!removed || CompareAnchors(removed.from, decoration.from) !== 0 || CompareAnchors(removed.to, decoration.to) !== 0 || removed.left || removed.right)
+    if (!removed || removed.from !== decoration.from || removed.to !== decoration.to || removed.left || removed.right)
       throw new Error('Inconsistent');
     removed.parent = undefined;
     this._root = merge(tmp.left, tmp2.right);
@@ -278,13 +300,13 @@ export class Decorator {
   replace(from, to, inserted) {
     // TODO: take offset, removed, inserted instead to align with Replacement?
     let delta = inserted - (to - from);
-    let tmp = split(this._root, Start(from), kTo);
+    let tmp = split(this._root, from, kTo);
     let left = tmp.left;
-    tmp = split(tmp.right, End(to), kFrom);
+    tmp = split(tmp.right, to + 0.5, kFrom);
     let right = tmp.right;
-    tmp = split(tmp.left, End(from), kFrom);
+    tmp = split(tmp.left, from + 0.5, kFrom);
     let crossLeft = tmp.left;
-    tmp = split(tmp.right, Start(to), kTo);
+    tmp = split(tmp.right, to, kTo);
     let crossRight = tmp.right;
 
     let removed;
@@ -580,9 +602,9 @@ export class Decorator {
       if (!node)
         return;
       let next = visitor(node);
-      if (CompareAnchors(next, node.from) < 0)
+      if (next < node.from)
         throw new Error('Return value of visitor must not be less than decoration.from');
-      from = MaxAnchor(NextAnchor(from), MaxAnchor(node.to, next));
+      from = Math.max(NextAnchor(from), Math.max(node.to, next));
     }
   }
 

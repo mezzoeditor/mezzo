@@ -1,8 +1,6 @@
-import { Start, End, Before, After, Offset } from './Anchor.mjs';
 import { Decorator } from './Decorator.mjs';
 import { Document } from './Document.mjs';
 import { RoundMode, Metrics } from './Metrics.mjs';
-import { Tree } from './Tree.mjs';
 import { trace } from './Trace.mjs';
 import { EventEmitter } from './EventEmitter.mjs';
 import { TextView } from './TextView.mjs';
@@ -565,7 +563,7 @@ export class Viewport extends EventEmitter {
           x = offsetToX[after - line.from];
 
           for (let decorator of textDecorators) {
-            decorator.visitTouching(Start(offset), End(after), decoration => {
+            decorator.visitTouching(offset, after + 0.5, decoration => {
               trace.count('decorations');
               let from = Math.max(offset, Offset(decoration.from));
               let to = Math.min(after, Offset(decoration.to));
@@ -596,10 +594,10 @@ export class Viewport extends EventEmitter {
 
       let lineStyles = [];
       for (let decorator of lineDecorators) {
-        // We deliberately do not include Start(line.start) here
+        // We deliberately do not include |line.start| here
         // to allow line decorations to span the whole line without
         // affecting the next one.
-        if (decorator.countTouching(End(line.start), End(line.end)) > 0)
+        if (decorator.countTouching(line.start + 0.5, line.end + 0.5) > 0)
           lineStyles.push(decorator.style());
       }
       lineInfos.push({
@@ -610,11 +608,15 @@ export class Viewport extends EventEmitter {
       });
 
       for (let decorator of backgroundDecorators) {
-        decorator.visitTouching(Start(line.from - 1), Start(line.to + 1), decoration => {
+        // Expand by a single character which is not visible to account for borders
+        // extending past viewport.
+        decorator.visitTouching(line.from - 1, line.to + 1, decoration => {
           trace.count('decorations');
           // TODO: note that some editors only show selection up to line length. Setting?
-          let from = Offset(decoration.from) < line.from ? paddingLeft : offsetToX[Offset(decoration.from) - line.from];
-          let to = Offset(decoration.to) > line.to ? this._width - paddingRight : offsetToX[Offset(decoration.to) - line.from];
+          let from = Offset(decoration.from);
+          from = from < line.from ? paddingLeft : offsetToX[from - line.from];
+          let to = Offset(decoration.to);
+          to = to > line.to ? this._width - paddingRight : offsetToX[to - line.from];
           if (from <= to) {
             background.push({
               x: from,
@@ -660,7 +662,7 @@ export class Viewport extends EventEmitter {
         }
 
         let nextOffset = this.contentPointToOffset({x: 0, y: bottom / ratio });
-        return Start(Math.max(Offset(decoration.to), nextOffset));
+        return Math.max(Offset(decoration.to), nextOffset);
       });
       if (lastTop >= 0)
         scrollbar.push({y: lastTop, height: lastBottom - lastTop, style: decorator.style()});
@@ -759,6 +761,14 @@ function cachedContent(document, from, to, cache, left, right) {
   }
   return cache._content.substring(cache._left - left,
                                   cache._content.length - (cache._right - right));
+}
+
+/**
+ * @param {!Anchor} anchor
+ * @return {number}
+ */
+function Offset(anchor) {
+  return Math.floor(anchor);
 }
 
 let kDefaultChunkSize = 1000;

@@ -1,4 +1,3 @@
-import { Start } from '../src/core/Anchor.mjs';
 import { TextDecorator } from '../src/core/Decorator.mjs';
 import { Tokenizer } from "../src/editor/Tokenizer.mjs";
 import { Document } from "../src/core/Document.mjs";
@@ -85,7 +84,7 @@ export class SelectedWordHighlighter {
         iterator.advance(word.length);
         if (tokenizer.isWordChar(iterator.current))
           continue;
-        decorator.add(Start(iterator.offset - word.length), Start(iterator.offset), 'search.match');
+        decorator.add(iterator.offset - word.length, iterator.offset, 'search.match');
       }
     }
     return {background: [decorator]};
