@@ -5,11 +5,8 @@ export function addTests(runner, expect) {
 
   describe('Renderer', () => {
     it('should work', async ({server, page}) => {
-      console.log('nav..');
       await page.goto(server.PREFIX + '/src/web/test/renderer.html');
-      console.log('click..');
       await page.click('canvas');
-      console.log('type..');
       await page.keyboard.type('hello, world');
       expect(await editorText(page)).toBe('hello, world');
     });
