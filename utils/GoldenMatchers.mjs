@@ -20,14 +20,28 @@ import url from 'url';
 
 const __dirname = path.dirname(new url.URL(import.meta.url).pathname);
 
+const actualSuffix = '.actual';
+const expectedSuffix = '.expected';
+const diffSuffix = '.diff';
+
 export class GoldenMatchers {
   constructor(goldenDir, outputDir, resetResults) {
     this._goldenDir = path.normalize(goldenDir);
     this._outputDir = path.normalize(outputDir);
     this._resetResults = resetResults;
+    if (resetResults) {
+      const files = fs.readdirSync(this._outputDir);
+      for (const file of files) {
+        if (file.includes(actualSuffix) || file.includes(expectedSuffix) || file.includes(diffSuffix))
+          fs.unlinkSync(path.join(this._outputDir, file));
+      }
+      // Cleanup .actual, .expected and .diff files.
+    }
   }
 
   expectText(actual, goldenName) {
+    if (goldenName.includes(actualSuffix) || goldenName.includes(expectedSuffix) || goldenName.includes(diffSuffix))
+      throw new Error(`Invalid golden name: "${goldenName}". Name cannot contain "${actualSuffix}", "${expectedSuffix}" or ${diffSuffix}".`);
     if (this._resetResults) {
       this._overwrite(actual, goldenName);
       return;
@@ -81,7 +95,7 @@ function compare(goldenPath, outputPath, actual, goldenName, comparator) {
 
   if (!fs.existsSync(expectedPath)) {
     ensureOutputDir();
-    fs.writeFileSync(actualPath, actual);
+    fs.writeFileSync(addSuffix(actualPath, actualSuffix), actual);
     return {
       pass: false,
       message: goldenName + ' is missing in golden results. ' + messageSuffix
@@ -92,15 +106,10 @@ function compare(goldenPath, outputPath, actual, goldenName, comparator) {
   if (!result)
     return { pass: true };
   ensureOutputDir();
-  if (goldenPath === outputPath) {
-    fs.writeFileSync(addSuffix(actualPath, '-actual'), actual);
-  } else {
-    fs.writeFileSync(actualPath, actual);
-    // Copy expected to the output/ folder for convenience.
-    fs.writeFileSync(addSuffix(actualPath, '-expected'), expected);
-  }
+  fs.writeFileSync(addSuffix(actualPath, actualSuffix), actual);
+  fs.writeFileSync(addSuffix(actualPath, expectedSuffix), expected);
   if (result.diff) {
-    const diffPath = addSuffix(actualPath, '-diff', result.diffExtension);
+    const diffPath = addSuffix(actualPath, diffSuffix, result.diffExtension);
     fs.writeFileSync(diffPath, result.diff);
   }
 

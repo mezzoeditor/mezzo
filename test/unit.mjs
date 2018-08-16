@@ -19,6 +19,7 @@ console.log(import.meta.url);
 
   // Editor tests.
   (await import('../src/editor/Search.spec.mjs')).addTests(runner, expect);
+  (await import('../src/editor/Editor.spec.mjs')).addTests(runner, expect);
 
   // JSLexer unit tests
   (await import('../src/javascript/jslexer/tokenizer.spec.mjs')).addTests(runner, expect);
