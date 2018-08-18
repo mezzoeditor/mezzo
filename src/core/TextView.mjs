@@ -9,17 +9,61 @@ import { Tree } from './Tree.mjs';
  * }} Mark
  */
 
+/**
+ * Measurer converts strings to widths and provides line height.
+ *
+ * @interface
+ */
+export class Measurer {
+  /**
+   * The default width of a code point, should be a positive number.
+   * Note that code points from Supplementary Planes cannot be given default width.
+   * The total width of a |string| with all code points of default width will be
+   * |string.length * defaultWidth|.
+   *
+   * @return {number}
+   */
+  defaultWidth() {
+  }
+
+  /**
+   * Regex for strings which consist only of characters with default width and height.
+   * Used for fast-path calculations.
+   *
+   * @return {?RegExp}
+   */
+  defaultWidthRegex() {
+  }
+
+  /**
+   * Measures the width of a string.
+   * @param {string} s
+   */
+  measureString(s) {
+  }
+};
+
 export class TextView extends EventEmitter {
   /**
-   * @param {!Metrics} metrics
+   * @param {!Measurer} measurer
    * @param {!Text} text
    */
-  constructor(metrics, text) {
+  constructor(measurer, text) {
     super();
-    this._metrics = metrics;
     this._text = text;
     this._marks = new Decorator(true /* createHandles */);
-    let nodes = this._createNodes(text, 0, text.length(), kDefaultChunkSize);
+    this.setMeasurer(measurer);
+  }
+
+  /**
+   * @param {!Measurer} measurer
+   */
+  setMeasurer(measurer) {
+    this._lineHeight = measurer.lineHeight();
+    this._defaultWidth = measurer.defaultWidth();
+    let measure = s => measurer.measureString(s) / this._defaultWidth;
+    this._metrics = new Metrics(measurer.defaultWidthRegex(), measure, measure);
+    let nodes = this._createNodes(this._text, 0, this._text.length(), kDefaultChunkSize);
     this._setTree(Tree.build(nodes));
   }
 
@@ -84,10 +128,16 @@ export class TextView extends EventEmitter {
   }
 
   /**
-   * @return {!TextMetrics}
+   * @param {!Point} point
+   * @param {RoundMode} roundMode
+   * @param {boolean} strict
+   * @return {number}
    */
-  metrics() {
-    return this._tree.metrics();
+  pointToOffset(point, roundMode = RoundMode.Floor, strict = false) {
+    return this._virtualPointToOffset({
+      x: point.x / this._defaultWidth,
+      y: point.y / this._lineHeight
+    }, roundMode, strict);
   }
 
   /**
@@ -96,7 +146,7 @@ export class TextView extends EventEmitter {
    * @param {boolean} strict
    * @return {number}
    */
-  pointToOffset(point, roundMode = RoundMode.Floor, strict = false) {
+  _virtualPointToOffset(point, roundMode, strict) {
     let iterator = this._tree.iterator();
     let clamped = iterator.locateByPoint(point, strict);
     if (clamped === null)
@@ -113,6 +163,15 @@ export class TextView extends EventEmitter {
    * @return {?Point}
    */
   offsetToPoint(offset) {
+    let point = this._offsetToVirtualPoint(offset);
+    return point === null ? null : {x: point.x * this._defaultWidth, y: point.y * this._lineHeight};
+  }
+
+  /**
+   * @param {number} offset
+   * @return {?Point}
+   */
+  _offsetToVirtualPoint(offset) {
     let iterator = this._tree.iterator();
     if (iterator.locateByOffset(offset, true /* strict */) === null)
       return null;
@@ -128,7 +187,10 @@ export class TextView extends EventEmitter {
    */
   _setTree(tree) {
     this._tree = tree;
-    this.emit(TextView.Events.Changed);
+    let metrics = tree.metrics();
+    let contentWidth = metrics.longestWidth * this._defaultWidth;
+    let contentHeight = (1 + (metrics.lineBreaks || 0)) * this._lineHeight;
+    this.emit(TextView.Events.Changed, contentWidth, contentHeight);
   }
 
   /**
@@ -197,7 +259,7 @@ export class TextView extends EventEmitter {
         return;
       addNodes(Math.floor(decoration.from));
       let mark = decoration.data;
-      let width = mark.width / 1; /* should be this._defaultWidth */
+      let width = mark.width / this._defaultWidth;
       let metrics = {length: 0, firstWidth: width, lastWidth: width, longestWidth: width};
       nodes.push({metrics, data: mark});
     });

@@ -65,40 +65,6 @@ import { TextView } from './TextView.mjs';
  */
 
 /**
- * Measurer converts strings to widths and provides line height.
- *
- * @interface
- */
-export class Measurer {
-  /**
-   * The default width of a code point, should be a positive number.
-   * Note that code points from Supplementary Planes cannot be given default width.
-   * The total width of a |string| with all code points of default width will be
-   * |string.length * defaultWidth|.
-   *
-   * @return {number}
-   */
-  defaultWidth() {
-  }
-
-  /**
-   * Regex for strings which consist only of characters with default width and height.
-   * Used for fast-path calculations.
-   *
-   * @return {?RegExp}
-   */
-  defaultWidthRegex() {
-  }
-
-  /**
-   * Measures the width of a string.
-   * @param {string} s
-   */
-  measureString(s) {
-  }
-};
-
-/**
  * Viewport class abstracts the window that peeks into document.
  * It supports padding around text to implement overscrolling and
  * requires Measurer to convert text into pixel metrics.
@@ -148,14 +114,17 @@ export class Viewport extends EventEmitter {
     this._frozen = false;
     this._decorateCallbacks = [];
 
-    this._onTextViewChanged = () => {
-      let metrics = this._textView.metrics();
-      this._contentWidth = metrics.longestWidth * this._defaultWidth;
-      this._contentHeight = (1 + (metrics.lineBreaks || 0)) * this._lineHeight;
+    this._measurer = measurer;
+    this._lineHeight = measurer.lineHeight();
+    this._defaultWidth = measurer.defaultWidth();
+
+    this._textView = new TextView(measurer, this._document.text());
+    this._textView.on(TextView.Events.Changed, (contentWidth, contentHeight) => {
+      this._contentWidth = contentWidth;
+      this._contentHeight = contentHeight;
       this._recompute();
-    };
-    this._measurer = null;
-    this.setMeasurer(measurer);
+    });
+    this._recompute();
   }
 
   raf() {
@@ -178,12 +147,7 @@ export class Viewport extends EventEmitter {
     this._measurer = measurer;
     this._lineHeight = measurer.lineHeight();
     this._defaultWidth = measurer.defaultWidth();
-    let measure = s => measurer.measureString(s) / this._defaultWidth;
-    this._metrics = new Metrics(measurer.defaultWidthRegex(), measure, measure);
-    if (this._textView)
-      this._textView.off(TextView.Events.Changed, this._onTextViewChanged);
-    this._textView = new TextView(this._metrics, this._document.text());
-    this._textView.on(TextView.Events.Changed, this._onTextViewChanged);
+    this._textView.setMeasurer(measurer);
   }
 
   /**
@@ -318,15 +282,15 @@ export class Viewport extends EventEmitter {
 
   /**
    * @param {!Point} point
-   * @param {RoundMode=} roundMode
-   * @param {boolean=} strict
+   * @param {RoundMode} roundMode
+   * @param {boolean} strict
    * @return {number}
    */
-  viewportPointToOffset(point, roundMode = RoundMode.Floor, strict) {
-    return this._virtualPointToOffset({
-      x: (point.x + this._scrollLeft - this._padding.left) / this._defaultWidth,
-      y: (point.y + this._scrollTop - this._padding.top) / this._lineHeight
-    }, roundMode, !!strict);
+  viewportPointToOffset(point, roundMode = RoundMode.Floor, strict = false) {
+    return this._textView.pointToOffset({
+      x: point.x + this._scrollLeft - this._padding.left,
+      y: point.y + this._scrollTop - this._padding.top
+    }, roundMode, strict);
   }
 
   /**
@@ -334,24 +298,21 @@ export class Viewport extends EventEmitter {
    * @return {?Point}
    */
   offsetToViewportPoint(offset) {
-    let point = this._offsetToVirtualPoint(offset);
+    let point = this._textView.offsetToPoint(offset);
     return point === null ? null : {
-      x: point.x * this._defaultWidth - this._scrollLeft + this._padding.left,
-      y: point.y * this._lineHeight - this._scrollTop + this._padding.top
+      x: point.x - this._scrollLeft + this._padding.left,
+      y: point.y - this._scrollTop + this._padding.top
     };
   }
 
   /**
    * @param {!Point} point
-   * @param {RoundMode=} roundMode
-   * @param {boolean=} strict
+   * @param {RoundMode} roundMode
+   * @param {boolean} strict
    * @return {number}
    */
-  contentPointToOffset(point, roundMode = RoundMode.Floor, strict) {
-    return this._virtualPointToOffset({
-      x: point.x / this._defaultWidth,
-      y: point.y / this._lineHeight
-    }, roundMode, !!strict);
+  contentPointToOffset(point, roundMode = RoundMode.Floor, strict = false) {
+    return this._textView.pointToOffset(point, roundMode, strict);
   }
 
   /**
@@ -359,11 +320,7 @@ export class Viewport extends EventEmitter {
    * @return {?Point}
    */
   offsetToContentPoint(offset) {
-    let point = this._offsetToVirtualPoint(offset);
-    return point === null ? null : {
-      x: point.x * this._defaultWidth,
-      y: point.y * this._lineHeight
-    };
+    return this._textView.offsetToPoint(offset);
   }
 
   /**
@@ -546,7 +503,7 @@ export class Viewport extends EventEmitter {
           //   offsetToX[offset - line.from] = x;
         } else {
           let after = Math.min(line.to, iterator.after ? iterator.after.offset : offset);
-          this._metrics.fillXMap(offsetToX, needsRtlBreakAfter, lineContent, offset - line.from, after - line.from, x, this._defaultWidth);
+          this._textView._metrics.fillXMap(offsetToX, needsRtlBreakAfter, lineContent, offset - line.from, after - line.from, x, this._defaultWidth);
           x = offsetToX[after - line.from];
 
           for (let decorator of textDecorators) {
@@ -668,30 +625,11 @@ export class Viewport extends EventEmitter {
   }
 
   /**
-   * @param {!Point} point
-   * @param {RoundMode} roundMode
-   * @param {boolean} strict
-   * @return {number}
-   */
-  _virtualPointToOffset(point, roundMode = RoundMode.Floor, strict = false) {
-    return this._textView.pointToOffset(point, roundMode, strict);
-  }
-
-  /**
-   * @param {number} offset
-   * @return {?Point}
-   */
-  _offsetToVirtualPoint(offset) {
-    return this._textView.offsetToPoint(offset);
-  }
-
-  /**
    * @param {!DocumentChangedEvent} event
    */
   _onDocumentChanged({replacements}) {
     if (!replacements.length)
       return;
-
     if (this._frozen)
       throw new Error('Document modification during decoration is prohibited');
     for (const replacement of replacements)
@@ -757,7 +695,6 @@ function Offset(anchor) {
   return Math.floor(anchor);
 }
 
-let kDefaultChunkSize = 1000;
 const kMinScrollbarDecorationHeight = 5;
 
 Viewport.test = {};
