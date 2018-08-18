@@ -32,6 +32,12 @@ export function addTests(runner, expect) {
         await gg.softRedo();
         expect(await gg.textWithCursors()).toBe('hello, wor|ld');
       });
+      it('should be able to type after initial undo', async ({gg}) => {
+        for (let i = 0; i < 10; ++i)
+          await gg.undo();
+        await gg.type('can type');
+        expect(await gg.textWithCursors()).toBe('can type|');
+      });
     });
   });
 }
@@ -51,7 +57,7 @@ class GG {
   }
 
   async type(text) {
-    await this._page.keyboard.type('hello, world');
+    await this._page.keyboard.type(text);
   }
 
   async undo() {

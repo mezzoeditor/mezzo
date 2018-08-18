@@ -49,10 +49,13 @@ export class Editor {
     this.setHighlighter(new DefaultHighlighter(this));
 
     this._history = new History(this._document);
+
+    this.reset('');
   }
 
   reset(text) {
     this._document.reset(text);
+    this._document.setSelection([{focus: 0, anchor: 0}]);
     this._history.reset();
   }
 
