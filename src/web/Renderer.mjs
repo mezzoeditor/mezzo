@@ -816,7 +816,7 @@ export class Renderer {
     ctx.lineWidth = 1 / this._ratio;
 
     trace.begin('frame');
-    const {text, background, inlineWidgets, scrollbar, lines, paddingLeft, paddingRight} = this._editor.viewport().decorate();
+    const {text, background, marks, scrollbar, lines, paddingLeft, paddingRight} = this._editor.viewport().decorate();
     trace.end('frame');
 
     trace.begin('gutter');
@@ -835,7 +835,7 @@ export class Renderer {
     ctx.clip();
     ctx.translate(this._editorRect.x, this._editorRect.y);
     this._drawTextAndBackground(ctx, text, background, lines, paddingLeft, paddingRight);
-    this._drawInlineWidgets(ctx, inlineWidgets);
+    this._drawMarks(ctx, marks);
     ctx.restore();
     trace.endGroup('text');
 
@@ -941,12 +941,12 @@ export class Renderer {
     }
   }
 
-  _drawInlineWidgets(ctx, inlineWidgets) {
+  _drawMarks(ctx, marks) {
     const lineHeight = this._measurer.lineHeight();
-    for (let {x, y, inlineWidget} of inlineWidgets) {
-      // TODO: support dom elements instead.
-      ctx.fillStyle = inlineWidget.width === 43 ? 'red' : 'green';
-      ctx.fillRect(x, y + 2, inlineWidget.width, lineHeight - 4);
+    for (let {x, y, mark} of marks) {
+      // TODO: need some rendering!
+      ctx.fillStyle = 'red';
+      ctx.fillRect(x, y + 2, mark.width, lineHeight - 4);
     }
   }
 

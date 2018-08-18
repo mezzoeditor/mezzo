@@ -1,6 +1,13 @@
 import { EventEmitter } from './EventEmitter.mjs';
+import { Decorator } from './Decorator.mjs';
 import { Metrics } from './Metrics.mjs';
 import { Tree } from './Tree.mjs';
+
+/**
+ * @typedef {{
+ *   width: number
+ * }} Mark
+ */
 
 export class TextView extends EventEmitter {
   /**
@@ -11,7 +18,7 @@ export class TextView extends EventEmitter {
     super();
     this._metrics = metrics;
     this._text = text;
-    // this._inlineWidgets = new Decorator(true /* createHandles */);
+    this._marks = new Decorator(true /* createHandles */);
     let nodes = this._createNodes(text, 0, text.length(), kDefaultChunkSize);
     this._setTree(Tree.build(nodes));
   }
@@ -29,10 +36,10 @@ export class TextView extends EventEmitter {
     let to = from + replacement.removed.length();
     let inserted = replacement.inserted.length();
 
-    // for (let inlineWidget of this._inlineWidgets.replace(from, to, inserted)) {
-    //   delete inlineWidget[kWidgetSymbol];
-    //   this.emit(Viewport.Events.InlineWidgetRemoved, inlineWidget);
-    // }
+    for (let mark of this._marks.replace(from, to, inserted)) {
+      delete mark[kMarkSymbol];
+      this.emit(TextView.Events.MarkCleared, mark);
+    }
 
     this._rechunk(replacement.after, from, to, inserted);
     this._text = replacement.after;
@@ -44,20 +51,13 @@ export class TextView extends EventEmitter {
    * @param {!Mark} mark
    */
   markRange(from, to, mark) {
+    if (from !== to)
+      throw new Error('Only empty ranges are supported for now');
     if (mark[kMarkSymbol])
       throw new Error('This mark is already used');
+    mark[kMarkSymbol] = this._marks.add(from, to, mark);
+    this._rechunk(this._text, from, to, to - from);
   }
-
-  // /**
-  //  * @param {!Viewport.InlineWidget} inlineWidget
-  //  * @param {!Anchor} anchor
-  //  */
-  // addInlineWidget(inlineWidget, anchor) {
-  //   if (inlineWidget[kWidgetSymbol])
-  //     throw new Error('Widget was already added before');
-  //   inlineWidget[kWidgetSymbol] = this._inlineWidgets.add(anchor, anchor, inlineWidget);
-  //   this._rechunk(this._document.text(), anchor.offset, anchor.offset, 0);
-  // }
 
   /**
    * @param {!Mark} mark
@@ -65,29 +65,23 @@ export class TextView extends EventEmitter {
   clearMark(mark) {
     if (!mark[kMarkSymbol])
       throw new Error('The mark is not set');
+
+    let {from, to} = this._marks.resolve(mark[kMarkSymbol]);
+    this._marks.remove(mark[kMarkSymbol]);
+    delete mark[kMarkSymbol];
+    if (from !== to)
+      throw new Error('Inconsistent');
+
+    let split = this._tree.split(from, from);
+    let nodes = split.middle.collect();
+    if (nodes.some(node => !node.data))
+      throw new Error('Inconsistent');
+    let index = nodes.findIndex(node => node.data === mark);
+    if (index === -1)
+      throw new Error('Inconsistent');
+    nodes.splice(index, 1);
+    this._setTree(Tree.merge(split.left, Tree.merge(Tree.build(nodes), split.right)));
   }
-
-  // /**
-  //  * @param {!Viewport.InlineWidget} inlineWidget
-  //  */
-  // removeWidget(inlineWidget) {
-  //   if (!inlineWidget[kWidgetSymbol])
-  //     throw new Error('Widget was not added before');
-  //   let anchor = this._inlineWidgets.resolve(inlineWidget[kWidgetSymbol]).from;
-  //   this._inlineWidgets.remove(inlineWidget[kWidgetSymbol]);
-  //   delete inlineWidget[kWidgetSymbol];
-
-  //   let split = this._tree.split(anchor.offset, anchor.offset);
-  //   let nodes = split.middle.collect();
-  //   if (nodes.some(node => !node.data.inlineWidget || !node.data.inlineWidget[kWidgetSymbol]))
-  //     throw new Error('Inconsistent');
-  //   let index = nodes.findIndex(node => node.data.inlineWidget === inlineWidget);
-  //   if (index === -1)
-  //     throw new Error('Inconsistent');
-  //   nodes.splice(index, 1);
-
-  //   this._setTree(Tree.merge(split.left, Tree.merge(Tree.build(nodes), split.right)));
-  // }
 
   /**
    * @return {!TextMetrics}
@@ -130,7 +124,7 @@ export class TextView extends EventEmitter {
   }
 
   /**
-   * @param {!Tree<!Chunk>} tree
+   * @param {!Tree<?Mark>} tree
    */
   _setTree(tree) {
     this._tree = tree;
@@ -148,7 +142,7 @@ export class TextView extends EventEmitter {
     let newFrom = split.left.metrics().length;
     let newTo = text.length() - split.right.metrics().length;
 
-    let tmp = split.left.split(split.left.metrics().length, split.left.metrics().length);
+    let tmp = split.left.split(newFrom, newFrom);
     if (!tmp.right.empty())
       throw new Error('Inconsistent');
     split.left = tmp.left;
@@ -167,7 +161,6 @@ export class TextView extends EventEmitter {
       nodes = this._createNodes(text, newFrom, newTo, kDefaultChunkSize);
     }
 
-    // TODO: remove widgets at split.left.last and split.right.first.
     this._setTree(Tree.merge(split.left, Tree.merge(Tree.build(nodes), split.right)));
   }
 
@@ -177,7 +170,7 @@ export class TextView extends EventEmitter {
    * @param {number} to
    * @param {number} chunkSize
    * @param {number=} firstChunkSize
-   * @return {!Array<!{metrics: !TextMetrics, data: !Chunk}>}
+   * @return {!Array<!{metrics: !TextMetrics, data: ?Mark}>}
    */
   _createNodes(text, from, to, chunkSize, firstChunkSize) {
     let iterator = text.iterator(from, 0, text.length());
@@ -195,34 +188,28 @@ export class TextView extends EventEmitter {
           chunk += iterator.current;
           iterator.next();
         }
-        nodes.push({metrics: this._metrics.forString(chunk), data: {}});
+        nodes.push({metrics: this._metrics.forString(chunk), data: null});
       }
     };
 
-    // this._inlineWidgets.visitTouching(End(from - 1), Start(to + 1), decoration => {
-    //   if (decoration.from.offset < from || decoration.to.offset > to)
-    //     return;
-    //   addNodes(decoration.from.offset);
-    //   let inlineWidget = decoration.data;
-    //   let width = inlineWidget.width / this._defaultWidth;
-    //   let metrics = {length: 0, firstWidth: width, lastWidth: width, longestWidth: width};
-    //   nodes.push({metrics, data: {inlineWidget, end: decoration.from.end}});
-    // });
+    this._marks.visitTouching(from - 0.5, to + 1, decoration => {
+      if (decoration.from < from || decoration.to > to + 0.5)
+        return;
+      addNodes(Math.floor(decoration.from));
+      let mark = decoration.data;
+      let width = mark.width / 1; /* should be this._defaultWidth */
+      let metrics = {length: 0, firstWidth: width, lastWidth: width, longestWidth: width};
+      nodes.push({metrics, data: mark});
+    });
     addNodes(to);
     return nodes;
   }
 };
 
 TextView.Events = {
-  Changed: 'changed'
+  Changed: 'changed',
+  MarkCleared: 'markCleared',
 };
-
-/**
- * @typedef {{
- *   inlineWidget: !Viewport.InlineWidget|undefined,
- *   end: boolean|undefined,
- * }} Chunk
- */
 
 const kMarkSymbol = Symbol('mark');
 const kDefaultChunkSize = 1000;

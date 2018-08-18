@@ -26,7 +26,7 @@ import { TextView } from './TextView.mjs';
  *   x: number,
  *   y: number,
  *   content: string,
- *   style: string
+ *   style: string,
  * }} Viewport.TextInfo
  */
 
@@ -60,14 +60,8 @@ import { TextView } from './TextView.mjs';
  * @typedef {{
  *   x: number,
  *   y: number,
- *   widget: !Viewport.InlineWidget,
- * }} Viewport.InlineWidgetInfo
- */
-
-/**
- * @typedef {{
- *   width: number,
- * }} Viewport.InlineWidget
+ *   mark: !Mark,
+ * }} Viewport.MarkInfo
  */
 
 /**
@@ -408,25 +402,17 @@ export class Viewport extends EventEmitter {
   }
 
   /**
-   * @param {!Viewport.InlineWidget} inlineWidget
-   * @param {!Anchor} anchor
+   * @return {!TextView}
    */
-  addInlineWidget(inlineWidget, anchor) {
-    // TODO: delegate to TextView.
-  }
-
-  /**
-   * @param {!Viewport.InlineWidget} inlineWidget
-   */
-  removeWidget(inlineWidget) {
-    // TODO: delegate to TextView.
+  textView() {
+    return this._textView;
   }
 
   /**
    * @return {!{
    *   text: !Array<!Viewport.TextInfo>,
    *   background: !Array<!Viewport.BackgroundInfo>,
-   *   inlineWidgets: !Array<!Viewport.InlineWidgetInfo>,
+   *   marks: !Array<!Viewport.MarkInfo>,
    *   scrollbar: !Array<!Viewport.ScrollbarInfo>,
    *   lines: !Array<!Viewport.LineInfo>,
    *   paddingLeft: number,
@@ -477,11 +463,11 @@ export class Viewport extends EventEmitter {
       lineDecorators.push(...(result.lines || []));
     }
 
-    let {text, background, inlineWidgets, lineInfos, paddingLeft, paddingRight} = this._buildContents(lines, textDecorators, backgroundDecorators, lineDecorators);
+    let {text, background, marks, lineInfos, paddingLeft, paddingRight} = this._buildContents(lines, textDecorators, backgroundDecorators, lineDecorators);
     let scrollbar = this._buildScrollbar(lineDecorators);
 
     this._frozen = false;
-    return {text, background, inlineWidgets, scrollbar, lines: lineInfos, paddingLeft, paddingRight};
+    return {text, background, marks, scrollbar, lines: lineInfos, paddingLeft, paddingRight};
   }
 
   /**
@@ -523,7 +509,7 @@ export class Viewport extends EventEmitter {
    * @return {!{
    *    text: !Array<!Viewport.TextInfo>,
    *    background: !Array<!Viewport.BackgroundInfo>,
-   *    inlineWidgets: !Array<!Viewport.InlineWidgetInfo>,
+   *    marks: !Array<!Viewport.MarkInfo>,
    *    lineInfos: !Array<!Viewport.LineInfo>,
    *    paddingLeft: number,
    *    paddingRight: number,
@@ -534,7 +520,7 @@ export class Viewport extends EventEmitter {
     const paddingRight = Math.max(this._padding.right - (this._maxScrollLeft - this._scrollLeft), 0);
     const text = [];
     const background = [];
-    const inlineWidgets = [];
+    const marks = [];
     const lineInfos = [];
 
     for (let line of lines) {
@@ -552,11 +538,12 @@ export class Viewport extends EventEmitter {
       // Skip processing text if we are scrolled past the end of the line, in which case
       // locateByOffset will point to undefined location.
       while (iterator.before) {
-        if (iterator.data && iterator.data.inlineWidget) {
-          inlineWidgets.push({x: x, y: line.y, inlineWidget: iterator.data.inlineWidget});
-          x += iterator.data.inlineWidget.width;
-          if (!iterator.data.end)
-            offsetToX[offset - line.from] = x;
+        if (iterator.data) {
+          let mark = iterator.data;
+          marks.push({x: x, y: line.y, mark});
+          x += mark.width;
+          // if (!iterator.data.end)
+          //   offsetToX[offset - line.from] = x;
         } else {
           let after = Math.min(line.to, iterator.after ? iterator.after.offset : offset);
           this._metrics.fillXMap(offsetToX, needsRtlBreakAfter, lineContent, offset - line.from, after - line.from, x, this._defaultWidth);
@@ -629,7 +616,7 @@ export class Viewport extends EventEmitter {
       }
     }
 
-    return {text, background, inlineWidgets, lineInfos, paddingLeft, paddingRight};
+    return {text, background, marks, lineInfos, paddingLeft, paddingRight};
   }
 
   /**
@@ -715,7 +702,6 @@ export class Viewport extends EventEmitter {
 Viewport.Events = {
   Raf: 'raf',
   Changed: 'changed',
-  InlineWidgetRemoved: 'inlineWidgetRemoved',
 };
 
 Viewport.VisibleRange = class {
@@ -773,7 +759,6 @@ function Offset(anchor) {
 
 let kDefaultChunkSize = 1000;
 const kMinScrollbarDecorationHeight = 5;
-const kWidgetSymbol = Symbol('widgetHandle');
 
 Viewport.test = {};
 

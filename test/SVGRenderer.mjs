@@ -49,7 +49,7 @@ export class SVGRenderer {
       bottom: this._height - LINE_HEIGHT - EDITOR_PADDING,
     });
 
-    const {text, background, inlineWidgets, scrollbar, lines, paddingLeft, paddingRight} = viewport.decorate();
+    const {text, background, marks, scrollbar, lines, paddingLeft, paddingRight} = viewport.decorate();
 
     const root = SVGNode.createRoot({
       width: this._width,
