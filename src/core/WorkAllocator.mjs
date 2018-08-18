@@ -1,6 +1,5 @@
 import { Decorator } from './Decorator.mjs';
 
-// TODO: do we even need anchors in this file?
 export class WorkAllocator {
   /**
    * @param {number} size
@@ -28,10 +27,8 @@ export class WorkAllocator {
    * @param {number} to
    */
   _addWork(from, to) {
-    if (from === to)
-      return;
-    // Enforce all range to be |Left| anchors.
-    this._work.add(from, to);
+    if (from !== to)
+      this._work.add(from, to);
   }
 
   /**
@@ -39,9 +36,9 @@ export class WorkAllocator {
    * @param {number=} to
    */
   done(from = 0, to = this._size) {
-    // Use |Left| and |Right| anchors to merge adjacent ranges.
     from = this._clamp(from);
     to = this._clamp(to);
+    // Use +0.5 to merge with ranges starting at |to|.
     const workRanges = this._work.listTouching(from, to + 0.5);
     this._work.clearTouching(from, to + 0.5);
     for (const workRange of workRanges) {
@@ -60,9 +57,9 @@ export class WorkAllocator {
    * @param {number=} to
    */
   undone(from = 0, to = this._size) {
-    // Use |Left| and |Right| anchors to merge adjacent ranges.
     from = this._clamp(from);
     to = this._clamp(to);
+    // Use +0.5 to merge with ranges starting at |to|.
     const workRanges = this._work.listTouching(from, to + 0.5);
     this._work.clearTouching(from, to + 0.5);
 
@@ -81,9 +78,9 @@ export class WorkAllocator {
    * @return {?Range}
    */
   workRange(from = 0, to = this._size) {
-    // Use |Right| anchor to avoid zero-length ranges.
     from = this._clamp(from);
     to = this._clamp(to);
+    // Use +0.5 to return non-zero length range.
     let workRange = this._work.firstTouching(from + 0.5, to);
     if (!workRange)
       return null;
