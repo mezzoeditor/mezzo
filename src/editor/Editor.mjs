@@ -5,7 +5,7 @@ import { Search } from './Search.mjs';
 import { History } from './History.mjs';
 import { DefaultHighlighter } from '../default/DefaultHighlighter.mjs';
 import { DefaultTokenizer } from '../default/DefaultTokenizer.mjs';
-import { Measurer } from '../core/TextView.mjs';
+import { Measurer } from '../core/Markup.mjs';
 import { Viewport } from '../core/Viewport.mjs';
 import { EventEmitter } from '../core/EventEmitter.mjs';
 import { LineDecorator } from '../core/Decorator.mjs';

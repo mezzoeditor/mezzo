@@ -43,7 +43,7 @@ export class Measurer {
   }
 };
 
-export class TextView extends EventEmitter {
+export class Markup extends EventEmitter {
   /**
    * @param {!Measurer} measurer
    * @param {!Text} text
@@ -82,7 +82,7 @@ export class TextView extends EventEmitter {
 
     for (let mark of this._marks.replace(from, to, inserted)) {
       delete mark[kMarkSymbol];
-      this.emit(TextView.Events.MarkCleared, mark);
+      this.emit(Markup.Events.MarkCleared, mark);
     }
 
     this._rechunk(replacement.after, from, to, inserted);
@@ -150,7 +150,7 @@ export class TextView extends EventEmitter {
     let iterator = this._tree.iterator();
     let clamped = iterator.locateByPoint(point, strict);
     if (clamped === null)
-      throw 'Point does not belong to the TextView';
+      throw 'Point does not belong to the Markup';
     if (iterator.data === undefined)
       return iterator.before ? iterator.before.offset : 0;
     let from = iterator.before.offset;
@@ -190,7 +190,7 @@ export class TextView extends EventEmitter {
     let metrics = tree.metrics();
     let contentWidth = metrics.longestWidth * this._defaultWidth;
     let contentHeight = (1 + (metrics.lineBreaks || 0)) * this._lineHeight;
-    this.emit(TextView.Events.Changed, contentWidth, contentHeight);
+    this.emit(Markup.Events.Changed, contentWidth, contentHeight);
   }
 
   /**
@@ -268,7 +268,7 @@ export class TextView extends EventEmitter {
   }
 };
 
-TextView.Events = {
+Markup.Events = {
   Changed: 'changed',
   MarkCleared: 'markCleared',
 };
@@ -276,13 +276,13 @@ TextView.Events = {
 const kMarkSymbol = Symbol('mark');
 const kDefaultChunkSize = 1000;
 
-TextView.test = {};
+Markup.test = {};
 
 /**
- * @param {!TextView} textView
+ * @param {!Markup} Markup
  * @param {number} chunkSize
  */
-TextView.test.rechunk = function(textView, chunkSize) {
-  let nodes = textView._createNodes(textView._text, 0, textView._text.length(), chunkSize);
-  textView._setTree(Tree.build(nodes));
+Markup.test.rechunk = function(Markup, chunkSize) {
+  let nodes = Markup._createNodes(Markup._text, 0, Markup._text.length(), chunkSize);
+  Markup._setTree(Tree.build(nodes));
 };

@@ -1,5 +1,5 @@
 import { RoundMode, Metrics } from '../core/Metrics.mjs';
-import { Measurer } from '../core/TextView.mjs';
+import { Measurer } from '../core/Markup.mjs';
 import { Viewport } from '../core/Viewport.mjs';
 import { trace } from '../core/Trace.mjs';
 import { Document } from '../core/Document.mjs';

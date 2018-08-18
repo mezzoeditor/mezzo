@@ -3,7 +3,7 @@ import { Document } from './Document.mjs';
 import { RoundMode, Metrics } from './Metrics.mjs';
 import { trace } from './Trace.mjs';
 import { EventEmitter } from './EventEmitter.mjs';
-import { TextView } from './TextView.mjs';
+import { Markup } from './Markup.mjs';
 
 /**
  * @typedef {{
@@ -118,8 +118,8 @@ export class Viewport extends EventEmitter {
     this._lineHeight = measurer.lineHeight();
     this._defaultWidth = measurer.defaultWidth();
 
-    this._textView = new TextView(measurer, this._document.text());
-    this._textView.on(TextView.Events.Changed, (contentWidth, contentHeight) => {
+    this._markup = new Markup(measurer, this._document.text());
+    this._markup.on(Markup.Events.Changed, (contentWidth, contentHeight) => {
       this._contentWidth = contentWidth;
       this._contentHeight = contentHeight;
       this._recompute();
@@ -147,7 +147,7 @@ export class Viewport extends EventEmitter {
     this._measurer = measurer;
     this._lineHeight = measurer.lineHeight();
     this._defaultWidth = measurer.defaultWidth();
-    this._textView.setMeasurer(measurer);
+    this._markup.setMeasurer(measurer);
   }
 
   /**
@@ -287,7 +287,7 @@ export class Viewport extends EventEmitter {
    * @return {number}
    */
   viewportPointToOffset(point, roundMode = RoundMode.Floor, strict = false) {
-    return this._textView.pointToOffset({
+    return this._markup.pointToOffset({
       x: point.x + this._scrollLeft - this._padding.left,
       y: point.y + this._scrollTop - this._padding.top
     }, roundMode, strict);
@@ -298,7 +298,7 @@ export class Viewport extends EventEmitter {
    * @return {?Point}
    */
   offsetToViewportPoint(offset) {
-    let point = this._textView.offsetToPoint(offset);
+    let point = this._markup.offsetToPoint(offset);
     return point === null ? null : {
       x: point.x - this._scrollLeft + this._padding.left,
       y: point.y - this._scrollTop + this._padding.top
@@ -312,7 +312,7 @@ export class Viewport extends EventEmitter {
    * @return {number}
    */
   contentPointToOffset(point, roundMode = RoundMode.Floor, strict = false) {
-    return this._textView.pointToOffset(point, roundMode, strict);
+    return this._markup.pointToOffset(point, roundMode, strict);
   }
 
   /**
@@ -320,7 +320,7 @@ export class Viewport extends EventEmitter {
    * @return {?Point}
    */
   offsetToContentPoint(offset) {
-    return this._textView.offsetToPoint(offset);
+    return this._markup.offsetToPoint(offset);
   }
 
   /**
@@ -356,13 +356,6 @@ export class Viewport extends EventEmitter {
       this._scrollLeft = Math.min(to.x - this._width + rangePadding.right, this._maxScrollLeft);
     }
     this._recompute();
-  }
-
-  /**
-   * @return {!TextView}
-   */
-  textView() {
-    return this._textView;
   }
 
   /**
@@ -490,7 +483,7 @@ export class Viewport extends EventEmitter {
       offsetToX[0] = x;
       needsRtlBreakAfter[line.to - line.from] = 0;
 
-      let iterator = this._textView.iterator();
+      let iterator = this._markup.iterator();
       iterator.locateByOffset(line.from);
       // Skip processing text if we are scrolled past the end of the line, in which case
       // locateByOffset will point to undefined location.
@@ -503,7 +496,7 @@ export class Viewport extends EventEmitter {
           //   offsetToX[offset - line.from] = x;
         } else {
           let after = Math.min(line.to, iterator.after ? iterator.after.offset : offset);
-          this._textView._metrics.fillXMap(offsetToX, needsRtlBreakAfter, lineContent, offset - line.from, after - line.from, x, this._defaultWidth);
+          this._markup._metrics.fillXMap(offsetToX, needsRtlBreakAfter, lineContent, offset - line.from, after - line.from, x, this._defaultWidth);
           x = offsetToX[after - line.from];
 
           for (let decorator of textDecorators) {
@@ -633,7 +626,7 @@ export class Viewport extends EventEmitter {
     if (this._frozen)
       throw new Error('Document modification during decoration is prohibited');
     for (const replacement of replacements)
-      this._textView.replace(replacement);
+      this._markup.replace(replacement);
   }
 }
 
@@ -704,5 +697,5 @@ Viewport.test = {};
  * @param {number} chunkSize
  */
 Viewport.test.rechunk = function(viewport, chunkSize) {
-  TextView.test.rechunk(viewport._textView, chunkSize);
+  Markup.test.rechunk(viewport._markup, chunkSize);
 };
