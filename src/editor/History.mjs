@@ -8,8 +8,8 @@ import { Document } from '../core/Document.mjs';
  * 3. For every document operation, a new "HistoryEntry" object is created. It is then added to
  * the history array using one of the following VERBS (aka "decisions"):
  *  - PUSH: all history entries after the current position are dropped; a new entry is added to the end.
- *  - SUBSTITUTE: current history entry is substituted with the new one. This could be done only for the LAST history entry and never for the first one.
- * 4: By default, History applies SUBSTITUTE to all new HistoryEntries when possible and falls back to PUSH if not.
+ *  - MERGE: current history entry is merged with the new one. This could be done only for the LAST history entry and never for the first one.
+ * 4: By default, History applies MERGE to all new HistoryEntries when possible and falls back to PUSH if not.
  *
  * Default history behavior results in two history entries: initial and current.
  *
@@ -28,8 +28,8 @@ import { Document } from '../core/Document.mjs';
  * - newEntry
  * - DocumentChangedEvent
  *
- * Callback must return either History.Decisions.Push or History.Decisions.Substitute.
- * If callback returns SUBSTITUTE but this verb is illebal, History will silently fallback
+ * Callback must return either History.Decisions.Push or History.Decisions.Merge.
+ * If callback returns MERGE but this verb is illebal, History will silently fallback
  * to PUSH.
  *
  *
@@ -72,7 +72,7 @@ export class History {
     this._document.on(Document.Events.Changed, this._onDocumentChanged.bind(this));
 
     this._position = 0;
-    this._entries = [new HistoryEntry(document)];
+    this._entries = [new HistoryEntry(document, [])];
 
     this._arbitrator = null;
   }
@@ -81,16 +81,18 @@ export class History {
     if (this._muteDocumentChanged)
       return;
     const entry = this._entries[this._position];
-    const newEntry = new HistoryEntry(this._document);
-    let decision = this._arbitrator ? this._arbitrator(entry, newEntry, event) : History.Decisions.Substitute;
+    const newEntry = new HistoryEntry(this._document, event.replacements);
+    let decision = this._arbitrator ? this._arbitrator(entry, newEntry, event) : History.Decisions.Merge;
     if (this._position === 0 || this._position < this._entries.length - 1)
       decision = History.Decisions.Push;
-    if (decision === History.Decisions.Push)
+    if (decision === History.Decisions.Push) {
       this._entries.splice(++this._position, this._entries.length, newEntry);
-    else if (decision === History.Decisions.Substitute)
+    } else if (decision === History.Decisions.Merge) {
+      newEntry.merge(this._entries[this._position]);
       this._entries[this._position] = newEntry;
-    else
+    } else {
       throw new Error('Unknown history arbitrator decision: ' + decision);
+    }
   }
 
   arbitrate(operation, callback) {
@@ -104,27 +106,24 @@ export class History {
 
   reset() {
     this._position = 0;
-    this._entries = [new HistoryEntry(this._document)];
+    this._entries = [new HistoryEntry(this._document, [])];
   }
 
   undo() {
-    while (this._position > 0) {
-      const entry = this._entries[this._position];
-      const newEntry = this._entries[--this._position];
-      if (entry.text !== newEntry.text) {
-        this._apply(newEntry);
-        return;
-      }
-    }
-    this._apply(this._entries[this._position]);
+    if (!this._position)
+      return;
+    let position = this._position - 1;
+    while (position > 0 && !this._entries[position + 1].hasTextChanges())
+      --position;
+    this._apply(position);
   }
 
   redo() {
-    while (this._position + 1 < this._entries.length) {
-      const entry = this._entries[this._position];
-      const newEntry = this._entries[++this._position];
-      if (entry.text !== newEntry.text) {
-        this._apply(newEntry);
+    let position = this._position;
+    while (position + 1 < this._entries.length) {
+      ++position;
+      if (this._entries[position].hasTextChanges()) {
+        this._apply(position);
         return;
       }
     }
@@ -133,25 +132,33 @@ export class History {
   softUndo() {
     if (this._position === 0)
       return;
-    this._apply(this._entries[--this._position]);
+    this._apply(this._position - 1);
   }
 
   softRedo() {
     if (this._position + 1 >= this._entries.length)
       return;
-    this._apply(this._entries[++this._position]);
+    this._apply(this._position + 1);
   }
 
   /**
    * @param {!HistoryEntry} entry
    * @param {string} origin
    */
-  _apply(entry) {
+  _apply(newPosition) {
+    if (newPosition === this._position)
+      return;
     this._muteDocumentChanged = true;
     this._document.operation(() => {
-      if (this._document.text() !== entry.text)
-        this._document.reset(entry.text);
-      this._document.setSelection(entry.selection);
+      if (newPosition > this._position) {
+        for (let i = this._position + 1; i <= newPosition; ++i)
+          this._entries[i].rollForward();
+      } else {
+        for (let i = this._position; i > newPosition; --i)
+          this._entries[i].rollBack();
+      }
+      this._document.setSelection(this._entries[newPosition].selection);
+      this._position = newPosition;
     });
     this._muteDocumentChanged = false;
   }
@@ -159,7 +166,7 @@ export class History {
 
 History.Decisions = {
   Push: 'push',
-  Substitute: 'substitute',
+  Merge: 'merge',
 };
 
 class HistoryEntry {
@@ -167,8 +174,31 @@ class HistoryEntry {
    * @param {!Text} text
    * @param {!Array<!SelectionRange>} selection
    */
-  constructor(document) {
-    this.text = document.text();
+  constructor(document, replacements) {
+    this.document = document;
     this.selection = document.selection();
+    this.replacements = replacements;
+  }
+
+  hasTextChanges() {
+    return !!this.replacements.length;
+  }
+
+  rollForward() {
+    for (let i = 0; i < this.replacements.length; ++i) {
+      const replacement = this.replacements[i];
+      this.document.replace(replacement.offset, replacement.offset + replacement.removed.length(), replacement.inserted);
+    }
+  }
+
+  merge(oldEntry) {
+    this.replacements = [...oldEntry.replacements, ...this.replacements];
+  }
+
+  rollBack() {
+    for (let i = this.replacements.length - 1; i >= 0; --i) {
+      const replacement = this.replacements[i];
+      this.document.replace(replacement.offset, replacement.offset + replacement.inserted.length(), replacement.removed);
+    }
   }
 }

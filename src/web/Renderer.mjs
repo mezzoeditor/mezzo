@@ -448,7 +448,7 @@ export class Renderer {
           this._editor.input().setLastCursor({anchor: mouseRangeStartOffset, focus: mouseRangeEndOffset});
       }, (entry, newEntry, event) => {
         ensureHistoryEntryMetadata(newEntry, event, 'mouse');
-        return History.Decisions.Substitute;
+        return History.Decisions.Merge;
       });
       this._revealCursors();
     });
@@ -467,7 +467,7 @@ export class Renderer {
           this._editor.input().setLastCursor({anchor: mouseRangeStartOffset, focus: mouseRangeEndOffset});
       }, (entry, newEntry, event) => {
         ensureHistoryEntryMetadata(newEntry, event, 'mouse');
-        return History.Decisions.Substitute;
+        return History.Decisions.Merge;
       });
       this._revealCursors();
     });
@@ -1004,7 +1004,7 @@ function keyboardHistory(entry, newEntry, event) {
   if (newMetadata.allSpaces && !metadata.allSpaces)
     return History.Decisions.Push;
   // Otherwise, amend current entry.
-  return History.Decisions.Substitute;
+  return History.Decisions.Merge;
 }
 
 function ensureHistoryEntryMetadata(entry, event, origin) {
