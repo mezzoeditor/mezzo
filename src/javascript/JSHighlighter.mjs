@@ -7,7 +7,6 @@ import { EventEmitter } from '../core/EventEmitter.mjs';
 const HIGHLIGHT_CHUNK = 20000;
 const STATE_CHUNK = 2000;
 
-// TODO: all +0.5 here should not be necessary.
 export class JSHighlighter {
   constructor(editor) {
     this._platformSupport = editor.platformSupport();
@@ -38,7 +37,7 @@ export class JSHighlighter {
     if (this._highlightOffset >= this._document.text().length())
       return;
     let to = Math.min(this._highlightOffset + HIGHLIGHT_CHUNK, this._document.text().length());
-    this._highlightStates.clearTouching(this._highlightOffset, to + 0.5);
+    this._highlightStates.clearStarting(this._highlightOffset, to + 1);
     for (; this._highlightOffset < to; this._highlightOffset += STATE_CHUNK) {
       this._parser.it.setConstraints(0, this._highlightOffset);
       for (let token of this._parser);
@@ -79,7 +78,7 @@ export class JSHighlighter {
       let from = replacement.offset;
       let to = from + replacement.removed.length();
 
-      this._highlightStates.clearTouching(from, to + 0.5);
+      this._highlightStates.clearStarting(from, to + 1);
       this._highlightStates.replace(from, to, replacement.inserted.length());
       if (from === 0)
         this._highlightStates.add(0, 0, Parser.defaultState());
@@ -88,7 +87,7 @@ export class JSHighlighter {
         continue;
       }
 
-      let decoration = this._highlightStates.lastTouching(0, from + 0.5);
+      let decoration = this._highlightStates.lastStarting(0, from + 1);
       if (decoration) {
         this._highlightOffset = decoration.from;
         this._parser = new Parser(replacement.after.iterator(this._highlightOffset), decoration.data);
@@ -108,7 +107,7 @@ export class JSHighlighter {
     trace.beginGroup('js');
     let decorator = new TextDecorator();
     for (let range of visibleContent.ranges) {
-      let decoration = this._highlightStates.lastTouching(range.from - STATE_CHUNK, range.from + 0.5);
+      let decoration = this._highlightStates.lastStarting(range.from - STATE_CHUNK, range.from + 1);
       if (!decoration) {
         decorator.add(range.from, range.to, 'syntax.default');
         continue;
