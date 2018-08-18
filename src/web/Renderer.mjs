@@ -602,6 +602,20 @@ export class Renderer {
     return {x, y};
   }
 
+  positionToViewportPoint(position) {
+    const offset = this._editor.document().text().positionToOffset(position, false /* strict */);
+    console.log(offset);
+    const point = this._editor.viewport().offsetToViewportPoint(offset);
+    if (!point)
+      return null;
+    console.log(point);
+    const bounds = this._canvas.getBoundingClientRect();
+    return {
+      x: point.x + bounds.left + this._editorRect.x,
+      y: point.y + bounds.top + this._editorRect.y
+    };
+  }
+
   _canvasToTextOffset({x, y}) {
     x -= this._editorRect.x;
     y -= this._editorRect.y;
