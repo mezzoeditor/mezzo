@@ -37,6 +37,10 @@ export class Document extends EventEmitter {
     this._operationReplacements = [];
     this._oldSelection = null;
     this._dispatchingChangedEvent = false;
+
+    this._muteHistory = false;
+    this._history = [new HistoryEntry([] /* replacements */, [] /* selection */)];
+    this._historyIndex = 0;
   }
 
   /**
@@ -111,17 +115,18 @@ export class Document extends EventEmitter {
 
   /**
    * @param {function()} fun
+   * @param {string} historyAction
    */
-  operation(fun) {
+  operation(fun, historyAction) {
     if (this._dispatchingChangedEvent)
       throw new Error('Cannot modify document from-inside change event');
     ++this._operation;
     const result = fun();
     --this._operation;
-    this._maybeEmit();
+    this._maybeEmit(historyAction);
   }
 
-  _maybeEmit() {
+  _maybeEmit(historyAction = Document.History.Push) {
     if (this._operation || (!this._operationReplacements.length && !this._oldSelection))
       return;
     // If there are some edits, make sure selection is consistent with document.
@@ -139,6 +144,26 @@ export class Document extends EventEmitter {
     this._operationReplacements = [];
     this._oldSelection = null;
 
+    // Update history.
+    if (!this._muteHistory) {
+      const entry = this._history[this._historyIndex];
+      const newEntry = new HistoryEntry(replacements, this._selection);
+      if (historyAction !== Document.History.Reset && this._historyIndex === 0 || this._historyIndex < this._history.length - 1)
+        historyAction = Document.History.Push;
+      if (historyAction === Document.History.Push) {
+        this._history.splice(++this._historyIndex, this._history.length, newEntry);
+      } else if (historyAction === Document.History.Merge) {
+        newEntry.merge(this._history[this._historyIndex]);
+        this._history[this._historyIndex] = newEntry;
+      } else if (historyAction === Document.History.Reset) {
+        this._history = [newEntry];
+        this._historyIndex = 0;
+      } else {
+        throw new Error('Unknown history action: ' + historyAction);
+      }
+    }
+
+    // Dispatch event.
     if (this._dispatchingChangedEvent)
       throw new Error('Cannot modify document from-inside change event');
     this._dispatchingChangedEvent = true;
@@ -163,7 +188,7 @@ export class Document extends EventEmitter {
       after: text
     });
     this._text = text;
-    this._maybeEmit();
+    this._maybeEmit(Document.History.Reset);
     return removed;
   }
 
@@ -190,8 +215,87 @@ export class Document extends EventEmitter {
     this._maybeEmit();
     return removed;
   }
+
+  /**
+   * @return {boolean}
+   */
+  undo() {
+    if (!this._historyIndex)
+      return false;
+    let index = this._historyIndex - 1;
+    while (index > 0 && !this._history[index + 1].hasTextChanges())
+      --index;
+    this._apply(index);
+    return true;
+  }
+
+  /**
+   * @return {boolean}
+   */
+  redo() {
+    let index = this._historyIndex;
+    while (index + 1 < this._history.length) {
+      ++index;
+      if (this._history[index].hasTextChanges()) {
+        this._apply(index);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * @return {boolean}
+   */
+  softUndo() {
+    if (this._historyIndex === 0)
+      return false;
+    this._apply(this._historyIndex - 1);
+    return true;
+  }
+
+  /**
+   * @return {boolean}
+   */
+  softRedo() {
+    if (this._historyIndex + 1 >= this._history.length)
+      return false;
+    this._apply(this._historyIndex + 1);
+    return true;
+  }
+
+  /**
+   * @param {!HistoryEntry} entry
+   */
+  _apply(newHistoryIndex) {
+    this._muteHistory = true;
+    this.operation(() => {
+      if (newHistoryIndex > this._historyIndex) {
+        for (let i = this._historyIndex + 1; i <= newHistoryIndex; ++i) {
+          for (const replacement of this._history[i].replacements) {
+            this.replace(replacement.offset, replacement.offset + replacement.removed.length(), replacement.inserted);
+          }
+        }
+      } else {
+        for (let i = this._historyIndex; i > newHistoryIndex; --i) {
+          const replacements = this._history[i].replacements;
+          for (let j = replacements.length - 1; j >= 0; --j) {
+            this.replace(replacements[j].offset, replacements[j].offset + replacements[j].inserted.length(), replacements[j].removed);
+          }
+        }
+      }
+      this.setSelection(this._history[newHistoryIndex].selection);
+      this._historyIndex = newHistoryIndex;
+    });
+    this._muteHistory = false;
+  }
 };
 
+Document.History = {
+  Push: 'push',
+  Merge: 'merge',
+  Reset: 'reset',
+};
 
 /**
  * @param {!Array<!SelectionRange>} aRanges
@@ -284,6 +388,25 @@ Document.Events = {
 };
 
 Document.test = {};
+
+class HistoryEntry {
+  /**
+   * @param {!Array<!Replacement>} replacements
+   * @param {!Array<!SelectionRange>} selection
+   */
+  constructor(replacements, selection) {
+    this.selection = selection;
+    this.replacements = replacements;
+  }
+
+  hasTextChanges() {
+    return !!this.replacements.length;
+  }
+
+  merge(oldEntry) {
+    this.replacements = [...oldEntry.replacements, ...this.replacements];
+  }
+}
 
 /**
  * @param {!Document} document
