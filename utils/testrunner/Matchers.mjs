@@ -51,9 +51,23 @@ class Expect {
 }
 
 const DefaultMatchers = {
+  /**
+   * @param {*} value
+   * @param {*} other
+   * @param {string=} message
+   */
   toBe: function(value, other, message) {
-    message = message || `${value} == ${other}`;
-    return { pass: Object.is(value, other), message };
+    // 1. PASS if values are strictly equal
+    if (Object.is(value, other))
+      return { pass: true, message: message || `${value} === ${other}` };
+    // 2. FAIL if values are of different type
+    if (typeof value !== typeof other)
+      return { pass: false, message: message || `${value} === ${other}` };
+    // 3. Compare value serialization
+    const valueJson = stringify(value);
+    const otherJson = stringify(other);
+    message = message || `${valueJson} ≈ ${otherJson}`;
+    return { pass: valueJson === otherJson, message };
   },
 
   toBeFalsy: function(value, message) {
@@ -94,13 +108,6 @@ const DefaultMatchers = {
   toContain: function(value, other, message) {
     message = message || `${value} ⊇ ${other}`;
     return { pass: value.includes(other), message };
-  },
-
-  toEqual: function(value, other, message) {
-    const valueJson = stringify(value);
-    const otherJson = stringify(other);
-    message = message || `${valueJson} ≈ ${otherJson}`;
-    return { pass: valueJson === otherJson, message };
   },
 
   toBeCloseTo: function(value, other, precision, message) {

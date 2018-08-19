@@ -10,8 +10,8 @@ export function addTests(runner, expect) {
       if (!expected) {
         expect(got).toBe(null);
       } else {
-        expect(got.from).toEqual(expected.from);
-        expect(got.to).toEqual(expected.to);
+        expect(got.from).toBe(expected.from);
+        expect(got.to).toBe(expected.to);
         expect(got.data).toBe(expected.data);
       }
     }
@@ -142,13 +142,13 @@ export function addTests(runner, expect) {
         let got = dec.listAll();
         expect(got.length).toBe(expected.length, `test: ${JSON.stringify(test)}`);
         for (let i = 0; i < got.length; i++) {
-          expect(got[i].from).toEqual(expected[i].from, `test: ${JSON.stringify(test)}`);
-          expect(got[i].to).toEqual(expected[i].to, `test: ${JSON.stringify(test)}`);
+          expect(got[i].from).toBe(expected[i].from, `test: ${JSON.stringify(test)}`);
+          expect(got[i].to).toBe(expected[i].to, `test: ${JSON.stringify(test)}`);
         }
         if (expected.length) {
           let range = dec.resolve(handle);
-          expect(range.from).toEqual(expected[0].from);
-          expect(range.to).toEqual(expected[0].to);
+          expect(range.from).toBe(expected[0].from);
+          expect(range.to).toBe(expected[0].to);
         } else {
           expect(removed.length).toBe(1);
           expect(removed[0]).toBe(handle);
@@ -166,8 +166,8 @@ export function addTests(runner, expect) {
       let list = dec.listAll();
       expect(list.length).toBe(count);
       for (let i = 0; i < count; i++) {
-        expect(list[i].from).toEqual(i+ 200 + 99);
-        expect(list[i].to).toEqual(i+ 200 + 99);
+        expect(list[i].from).toBe(i+ 200 + 99);
+        expect(list[i].to).toBe(i+ 200 + 99);
       }
     });
 
@@ -187,7 +187,7 @@ export function addTests(runner, expect) {
 
       checkList(dec.listAll(), [a, b, c, d, e]);
 
-      expect(dec.remove(eHandle)).toEqual(e);
+      expect(dec.remove(eHandle)).toBe(e);
       expect(dec.remove(eHandle)).toBe(undefined);
       checkList(dec.listAll(), [a, b, c, d]);
 
@@ -209,7 +209,7 @@ export function addTests(runner, expect) {
       checkList(dec.listAll(), [a, b, e]);
 
       dec.add(d.from, d.to, d.data);
-      expect(dec.remove(aHandle)).toEqual(a);
+      expect(dec.remove(aHandle)).toBe(a);
       expect(dec.remove(eHandle)).toBe(undefined);
       checkList(dec.listAll(), [b, d, e]);
 

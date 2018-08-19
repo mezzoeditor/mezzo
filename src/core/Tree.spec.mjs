@@ -9,23 +9,23 @@ export function addTests(runner, expect) {
     it('empty tree', () => {
       const emptyMetrics = {length: 0, firstWidth: 0, lastWidth: 0, longestWidth: 0};
       let tree = new Tree();
-      expect(tree.metrics()).toEqual(emptyMetrics);
-      expect(tree.collect()).toEqual([]);
+      expect(tree.metrics()).toBe(emptyMetrics);
+      expect(tree.collect()).toBe([]);
 
       let {left, right, middle} = tree.split(5, 25);
-      expect(left.metrics()).toEqual(emptyMetrics);
-      expect(right.metrics()).toEqual(emptyMetrics);
-      expect(middle.metrics()).toEqual(emptyMetrics);
+      expect(left.metrics()).toBe(emptyMetrics);
+      expect(right.metrics()).toBe(emptyMetrics);
+      expect(middle.metrics()).toBe(emptyMetrics);
 
       let {first, rest} = tree.splitFirst();
       expect(first).toBe(null);
-      expect(rest.metrics()).toEqual(emptyMetrics);
+      expect(rest.metrics()).toBe(emptyMetrics);
 
       let {last} = tree.splitLast();
       expect(last).toBe(null);
 
       let another = Tree.merge(tree, new Tree());
-      expect(another.metrics()).toEqual(emptyMetrics);
+      expect(another.metrics()).toBe(emptyMetrics);
     });
 
     it('merge', () => {
@@ -48,39 +48,39 @@ export function addTests(runner, expect) {
       const metrics300303 = Tree.combineMetrics(metrics3, Tree.combineMetrics(metrics3, metrics3));
 
       let tree12 = Tree.build([{data: 1, metrics: metrics1}, {data: 2, metrics: metrics2}]);
-      expect(tree12.metrics()).toEqual(metrics12);
-      expect(tree12.collect()).toEqual([node1, node2]);
+      expect(tree12.metrics()).toBe(metrics12);
+      expect(tree12.collect()).toBe([node1, node2]);
       let tree3 = Tree.build([{data: 3, metrics: metrics3}]);
-      expect(tree3.metrics()).toEqual(metrics3);
-      expect(tree3.collect()).toEqual([node3]);
+      expect(tree3.metrics()).toBe(metrics3);
+      expect(tree3.collect()).toBe([node3]);
       let tree0 = Tree.build([]);
-      expect(tree0.metrics()).toEqual(metrics0);
-      expect(tree0.collect()).toEqual([]);
+      expect(tree0.metrics()).toBe(metrics0);
+      expect(tree0.collect()).toBe([]);
       let tree4 = Tree.build([{data: 4, metrics: metrics4}]);
-      expect(tree4.metrics()).toEqual(metrics4);
-      expect(tree4.collect()).toEqual([node4]);
+      expect(tree4.metrics()).toBe(metrics4);
+      expect(tree4.collect()).toBe([node4]);
 
       let tree012 = Tree.merge(tree0, tree12);
-      expect(tree012.metrics()).toEqual(metrics12);
-      expect(tree012.collect()).toEqual([node1, node2]);
+      expect(tree012.metrics()).toBe(metrics12);
+      expect(tree012.collect()).toBe([node1, node2]);
       let tree124 = Tree.merge(tree12, tree4);
-      expect(tree124.metrics()).toEqual(metrics124);
-      expect(tree124.collect()).toEqual([node1, node2, node4]);
+      expect(tree124.metrics()).toBe(metrics124);
+      expect(tree124.collect()).toBe([node1, node2, node4]);
       let tree3124 = Tree.merge(tree3, tree124);
-      expect(tree3124.metrics()).toEqual(metrics3124);
-      expect(tree3124.collect()).toEqual([node3, node1, node2, node4]);
+      expect(tree3124.metrics()).toBe(metrics3124);
+      expect(tree3124.collect()).toBe([node3, node1, node2, node4]);
 
       let tree43 = Tree.merge(tree4, tree3);
-      expect(tree43.metrics()).toEqual(metrics43);
-      expect(tree43.collect()).toEqual([node4, node3]);
+      expect(tree43.metrics()).toBe(metrics43);
+      expect(tree43.collect()).toBe([node4, node3]);
       let tree43012 = Tree.merge(tree43, tree012);
-      expect(tree43012.metrics()).toEqual(metrics43012);
-      expect(tree43012.collect()).toEqual([node4, node3, node1, node2]);
+      expect(tree43012.metrics()).toBe(metrics43012);
+      expect(tree43012.collect()).toBe([node4, node3, node1, node2]);
 
       let tree30 = Tree.merge(tree3, tree0);
       let tree300303 = Tree.merge(tree30, Tree.merge(tree0, Tree.merge(tree30, tree3)));
-      expect(tree300303.metrics()).toEqual(metrics300303);
-      expect(tree300303.collect()).toEqual([node3, node3, node3]);
+      expect(tree300303.metrics()).toBe(metrics300303);
+      expect(tree300303.collect()).toBe([node3, node3, node3]);
     });
 
     it('split', () => {
@@ -102,42 +102,42 @@ export function addTests(runner, expect) {
         {data: 0, metrics: metrics0}, {data: 3, metrics: metrics3},
         {data: 4, metrics: metrics4}, {data: 0, metrics: metrics0},
       ]);
-      expect(tree.collect()).toEqual([node1, node2, node0, node3, node4, node0]);
+      expect(tree.collect()).toBe([node1, node2, node0, node3, node4, node0]);
 
       tmp = tree.split(0, 0);
-      expect(tmp.left.collect()).toEqual([]);
-      expect(tmp.middle.collect()).toEqual([]);
-      expect(tmp.right.collect()).toEqual([node1, node2, node0, node3, node4, node0]);
+      expect(tmp.left.collect()).toBe([]);
+      expect(tmp.middle.collect()).toBe([]);
+      expect(tmp.right.collect()).toBe([node1, node2, node0, node3, node4, node0]);
 
       tmp = tree.split(0, 3);
-      expect(tmp.left.collect()).toEqual([]);
-      expect(tmp.middle.collect()).toEqual([node1, node2, node0]);
-      expect(tmp.right.collect()).toEqual([node3, node4, node0]);
+      expect(tmp.left.collect()).toBe([]);
+      expect(tmp.middle.collect()).toBe([node1, node2, node0]);
+      expect(tmp.right.collect()).toBe([node3, node4, node0]);
 
       tmp = tree.split(2, 5);
-      expect(tmp.left.collect()).toEqual([]);
-      expect(tmp.middle.collect()).toEqual([node1, node2, node0, node3]);
-      expect(tmp.right.collect()).toEqual([node4, node0]);
+      expect(tmp.left.collect()).toBe([]);
+      expect(tmp.middle.collect()).toBe([node1, node2, node0, node3]);
+      expect(tmp.right.collect()).toBe([node4, node0]);
 
       tmp = tree.split(3, 8);
-      expect(tmp.left.collect()).toEqual([node1]);
-      expect(tmp.middle.collect()).toEqual([node2, node0, node3]);
-      expect(tmp.right.collect()).toEqual([node4, node0]);
+      expect(tmp.left.collect()).toBe([node1]);
+      expect(tmp.middle.collect()).toBe([node2, node0, node3]);
+      expect(tmp.right.collect()).toBe([node4, node0]);
 
       tmp = tree.split(7, 7);
-      expect(tmp.left.collect()).toEqual([node1, node2, node0]);
-      expect(tmp.middle.collect()).toEqual([node3]);
-      expect(tmp.right.collect()).toEqual([node4, node0]);
+      expect(tmp.left.collect()).toBe([node1, node2, node0]);
+      expect(tmp.middle.collect()).toBe([node3]);
+      expect(tmp.right.collect()).toBe([node4, node0]);
 
       tmp = tree.split(3, 9);
-      expect(tmp.left.collect()).toEqual([node1]);
-      expect(tmp.middle.collect()).toEqual([node2, node0, node3, node4, node0]);
-      expect(tmp.right.collect()).toEqual([]);
+      expect(tmp.left.collect()).toBe([node1]);
+      expect(tmp.middle.collect()).toBe([node2, node0, node3, node4, node0]);
+      expect(tmp.right.collect()).toBe([]);
 
       tmp = tree.split(12, 15);
-      expect(tmp.left.collect()).toEqual([node1, node2, node0, node3, node4, node0]);
-      expect(tmp.middle.collect()).toEqual([]);
-      expect(tmp.right.collect()).toEqual([]);
+      expect(tmp.left.collect()).toBe([node1, node2, node0, node3, node4, node0]);
+      expect(tmp.middle.collect()).toBe([]);
+      expect(tmp.right.collect()).toBe([]);
     });
 
     it('iterator', () => {
@@ -187,22 +187,22 @@ export function addTests(runner, expect) {
 
         expect(iterator.locateByOffset(start, false /* strict */)).toBe(Math.max(0, Math.min(start, total.offset)));
         for (let j = i; j < nodes.length; j++) {
-          expect(iterator.before).toEqual(before[j]);
+          expect(iterator.before).toBe(before[j]);
           expect(iterator.data).toBe(nodes[j].data);
-          expect(iterator.metrics).toEqual(nodes[j].metrics);
-          expect(iterator.after).toEqual(advance(before[j], nodes[j].metrics));
+          expect(iterator.metrics).toBe(nodes[j].metrics);
+          expect(iterator.after).toBe(advance(before[j], nodes[j].metrics));
           expect(iterator.next()).toBe(j + 1 < nodes.length);
         }
-        expect(iterator.before).toEqual(total);
+        expect(iterator.before).toBe(total);
         expect(iterator.data).toBe(undefined);
         expect(iterator.metrics).toBe(undefined);
         expect(iterator.after).toBe(undefined);
         expect(iterator.next()).toBe(false);
-        expect(iterator.before).toEqual(total);
+        expect(iterator.before).toBe(total);
 
         expect(iterator.locateByOffset(start, false /* strict */)).toBe(Math.max(0, Math.min(start, total.offset)));
         if (i === nodes.length) {
-          expect(iterator.before).toEqual(total);
+          expect(iterator.before).toBe(total);
           expect(iterator.data).toBe(undefined);
           expect(iterator.metrics).toBe(undefined);
           expect(iterator.after).toBe(undefined);
@@ -210,18 +210,18 @@ export function addTests(runner, expect) {
           i--;
         }
         for (let j = i; j >= 0; j--) {
-          expect(iterator.before).toEqual(before[j]);
+          expect(iterator.before).toBe(before[j]);
           expect(iterator.data).toBe(nodes[j].data);
-          expect(iterator.metrics).toEqual(nodes[j].metrics);
-          expect(iterator.after).toEqual(advance(before[j], nodes[j].metrics));
+          expect(iterator.metrics).toBe(nodes[j].metrics);
+          expect(iterator.after).toBe(advance(before[j], nodes[j].metrics));
           expect(iterator.prev()).toBe(j > 0);
         }
         expect(iterator.before).toBe(undefined);
         expect(iterator.data).toBe(undefined);
         expect(iterator.metrics).toBe(undefined);
-        expect(iterator.after).toEqual({x: 0, y: 0, offset: 0});
+        expect(iterator.after).toBe({x: 0, y: 0, offset: 0});
         expect(iterator.prev()).toBe(false);
-        expect(iterator.after).toEqual({x: 0, y: 0, offset: 0});
+        expect(iterator.after).toBe({x: 0, y: 0, offset: 0});
       }
     });
   });

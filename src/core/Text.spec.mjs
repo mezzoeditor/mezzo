@@ -8,15 +8,15 @@ export function addTests(runner, expect) {
 
   describe('Text', () => {
     it('chunking', () => {
-      expect(Text.test.chunks('', 5)).toEqual([]);
-      expect(Text.test.chunks('😀', 1)).toEqual([
+      expect(Text.test.chunks('', 5)).toBe([]);
+      expect(Text.test.chunks('😀', 1)).toBe([
         {data: '😀', metrics: {length: 2, firstWidth: 1, lastWidth: 1, longestWidth: 1}}
       ]);
-      expect(Text.test.chunks('ab', 1)).toEqual([
+      expect(Text.test.chunks('ab', 1)).toBe([
         {data: 'a', metrics: {length: 1, firstWidth: 1, lastWidth: 1, longestWidth: 1}},
         {data: 'b', metrics: {length: 1, firstWidth: 1, lastWidth: 1, longestWidth: 1}}
       ]);
-      expect(Text.test.chunks('ab', 5)).toEqual([
+      expect(Text.test.chunks('ab', 5)).toBe([
         {data: 'ab', metrics: {length: 2, firstWidth: 2, lastWidth: 2, longestWidth: 2}}
       ]);
     });
@@ -70,14 +70,14 @@ export function addTests(runner, expect) {
         expect(text.length()).toBe(content.length);
         for (let {from, to} of contentQueries)
           expect(text.content(from, to)).toBe(content.substring(from, to));
-        expect(text.offsetToPosition(0)).toEqual({line: 0, column: 0});
-        expect(text.offsetToPosition(content.length)).toEqual({line: lineCount, column: 0});
+        expect(text.offsetToPosition(0)).toBe({line: 0, column: 0});
+        expect(text.offsetToPosition(content.length)).toBe({line: lineCount, column: 0});
         expect(text.offsetToPosition(content.length + 1)).toBe(null);
         for (let {line, column, offset, nonStrict} of locationQueries) {
           if (nonStrict) {
             expect(text.positionToOffset({line, column: nonStrict.column})).toBe(offset);
           } else {
-            expect(text.offsetToPosition(offset)).toEqual({line, column});
+            expect(text.offsetToPosition(offset)).toBe({line, column});
             expect(text.positionToOffset({line, column})).toBe(offset);
             expect(text.positionToOffset({line, column}, true)).toBe(offset);
           }

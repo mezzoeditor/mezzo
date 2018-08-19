@@ -19,7 +19,7 @@ export function addTests(runner, expect) {
 
       editor.search().find('hello');
       platform.runUntilIdle();
-      expect(editor.search().matches()).toEqual([
+      expect(editor.search().matches()).toBe([
         {from: 0, to: 5}
       ]);
 

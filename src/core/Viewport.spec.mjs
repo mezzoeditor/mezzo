@@ -73,14 +73,14 @@ export function addTests(runner, expect) {
         Viewport.test.rechunk(viewport, chunkSize);
         expect(viewport.contentWidth()).toBe(longest);
         expect(viewport.contentHeight()).toBe((lineCount + 1) * 3);
-        expect(viewport.offsetToContentPoint(0)).toEqual({x: 0, y: 0});
-        expect(viewport.offsetToContentPoint(content.length)).toEqual({x: 0, y: lineCount * 3});
+        expect(viewport.offsetToContentPoint(0)).toBe({x: 0, y: 0});
+        expect(viewport.offsetToContentPoint(content.length)).toBe({x: 0, y: lineCount * 3});
         expect(viewport.offsetToContentPoint(content.length + 1)).toBe(null);
         for (let {offset, x, y, nonStrict, rounded} of locationQueries) {
           if (nonStrict) {
             expect(viewport.contentPointToOffset({x: nonStrict.x, y}, RoundMode.Floor)).toBe(offset);
           } else {
-            expect(viewport.offsetToContentPoint(offset)).toEqual({x, y});
+            expect(viewport.offsetToContentPoint(offset)).toBe({x, y});
             expect(viewport.contentPointToOffset({x, y}, RoundMode.Floor)).toBe(offset);
             expect(viewport.contentPointToOffset({x: x + 0.5, y: y + 0.5}, RoundMode.Floor, false /* strict */)).toBe(offset);
             expect(viewport.contentPointToOffset({x, y}, RoundMode.Floor, true /* strict */)).toBe(offset);
