@@ -30,7 +30,10 @@ export let DefaultTheme = {
         left: 0,
         right: 100,
       },
-    }
+    },
+    gutter: {
+      border: 'hsla(36, 96%, 56%, 0.7)',
+    },
   },
   'search.match.current': {
     border: {

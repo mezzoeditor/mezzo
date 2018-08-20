@@ -19,9 +19,9 @@ export function addTests(runner, expect) {
       renderer.editor().reset('hello\nasdf\nasdf\nasdf\n');
       renderer.editor().document().setSelection([
         {anchor: 0, focus: 7},
-        {anchor: 15, focus: 15},
+        {anchor: 19, focus: 19},
       ]);
-      golden.expectText(renderer.render(), 'simple.svg');
+      golden.expectText(renderer.render(1.1, 0), 'simple.svg');
     });
   });
 }

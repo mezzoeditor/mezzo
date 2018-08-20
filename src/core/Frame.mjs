@@ -22,6 +22,22 @@ import { Document } from './Document.mjs';
 
 export class Frame {
   constructor() {
+    /**
+     * These should be applied before drawing text, background, marks and lines.
+     * All other coordinates are relative to these offsets.
+     */
+    this.translateLeft = 0;
+    this.translateTop = 0;
+
+    /**
+     * These are the X-coordinates of left-most and right-most visible
+     * points of any line.
+     */
+    this.lineLeft = 0;
+    this.lineRight = 0;
+
+    this.lineHeight = 0;
+
     /** @type {!Array<{x: number, y: number, content: string, style: string}>} */
     this.text = [];
     /** @type {!Array<{x: number, y: number, width: number, style: string}>} */
@@ -30,12 +46,15 @@ export class Frame {
     this.marks = [];
     /** @type {!Array<{y: number, height: number, style: string}>} */
     this.scrollbar = [];
-    /** @type {!Array<{first: number, last: number, y: number, styles: !Array<string>}>} */
+    /** @type {!Array<{
+     *      first: number,
+     *      last: number,
+     *      x: number,
+     *      y: number,
+     *      width: number,
+     *      styles: !Array<string>
+     * }>} */
     this.lines = [];
-    /** @type {number} */
-    this.paddingLeft = 0;
-    /** @type {number} */
-    this.paddingRight = 0;
   }
 };
 

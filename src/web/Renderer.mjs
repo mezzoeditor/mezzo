@@ -816,37 +816,38 @@ export class Renderer {
     ctx.clearRect(0, 0, this._cssWidth, this._cssHeight);
     ctx.lineWidth = 1 / this._ratio;
 
-    trace.begin('frame');
+    trace.begin('buildFrame');
     const frame = this._editor.viewport().decorate();
-    trace.end('frame');
+    trace.end('buildFrame');
 
-    trace.begin('gutter');
+    trace.begin('drawGutter');
     ctx.save();
     ctx.beginPath();
     ctx.rect(this._gutterRect.x, this._gutterRect.y, this._gutterRect.width, this._gutterRect.height);
     ctx.clip();
     this._drawGutter(ctx, frame);
     ctx.restore();
-    trace.end('gutter');
+    trace.end('drawGutter');
 
-    trace.beginGroup('text');
+    trace.beginGroup('drawContent');
     ctx.save();
     ctx.beginPath();
     ctx.rect(this._editorRect.x, this._editorRect.y, this._editorRect.width, this._editorRect.height);
     ctx.clip();
     ctx.translate(this._editorRect.x, this._editorRect.y);
+    ctx.translate(frame.translateLeft, frame.translateTop);
     this._drawTextAndBackground(ctx, frame);
     this._drawMarks(ctx, frame);
     ctx.restore();
-    trace.endGroup('text');
+    trace.endGroup('drawContent');
 
-    trace.beginGroup('scrollbar');
+    trace.beginGroup('drawScrollbar');
     ctx.save();
     this._drawScrollbarMarkers(ctx, frame, this._vScrollbar.rect);
     this._drawScrollbar(ctx, this._vScrollbar, true /* isVertical */);
     this._drawScrollbar(ctx, this._hScrollbar, false /* isVertical */);
     ctx.restore();
-    trace.endGroup('scrollbar');
+    trace.endGroup('drawScrollbar');
 
     this._rendering = false;
     trace.endGroup('render', 50);
@@ -862,6 +863,29 @@ export class Renderer {
     ctx.lineTo(this._gutterRect.width, this._gutterRect.height);
     ctx.stroke();
 
+    ctx.translate(0, frame.translateTop);
+    for (let {y, styles} of frame.lines) {
+      for (let style of styles) {
+        const theme = this._theme[style];
+        if (!theme || !theme.gutter)
+          continue;
+        if (theme.gutter.color) {
+          ctx.fillStyle = theme.gutter.color;
+          ctx.fillRect(0, y, this._gutterRect.width, frame.lineHeight);
+        }
+        if (theme.gutter.border) {
+          ctx.strokeStyle = theme.gutter.border;
+          ctx.lineWidth = 1 / this._ratio;
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(this._gutterRect.width, y);
+          ctx.moveTo(0, y + frame.lineHeight);
+          ctx.lineTo(this._gutterRect.width, y + frame.lineHeight);
+          ctx.stroke();
+        }
+      }
+    }
+
     ctx.textAlign = 'right';
     ctx.fillStyle = 'rgb(128, 128, 128)';
     const textOffset = this._measurer.textOffset;
@@ -874,8 +898,6 @@ export class Renderer {
   }
 
   _drawTextAndBackground(ctx, frame) {
-    const lineHeight = this._measurer.lineHeight();
-
     for (let {y, styles} of frame.lines) {
       for (let style of styles) {
         const theme = this._theme[style];
@@ -883,17 +905,16 @@ export class Renderer {
           continue;
         if (theme.line.background && theme.line.background.color) {
           ctx.fillStyle = theme.line.background.color;
-          ctx.fillRect(frame.paddingLeft, y, this._editorRect.width - frame.paddingRight, lineHeight);
+          ctx.fillRect(frame.lineLeft, y, frame.lineRight - frame.lineLeft, frame.lineHeight);
         }
         if (theme.line.border && theme.line.border.color) {
           ctx.strokeStyle = theme.line.border.color;
           ctx.lineWidth = (theme.line.border.width || 1) / this._ratio;
-
           ctx.beginPath();
-          ctx.moveTo(frame.paddingLeft, y);
-          ctx.lineTo(this._editorRect.width - frame.paddingRight, y);
-          ctx.moveTo(frame.paddingLeft, y + lineHeight);
-          ctx.lineTo(this._editorRect.width - frame.paddingRight, y + lineHeight);
+          ctx.moveTo(frame.lineLeft, y);
+          ctx.lineTo(frame.lineRight, y);
+          ctx.moveTo(frame.lineLeft, y + frame.lineHeight);
+          ctx.lineTo(frame.lineRight, y + frame.lineHeight);
           ctx.stroke();
         }
       }
@@ -906,7 +927,7 @@ export class Renderer {
 
       if (theme.background && theme.background.color) {
         ctx.fillStyle = theme.background.color;
-        ctx.fillRect(x, y, width, lineHeight);
+        ctx.fillRect(x, y, width, frame.lineHeight);
       }
 
       if (theme.border) {
@@ -919,14 +940,14 @@ export class Renderer {
         ctx.beginPath();
         if (!width) {
           ctx.moveTo(x, y);
-          ctx.lineTo(x, y + lineHeight);
+          ctx.lineTo(x, y + frame.lineHeight);
         } else {
           // TODO: border.radius should actually clip background.
-          const radius = Math.min(theme.border.radius || 0, Math.min(lineHeight, width) / 2) / this._ratio;
+          const radius = Math.min(theme.border.radius || 0, Math.min(frame.lineHeight, width) / 2) / this._ratio;
           if (radius)
-            roundRect(ctx, x, y, width, lineHeight, radius);
+            roundRect(ctx, x, y, width, frame.lineHeight, radius);
           else
-            ctx.rect(x, y, width, lineHeight);
+            ctx.rect(x, y, width, frame.lineHeight);
         }
         ctx.stroke();
       }
@@ -971,7 +992,7 @@ export class Renderer {
   _drawScrollbarMarkers(ctx, frame, rect) {
     for (let {y, height, style} of frame.scrollbar) {
       const theme = this._theme[style];
-      if (!theme || !theme.line.scrollbar || !theme.line.scrollbar || !theme.line.scrollbar.color)
+      if (!theme || !theme.line || !theme.line.scrollbar || !theme.line.scrollbar || !theme.line.scrollbar.color)
         continue;
       ctx.fillStyle = theme.line.scrollbar.color;
       let left = Math.round(rect.width * (theme.line.scrollbar.left || 0) / 100);

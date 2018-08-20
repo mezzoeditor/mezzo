@@ -1,6 +1,6 @@
 <svg version="1.1" xmlns="http://www.w3.org/2000/svg" baseProfile="full" width="50ch" height="20em" style="font-family: monospace; font-size: 14px;">
+  <line x1="4ch" y1="0em" x2="4ch" y2="20em" stroke="rgb(187, 187, 187)" id="gutter-border"></line>
   <g id="gutter">
-    <line x1="4ch" y1="0em" x2="4ch" y2="20em" stroke="rgb(187, 187, 187)"></line>
     <text x="3.5ch" y="0.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">1</text>
     <text x="3.5ch" y="1.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">2</text>
     <text x="3.5ch" y="2.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">3</text>
@@ -8,16 +8,16 @@
     <text x="3.5ch" y="4.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">5</text>
   </g>
   <g id="viewport">
-    <g id="line-decorations">
-      <rect x="4.5ch" y="0.5em" width="44.5ch" height="1em" fill="rgba(126, 188, 254, 0.1)"></rect>
-      <rect x="4.5ch" y="1.5em" width="44.5ch" height="1em" fill="rgba(126, 188, 254, 0.1)"></rect>
-      <rect x="4.5ch" y="2.5em" width="44.5ch" height="1em" fill="rgba(126, 188, 254, 0.1)"></rect>
+    <g id="lines">
+      <rect x="4.5ch" y="0.5em" width="44ch" height="1em" fill="rgba(126, 188, 254, 0.1)"></rect>
+      <rect x="4.5ch" y="1.5em" width="44ch" height="1em" fill="rgba(126, 188, 254, 0.1)"></rect>
+      <rect x="4.5ch" y="3.5em" width="44ch" height="1em" fill="rgba(126, 188, 254, 0.1)"></rect>
     </g>
     <g id="background">
       <rect x="4.5ch" y="0.5em" width="44ch" height="1em" fill="rgba(126, 188, 254, 0.5)"></rect>
       <rect x="4.5ch" y="1.5em" width="1ch" height="1em" fill="rgba(126, 188, 254, 0.5)"></rect>
       <line x1="5.5ch" y1="1.5em" x2="5.5ch" y2="2.5em" stroke="rgb(33, 33, 33)"></line>
-      <line x1="8.5ch" y1="2.5em" x2="8.5ch" y2="3.5em" stroke="rgb(33, 33, 33)"></line>
+      <line x1="7.5ch" y1="3.5em" x2="7.5ch" y2="4.5em" stroke="rgb(33, 33, 33)"></line>
     </g>
     <g id="text">
       <text x="4.5ch" y="0.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">hello</text>

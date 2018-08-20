@@ -2,7 +2,6 @@ import { Decorator } from './Decorator.mjs';
 import { Document } from './Document.mjs';
 import { Frame, VisibleRange } from './Frame.mjs';
 import { RoundMode, Metrics } from './Metrics.mjs';
-import { trace } from './Trace.mjs';
 import { EventEmitter } from './EventEmitter.mjs';
 import { Markup } from './Markup.mjs';
 
@@ -305,16 +304,32 @@ export class Viewport extends EventEmitter {
    */
   decorate() {
     this._frozen = true;
+    const frame = new Frame();
+    const paddingLeft = Math.max(this._padding.left - this._scrollLeft, 0);
+    const paddingTop = Math.max(this._padding.top - this._scrollTop, 0);
 
-    let y = this.offsetToViewportPoint(this.viewportPointToOffset({x: 0, y: 0})).y;
+    frame.translateLeft = -this._scrollLeft + paddingLeft;
+    frame.translateTop = -this._scrollTop + paddingTop;
+
+    frame.lineLeft = this._scrollLeft;
+    const paddingRight = Math.max(this._padding.right - (this._maxScrollLeft - this._scrollLeft), 0);
+    frame.lineRight = Math.max(0, this._width - paddingRight - paddingLeft) + this._scrollLeft;
+    frame.lineHeight = this._lineHeight;
+
+    const contentLeft = this._scrollLeft - paddingLeft;
+    const contentTop = this._scrollTop - paddingTop;
+    const contentRight = contentLeft + this._width;
+    const contentBottom = contentTop + this._height;
+
+    let y = this.offsetToContentPoint(this.contentPointToOffset({x: contentLeft, y: contentTop})).y;
     let lines = [];
-    for (; y <= this._height; y += this._lineHeight) {
+    for (; y <= contentBottom; y += this._lineHeight) {
       // TODO: from/to do not include widgets on the edge.
-      let from = this.viewportPointToOffset({x: 0, y: y});
-      let to = this.viewportPointToOffset({x: this._width, y: y}, RoundMode.Ceil);
-      let start = this.viewportPointToOffset({x: -this._scrollLeft, y: y});
-      let end = this.viewportPointToOffset({x: this._maxScrollLeft + this._width - this._scrollLeft, y: y});
-      let point = this.offsetToViewportPoint(from);
+      let from = this.contentPointToOffset({x: contentLeft, y: y});
+      let to = this.contentPointToOffset({x: contentRight, y: y}, RoundMode.Ceil);
+      let start = this.contentPointToOffset({x: 0, y: y});
+      let end = this.contentPointToOffset({x: this._contentWidth, y: y});
+      let point = this.offsetToContentPoint(from);
       if (point.y < y)
         break;
       lines.push({
@@ -345,7 +360,6 @@ export class Viewport extends EventEmitter {
       decorators.lines.push(...(partial.lines || []));
     }
 
-    let frame = new Frame();
     this._buildFrameContents(frame, lines, decorators);
     this._buildFrameScrollbar(frame, decorators);
     this._frozen = false;
@@ -389,9 +403,6 @@ export class Viewport extends EventEmitter {
    * @param {!DecorationResult} decorators
    */
   _buildFrameContents(frame, lines, decorators) {
-    frame.paddingLeft = Math.max(this._padding.left - this._scrollLeft, 0);
-    frame.paddingRight = Math.max(this._padding.right - (this._maxScrollLeft - this._scrollLeft), 0);
-
     for (let line of lines) {
       let offsetToX = new Float32Array(line.to - line.from + 1);
       let needsRtlBreakAfter = new Int8Array(line.to - line.from + 1);
@@ -420,7 +431,6 @@ export class Viewport extends EventEmitter {
 
           for (let decorator of decorators.text) {
             decorator.visitTouching(offset, after + 0.5, decoration => {
-              trace.count('decorations');
               let from = Math.max(offset, Offset(decoration.from));
               let to = Math.min(after, Offset(decoration.to));
               while (from < to) {
@@ -467,12 +477,11 @@ export class Viewport extends EventEmitter {
         // Expand by a single character which is not visible to account for borders
         // extending past viewport.
         decorator.visitTouching(line.from - 1, line.to + 1, decoration => {
-          trace.count('decorations');
           // TODO: note that some editors only show selection up to line length. Setting?
           let from = Offset(decoration.from);
-          from = from < line.from ? frame.paddingLeft : offsetToX[from - line.from];
+          from = from < line.from ? frame.lineLeft : offsetToX[from - line.from];
           let to = Offset(decoration.to);
-          to = to > line.to ? this._width - frame.paddingRight : offsetToX[to - line.from];
+          to = to > line.to ? frame.lineRight : offsetToX[to - line.from];
           if (from <= to) {
             frame.background.push({
               x: from,
@@ -491,18 +500,16 @@ export class Viewport extends EventEmitter {
    * @param {!DecorationResult} decorators
    */
   _buildFrameScrollbar(frame, decorators) {
-    const lineHeight = this._lineHeight;
     const ratio = this._height / (this._maxScrollTop + this._height);
     for (let decorator of decorators.lines) {
       let lastTop = -1;
       let lastBottom = -1;
       decorator.sparseVisitAll(decoration => {
-        trace.count('decorations');
         const from = this.offsetToContentPoint(Offset(decoration.from)).y;
         const to = this.offsetToContentPoint(Offset(decoration.to)).y;
 
         let top = from * ratio;
-        let bottom = (to + lineHeight) * ratio;
+        let bottom = (to + frame.lineHeight) * ratio;
         bottom = Math.max(bottom, top + kMinScrollbarDecorationHeight);
 
         if (top <= lastBottom) {
