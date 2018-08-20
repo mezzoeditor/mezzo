@@ -44,6 +44,22 @@ export class Document extends EventEmitter {
   }
 
   /**
+   * @param {*} key
+   * @param {*} value
+   */
+  setMetadata(key, value) {
+    this._history[this._historyIndex].metadata.set(key, value);
+  }
+
+  /**
+   * @param {*} key
+   * @return {*}
+   */
+  metadata(key) {
+    return this._history[this._historyIndex].metadata.get(key);
+  }
+
+  /**
    * @return {boolean}
    */
   hasSelection() {
@@ -173,23 +189,15 @@ export class Document extends EventEmitter {
 
   /**
    * @param {!Text|string} text
+   * @param {!Array<!SelectionRange>} selection
    */
-  reset(text) {
+  reset(text, selection = []) {
     if (this._dispatchingChangedEvent)
       throw new Error('Cannot modify document from-inside change event');
-    if (typeof text === 'string')
-      text = Text.fromString(text);
-    const removed = this._text;
-    this._operationReplacements.push({
-      before: this._text,
-      offset: 0,
-      removed: this._text,
-      inserted: text,
-      after: text
-    });
-    this._text = text;
-    this._maybeEmit(Document.History.Reset);
-    return removed;
+    return this.operation(() => {
+      this.replace(0, this._text.length(), text);
+      this.setSelection(selection);
+    }, Document.History.Reset);
   }
 
   /**
@@ -397,6 +405,7 @@ class HistoryEntry {
   constructor(replacements, selection) {
     this.selection = selection;
     this.replacements = replacements;
+    this.metadata = new Map();
   }
 
   hasTextChanges() {

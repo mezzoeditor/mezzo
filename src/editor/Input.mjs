@@ -1,5 +1,6 @@
 import { Tokenizer } from "./Tokenizer.mjs";
 import { RoundMode } from '../core/Metrics.mjs';
+import { Document } from '../core/Document.mjs';
 
 /**
  * @typedef {{
@@ -26,6 +27,8 @@ export class Input {
     this._indent = ' '.repeat(2);
     this._overrides = new Set();
     this._commands = new Map();
+
+    this._historyMetadata = Symbol('input.history');
 
     this.addCommand('input.backspace', this.deleteBefore.bind(this));
     this.addCommand('input.backspace.word', this.deleteWordBefore.bind(this));
@@ -96,13 +99,27 @@ export class Input {
    * @return {boolean}
    */
   paste(text) {
-    return this._replace(text, range => range);
+    return this._replace(text, range => range, 'clipboard');
+  }
+
+  /**
+   * @return {boolean}
+   */
+  cut() {
+    return this._innerDeleteBefore('clipboard');
   }
 
   /**
    * @return {boolean}
    */
   deleteBefore() {
+    return this._innerDeleteBefore('keyboard');
+  }
+
+  /**
+   * @return {boolean}
+   */
+  _innerDeleteBefore(origin) {
     return this._replace('', range => {
       if (range.from !== range.to)
         return range;
@@ -110,7 +127,7 @@ export class Input {
       if (!column)
         return {s: range.s, from: Math.max(0, range.from - 1), to: range.to};
       return {s: range.s, from: this._document.text().positionToOffset({line, column: column - 1}), to: range.to};
-    });
+    }, origin);
   }
 
   /**
@@ -122,7 +139,7 @@ export class Input {
         return range;
       let offset = Tokenizer.leftBoundary(this._document, this._editor.tokenizer(), range.from - 1);
       return {s: range.s, from: offset, to: range.to};
-    });
+    }, 'keyboard');
   }
 
   /**
@@ -134,7 +151,7 @@ export class Input {
       let linePosition = {line: position.line, column: 0};
       let startOffset = this._document.text().positionToOffset(linePosition);
       return {s: range.s, from: startOffset, to: range.from};
-    });
+    }, 'keyboard');
   }
 
   /**
@@ -149,7 +166,7 @@ export class Input {
       if (next === range.to)
         return {s: range.s, from: range.from, to: Math.min(this._document.text().length(), range.to + 1)};
       return {s: range.s, from: range.from, to: next};
-    });
+    }, 'keyboard');
   }
 
   /**
@@ -157,7 +174,7 @@ export class Input {
    * @return {boolean}
    */
   type(text) {
-    return this._replace(text, range => range);
+    return this._replace(text, range => range, 'keyboard');
   }
 
   /**
@@ -173,7 +190,7 @@ export class Input {
         it.next();
       let indent = ' '.repeat(it.offset - startOffset);
       return {s: range.s + indent, from: range.from, to: range.to};
-    });
+    }, 'keyboard');
   }
 
   /**
@@ -538,35 +555,94 @@ export class Input {
   /**
    * @param {string} s
    * @param {function(!RangeEdit):!RangeEdit} rangeCallback
+   * @param {string} origin
    * @return {boolean}
    */
-  _replace(s, rangeCallback) {
+  _replace(s, rangeCallback, origin) {
     let ranges = this._document.sortedSelection();
     if (!ranges.length)
       return false;
-    this._document.operation(() => {
-      let newRanges = [];
-      let delta = 0;
-      for (let range of ranges) {
-        let from = Math.max(0, Math.min(Math.min(range.anchor, range.focus) + delta, this._document.text().length()));
-        let to = Math.max(0, Math.min(Math.max(range.anchor, range.focus) + delta, this._document.text().length()));
-        let replaced = rangeCallback({from, to, s});
-        let cursorOffset = replaced.from + replaced.s.length;
-        for (let override of this._overrides) {
-          let result = override.call(null, replaced);
-          if (result) {
-            replaced = result.edit;
-            cursorOffset = result.cursorOffset;
-            break;
-          }
+
+    // Figure intended changes first.
+    let edits = [];
+    for (let range of ranges) {
+      let from = Math.max(0, Math.min(Math.min(range.anchor, range.focus), this._document.text().length()));
+      let to = Math.max(0, Math.min(Math.max(range.anchor, range.focus), this._document.text().length()));
+      let replaced = rangeCallback({from, to, s});
+      replaced.cursorOffset = replaced.from + replaced.s.length;
+      for (let override of this._overrides) {
+        let result = override.call(null, replaced);
+        if (result) {
+          replaced = result.edit;
+          replaced.cursorOffset = result.cursorOffset;
+          break;
         }
-        this._document.replace(replaced.from, replaced.to, replaced.s);
-        newRanges.push({anchor: cursorOffset, focus: cursorOffset});
-        delta += replaced.s.length - (replaced.to - replaced.from);
       }
-      this._document.setSelection(newRanges);
-    });
+      edits.push(replaced);
+    }
+    // Compute history action.
+    const metadata = this._document.metadata(this._historyMetadata);
+    const newMetadata = createMetadata(this._document.text(), edits, origin);
+    const historyAction = decideHistoryAction(metadata, newMetadata);
+
+    // Run document operation with proper action.
+    this._document.operation(() => {
+      let delta = 0;
+      let newSelection = [];
+      for (const edit of edits) {
+        this._document.replace(edit.from + delta, edit.to + delta, edit.s);
+        newSelection.push({anchor: edit.cursorOffset + delta, focus: edit.cursorOffset + delta});
+        delta += edit.s.length - (edit.to - edit.from);
+      }
+      this._document.setSelection(newSelection);
+    }, historyAction);
+    this._document.setMetadata(this._historyMetadata, newMetadata);
     return true;
+
+    function createMetadata(text, edits, origin) {
+      let allInserted = true;
+      let allRemoved = true;
+      let allSpaces = true;
+      for (const edit of edits) {
+        const inserted = edit.s;
+        const removed = text.content(edit.from, edit.to);
+        allInserted = allInserted && inserted.length > 0 && removed.length === 0;
+        allRemoved = allRemoved && inserted.length === 0 && removed.length > 0;
+        // Limit space detection for performance reasons.
+        allSpaces = allSpaces && (inserted.length < 100 && /^\s+/.test(inserted))
+                    || (removed.length < 100 && /^\s+/.test(removed));
+      }
+      let modificationType = 'mixed';
+      if (!edits.length)
+        modificationType = 'none';
+      else if (allInserted)
+        modificationType = 'inserts';
+      else if (allRemoved)
+        modificationType = 'removes';
+      return {modificationType, allSpaces, origin};
+    }
+
+    function decideHistoryAction(metadata, newMetadata) {
+      if (!metadata)
+        return Document.History.Push;
+
+      // If this is a selection-only change - push entry.
+      if (newMetadata.modificationType === 'none')
+        return Document.History.Push;
+
+      // If this is the first time we started to type after mouse action - push.
+      if (metadata.origin !== newMetadata.origin)
+        return Document.History.Push;
+
+      // If modification type is "mixed" or it has changed wrt the last entry - push a new entry
+      if (newMetadata.modificationType === 'mixed' || metadata.modificationType !== newMetadata.modificationType)
+        return Document.History.Push;
+      // If we started inserting/removing spaces - push a new entry.
+      if (newMetadata.allSpaces && !metadata.allSpaces)
+        return Document.History.Push;
+      // Otherwise, amend current entry.
+      return Document.History.Merge;
+    }
   }
 
   /**
