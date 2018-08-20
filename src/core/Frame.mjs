@@ -46,14 +46,7 @@ export class Frame {
     this.marks = [];
     /** @type {!Array<{y: number, height: number, style: string}>} */
     this.scrollbar = [];
-    /** @type {!Array<{
-     *      first: number,
-     *      last: number,
-     *      x: number,
-     *      y: number,
-     *      width: number,
-     *      styles: !Array<string>
-     * }>} */
+    /** @type {!Array<{first: number, last: number, y: number, styles: !Array<string>}>} */
     this.lines = [];
   }
 };
