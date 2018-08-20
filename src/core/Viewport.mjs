@@ -7,14 +7,6 @@ import { Markup } from './Markup.mjs';
 
 /**
  * @typedef {{
- *   document: !Document,
- *   range: !Range,
- *   ranges: !Array<!Viewport.VisibleRange>,
- * }} Viewport.VisibleContent
- */
-
-/**
- * @typedef {{
  *   text: !Array<!TextDecorator>|undefined,
  *   background: !Array<!TextDecorator>|undefined,
  *   lines: !Array<!LineDecorator>|undefined
@@ -118,7 +110,7 @@ export class Viewport extends EventEmitter {
     this._lineHeight = measurer.lineHeight();
     this._defaultWidth = measurer.defaultWidth();
 
-    this._markup = new Markup(measurer, this._document.text());
+    this._markup = new Markup(measurer, this._document);
     this._markup.on(Markup.Events.Changed, (contentWidth, contentHeight) => {
       this._contentWidth = contentWidth;
       this._contentHeight = contentHeight;
@@ -625,8 +617,6 @@ export class Viewport extends EventEmitter {
       return;
     if (this._frozen)
       throw new Error('Document modification during decoration is prohibited');
-    for (const replacement of replacements)
-      this._markup.replace(replacement);
   }
 }
 

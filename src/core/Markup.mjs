@@ -1,4 +1,5 @@
 import { EventEmitter } from './EventEmitter.mjs';
+import { Document } from './Document.mjs';
 import { Decorator } from './Decorator.mjs';
 import { Metrics } from './Metrics.mjs';
 import { Tree } from './Tree.mjs';
@@ -9,7 +10,7 @@ import { Tree } from './Tree.mjs';
  * }} Mark
  */
 
-/**
+ /**
  * Measurer converts strings to widths and provides line height.
  *
  * @interface
@@ -46,11 +47,16 @@ export class Measurer {
 export class Markup extends EventEmitter {
   /**
    * @param {!Measurer} measurer
-   * @param {!Text} text
+   * @param {!Document} document
    */
-  constructor(measurer, text) {
+  constructor(measurer, document) {
     super();
-    this._text = text;
+    this._document = document;
+    this._document.on(Document.Events.Changed, ({replacements}) => {
+      for (const replacement of replacements)
+        this._replace(replacement);
+    });
+    this._text = document.text();
     this._marks = new Decorator(true /* createHandles */);
     this.setMeasurer(measurer);
   }
@@ -75,7 +81,7 @@ export class Markup extends EventEmitter {
   /**
    * @param {!Replacement} replacement
    */
-  replace(replacement) {
+  _replace(replacement) {
     let from = replacement.offset;
     let to = from + replacement.removed.length();
     let inserted = replacement.inserted.length();
