@@ -1,0 +1,78 @@
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" baseProfile="full" width="50ch" height="20em" style="font-family: monospace; font-size: 14px;">
+  <line x1="4ch" y1="0em" x2="4ch" y2="20em" stroke="rgb(187, 187, 187)" id="gutter-border"></line>
+  <g id="gutter">
+    <line x1="0ch" y1="4.9em" x2="4ch" y2="4.9em" stroke="hsla(36, 96%, 56%, 0.7)"></line>
+    <text x="3.5ch" y="-0.1em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">1</text>
+    <text x="3.5ch" y="0.9em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">2</text>
+    <text x="3.5ch" y="1.9em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">3</text>
+    <text x="3.5ch" y="2.9em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">4</text>
+    <text x="3.5ch" y="3.9em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">5</text>
+    <text x="3.5ch" y="4.9em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">6</text>
+    <text x="3.5ch" y="5.9em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">7</text>
+    <text x="3.5ch" y="6.9em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">8</text>
+    <text x="3.5ch" y="7.9em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">9</text>
+    <text x="3.5ch" y="8.9em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">10</text>
+    <text x="3.5ch" y="9.9em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">11</text>
+    <text x="3.5ch" y="10.9em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">12</text>
+    <text x="3.5ch" y="11.9em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">13</text>
+    <text x="3.5ch" y="12.9em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">14</text>
+    <text x="3.5ch" y="13.9em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">15</text>
+    <text x="3.5ch" y="14.9em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">16</text>
+    <text x="3.5ch" y="15.9em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">17</text>
+    <text x="3.5ch" y="16.9em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">18</text>
+    <text x="3.5ch" y="17.9em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">19</text>
+    <text x="3.5ch" y="18.9em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">20</text>
+    <text x="3.5ch" y="19.9em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">21</text>
+  </g>
+  <clipPath id="viewport-clip">
+    <rect x="4ch" y="0em" width="45ch" height="20em"></rect>
+  </clipPath>
+  <g id="viewport" clip-path="url(#viewport-clip)">
+    <g id="lines"></g>
+    <g id="background">
+      <rect x="4.1ch" y="4.9em" width="5ch" height="1em" fill="hsla(36, 96%, 56%, 0.4)"></rect>
+      <rect x="10.1ch" y="4.9em" width="5ch" height="1em" fill="hsla(36, 96%, 56%, 0.4)"></rect>
+      <rect x="16.1ch" y="4.9em" width="5ch" height="1em" fill="hsla(36, 96%, 56%, 0.4)"></rect>
+      <rect x="22.1ch" y="4.9em" width="5ch" height="1em" fill="hsla(36, 96%, 56%, 0.4)"></rect>
+      <rect x="28.1ch" y="4.9em" width="5ch" height="1em" fill="hsla(36, 96%, 56%, 0.4)"></rect>
+      <rect x="34.1ch" y="4.9em" width="5ch" height="1em" fill="hsla(36, 96%, 56%, 0.4)"></rect>
+      <rect x="40.1ch" y="4.9em" width="5ch" height="1em" fill="hsla(36, 96%, 56%, 0.4)"></rect>
+      <rect x="46.1ch" y="4.9em" width="2.9ch" height="1em" fill="hsla(36, 96%, 56%, 0.4)"></rect>
+      <rect x="4.1ch" y="4.9em" width="5ch" height="1em" rx="0" ry="0" stroke="hsl(39, 96%, 28%)" fill="transparent"></rect>
+    </g>
+    <g id="text">
+      <text x="4.1ch" y="-0.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line0 Line0 Line0 Line0 Line0 Line0 Line0 Lin</text>
+      <text x="4.1ch" y="0.9em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line1 Line1 Line1 Line1 Line1 Line1 Line1 Lin</text>
+      <text x="4.1ch" y="1.9em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line2 Line2 Line2 Line2 Line2 Line2 Line2 Lin</text>
+      <text x="4.1ch" y="2.9em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line3 Line3 Line3 Line3 Line3 Line3 Line3 Lin</text>
+      <text x="4.1ch" y="3.9em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line4 Line4 Line4 Line4 Line4 Line4 Line4 Lin</text>
+      <text x="4.1ch" y="4.9em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line5 Line5 Line5 Line5 Line5 Line5 Line5 Lin</text>
+      <text x="4.1ch" y="5.9em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line6 Line6 Line6 Line6 Line6 Line6 Line6 Lin</text>
+      <text x="4.1ch" y="6.9em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line7 Line7 Line7 Line7 Line7 Line7 Line7 Lin</text>
+      <text x="4.1ch" y="7.9em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line8 Line8 Line8 Line8 Line8 Line8 Line8 Lin</text>
+      <text x="4.1ch" y="8.9em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line9 Line9 Line9 Line9 Line9 Line9 Line9 Lin</text>
+      <text x="4.1ch" y="9.9em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line10 Line10 Line10 Line10 Line10 Line10 Lin</text>
+      <text x="4.1ch" y="10.9em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line11 Line11 Line11 Line11 Line11 Line11 Lin</text>
+      <text x="4.1ch" y="11.9em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line12 Line12 Line12 Line12 Line12 Line12 Lin</text>
+      <text x="4.1ch" y="12.9em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line13 Line13 Line13 Line13 Line13 Line13 Lin</text>
+      <text x="4.1ch" y="13.9em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line14 Line14 Line14 Line14 Line14 Line14 Lin</text>
+      <text x="4.1ch" y="14.9em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line15 Line15 Line15 Line15 Line15 Line15 Lin</text>
+      <text x="4.1ch" y="15.9em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line16 Line16 Line16 Line16 Line16 Line16 Lin</text>
+      <text x="4.1ch" y="16.9em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line17 Line17 Line17 Line17 Line17 Line17 Lin</text>
+      <text x="4.1ch" y="17.9em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line18 Line18 Line18 Line18 Line18 Line18 Lin</text>
+      <text x="4.1ch" y="18.9em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line19 Line19 Line19 Line19 Line19 Line19 Lin</text>
+      <text x="4.1ch" y="19.9em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line20 Line20 Line20 Line20 Line20 Line20 Lin</text>
+    </g>
+  </g>
+  <g id="scrollbars">
+    <rect x="49ch" y="0em" width="1ch" height="20em" fill="white" stroke="rgba(100, 100, 100, 0.2)"></rect>
+    <rect x="49ch" y="0.05em" width="1ch" height="3.361em" fill="rgba(100, 100, 100, 0.4)"></rect>
+    <rect x="4ch" y="19em" width="45ch" height="1em" fill="transparent" stroke="rgba(100, 100, 100, 0.2)"></rect>
+    <rect x="4.071ch" y="19em" width="15.945ch" height="1em" fill="rgba(100, 100, 100, 0.4)"></rect>
+    <rect x="49ch" y="0.84em" width="1ch" height="0.168em" fill="hsla(36, 96%, 56%, 0.4)"></rect>
+    <rect x="49ch" y="8.403em" width="1ch" height="1.681em" fill="hsla(36, 96%, 56%, 0.4)"></rect>
+    <rect x="49.4ch" y="6.555em" width="0.2ch" height="0.168em" fill="rgba(126, 188, 254, 0.6)"></rect>
+    <rect x="49.4ch" y="7.395em" width="0.2ch" height="0.168em" fill="rgba(126, 188, 254, 0.6)"></rect>
+    <rect x="49.4ch" y="8.067em" width="0.2ch" height="1.008em" fill="rgba(126, 188, 254, 0.6)"></rect>
+  </g>
+</svg>

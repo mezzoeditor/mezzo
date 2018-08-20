@@ -1,5 +1,6 @@
 import {Editor} from '../src/editor/Editor.mjs';
 import {DefaultTheme} from '../src/default/DefaultTheme.mjs';
+import {Viewport} from '../src/core/Viewport.mjs';
 
 // All sizes are in CH (if horizontal) and EM (if vertical).
 const GUTTER_PADDING_LEFT = 0.5;
@@ -52,6 +53,7 @@ export class SVGRenderer {
     });
     viewport.setScrollLeft(scrollLeft);
     viewport.setScrollTop(scrollTop);
+    const beforeHeight = Viewport.test.setMinScrollbarDecorationHeight(0.001);
 
     const frame = viewport.decorate();
     const root = SVGNode.createRoot({
@@ -68,7 +70,13 @@ export class SVGRenderer {
     const gutter = root.add('g', {id: 'gutter'}).pushCoordinateSystem(0, frame.translateTop);
     this._drawGutter(gutter, gutterLength, frame);
 
-    const coords = root.add('g', {id: 'viewport'}).pushCoordinateSystem(gutterLength + frame.translateLeft, frame.translateTop);
+    root.add('clipPath', {id: 'viewport-clip'}).add('rect', {
+      x: gutterLength, y: 0,
+      width: this._width - gutterLength - SCROLLBAR_WIDTH,
+      height: this._height
+    });
+    const coords = root.add('g', {id: 'viewport', 'clip-path': 'url(#viewport-clip)'})
+        .pushCoordinateSystem(gutterLength + frame.translateLeft, frame.translateTop);
     this._drawTextAndBackground(coords, frame);
 
     const scrollbarsElement = root.add('g', {id: 'scrollbars'});
@@ -76,6 +84,7 @@ export class SVGRenderer {
     this._drawHScrollbar(scrollbarsElement, gutterLength);
     this._drawScrollbarMarkers(scrollbarsElement, frame);
 
+    Viewport.test.setMinScrollbarDecorationHeight(beforeHeight);
     return root.serialize();
   }
 
@@ -156,7 +165,7 @@ export class SVGRenderer {
             rx: radius,
             ry: radius,
             stroke: theme.border.color,
-            fill: transparent,
+            fill: 'transparent',
           });
         }
       }
@@ -226,11 +235,10 @@ export class SVGRenderer {
       const right = ((theme.line.scrollbar.right || 100) / 100);
       svg.add('rect', {
         x: this._width - 1 + left,
-        y: 0,
+        y: y,
         width: right - left,
         height: height,
         fill: theme.line.scrollbar.color,
-        class: 'scrollbar-marker'
       });
     }
   }

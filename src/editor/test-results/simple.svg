@@ -7,7 +7,10 @@
     <text x="3.5ch" y="3.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">4</text>
     <text x="3.5ch" y="4.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">5</text>
   </g>
-  <g id="viewport">
+  <clipPath id="viewport-clip">
+    <rect x="4ch" y="0em" width="45ch" height="20em"></rect>
+  </clipPath>
+  <g id="viewport" clip-path="url(#viewport-clip)">
     <g id="lines">
       <rect x="4.5ch" y="0.5em" width="44ch" height="1em" fill="rgba(126, 188, 254, 0.1)"></rect>
       <rect x="4.5ch" y="1.5em" width="44ch" height="1em" fill="rgba(126, 188, 254, 0.1)"></rect>
@@ -29,6 +32,7 @@
   <g id="scrollbars">
     <rect x="49ch" y="0em" width="1ch" height="20em" fill="white" stroke="rgba(100, 100, 100, 0.2)"></rect>
     <rect x="49ch" y="0em" width="1ch" height="16.667em" fill="rgba(100, 100, 100, 0.4)"></rect>
-    <rect x="49.4ch" y="0em" width="0.2ch" height="5em" fill="rgba(126, 188, 254, 0.6)" class="scrollbar-marker"></rect>
+    <rect x="49.4ch" y="0em" width="0.2ch" height="1.667em" fill="rgba(126, 188, 254, 0.6)"></rect>
+    <rect x="49.4ch" y="2.5em" width="0.2ch" height="0.833em" fill="rgba(126, 188, 254, 0.6)"></rect>
   </g>
 </svg>

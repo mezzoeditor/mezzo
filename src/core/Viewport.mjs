@@ -563,7 +563,7 @@ function Offset(anchor) {
   return Math.floor(anchor);
 }
 
-const kMinScrollbarDecorationHeight = 5;
+let kMinScrollbarDecorationHeight = 5;
 
 Viewport.test = {};
 
@@ -573,4 +573,10 @@ Viewport.test = {};
  */
 Viewport.test.rechunk = function(viewport, chunkSize) {
   Markup.test.rechunk(viewport._markup, chunkSize);
+};
+
+Viewport.test.setMinScrollbarDecorationHeight = function(value) {
+  const result = kMinScrollbarDecorationHeight;
+  kMinScrollbarDecorationHeight = value;
+  return result;
 };
