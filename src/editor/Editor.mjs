@@ -196,8 +196,8 @@ class SelectionDecorator {
   }
 
   /**
-   * @param {!Viewport.VisibleContent} visibleContent
-   * @return {!Viewport.DecorationResult}
+   * @param {!VisibleContent} visibleContent
+   * @return {!DecorationResult}
    */
   _onDecorate(visibleContent) {
     if (this._staleDecorations) {

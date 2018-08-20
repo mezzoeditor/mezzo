@@ -61,8 +61,8 @@ export class SelectedWordHighlighter {
   }
 
   /**
-   * @param {!Viewport.VisibleContent} visibleContent
-   * @return {?Viewpor.DecorationResult}
+   * @param {!VisibleContent} visibleContent
+   * @return {?DecorationResult}
    */
   _onDecorate(visibleContent) {
     let tokenizer = this._editor.tokenizer();

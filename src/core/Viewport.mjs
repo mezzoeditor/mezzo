@@ -1,60 +1,10 @@
 import { Decorator } from './Decorator.mjs';
 import { Document } from './Document.mjs';
+import { Frame, VisibleRange } from './Frame.mjs';
 import { RoundMode, Metrics } from './Metrics.mjs';
 import { trace } from './Trace.mjs';
 import { EventEmitter } from './EventEmitter.mjs';
 import { Markup } from './Markup.mjs';
-
-/**
- * @typedef {{
- *   text: !Array<!TextDecorator>|undefined,
- *   background: !Array<!TextDecorator>|undefined,
- *   lines: !Array<!LineDecorator>|undefined
- * }} Viewport.DecorationResult
- */
-
- /**
- * @typedef {{
- *   x: number,
- *   y: number,
- *   content: string,
- *   style: string,
- * }} Viewport.TextInfo
- */
-
-/**
- * @typedef {{
- *   x: number,
- *   y: number,
- *   width: number,
- *   style: string
- * }} Viewport.BackgroundInfo
- */
-
-/**
- * @typedef {{
- *   y: number,
- *   height: number,
- *   style: string
- * }} Viewport.ScrollbarInfo
- */
-
-/**
- * @typedef {{
- *   first: number,
- *   last: number,
- *   y: number,
- *   styles: !Array<string>
- * }} Viewport.LineInfo
- */
-
-/**
- * @typedef {{
- *   x: number,
- *   y: number,
- *   mark: !Mark,
- * }} Viewport.MarkInfo
- */
 
 /**
  * Viewport class abstracts the window that peeks into document.
@@ -150,7 +100,7 @@ export class Viewport extends EventEmitter {
   }
 
   /**
-   * @param {function(!Viewport.VisibleContent):!Viewport.DecorationResult} callback
+   * @param {DecorationCallback} callback
    */
   addDecorationCallback(callback) {
     this._decorateCallbacks.push(callback);
@@ -158,7 +108,7 @@ export class Viewport extends EventEmitter {
   }
 
   /**
-   * @param {function(!Viewport.VisibleContent):!Viewport.DecorationResult} callback
+   * @param {DecorationCallback} callback
    */
   removeDecorationCallback(callback) {
     let index = this._decorateCallbacks.indexOf(callback);
@@ -351,15 +301,7 @@ export class Viewport extends EventEmitter {
   }
 
   /**
-   * @return {!{
-   *   text: !Array<!Viewport.TextInfo>,
-   *   background: !Array<!Viewport.BackgroundInfo>,
-   *   marks: !Array<!Viewport.MarkInfo>,
-   *   scrollbar: !Array<!Viewport.ScrollbarInfo>,
-   *   lines: !Array<!Viewport.LineInfo>,
-   *   paddingLeft: number,
-   *   paddingRight: number,
-   * }}
+   * @return {!Frame}
    */
   decorate() {
     this._frozen = true;
@@ -393,23 +335,21 @@ export class Viewport extends EventEmitter {
       ranges: ranges,
     };
 
-    let textDecorators = [];
-    let backgroundDecorators = [];
-    let lineDecorators = [];
+    let decorators = {text: [], background: [], lines: []};
     for (let decorateCallback of this._decorateCallbacks) {
-      let result = decorateCallback(visibleContent);
-      if (!result)
+      let partial = decorateCallback(visibleContent);
+      if (!partial)
         continue;
-      textDecorators.push(...(result.text || []));
-      backgroundDecorators.push(...(result.background || []));
-      lineDecorators.push(...(result.lines || []));
+      decorators.text.push(...(partial.text || []));
+      decorators.background.push(...(partial.background || []));
+      decorators.lines.push(...(partial.lines || []));
     }
 
-    let {text, background, marks, lineInfos, paddingLeft, paddingRight} = this._buildContents(lines, textDecorators, backgroundDecorators, lineDecorators);
-    let scrollbar = this._buildScrollbar(lineDecorators);
-
+    let frame = new Frame();
+    this._buildFrameContents(frame, lines, decorators);
+    this._buildFrameScrollbar(frame, decorators);
     this._frozen = false;
-    return {text, background, marks, scrollbar, lines: lineInfos, paddingLeft, paddingRight};
+    return frame;
   }
 
   /**
@@ -438,32 +378,19 @@ export class Viewport extends EventEmitter {
       if (i && join[i - 1])
         result[result.length - 1].to = ranges[i].to;
       else
-        result.push(new Viewport.VisibleRange(this._document, ranges[i].from, ranges[i].to));
+        result.push(new VisibleRange(this._document, ranges[i].from, ranges[i].to));
     }
     return result;
   }
 
   /**
+   * @param {!Frame} frame
    * @param {!Array<!{from: number, to: number, x: number, y: number, start: number, end: number}>} lines
-   * @param {!Array<!TextDecorator>} textDecorators
-   * @param {!Array<!TextDecorator>} backgroundDecorators
-   * @param {!Array<!LineDecorator>} lineDecorators
-   * @return {!{
-   *    text: !Array<!Viewport.TextInfo>,
-   *    background: !Array<!Viewport.BackgroundInfo>,
-   *    marks: !Array<!Viewport.MarkInfo>,
-   *    lineInfos: !Array<!Viewport.LineInfo>,
-   *    paddingLeft: number,
-   *    paddingRight: number,
-   * }}
+   * @param {!DecorationResult} decorators
    */
-  _buildContents(lines, textDecorators, backgroundDecorators, lineDecorators) {
-    const paddingLeft = Math.max(this._padding.left - this._scrollLeft, 0);
-    const paddingRight = Math.max(this._padding.right - (this._maxScrollLeft - this._scrollLeft), 0);
-    const text = [];
-    const background = [];
-    const marks = [];
-    const lineInfos = [];
+  _buildFrameContents(frame, lines, decorators) {
+    frame.paddingLeft = Math.max(this._padding.left - this._scrollLeft, 0);
+    frame.paddingRight = Math.max(this._padding.right - (this._maxScrollLeft - this._scrollLeft), 0);
 
     for (let line of lines) {
       let offsetToX = new Float32Array(line.to - line.from + 1);
@@ -482,7 +409,7 @@ export class Viewport extends EventEmitter {
       while (iterator.before) {
         if (iterator.data) {
           let mark = iterator.data;
-          marks.push({x: x, y: line.y, mark});
+          frame.marks.push({x: x, y: line.y, mark});
           x += mark.width;
           // if (!iterator.data.end)
           //   offsetToX[offset - line.from] = x;
@@ -491,7 +418,7 @@ export class Viewport extends EventEmitter {
           this._markup._metrics.fillXMap(offsetToX, needsRtlBreakAfter, lineContent, offset - line.from, after - line.from, x, this._defaultWidth);
           x = offsetToX[after - line.from];
 
-          for (let decorator of textDecorators) {
+          for (let decorator of decorators.text) {
             decorator.visitTouching(offset, after + 0.5, decoration => {
               trace.count('decorations');
               let from = Math.max(offset, Offset(decoration.from));
@@ -500,7 +427,7 @@ export class Viewport extends EventEmitter {
                 let end = from + 1;
                 while (end < to && !needsRtlBreakAfter[end - line.from])
                   end++;
-                text.push({
+                frame.text.push({
                   x: offsetToX[from - line.from],
                   y: line.y,
                   content: lineContent.substring(from - line.from, end - line.from),
@@ -522,32 +449,32 @@ export class Viewport extends EventEmitter {
       }
 
       let lineStyles = [];
-      for (let decorator of lineDecorators) {
+      for (let decorator of decorators.lines) {
         // We deliberately do not include |line.start| here
         // to allow line decorations to span the whole line without
         // affecting the next one.
         if (decorator.countTouching(line.start + 0.5, line.end + 0.5) > 0)
           lineStyles.push(decorator.style());
       }
-      lineInfos.push({
+      frame.lines.push({
         first: this._document.text().offsetToPosition(line.start).line,
         last: this._document.text().offsetToPosition(line.end).line,
         y: line.y,
         styles: lineStyles
       });
 
-      for (let decorator of backgroundDecorators) {
+      for (let decorator of decorators.background) {
         // Expand by a single character which is not visible to account for borders
         // extending past viewport.
         decorator.visitTouching(line.from - 1, line.to + 1, decoration => {
           trace.count('decorations');
           // TODO: note that some editors only show selection up to line length. Setting?
           let from = Offset(decoration.from);
-          from = from < line.from ? paddingLeft : offsetToX[from - line.from];
+          from = from < line.from ? frame.paddingLeft : offsetToX[from - line.from];
           let to = Offset(decoration.to);
-          to = to > line.to ? this._width - paddingRight : offsetToX[to - line.from];
+          to = to > line.to ? this._width - frame.paddingRight : offsetToX[to - line.from];
           if (from <= to) {
-            background.push({
+            frame.background.push({
               x: from,
               y: line.y,
               width: to - from,
@@ -557,19 +484,16 @@ export class Viewport extends EventEmitter {
         });
       }
     }
-
-    return {text, background, marks, lineInfos, paddingLeft, paddingRight};
   }
 
   /**
-   * @param {!Array<!LineDecorator>} lineDecorators
-   * @return {!Array<!Viewport.ScrollbarInfo>}
+   * @param {!Frame} frame
+   * @param {!DecorationResult} decorators
    */
-  _buildScrollbar(lineDecorators) {
+  _buildFrameScrollbar(frame, decorators) {
     const lineHeight = this._lineHeight;
     const ratio = this._height / (this._maxScrollTop + this._height);
-    let scrollbar = [];
-    for (let decorator of lineDecorators) {
+    for (let decorator of decorators.lines) {
       let lastTop = -1;
       let lastBottom = -1;
       decorator.sparseVisitAll(decoration => {
@@ -585,7 +509,7 @@ export class Viewport extends EventEmitter {
           lastBottom = bottom;
         } else {
           if (lastTop >= 0)
-            scrollbar.push({y: lastTop, height: lastBottom - lastTop, style: decorator.style()});
+            frame.scrollbar.push({y: lastTop, height: lastBottom - lastTop, style: decorator.style()});
           lastTop = top;
           lastBottom = bottom;
         }
@@ -594,9 +518,8 @@ export class Viewport extends EventEmitter {
         return Math.max(Offset(decoration.to), nextOffset);
       });
       if (lastTop >= 0)
-        scrollbar.push({y: lastTop, height: lastBottom - lastTop, style: decorator.style()});
+        frame.scrollbar.push({y: lastTop, height: lastBottom - lastTop, style: decorator.style()});
     }
-    return scrollbar;
   }
 
   _recompute() {
@@ -624,51 +547,6 @@ Viewport.Events = {
   Raf: 'raf',
   Changed: 'changed',
 };
-
-Viewport.VisibleRange = class {
-  /**
-   * @param {!Document} document
-   * @param {number} from
-   * @param {number} to
-   */
-  constructor(document, from, to) {
-    this._document = document;
-    this.from = from;
-    this.to = to;
-  }
-
-  /**
-   * @param {number=} paddingLeft
-   * @param {number=} paddingRight
-   * @return {string}
-   */
-  content(paddingLeft = 0, paddingRight = 0) {
-    if (!this._cache)
-      this._cache = {};
-    return cachedContent(this._document, this.from, this.to, this._cache, paddingLeft, paddingRight);
-  }
-};
-
-/**
- * @param {!Document} document
- * @param {number} from
- * @param {number} to
- * @param {{content: string, left: number, right: number}} cache
- * @param {number} left
- * @param {number} right
- * @return {string}
- */
-function cachedContent(document, from, to, cache, left, right) {
-  left = Math.min(left, from);
-  right = Math.min(right, document.text().length() - to);
-  if (cache._content === undefined || cache._left < left || cache._right < right) {
-    cache._left = Math.max(left, cache._left || 0);
-    cache._right = Math.max(right, cache._right || 0);
-    cache._content = document.text().content(from - cache._left, to + cache._right);
-  }
-  return cache._content.substring(cache._left - left,
-                                  cache._content.length - (cache._right - right));
-}
 
 /**
  * @param {!Anchor} anchor

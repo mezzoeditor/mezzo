@@ -164,8 +164,8 @@ export class Search extends EventEmitter {
   // ------ Internals -------
 
   /**
-   * @param {!Viewport.VisibleContent} visibleContent
-   * @return {?Viewpor.DecorationResult}
+   * @param {!VisibleContent} visibleContent
+   * @return {?DecorationResult}
    */
   _onDecorate(visibleContent) {
     if (!this._options)

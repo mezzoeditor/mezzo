@@ -13,8 +13,8 @@ export class DefaultHighlighter {
   }
 
   /**
-   * @param {!Viewport.VisibleContent} visibleContent
-   * @return {!Viewport.DecorationResult}
+   * @param {!VisibleContent} visibleContent
+   * @return {!DecorationResult}
    */
   _onDecorate(visibleContent) {
     let {from, to} = visibleContent.range;
