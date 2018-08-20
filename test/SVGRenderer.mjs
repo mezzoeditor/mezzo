@@ -49,8 +49,7 @@ export class SVGRenderer {
       bottom: this._height - LINE_HEIGHT - EDITOR_PADDING,
     });
 
-    const {text, background, marks, scrollbar, lines, paddingLeft, paddingRight} = viewport.decorate();
-
+    const frame = viewport.decorate();
     const root = SVGNode.createRoot({
       width: this._width,
       height: this._height,
@@ -58,25 +57,25 @@ export class SVGRenderer {
     });
 
     const gutterElement = root.add('g', {id: 'gutter'});
-    this._drawGutter(gutterElement, gutterLength, lines);
+    this._drawGutter(gutterElement, gutterLength, frame);
 
     const coords = root.add('g', {id: 'viewport'}).pushCoordinateSystem(gutterLength, 0);
-    this._drawTextAndBackground(coords, gutterLength, text, background, lines, paddingLeft, paddingRight);
+    this._drawTextAndBackground(coords, gutterLength, frame);
 
     const scrollbarsElement = root.add('g', {id: 'scrollbars'});
     this._drawVScrollbar(scrollbarsElement);
     this._drawHScrollbar(scrollbarsElement, gutterLength);
-    this._drawScrollbarMarkers(scrollbarsElement, scrollbar);
+    this._drawScrollbarMarkers(scrollbarsElement, frame);
 
     return root.serialize();
   }
 
-  _drawGutter(svg, gutterLength, lines) {
+  _drawGutter(svg, gutterLength, frame) {
     svg.add('line', {
       x1: gutterLength, y1: 0, x2: gutterLength, y2: this._height,
       stroke: 'rgb(187, 187, 187)',
     });
-    for (let {first, y} of lines) {
+    for (let {first, y} of frame.lines) {
       svg.add('text', {x: gutterLength - GUTTER_PADDING_RIGHT, y,
         'text-anchor': 'end',
         'alignment-baseline': 'hanging',
@@ -85,23 +84,23 @@ export class SVGRenderer {
     }
   }
 
-  _drawTextAndBackground(svg, gutterLength, text, background, lines, paddingLeft, paddingRight) {
+  _drawTextAndBackground(svg, gutterLength, frame) {
     const width = this._width - gutterLength - SCROLLBAR_WIDTH;
     const lineDecorations = svg.add('g', {id: 'line-decorations'});
-    for (const {y, styles} of lines) {
+    for (const {y, styles} of frame.lines) {
       for (const style of styles) {
         const theme = this._theme[style];
         if (!theme || !theme.line)
           continue;
         if (theme.line.background && theme.line.background.color) {
           lineDecorations.add('rect', {
-            x: paddingLeft, y, width: width - paddingRight, height: LINE_HEIGHT,
+            x: frame.paddingLeft, y, width: width - frame.paddingRight, height: LINE_HEIGHT,
             fill: theme.line.background.color,
           });
         }
         if (theme.line.border && theme.line.border.color) {
           lineDecorations.add('rect', {
-            x: paddingLeft, y, width: width - paddingRight, height: LINE_HEIGHT,
+            x: frame.paddingLeft, y, width: width - frame.paddingRight, height: LINE_HEIGHT,
             fill: transparent,
             stroke: theme.line.border.color,
           });
@@ -110,7 +109,7 @@ export class SVGRenderer {
     }
 
     const backgroundElement = svg.add('g', {id: 'background'});
-    for (let {x, y, width, style} of background) {
+    for (let {x, y, width, style} of frame.background) {
       const theme = this._theme[style];
       if (!theme)
         continue;
@@ -141,7 +140,7 @@ export class SVGRenderer {
     }
 
     const textElement = svg.add('g', {id: 'text'});
-    for (let {x, y, content, style} of text) {
+    for (let {x, y, content, style} of frame.text) {
       const theme = this._theme[style];
       if (theme && theme.text) {
         textElement.add('text', {
@@ -195,8 +194,8 @@ export class SVGRenderer {
     });
   }
 
-  _drawScrollbarMarkers(svg, scrollbar) {
-    for (let {y, height, style} of scrollbar) {
+  _drawScrollbarMarkers(svg, frame) {
+    for (let {y, height, style} of frame.scrollbar) {
       const theme = this._theme[style];
       if (!theme || !theme.line.scrollbar || !theme.line.scrollbar || !theme.line.scrollbar.color)
         continue;

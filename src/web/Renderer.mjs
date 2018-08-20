@@ -817,7 +817,7 @@ export class Renderer {
     ctx.lineWidth = 1 / this._ratio;
 
     trace.begin('frame');
-    const {text, background, marks, scrollbar, lines, paddingLeft, paddingRight} = this._editor.viewport().decorate();
+    const frame = this._editor.viewport().decorate();
     trace.end('frame');
 
     trace.begin('gutter');
@@ -825,7 +825,7 @@ export class Renderer {
     ctx.beginPath();
     ctx.rect(this._gutterRect.x, this._gutterRect.y, this._gutterRect.width, this._gutterRect.height);
     ctx.clip();
-    this._drawGutter(ctx, lines);
+    this._drawGutter(ctx, frame);
     ctx.restore();
     trace.end('gutter');
 
@@ -835,14 +835,14 @@ export class Renderer {
     ctx.rect(this._editorRect.x, this._editorRect.y, this._editorRect.width, this._editorRect.height);
     ctx.clip();
     ctx.translate(this._editorRect.x, this._editorRect.y);
-    this._drawTextAndBackground(ctx, text, background, lines, paddingLeft, paddingRight);
-    this._drawMarks(ctx, marks);
+    this._drawTextAndBackground(ctx, frame);
+    this._drawMarks(ctx, frame);
     ctx.restore();
     trace.endGroup('text');
 
     trace.beginGroup('scrollbar');
     ctx.save();
-    this._drawScrollbarMarkers(ctx, scrollbar, this._vScrollbar.rect);
+    this._drawScrollbarMarkers(ctx, frame, this._vScrollbar.rect);
     this._drawScrollbar(ctx, this._vScrollbar, true /* isVertical */);
     this._drawScrollbar(ctx, this._hScrollbar, false /* isVertical */);
     ctx.restore();
@@ -852,7 +852,7 @@ export class Renderer {
     trace.endGroup('render', 50);
   }
 
-  _drawGutter(ctx, lines) {
+  _drawGutter(ctx, frame) {
     ctx.fillStyle = 'white';
     ctx.fillRect(0, 0, this._gutterRect.width, this._gutterRect.height);
     ctx.strokeStyle = 'rgb(187, 187, 187)';
@@ -866,40 +866,40 @@ export class Renderer {
     ctx.fillStyle = 'rgb(128, 128, 128)';
     const textOffset = this._measurer.textOffset;
     const textX = this._gutterRect.width - GUTTER_PADDING_RIGHT;
-    for (let {first, y} of lines) {
+    for (let {first, y} of frame.lines) {
       // TODO: show "first..last" range instead
       const number = (first + 1) + '';
       ctx.fillText(number, textX, y + textOffset);
     }
   }
 
-  _drawTextAndBackground(ctx, text, background, lines, paddingLeft, paddingRight) {
+  _drawTextAndBackground(ctx, frame) {
     const lineHeight = this._measurer.lineHeight();
 
-    for (let {y, styles} of lines) {
+    for (let {y, styles} of frame.lines) {
       for (let style of styles) {
         const theme = this._theme[style];
         if (!theme || !theme.line)
           continue;
         if (theme.line.background && theme.line.background.color) {
           ctx.fillStyle = theme.line.background.color;
-          ctx.fillRect(paddingLeft, y, this._editorRect.width - paddingRight, lineHeight);
+          ctx.fillRect(frame.paddingLeft, y, this._editorRect.width - frame.paddingRight, lineHeight);
         }
         if (theme.line.border && theme.line.border.color) {
           ctx.strokeStyle = theme.line.border.color;
           ctx.lineWidth = (theme.line.border.width || 1) / this._ratio;
 
           ctx.beginPath();
-          ctx.moveTo(paddingLeft, y);
-          ctx.lineTo(this._editorRect.width - paddingRight, y);
-          ctx.moveTo(paddingLeft, y + lineHeight);
-          ctx.lineTo(this._editorRect.width - paddingRight, y + lineHeight);
+          ctx.moveTo(frame.paddingLeft, y);
+          ctx.lineTo(this._editorRect.width - frame.paddingRight, y);
+          ctx.moveTo(frame.paddingLeft, y + lineHeight);
+          ctx.lineTo(this._editorRect.width - frame.paddingRight, y + lineHeight);
           ctx.stroke();
         }
       }
     }
 
-    for (let {x, y, width, style} of background) {
+    for (let {x, y, width, style} of frame.background) {
       const theme = this._theme[style];
       if (!theme)
         continue;
@@ -933,7 +933,7 @@ export class Renderer {
     }
 
     const textOffset = this._measurer.textOffset;
-    for (let {x, y, content, style} of text) {
+    for (let {x, y, content, style} of frame.text) {
       const theme = this._theme[style];
       if (theme && theme.text) {
         ctx.fillStyle = theme.text.color || 'rgb(33, 33, 33)';
@@ -942,9 +942,9 @@ export class Renderer {
     }
   }
 
-  _drawMarks(ctx, marks) {
+  _drawMarks(ctx, frame) {
     const lineHeight = this._measurer.lineHeight();
-    for (let {x, y, mark} of marks) {
+    for (let {x, y, mark} of frame.marks) {
       // TODO: need some rendering!
       ctx.fillStyle = 'red';
       ctx.fillRect(x, y + 2, mark.width, lineHeight - 4);
@@ -968,8 +968,8 @@ export class Renderer {
     ctx.fillRect(scrollbar.thumbRect.x, scrollbar.thumbRect.y, scrollbar.thumbRect.width, scrollbar.thumbRect.height);
   }
 
-  _drawScrollbarMarkers(ctx, scrollbar, rect) {
-    for (let {y, height, style} of scrollbar) {
+  _drawScrollbarMarkers(ctx, frame, rect) {
+    for (let {y, height, style} of frame.scrollbar) {
       const theme = this._theme[style];
       if (!theme || !theme.line.scrollbar || !theme.line.scrollbar || !theme.line.scrollbar.color)
         continue;
