@@ -1,6 +1,6 @@
 import { Decorator } from './Decorator.mjs';
 import { Document } from './Document.mjs';
-import { Frame, VisibleRange } from './Frame.mjs';
+import { Frame } from './Frame.mjs';
 import { RoundMode, Metrics } from './Metrics.mjs';
 import { EventEmitter } from './EventEmitter.mjs';
 import { Markup } from './Markup.mjs';
@@ -41,7 +41,6 @@ export class Viewport extends EventEmitter {
   constructor(document, measurer) {
     super();
     this._document = document;
-    this._document.on(Document.Events.Changed, this._onDocumentChanged.bind(this));
 
     this._width = 0;
     this._height = 0;
@@ -54,10 +53,6 @@ export class Viewport extends EventEmitter {
     this._padding = { left: 0, right: 0, top: 0, bottom: 0};
     this._frozen = false;
     this._decorateCallbacks = [];
-
-    this._measurer = measurer;
-    this._lineHeight = measurer.lineHeight();
-    this._defaultWidth = measurer.defaultWidth();
 
     this._markup = new Markup(measurer, this._document);
     this._markup.on(Markup.Events.Changed, (contentWidth, contentHeight) => {
@@ -83,11 +78,6 @@ export class Viewport extends EventEmitter {
    * @param {!Measurer} measurer
    */
   setMeasurer(measurer) {
-    if (this._measurer === measurer)
-      return;
-    this._measurer = measurer;
-    this._lineHeight = measurer.lineHeight();
-    this._defaultWidth = measurer.defaultWidth();
     this._markup.setMeasurer(measurer);
   }
 
@@ -95,7 +85,7 @@ export class Viewport extends EventEmitter {
    * @return {number}
    */
   lineHeight() {
-    return this._lineHeight;
+    return this._markup.lineHeight();
   }
 
   /**
@@ -284,7 +274,7 @@ export class Viewport extends EventEmitter {
     from.y += this._scrollTop;
     let to = this.offsetToViewportPoint(range.to);
     to.x += this._scrollLeft;
-    to.y += this._scrollTop + this._lineHeight;
+    to.y += this._scrollTop + this.lineHeight();
 
     if (this._scrollTop > from.y) {
       this._scrollTop = Math.max(from.y - rangePadding.top, 0);
@@ -314,219 +304,21 @@ export class Viewport extends EventEmitter {
     frame.lineLeft = this._scrollLeft;
     const paddingRight = Math.max(this._padding.right - (this._maxScrollLeft - this._scrollLeft), 0);
     frame.lineRight = Math.max(0, this._width - paddingRight - paddingLeft) + this._scrollLeft;
-    frame.lineHeight = this._lineHeight;
 
-    const contentLeft = this._scrollLeft - paddingLeft;
-    const contentTop = this._scrollTop - paddingTop;
-    const contentRight = contentLeft + this._width;
-    const contentBottom = contentTop + this._height;
-
-    let y = this.offsetToContentPoint(this.contentPointToOffset({x: contentLeft, y: contentTop})).y;
-    let lines = [];
-    for (; y <= contentBottom; y += this._lineHeight) {
-      // TODO: from/to do not include widgets on the edge.
-      let from = this.contentPointToOffset({x: contentLeft, y: y});
-      let to = this.contentPointToOffset({x: contentRight, y: y}, RoundMode.Ceil);
-      let start = this.contentPointToOffset({x: 0, y: y});
-      let end = this.contentPointToOffset({x: this._contentWidth, y: y});
-      let point = this.offsetToContentPoint(from);
-      if (point.y < y)
-        break;
-      lines.push({
-        from: from,
-        to: to,
-        x: point.x,
-        y: point.y,
-        start: start,
-        end: end
-      });
-    }
-
-    let ranges = this._joinRanges(lines);
-    let totalRange = ranges.length ? {from: ranges[0].from, to: ranges[ranges.length - 1].to} : {from: 0, to: 0};
-    let visibleContent = {
-      document: this._document,
-      range: totalRange,
-      ranges: ranges,
+    const contentRect = {
+      left: this._scrollLeft - paddingLeft,
+      top: this._scrollTop - paddingTop,
+      width: this._width,
+      height: this._height
     };
-
-    let decorators = {text: [], background: [], lines: []};
-    for (let decorateCallback of this._decorateCallbacks) {
-      let partial = decorateCallback(visibleContent);
-      if (!partial)
-        continue;
-      decorators.text.push(...(partial.text || []));
-      decorators.background.push(...(partial.background || []));
-      decorators.lines.push(...(partial.lines || []));
+    const scrollbar = {
+      ratio: this._height / (this._maxScrollTop + this._height),
+      minDecorationHeight: kMinScrollbarDecorationHeight
     }
+    this._markup.buildFrame(frame, contentRect, scrollbar, this._decorateCallbacks);
 
-    this._buildFrameContents(frame, lines, decorators);
-    this._buildFrameScrollbar(frame, decorators);
     this._frozen = false;
     return frame;
-  }
-
-  /**
-   * @param {!Array<!Range>} ranges
-   * @return {!Array<!Viewport.VisibleRange>}
-   */
-  _joinRanges(ranges) {
-    let totalRange = 0;
-    for (let range of ranges)
-    totalRange += range.to - range.from;
-    let diffs = [];
-    for (let i = 0; i < ranges.length - 1; i++)
-      diffs[i] = {i, len: ranges[i + 1].from - ranges[i].to};
-    diffs.sort((a, b) => a.len - b.len || a.i - b.i);
-    let join = new Array(ranges.length).fill(false);
-    let remaining = totalRange * 0.5;
-    for (let diff of diffs) {
-      remaining -= diff.len;
-      if (remaining < 0)
-        break;
-      join[diff.i] = true;
-    }
-
-    let result = [];
-    for (let i = 0; i < ranges.length; i++) {
-      if (i && join[i - 1])
-        result[result.length - 1].to = ranges[i].to;
-      else
-        result.push(new VisibleRange(this._document, ranges[i].from, ranges[i].to));
-    }
-    return result;
-  }
-
-  /**
-   * @param {!Frame} frame
-   * @param {!Array<!{from: number, to: number, x: number, y: number, start: number, end: number}>} lines
-   * @param {!DecorationResult} decorators
-   */
-  _buildFrameContents(frame, lines, decorators) {
-    for (let line of lines) {
-      let offsetToX = new Float32Array(line.to - line.from + 1);
-      let needsRtlBreakAfter = new Int8Array(line.to - line.from + 1);
-      let lineContent = this._document.text().content(line.from, line.to);
-
-      let x = line.x;
-      let offset = line.from;
-      offsetToX[0] = x;
-      needsRtlBreakAfter[line.to - line.from] = 0;
-
-      let iterator = this._markup.iterator();
-      iterator.locateByOffset(line.from);
-      // Skip processing text if we are scrolled past the end of the line, in which case
-      // locateByOffset will point to undefined location.
-      while (iterator.before) {
-        if (iterator.data) {
-          let mark = iterator.data;
-          frame.marks.push({x: x, y: line.y, mark});
-          x += mark.width;
-          // if (!iterator.data.end)
-          //   offsetToX[offset - line.from] = x;
-        } else {
-          let after = Math.min(line.to, iterator.after ? iterator.after.offset : offset);
-          this._markup._metrics.fillXMap(offsetToX, needsRtlBreakAfter, lineContent, offset - line.from, after - line.from, x, this._defaultWidth);
-          x = offsetToX[after - line.from];
-
-          for (let decorator of decorators.text) {
-            decorator.visitTouching(offset, after + 0.5, decoration => {
-              let from = Math.max(offset, Offset(decoration.from));
-              let to = Math.min(after, Offset(decoration.to));
-              while (from < to) {
-                let end = from + 1;
-                while (end < to && !needsRtlBreakAfter[end - line.from])
-                  end++;
-                frame.text.push({
-                  x: offsetToX[from - line.from],
-                  y: line.y,
-                  content: lineContent.substring(from - line.from, end - line.from),
-                  style: decoration.data
-                });
-                from = end;
-              }
-            });
-          }
-
-          offset = after;
-        }
-
-        if (offset === line.to)
-          break;
-        if (!iterator.after)
-          throw new Error('Inconsistent');
-        iterator.next();
-      }
-
-      let lineStyles = [];
-      for (let decorator of decorators.lines) {
-        // We deliberately do not include |line.start| here
-        // to allow line decorations to span the whole line without
-        // affecting the next one.
-        if (decorator.countTouching(line.start + 0.5, line.end + 0.5) > 0)
-          lineStyles.push(decorator.style());
-      }
-      frame.lines.push({
-        first: this._document.text().offsetToPosition(line.start).line,
-        last: this._document.text().offsetToPosition(line.end).line,
-        y: line.y,
-        styles: lineStyles
-      });
-
-      for (let decorator of decorators.background) {
-        // Expand by a single character which is not visible to account for borders
-        // extending past viewport.
-        decorator.visitTouching(line.from - 1, line.to + 1, decoration => {
-          // TODO: note that some editors only show selection up to line length. Setting?
-          let from = Offset(decoration.from);
-          from = from < line.from ? frame.lineLeft : offsetToX[from - line.from];
-          let to = Offset(decoration.to);
-          to = to > line.to ? frame.lineRight : offsetToX[to - line.from];
-          if (from <= to) {
-            frame.background.push({
-              x: from,
-              y: line.y,
-              width: to - from,
-              style: decoration.data
-            });
-          }
-        });
-      }
-    }
-  }
-
-  /**
-   * @param {!Frame} frame
-   * @param {!DecorationResult} decorators
-   */
-  _buildFrameScrollbar(frame, decorators) {
-    const ratio = this._height / (this._maxScrollTop + this._height);
-    for (let decorator of decorators.lines) {
-      let lastTop = -1;
-      let lastBottom = -1;
-      decorator.sparseVisitAll(decoration => {
-        const from = this.offsetToContentPoint(Offset(decoration.from)).y;
-        const to = this.offsetToContentPoint(Offset(decoration.to)).y;
-
-        let top = from * ratio;
-        let bottom = (to + frame.lineHeight) * ratio;
-        bottom = Math.max(bottom, top + kMinScrollbarDecorationHeight);
-
-        if (top <= lastBottom) {
-          lastBottom = bottom;
-        } else {
-          if (lastTop >= 0)
-            frame.scrollbar.push({y: lastTop, height: lastBottom - lastTop, style: decorator.style()});
-          lastTop = top;
-          lastBottom = bottom;
-        }
-
-        let nextOffset = this.contentPointToOffset({x: 0, y: bottom / ratio });
-        return Math.max(Offset(decoration.to), nextOffset);
-      });
-      if (lastTop >= 0)
-        frame.scrollbar.push({y: lastTop, height: lastBottom - lastTop, style: decorator.style()});
-    }
   }
 
   _recompute() {
@@ -538,30 +330,12 @@ export class Viewport extends EventEmitter {
     this._scrollTop = Math.min(this._scrollTop, this._maxScrollTop);
     this.emit(Viewport.Events.Changed);
   }
-
-  /**
-   * @param {!DocumentChangedEvent} event
-   */
-  _onDocumentChanged({replacements}) {
-    if (!replacements.length)
-      return;
-    if (this._frozen)
-      throw new Error('Document modification during decoration is prohibited');
-  }
 }
 
 Viewport.Events = {
   Raf: 'raf',
   Changed: 'changed',
 };
-
-/**
- * @param {!Anchor} anchor
- * @return {number}
- */
-function Offset(anchor) {
-  return Math.floor(anchor);
-}
 
 let kMinScrollbarDecorationHeight = 5;
 

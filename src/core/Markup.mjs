@@ -1,8 +1,9 @@
 import { EventEmitter } from './EventEmitter.mjs';
 import { Document } from './Document.mjs';
 import { Decorator } from './Decorator.mjs';
-import { Metrics } from './Metrics.mjs';
+import { RoundMode, Metrics } from './Metrics.mjs';
 import { Tree } from './Tree.mjs';
+import { VisibleRange } from './Frame.mjs';
 
 /**
  * @typedef {{
@@ -51,13 +52,21 @@ export class Markup extends EventEmitter {
    */
   constructor(measurer, document) {
     super();
+    this._frozen = false;
     this._document = document;
     this._document.on(Document.Events.Changed, ({replacements}) => {
+      if (!replacements.length)
+        return;
+      if (this._frozen)
+        throw new Error('Document modification during decoration is prohibited');
       for (const replacement of replacements)
         this._replace(replacement);
     });
     this._text = document.text();
     this._marks = new Decorator(true /* createHandles */);
+    this._measurer = null;
+    this._contentWidth = 0;
+    this._contentHeight = 0;
     this.setMeasurer(measurer);
   }
 
@@ -65,6 +74,9 @@ export class Markup extends EventEmitter {
    * @param {!Measurer} measurer
    */
   setMeasurer(measurer) {
+    if (this._measurer === measurer)
+      return;
+    this._measurer = measurer;
     this._lineHeight = measurer.lineHeight();
     this._defaultWidth = measurer.defaultWidth();
     let measure = s => measurer.measureString(s) / this._defaultWidth;
@@ -73,9 +85,11 @@ export class Markup extends EventEmitter {
     this._setTree(Tree.build(nodes));
   }
 
-  iterator() {
-    // TODO: remove this one.
-    return this._tree.iterator();
+  /**
+   * @return {number}
+   */
+  lineHeight() {
+    return this._lineHeight;
   }
 
   /**
@@ -194,9 +208,9 @@ export class Markup extends EventEmitter {
   _setTree(tree) {
     this._tree = tree;
     let metrics = tree.metrics();
-    let contentWidth = metrics.longestWidth * this._defaultWidth;
-    let contentHeight = (1 + (metrics.lineBreaks || 0)) * this._lineHeight;
-    this.emit(Markup.Events.Changed, contentWidth, contentHeight);
+    this._contentWidth = metrics.longestWidth * this._defaultWidth;
+    this._contentHeight = (1 + (metrics.lineBreaks || 0)) * this._lineHeight;
+    this.emit(Markup.Events.Changed, this._contentWidth, this._contentHeight);
   }
 
   /**
@@ -272,12 +286,240 @@ export class Markup extends EventEmitter {
     addNodes(to);
     return nodes;
   }
+
+  /**
+   * @param {!Frame} frame
+   * @param {!{left: number, top: number, width: number, height: number}} rect
+   * @param {!{ratio: number, minDecorationHeight: number}} scrollbarParams
+   * @param {!Array<!DecorationCallback>} decorationCallbacks
+   */
+  buildFrame(frame, rect, scrollbarParams, decorationCallbacks) {
+    this._frozen = true;
+
+    frame.lineHeight = this._lineHeight;
+
+    let y = this.offsetToPoint(this.pointToOffset({x: rect.left, y: rect.top})).y;
+    const lines = [];
+    for (; y <= rect.top + rect.height; y += this._lineHeight) {
+      // TODO: from/to do not include widgets on the edge.
+      let from = this.pointToOffset({x: rect.left, y: y});
+      let to = this.pointToOffset({x: rect.left + rect.width, y: y}, RoundMode.Ceil);
+      let start = this.pointToOffset({x: 0, y: y});
+      let end = this.pointToOffset({x: this._contentWidth, y: y});
+      let point = this.offsetToPoint(from);
+      if (point.y < y)
+        break;
+      lines.push({
+        from: from,
+        to: to,
+        x: point.x,
+        y: point.y,
+        start: start,
+        end: end
+      });
+    }
+
+    const ranges = joinRanges(lines, this._document);
+    const totalRange = ranges.length ? {from: ranges[0].from, to: ranges[ranges.length - 1].to} : {from: 0, to: 0};
+    const visibleContent = {
+      document: this._document,
+      range: totalRange,
+      ranges: ranges,
+    };
+
+    const decorators = {text: [], background: [], lines: []};
+    for (let decorationCallback of decorationCallbacks) {
+      const partial = decorationCallback(visibleContent);
+      if (!partial)
+        continue;
+      decorators.text.push(...(partial.text || []));
+      decorators.background.push(...(partial.background || []));
+      decorators.lines.push(...(partial.lines || []));
+    }
+
+    this._buildFrameContents(frame, lines, decorators);
+    this._buildFrameScrollbar(frame, decorators, scrollbarParams);
+
+    this._frozen = false;
+  }
+
+  /**
+   * @param {!Frame} frame
+   * @param {!Array<!{from: number, to: number, x: number, y: number, start: number, end: number}>} lines
+   * @param {!DecorationResult} decorators
+   */
+  _buildFrameContents(frame, lines, decorators) {
+    for (let line of lines) {
+      const offsetToX = new Float32Array(line.to - line.from + 1);
+      const needsRtlBreakAfter = new Int8Array(line.to - line.from + 1);
+      const lineContent = this._text.content(line.from, line.to);
+
+      let x = line.x;
+      let offset = line.from;
+      offsetToX[0] = x;
+      needsRtlBreakAfter[line.to - line.from] = 0;
+
+      const iterator = this._tree.iterator();
+      iterator.locateByOffset(line.from);
+      // Skip processing text if we are scrolled past the end of the line, in which case
+      // locateByOffset will point to undefined location.
+      while (iterator.before) {
+        if (iterator.data) {
+          const mark = iterator.data;
+          frame.marks.push({x: x, y: line.y, mark});
+          x += mark.width;
+          // if (!iterator.data.end)
+          //   offsetToX[offset - line.from] = x;
+        } else {
+          const after = Math.min(line.to, iterator.after ? iterator.after.offset : offset);
+          this._metrics.fillXMap(offsetToX, needsRtlBreakAfter, lineContent, offset - line.from, after - line.from, x, this._defaultWidth);
+          x = offsetToX[after - line.from];
+
+          for (let decorator of decorators.text) {
+            decorator.visitTouching(offset, after + 0.5, decoration => {
+              let from = Math.max(offset, Offset(decoration.from));
+              const to = Math.min(after, Offset(decoration.to));
+              while (from < to) {
+                let end = from + 1;
+                while (end < to && !needsRtlBreakAfter[end - line.from])
+                  end++;
+                frame.text.push({
+                  x: offsetToX[from - line.from],
+                  y: line.y,
+                  content: lineContent.substring(from - line.from, end - line.from),
+                  style: decoration.data
+                });
+                from = end;
+              }
+            });
+          }
+
+          offset = after;
+        }
+
+        if (offset === line.to)
+          break;
+        if (!iterator.after)
+          throw new Error('Inconsistent');
+        iterator.next();
+      }
+
+      const lineStyles = [];
+      for (let decorator of decorators.lines) {
+        // We deliberately do not include |line.start| here
+        // to allow line decorations to span the whole line without
+        // affecting the next one.
+        if (decorator.countTouching(line.start + 0.5, line.end + 0.5) > 0)
+          lineStyles.push(decorator.style());
+      }
+      frame.lines.push({
+        first: this._text.offsetToPosition(line.start).line,
+        last: this._text.offsetToPosition(line.end).line,
+        y: line.y,
+        styles: lineStyles
+      });
+
+      for (let decorator of decorators.background) {
+        // Expand by a single character which is not visible to account for borders
+        // extending past viewport.
+        decorator.visitTouching(line.from - 1, line.to + 1, decoration => {
+          // TODO: note that some editors only show selection up to line length. Setting?
+          let from = Offset(decoration.from);
+          from = from < line.from ? frame.lineLeft : offsetToX[from - line.from];
+          let to = Offset(decoration.to);
+          to = to > line.to ? frame.lineRight : offsetToX[to - line.from];
+          if (from <= to) {
+            frame.background.push({
+              x: from,
+              y: line.y,
+              width: to - from,
+              style: decoration.data
+            });
+          }
+        });
+      }
+    }
+  }
+
+  /**
+   * @param {!Frame} frame
+   * @param {!DecorationResult} decorators
+   * @param {!{ratio: number, minDecorationHeight: number}} scrollbarParams
+   */
+  _buildFrameScrollbar(frame, decorators, {ratio, minDecorationHeight}) {
+    for (let decorator of decorators.lines) {
+      let lastTop = -1;
+      let lastBottom = -1;
+      decorator.sparseVisitAll(decoration => {
+        const from = this.offsetToPoint(Offset(decoration.from)).y;
+        const to = this.offsetToPoint(Offset(decoration.to)).y;
+
+        const top = from * ratio;
+        let bottom = (to + frame.lineHeight) * ratio;
+        bottom = Math.max(bottom, top + minDecorationHeight);
+
+        if (top <= lastBottom) {
+          lastBottom = bottom;
+        } else {
+          if (lastTop >= 0)
+            frame.scrollbar.push({y: lastTop, height: lastBottom - lastTop, style: decorator.style()});
+          lastTop = top;
+          lastBottom = bottom;
+        }
+
+        const nextOffset = this.pointToOffset({x: 0, y: bottom / ratio });
+        return Math.max(Offset(decoration.to), nextOffset);
+      });
+      if (lastTop >= 0)
+        frame.scrollbar.push({y: lastTop, height: lastBottom - lastTop, style: decorator.style()});
+    }
+  }
 };
 
 Markup.Events = {
   Changed: 'changed',
   MarkCleared: 'markCleared',
 };
+
+/**
+ * @param {!Array<!Range>} ranges
+ * @param {!Document} document
+ * @return {!Array<!Viewport.VisibleRange>}
+ */
+function joinRanges(ranges, document) {
+  let totalRange = 0;
+  for (let range of ranges)
+    totalRange += range.to - range.from;
+  const diffs = [];
+  for (let i = 0; i < ranges.length - 1; i++)
+    diffs[i] = {i, len: ranges[i + 1].from - ranges[i].to};
+  diffs.sort((a, b) => a.len - b.len || a.i - b.i);
+  const join = new Array(ranges.length).fill(false);
+  let remaining = totalRange * 0.5;
+  for (let diff of diffs) {
+    remaining -= diff.len;
+    if (remaining < 0)
+      break;
+    join[diff.i] = true;
+  }
+
+  const result = [];
+  for (let i = 0; i < ranges.length; i++) {
+    if (i && join[i - 1])
+      result[result.length - 1].to = ranges[i].to;
+    else
+      result.push(new VisibleRange(document, ranges[i].from, ranges[i].to));
+  }
+  return result;
+}
+
+/**
+ * @param {!Anchor} anchor
+ * @return {number}
+ */
+function Offset(anchor) {
+  return Math.floor(anchor);
+}
 
 const kMarkSymbol = Symbol('mark');
 const kDefaultChunkSize = 1000;
