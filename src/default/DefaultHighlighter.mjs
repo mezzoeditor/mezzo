@@ -3,13 +3,12 @@ import { TextDecorator } from '../core/Decorator.mjs';
 export class DefaultHighlighter {
   constructor(editor) {
     this._onDecorateCallback = this._onDecorate.bind(this);
-
-    this._viewport = editor.viewport();
-    this._viewport.addDecorationCallback(this._onDecorateCallback);
+    this._editor = editor;
+    this._editor.addDecorationCallback(this._onDecorateCallback);
   }
 
   dispose() {
-    this._viewport.removeDecorationCallback(this._onDecorateCallback);
+    this._editor.removeDecorationCallback(this._onDecorateCallback);
   }
 
   /**

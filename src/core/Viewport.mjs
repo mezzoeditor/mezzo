@@ -51,8 +51,6 @@ export class Viewport extends EventEmitter {
     this._maxScrollTop = 0;
     this._maxScrollLeft = 0;
     this._padding = { left: 0, right: 0, top: 0, bottom: 0};
-    this._frozen = false;
-    this._decorateCallbacks = [];
 
     this._markup = new Markup(measurer, this._document);
     this._markup.on(Markup.Events.Changed, (contentWidth, contentHeight) => {
@@ -61,10 +59,6 @@ export class Viewport extends EventEmitter {
       this._recompute();
     });
     this._recompute();
-  }
-
-  raf() {
-    this.emit(Viewport.Events.Raf);
   }
 
   /**
@@ -86,24 +80,6 @@ export class Viewport extends EventEmitter {
    */
   lineHeight() {
     return this._markup.lineHeight();
-  }
-
-  /**
-   * @param {DecorationCallback} callback
-   */
-  addDecorationCallback(callback) {
-    this._decorateCallbacks.push(callback);
-    this.raf();
-  }
-
-  /**
-   * @param {DecorationCallback} callback
-   */
-  removeDecorationCallback(callback) {
-    let index = this._decorateCallbacks.indexOf(callback);
-    if (index !== -1)
-      this._decorateCallbacks.splice(index, 1);
-    this.raf();
   }
 
   /**
@@ -255,45 +231,10 @@ export class Viewport extends EventEmitter {
   }
 
   /**
-   * @param {!Range} range
-   * @param {!{left: number, right: number, top: number, bottom: number}=} rangePadding
-   */
-  reveal(range, rangePadding) {
-    if (this._frozen)
-      throw new Error('Cannot reveal while decorating');
-
-    rangePadding = Object.assign({
-      left: 10,
-      right: 10,
-      top: 0,
-      bottom: 0
-    }, rangePadding);
-
-    let from = this.offsetToViewportPoint(range.from);
-    from.x += this._scrollLeft;
-    from.y += this._scrollTop;
-    let to = this.offsetToViewportPoint(range.to);
-    to.x += this._scrollLeft;
-    to.y += this._scrollTop + this.lineHeight();
-
-    if (this._scrollTop > from.y) {
-      this._scrollTop = Math.max(from.y - rangePadding.top, 0);
-    } else if (this._scrollTop + this._height < to.y) {
-      this._scrollTop = Math.min(to.y - this._height + rangePadding.bottom, this._maxScrollTop);
-    }
-    if (this._scrollLeft > from.x) {
-      this._scrollLeft = Math.max(from.x - rangePadding.left, 0);
-    } else if (this._scrollLeft + this._width < to.x) {
-      this._scrollLeft = Math.min(to.x - this._width + rangePadding.right, this._maxScrollLeft);
-    }
-    this._recompute();
-  }
-
-  /**
+   * @param {!Array<DecorationCallback>} decorationCallbacks
    * @return {!Frame}
    */
-  decorate() {
-    this._frozen = true;
+  decorate(decorationCallbacks) {
     const frame = new Frame();
     const paddingLeft = Math.max(this._padding.left - this._scrollLeft, 0);
     const paddingTop = Math.max(this._padding.top - this._scrollTop, 0);
@@ -315,9 +256,8 @@ export class Viewport extends EventEmitter {
       ratio: this._height / (this._maxScrollTop + this._height),
       minDecorationHeight: kMinScrollbarDecorationHeight
     }
-    this._markup.buildFrame(frame, contentRect, scrollbar, this._decorateCallbacks);
+    this._markup.buildFrame(frame, contentRect, scrollbar, decorationCallbacks);
 
-    this._frozen = false;
     return frame;
   }
 
@@ -333,7 +273,6 @@ export class Viewport extends EventEmitter {
 }
 
 Viewport.Events = {
-  Raf: 'raf',
   Changed: 'changed',
 };
 

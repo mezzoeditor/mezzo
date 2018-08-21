@@ -90,14 +90,14 @@ class TokenHighlighter {
   constructor(embedder) {
     this._editor = embedder.editor();
     this._token = '';
-    embedder.viewport().addDecorationCallback(this._onDecorate.bind(this));
+    this._editor.addDecorationCallback(this._onDecorate.bind(this));
   }
 
   setToken(token) {
     if (this._token === token)
       return;
     this._token = token;
-    this._editor.viewport().raf();
+    this._editor.raf();
   }
 
   _onDecorate(visibleContent) {

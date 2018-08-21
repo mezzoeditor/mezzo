@@ -14,7 +14,7 @@ export class Search extends EventEmitter {
     this._chunkSize = CHUNK_SIZE;
     this._editor = editor;
     this._viewport = editor.viewport();
-    this._viewport.addDecorationCallback(this._onDecorate.bind(this));
+    this._editor.addDecorationCallback(this._onDecorate.bind(this));
     this._document = editor.document();
     this._document.on(Document.Events.Changed, this._onDocumentChanged.bind(this));
 
@@ -71,13 +71,13 @@ export class Search extends EventEmitter {
     this._allocator = new WorkAllocator(Math.max(0, this._document.text().length() - query.length + 1));
     this._needsProcessing(0, this._document.text().length());
     this._shouldUpdateSelection = true;
-    this._viewport.raf();
+    this._editor.raf();
     this._emitUpdatedIfNeeded();
   }
 
   cancel() {
     this._cancel();
-    this._viewport.raf();
+    this._editor.raf();
     this._emitUpdatedIfNeeded();
   }
 
@@ -105,7 +105,7 @@ export class Search extends EventEmitter {
     if (!match)
       return false;
     this._updateCurrentMatch(match, true, true);
-    this._viewport.raf();
+    this._editor.raf();
     this._emitUpdatedIfNeeded();
     return true;
   }
@@ -127,7 +127,7 @@ export class Search extends EventEmitter {
     if (!match)
       return false;
     this._updateCurrentMatch(match, true, true);
-    this._viewport.raf();
+    this._editor.raf();
     this._emitUpdatedIfNeeded();
     return true;
   }
@@ -155,7 +155,7 @@ export class Search extends EventEmitter {
       this._updateCurrentMatch(match, this._shouldUpdateSelection, this._shouldUpdateSelection);
     }
 
-    this._viewport.raf();
+    this._editor.raf();
     if (this._allocator.hasWork())
       this._jobId = this._editor.platformSupport().requestIdleCallback(this._searchChunk.bind(this));
     this._emitUpdatedIfNeeded();
@@ -260,12 +260,7 @@ export class Search extends EventEmitter {
         }]);
       }
       if (reveal) {
-        this._viewport.reveal(this._currentMatch, {
-          left: 10,
-          right: 10,
-          top: this._viewport.height() / 2,
-          bottom: this._viewport.height() / 2,
-        });
+        this._editor.revealRange(this._currentMatch);
       }
     }
   }

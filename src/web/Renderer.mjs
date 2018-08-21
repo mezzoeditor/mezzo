@@ -1,5 +1,6 @@
 import { RoundMode, Metrics } from '../core/Metrics.mjs';
 import { Measurer } from '../core/Markup.mjs';
+import { Editor } from '../editor/Editor.mjs';
 import { Viewport } from '../core/Viewport.mjs';
 import { trace } from '../core/Trace.mjs';
 import { Document } from '../core/Document.mjs';
@@ -233,11 +234,12 @@ export class Renderer {
           if (!this._muteViewportChangedEvent)
             this.invalidate(this);
         }),
-        this._editor.viewport().on(Viewport.Events.Raf, this.raf.bind(this)),
+        this._editor.on(Editor.Events.Raf, this.raf.bind(this)),
         this._editor.document().on(Document.Events.Changed, ({selectionChanged}) => {
           if (selectionChanged)
             this.raf();
         }),
+        this._editor.on(Editor.Events.Reveal, this._reveal.bind(this)),
       ];
       this.invalidate();
     } else {
@@ -486,7 +488,7 @@ export class Renderer {
     let focus = lastCursor ? lastCursor.focus : null;
     if (success && focus !== null) {
       let vPadding = center ? this._editor.viewport().height() / 2 : 0;
-      this._editor.viewport().reveal({from: focus, to: focus}, {top: vPadding, bottom: vPadding});
+      this._reveal({from: focus, to: focus}, {top: vPadding, bottom: vPadding});
     }
     return success;
   }
@@ -753,6 +755,42 @@ export class Renderer {
       this._animationFrameId = requestAnimationFrame(this._render);
   }
 
+  /**
+   * @param {!Range} range
+   * @param {!{left: number, right: number, top: number, bottom: number}=} rangePadding
+   */
+  _reveal(range, rangePadding) {
+    if (this._rendering)
+      throw new Error('Cannot reveal while rendering');
+
+    const viewport = this._editor.viewport();
+
+    rangePadding = Object.assign({
+      left: 10,
+      right: 10,
+      top: viewport.height() / 2,
+      bottom: viewport.height() / 2,
+    }, rangePadding);
+
+    let from = viewport.offsetToViewportPoint(range.from);
+    from.x += viewport.scrollLeft();
+    from.y += viewport.scrollTop();
+    let to = viewport.offsetToViewportPoint(range.to);
+    to.x += viewport.scrollLeft();
+    to.y += viewport.scrollTop() + viewport.lineHeight();
+
+    if (viewport.scrollTop() > from.y) {
+      viewport.setScrollTop(Math.max(from.y - rangePadding.top, 0));
+    } else if (viewport.scrollTop() + viewport.height() < to.y) {
+      viewport.setScrollTop(Math.min(to.y - viewport.height() + rangePadding.bottom, viewport.maxScrollTop()));
+    }
+    if (viewport.scrollLeft() > from.x) {
+      viewport.setScrollLeft(Math.max(from.x - rangePadding.left, 0));
+    } else if (viewport.scrollLeft() + viewport.width() < to.x) {
+      viewport.setScrollLeft(Math.min(to.x - viewport.width() + rangePadding.right, viewport.maxScrollLeft()));
+    }
+  }
+
   _render() {
     this._animationFrameId = 0;
 
@@ -772,7 +810,7 @@ export class Renderer {
     ctx.lineWidth = 1 / this._ratio;
 
     trace.begin('buildFrame');
-    const frame = this._editor.viewport().decorate();
+    const frame = this._editor.viewport().decorate(this._editor.decorationCallbacks());
     trace.end('buildFrame');
 
     trace.begin('drawGutter');

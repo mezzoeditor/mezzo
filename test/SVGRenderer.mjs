@@ -20,6 +20,7 @@ export class SVGRenderer {
    * @param {number=} height
    */
   constructor(platformSupport, width = 50, height = 20) {
+    // TODO: implement reveal when needed.
     this._editor = new Editor(SVGRenderer.measurer(), platformSupport);
     this._width = width;
     this._height = height;
@@ -55,7 +56,7 @@ export class SVGRenderer {
     viewport.setScrollTop(scrollTop);
     const beforeHeight = Viewport.test.setMinScrollbarDecorationHeight(0.001);
 
-    const frame = viewport.decorate();
+    const frame = viewport.decorate(this._editor.decorationCallbacks());
     const root = SVGNode.createRoot({
       width: this._width,
       height: this._height,

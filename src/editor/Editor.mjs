@@ -22,16 +22,19 @@ export class PlatformSupport {
   cancelIdleCallback(id) { }
 }
 
-export class Editor {
+export class Editor extends EventEmitter {
   /**
    * @param {!Measurer} measurer
    * @param {!Platform} platformSupport
    */
   constructor(measurer, platformSupport) {
+    super();
     this._handles = new Decorator(true /* createHandles */);
     this._document = new Document();
     this._document.on(Document.Events.Changed, this._onDocumentChanged.bind(this));
     this._platformSupport = platformSupport;
+    /** @type {!Array<DecorationCallback>} */
+    this._decorationCallbacks = [];
 
     this._viewport = new Viewport(this._document, measurer);
 
@@ -44,7 +47,7 @@ export class Editor {
 
     // Add viewport decorator to style viewport.
     this._selectionDecorator = new SelectionDecorator(this._document);
-    this._selectionDecorator.decorate(this._viewport);
+    this._selectionDecorator.decorate(this);
 
     this.setHighlighter(new DefaultHighlighter(this));
 
@@ -62,13 +65,49 @@ export class Editor {
     return this._platformSupport;
   }
 
-  revealOffset(offset) {
-    this._viewport.reveal({from: offset, to: offset}, {
-      left: 10,
-      right: 10,
-      top: this._viewport.height() / 2,
-      bottom: this._viewport.height() / 2,
-    });
+  raf() {
+    this.emit(Editor.Events.Raf);
+  }
+
+  /**
+   * @param {number} offset
+   * @param {!{left: number, right: number, top: number, bottom: number}=} padding
+   */
+  revealOffset(offset, padding) {
+    this.revealRange({from: offset, to: offset}, padding);
+  }
+
+  /**
+   * @param {!Range} range
+   * @param {!{left: number, right: number, top: number, bottom: number}=} padding
+   */
+  revealRange(range, padding) {
+    this.emit(Editor.Events.Reveal, range, padding);
+  }
+
+  /**
+   * @param {DecorationCallback} callback
+   */
+  addDecorationCallback(callback) {
+    this._decorationCallbacks.push(callback);
+    this.raf();
+  }
+
+  /**
+   * @param {DecorationCallback} callback
+   */
+  removeDecorationCallback(callback) {
+    let index = this._decorationCallbacks.indexOf(callback);
+    if (index !== -1)
+      this._decorationCallbacks.splice(index, 1);
+    this.raf();
+  }
+
+  /**
+   * @return {!Array<DecorationCallback>}
+   */
+  decorationCallbacks() {
+    return this._decorationCallbacks;
   }
 
   /**
@@ -133,6 +172,11 @@ export class Editor {
   }
 }
 
+Editor.Events = {
+  Raf: 'raf',
+  Reveal: 'reveal',
+};
+
 class RangeHandle {
   constructor(document, decorator, from, to, onRemoved) {
     this._document = document;
@@ -180,10 +224,10 @@ class SelectionDecorator {
   }
 
   /**
-   * @param {!Viewport} viewport
+   * @param {!Editor} editor
    */
-  decorate(viewport) {
-    viewport.addDecorationCallback(this._onDecorate.bind(this));
+  decorate(editor) {
+    editor.addDecorationCallback(this._onDecorate.bind(this));
   }
 
   /**

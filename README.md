@@ -187,7 +187,7 @@ Decoration                               [xxxxxxxxxxxx]
 
 Typical plugin can be integrated at multiple points:
 * Edit document with `Document.replace`.
-* Reveal text ranges with `Viewport.reveal`.
+* Reveal text ranges with `Editor.revealRange`.
 * Listen to document changes with `replaceCallback`.
 * Decorate viewport with `decorationCallback`.
 * Do asynchronous work with `idleCallback`.

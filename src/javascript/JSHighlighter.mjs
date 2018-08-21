@@ -17,8 +17,9 @@ export class JSHighlighter {
 
     this._onDecorateCallback = this._onDecorate.bind(this);
 
+    this._editor = editor;
     this._viewport = editor.viewport();
-    this._viewport.addDecorationCallback(this._onDecorateCallback);
+    this._editor.addDecorationCallback(this._onDecorateCallback);
     this._document = editor.document();
 
     this._eventListeners = [
@@ -45,7 +46,7 @@ export class JSHighlighter {
     }
     if (this._highlightOffset < this._document.text().length()) {
       this._jobId = this._platformSupport.requestIdleCallback(this._doHighlight.bind(this));
-      this._viewport.raf();
+      this._editor.raf();
     } else {
       this._highlightOffset = this._document.text().length();
     }
@@ -60,7 +61,7 @@ export class JSHighlighter {
    * @param {!Viewport} viewport
    */
   dispose() {
-    this._viewport.removeDecorationCallback(this._onDecorateCallback);
+    this._editor.removeDecorationCallback(this._onDecorateCallback);
     EventEmitter.removeEventListeners(this._eventListeners);
     this._document.off(Document.Events.Changed, this._onReplaceCallback);
     if (this._jobId) {

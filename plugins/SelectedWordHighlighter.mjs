@@ -11,7 +11,7 @@ export class SelectedWordHighlighter {
     this._editor = editor;
     this._viewport = editor.viewport();
     this._document = editor.document();
-    this._viewport.addDecorationCallback(this._onDecorate.bind(this));
+    this._editor.addDecorationCallback(this._onDecorate.bind(this));
     this._document.on(Document.Events.Changed, ({selectionChanged}) => {
       if (selectionChanged)
         this._onSelectionChanged();
