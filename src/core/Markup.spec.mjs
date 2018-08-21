@@ -1,7 +1,7 @@
 import {Random} from './Random.mjs';
 import {Metrics, RoundMode} from './Metrics.mjs';
 import {Document} from './Document.mjs';
-import {Viewport} from './Viewport.mjs';
+import {Markup} from './Markup.mjs';
 
 export function addTests(runner, expect) {
   const {describe, xdescribe, fdescribe} = runner;
@@ -21,17 +21,17 @@ export function addTests(runner, expect) {
     };
   }
 
-  describe('Viewport', () => {
+  describe('Markup', () => {
     it('replace at chunk boundary should not hang', () => {
       let content = 'a'.repeat(6835);
       let document = new Document();
       document.reset(content);
-      let viewport = new Viewport(document, createTestMeasurer());
+      let markup = new Markup(createTestMeasurer(), document);
       document.replace(1674, 6835, '');
-      expect(viewport.contentWidth()).toBe(1674 * 1);
+      expect(markup.contentWidth()).toBe(1674 * 1);
     });
 
-    it('Viewport points API all chunk sizes', () => {
+    it('markup points API all chunk sizes', () => {
       let testMetrics = createTestMetrics();
       let random = Random(143);
       let lineCount = 200;
@@ -69,28 +69,28 @@ export function addTests(runner, expect) {
       for (let chunkSize = 1; chunkSize <= 100; chunkSize++) {
         let document = new Document();
         document.reset(content);
-        let viewport = new Viewport(document, createTestMeasurer());
-        Viewport.test.rechunk(viewport, chunkSize);
-        expect(viewport.contentWidth()).toBe(longest);
-        expect(viewport.contentHeight()).toBe((lineCount + 1) * 3);
-        expect(viewport.offsetToContentPoint(0)).toBe({x: 0, y: 0});
-        expect(viewport.offsetToContentPoint(content.length)).toBe({x: 0, y: lineCount * 3});
-        expect(viewport.offsetToContentPoint(content.length + 1)).toBe(null);
+        let markup = new Markup(createTestMeasurer(), document);
+        Markup.test.rechunk(markup, chunkSize);
+        expect(markup.contentWidth()).toBe(longest);
+        expect(markup.contentHeight()).toBe((lineCount + 1) * 3);
+        expect(markup.offsetToPoint(0)).toBe({x: 0, y: 0});
+        expect(markup.offsetToPoint(content.length)).toBe({x: 0, y: lineCount * 3});
+        expect(markup.offsetToPoint(content.length + 1)).toBe(null);
         for (let {offset, x, y, nonStrict, rounded} of locationQueries) {
           if (nonStrict) {
-            expect(viewport.contentPointToOffset({x: nonStrict.x, y}, RoundMode.Floor)).toBe(offset);
+            expect(markup.pointToOffset({x: nonStrict.x, y}, RoundMode.Floor)).toBe(offset);
           } else {
-            expect(viewport.offsetToContentPoint(offset)).toBe({x, y});
-            expect(viewport.contentPointToOffset({x, y}, RoundMode.Floor)).toBe(offset);
-            expect(viewport.contentPointToOffset({x: x + 0.5, y: y + 0.5}, RoundMode.Floor, false /* strict */)).toBe(offset);
-            expect(viewport.contentPointToOffset({x, y}, RoundMode.Floor, true /* strict */)).toBe(offset);
+            expect(markup.offsetToPoint(offset)).toBe({x, y});
+            expect(markup.pointToOffset({x, y}, RoundMode.Floor)).toBe(offset);
+            expect(markup.pointToOffset({x: x + 0.5, y: y + 0.5}, RoundMode.Floor, false /* strict */)).toBe(offset);
+            expect(markup.pointToOffset({x, y}, RoundMode.Floor, true /* strict */)).toBe(offset);
             if (rounded) {
-              expect(viewport.contentPointToOffset({x: x + 0.4, y}, RoundMode.Round, true /* strict */)).toBe(offset);
-              expect(viewport.contentPointToOffset({x: x + 0.5, y}, RoundMode.Round, true /* strict */)).toBe(offset);
-              expect(viewport.contentPointToOffset({x: x + 0.6, y}, RoundMode.Round, true /* strict */)).toBe(offset + 1);
-              expect(viewport.contentPointToOffset({x, y}, RoundMode.Ceil, true /* strict */)).toBe(offset);
-              expect(viewport.contentPointToOffset({x: x + 0.5, y}, RoundMode.Ceil, true /* strict */)).toBe(offset + 1);
-              expect(viewport.contentPointToOffset({x: x + 1, y}, RoundMode.Ceil, true /* strict */)).toBe(offset + 1);
+              expect(markup.pointToOffset({x: x + 0.4, y}, RoundMode.Round, true /* strict */)).toBe(offset);
+              expect(markup.pointToOffset({x: x + 0.5, y}, RoundMode.Round, true /* strict */)).toBe(offset);
+              expect(markup.pointToOffset({x: x + 0.6, y}, RoundMode.Round, true /* strict */)).toBe(offset + 1);
+              expect(markup.pointToOffset({x, y}, RoundMode.Ceil, true /* strict */)).toBe(offset);
+              expect(markup.pointToOffset({x: x + 0.5, y}, RoundMode.Ceil, true /* strict */)).toBe(offset + 1);
+              expect(markup.pointToOffset({x: x + 1, y}, RoundMode.Ceil, true /* strict */)).toBe(offset + 1);
             }
           }
         }

@@ -53,9 +53,9 @@ export class Viewport extends EventEmitter {
     this._padding = { left: 0, right: 0, top: 0, bottom: 0};
 
     this._markup = new Markup(measurer, this._document);
-    this._markup.on(Markup.Events.Changed, (contentWidth, contentHeight) => {
-      this._contentWidth = contentWidth;
-      this._contentHeight = contentHeight;
+    this._markup.on(Markup.Events.Changed, () => {
+      this._contentWidth = this._markup.contentWidth();
+      this._contentHeight = this._markup.contentHeight();
       this._recompute();
     });
     this._recompute();
@@ -279,14 +279,6 @@ Viewport.Events = {
 let kMinScrollbarDecorationHeight = 5;
 
 Viewport.test = {};
-
-/**
- * @param {!Viewport} viewport
- * @param {number} chunkSize
- */
-Viewport.test.rechunk = function(viewport, chunkSize) {
-  Markup.test.rechunk(viewport._markup, chunkSize);
-};
 
 Viewport.test.setMinScrollbarDecorationHeight = function(value) {
   const result = kMinScrollbarDecorationHeight;

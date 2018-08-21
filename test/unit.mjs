@@ -10,7 +10,7 @@ console.log(import.meta.url);
   // Core unit tests
   (await import('../src/core/Document.spec.mjs')).addTests(runner, expect);
   (await import('../src/core/TextIterator.spec.mjs')).addTests(runner, expect);
-  (await import('../src/core/Viewport.spec.mjs')).addTests(runner, expect);
+  (await import('../src/core/Markup.spec.mjs')).addTests(runner, expect);
   (await import('../src/core/Decorator.spec.mjs')).addTests(runner, expect);
   (await import('../src/core/Metrics.spec.mjs')).addTests(runner, expect);
   (await import('../src/core/Tree.spec.mjs')).addTests(runner, expect);

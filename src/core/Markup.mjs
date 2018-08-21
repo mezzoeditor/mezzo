@@ -93,6 +93,20 @@ export class Markup extends EventEmitter {
   }
 
   /**
+   * @return {number}
+   */
+  contentWidth() {
+    return this._contentWidth;
+  }
+
+  /**
+   * @return {number}
+   */
+  contentHeight() {
+    return this._contentHeight;
+  }
+
+  /**
    * @param {!Replacement} replacement
    */
   _replace(replacement) {
@@ -210,7 +224,7 @@ export class Markup extends EventEmitter {
     let metrics = tree.metrics();
     this._contentWidth = metrics.longestWidth * this._defaultWidth;
     this._contentHeight = (1 + (metrics.lineBreaks || 0)) * this._lineHeight;
-    this.emit(Markup.Events.Changed, this._contentWidth, this._contentHeight);
+    this.emit(Markup.Events.Changed);
   }
 
   /**
@@ -527,10 +541,10 @@ const kDefaultChunkSize = 1000;
 Markup.test = {};
 
 /**
- * @param {!Markup} Markup
+ * @param {!Markup} markup
  * @param {number} chunkSize
  */
-Markup.test.rechunk = function(Markup, chunkSize) {
-  let nodes = Markup._createNodes(Markup._text, 0, Markup._text.length(), chunkSize);
-  Markup._setTree(Tree.build(nodes));
+Markup.test.rechunk = function(markup, chunkSize) {
+  let nodes = markup._createNodes(markup._text, 0, markup._text.length(), chunkSize);
+  markup._setTree(Tree.build(nodes));
 };
