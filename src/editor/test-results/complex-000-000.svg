@@ -2,6 +2,7 @@
   <line x1="4ch" y1="0em" x2="4ch" y2="20em" stroke="rgb(187, 187, 187)" id="gutter-border"></line>
   <g id="gutter">
     <line x1="0ch" y1="5.5em" x2="4ch" y2="5.5em" stroke="hsla(36, 96%, 56%, 0.7)"></line>
+    <line x1="0ch" y1="6.5em" x2="4ch" y2="6.5em" stroke="hsla(36, 96%, 56%, 0.7)"></line>
     <text x="3.5ch" y="0.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">1</text>
     <text x="3.5ch" y="1.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">2</text>
     <text x="3.5ch" y="2.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">3</text>

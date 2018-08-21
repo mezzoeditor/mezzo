@@ -105,6 +105,10 @@ export class SVGRenderer {
             x1: 0, y1: y, x2: gutterLength, y2: y,
             stroke: theme.gutter.border
           });
+          svg.add('line', {
+            x1: 0, y1: y + frame.lineHeight, x2: gutterLength, y2: y + frame.lineHeight,
+            stroke: theme.gutter.border
+          });
         }
       }
     }

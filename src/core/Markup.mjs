@@ -484,7 +484,7 @@ Markup.Events = {
 /**
  * @param {!Array<!Range>} ranges
  * @param {!Document} document
- * @return {!Array<!Viewport.VisibleRange>}
+ * @return {!Array<!VisibleRange>}
  */
 function joinRanges(ranges, document) {
   let totalRange = 0;
