@@ -1,7 +1,8 @@
 <svg version="1.1" xmlns="http://www.w3.org/2000/svg" baseProfile="full" width="50ch" height="20em" style="font-family: monospace; font-size: 14px;">
   <line x1="4ch" y1="0em" x2="4ch" y2="20em" stroke="rgb(187, 187, 187)" id="gutter-border"></line>
   <g id="gutter">
-    <text x="3.5ch" y="0em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">100</text>
+    <text x="3.5ch" y="-0.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">99</text>
+    <text x="3.5ch" y="0.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">100</text>
   </g>
   <clipPath id="viewport-clip">
     <rect x="4ch" y="0em" width="45ch" height="20em"></rect>
@@ -10,7 +11,8 @@
     <g id="lines"></g>
     <g id="background"></g>
     <g id="text">
-      <text x="4ch" y="0em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">9 Line99 Line99 Line99 Line99 Line99 Line99 </text>
+      <text x="3.5ch" y="-0.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">98 Line98 Line98 Line98 Line98 Line98 </text>
+      <text x="3.5ch" y="0.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">99 Line99 Line99 Line99 Line99 Line99 Line99 </text>
     </g>
   </g>
   <g id="scrollbars">

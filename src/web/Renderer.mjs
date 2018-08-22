@@ -228,7 +228,7 @@ export class Renderer {
       EventEmitter.removeEventListeners(this._eventListeners);
     this._editor = editor;
     if (this._editor) {
-      this._editor.viewport().setMeasurer(this._measurer);
+      this._editor.markup().setMeasurer(this._measurer);
       this._eventListeners = [
         this._editor.viewport().on(Viewport.Events.Changed, () => {
           if (!this._muteViewportChangedEvent)
@@ -310,7 +310,7 @@ export class Renderer {
     }
     if (command === 'selection.collapse')
       return this._revealSelection(this._editor.input().collapseSelection(), true /* center */);
-    return this._revealSelection(this._editor.input().runCommand(command, this._editor.viewport()));
+    return this._revealSelection(this._editor.input().runCommand(command, this._editor.markup()));
   }
 
   _setupEventListeners() {
@@ -531,10 +531,10 @@ export class Renderer {
     this._canvas.style.width = cssWidth + 'px';
     this._canvas.style.height = cssHeight + 'px';
     this._measurer = new ContextBasedMeasurer(this._canvas.getContext('2d'), this._monospace);
-    // TODO: Updating in viewport every time is slow, but not doing it might be wrong on
+    // TODO: Updating in markup every time is slow, but not doing it might be wrong on
     // scale change. We should detect that.
     // if (zoomHasChanged())
-    //   this._viewport.setMeasurer(this._measurer);
+    //   this._editor.markup().setMeasurer(this._measurer);
     this.invalidate();
 
     // Changing cavas width/height clears the canvas synchronously.
@@ -549,7 +549,7 @@ export class Renderer {
     this._monospace = monospace;
     this._measurer = new ContextBasedMeasurer(this._canvas.getContext('2d'), this._monospace);
     if (this._editor)
-      this._editor.viewport().setMeasurer(this._measurer);
+      this._editor.markup().setMeasurer(this._measurer);
     this.invalidate();
   }
 

@@ -4,7 +4,7 @@ import { Input } from './Input.mjs';
 import { Search } from './Search.mjs';
 import { DefaultHighlighter } from '../default/DefaultHighlighter.mjs';
 import { DefaultTokenizer } from '../default/DefaultTokenizer.mjs';
-import { Measurer } from '../core/Markup.mjs';
+import { Markup, Measurer } from '../core/Markup.mjs';
 import { Viewport } from '../core/Viewport.mjs';
 import { EventEmitter } from '../core/EventEmitter.mjs';
 import { LineDecorator } from '../core/Decorator.mjs';
@@ -36,7 +36,8 @@ export class Editor extends EventEmitter {
     /** @type {!Array<DecorationCallback>} */
     this._decorationCallbacks = [];
 
-    this._viewport = new Viewport(this._document, measurer);
+    this._markup = new Markup(measurer, this._document);
+    this._viewport = new Viewport(this._document, this._markup);
 
     this._tokenizer = null;
     this.setTokenizer(new DefaultTokenizer());
@@ -133,6 +134,13 @@ export class Editor extends EventEmitter {
 
   viewport() {
     return this._viewport;
+  }
+
+  /**
+   * @return {!Markup}
+   */
+  markup() {
+    return this._markup;
   }
 
   /**

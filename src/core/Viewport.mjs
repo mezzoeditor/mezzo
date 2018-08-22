@@ -36,26 +36,22 @@ import { Markup } from './Markup.mjs';
 export class Viewport extends EventEmitter {
   /**
    * @param {!Document} document
-   * @param {!Measurer} measurer
+   * @param {!Markup} markup
    */
-  constructor(document, measurer) {
+  constructor(document, markup) {
     super();
     this._document = document;
 
     this._width = 0;
     this._height = 0;
-    this._contentWidth = 0;
-    this._contentHeight = 0;
     this._scrollTop = 0;
     this._scrollLeft = 0;
     this._maxScrollTop = 0;
     this._maxScrollLeft = 0;
     this._padding = { left: 0, right: 0, top: 0, bottom: 0};
 
-    this._markup = new Markup(measurer, this._document);
+    this._markup = markup;
     this._markup.on(Markup.Events.Changed, () => {
-      this._contentWidth = this._markup.contentWidth();
-      this._contentHeight = this._markup.contentHeight();
       this._recompute();
     });
     this._recompute();
@@ -66,13 +62,6 @@ export class Viewport extends EventEmitter {
    */
   document() {
     return this._document;
-  }
-
-  /**
-   * @param {!Measurer} measurer
-   */
-  setMeasurer(measurer) {
-    this._markup.setMeasurer(measurer);
   }
 
   /**
@@ -177,14 +166,14 @@ export class Viewport extends EventEmitter {
    * @return {number}
    */
   contentWidth() {
-    return this._contentWidth;
+    return this._markup.contentWidth();
   }
 
   /**
    * @return {number}
    */
   contentHeight() {
-    return this._contentHeight;
+    return this._markup.contentHeight();
   }
 
   /**
@@ -213,42 +202,21 @@ export class Viewport extends EventEmitter {
   }
 
   /**
-   * @param {!Point} point
-   * @param {RoundMode} roundMode
-   * @param {boolean} strict
-   * @return {number}
-   */
-  contentPointToOffset(point, roundMode = RoundMode.Floor, strict = false) {
-    return this._markup.pointToOffset(point, roundMode, strict);
-  }
-
-  /**
-   * @param {number} offset
-   * @return {?Point}
-   */
-  offsetToContentPoint(offset) {
-    return this._markup.offsetToPoint(offset);
-  }
-
-  /**
    * @param {!Array<DecorationCallback>} decorationCallbacks
    * @return {!Frame}
    */
   decorate(decorationCallbacks) {
     const frame = new Frame();
-    const paddingLeft = Math.max(this._padding.left - this._scrollLeft, 0);
-    const paddingTop = Math.max(this._padding.top - this._scrollTop, 0);
+    frame.translateLeft = -this._scrollLeft + this._padding.left;
+    frame.translateTop = -this._scrollTop + this._padding.top;
 
-    frame.translateLeft = -this._scrollLeft + paddingLeft;
-    frame.translateTop = -this._scrollTop + paddingTop;
-
-    frame.lineLeft = this._scrollLeft;
-    const paddingRight = Math.max(this._padding.right - (this._maxScrollLeft - this._scrollLeft), 0);
-    frame.lineRight = Math.max(0, this._width - paddingRight - paddingLeft) + this._scrollLeft;
+    frame.lineLeft = this._scrollLeft - Math.min(this._scrollLeft, this._padding.left);
+    frame.lineRight = this._scrollLeft - this._padding.left + this._width
+        + Math.min(this._maxScrollLeft - this._scrollLeft - this._padding.right, 0);
 
     const contentRect = {
-      left: this._scrollLeft - paddingLeft,
-      top: this._scrollTop - paddingTop,
+      left: this._scrollLeft - this._padding.left,
+      top: this._scrollTop - this._padding.top,
       width: this._width,
       height: this._height
     };
@@ -262,8 +230,8 @@ export class Viewport extends EventEmitter {
   }
 
   _recompute() {
-    this._maxScrollTop = Math.max(0, this._contentHeight - this._height + this._padding.top + this._padding.bottom);
-    this._maxScrollLeft = Math.max(0, this._contentWidth - this._width + this._padding.left + this._padding.right);
+    this._maxScrollTop = Math.max(0, this._markup.contentHeight() - this._height + this._padding.top + this._padding.bottom);
+    this._maxScrollLeft = Math.max(0, this._markup.contentWidth() - this._width + this._padding.left + this._padding.right);
     this._scrollLeft = Math.max(this._scrollLeft, 0);
     this._scrollLeft = Math.min(this._scrollLeft, this._maxScrollLeft);
     this._scrollTop = Math.max(this._scrollTop, 0);

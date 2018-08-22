@@ -80,11 +80,11 @@ export class Input {
     this._commands.set(command, handler);
   }
 
-  runCommand(command, viewport) {
+  runCommand(command, markup) {
     const handler = this._commands.get(command);
     if (!handler)
       return false;
-    return handler.call(null, viewport);
+    return handler.call(null, markup);
   }
 
   /**
@@ -264,14 +264,14 @@ export class Input {
   }
 
   /**
-   * @param {!Viewport} viewport
+   * @param {!Markup} markup
    * @return {boolean}
    */
-  moveUp(viewport) {
+  moveUp(markup) {
     return this._updateSelection(range => {
       let offset = Math.min(range.anchor, range.focus);
       let upDownX = range.upDownX;
-      let upResult = this._lineUp(viewport, range.focus, range.upDownX);
+      let upResult = this._lineUp(markup, range.focus, range.upDownX);
       offset = upResult.offset;
       upDownX = upResult.upDownX;
       return {upDownX, anchor: offset, focus: offset};
@@ -279,14 +279,14 @@ export class Input {
   }
 
   /**
-   * @param {!Viewport} viewport
+   * @param {!Markup} markup
    * @return {boolean}
    */
-  moveDown(viewport) {
+  moveDown(markup) {
     return this._updateSelection(range => {
       let offset = Math.max(range.anchor, range.focus);
       let upDownX = range.upDownX;
-      let upResult = this._lineDown(viewport, range.focus, range.upDownX);
+      let upResult = this._lineDown(markup, range.focus, range.upDownX);
       offset = upResult.offset;
       upDownX = upResult.upDownX;
       return {upDownX, anchor: offset, focus: offset};
@@ -404,23 +404,23 @@ export class Input {
   }
 
   /**
-   * @param {!Viewport} viewport
+   * @param {!Markup} markup
    * @return {boolean}
    */
-  selectUp(viewport) {
+  selectUp(markup) {
     return this._updateSelection(range => {
-      let {offset, upDownX} = this._lineUp(viewport, range.focus, range.upDownX);
+      let {offset, upDownX} = this._lineUp(markup, range.focus, range.upDownX);
       return {upDownX, anchor: range.anchor, focus: offset};
     });
   }
 
   /**
-   * @param {!Viewport} viewport
+   * @param {!Markup} markup
    * @return {boolean}
    */
-  selectDown(viewport) {
+  selectDown(markup) {
     return this._updateSelection(range => {
-      let {offset, upDownX} = this._lineDown(viewport, range.focus, range.upDownX);
+      let {offset, upDownX} = this._lineDown(markup, range.focus, range.upDownX);
       return {upDownX, anchor: range.anchor, focus: offset};
     });
   }
@@ -689,30 +689,30 @@ export class Input {
   }
 
   /**
-   * @param {!Viewport} viewport
+   * @param {!Markup} markup
    * @param {number} offset
    * @param {number} upDownX
    * @return {!{offset: number, upDownX: number}}
    */
-  _lineUp(viewport, offset, upDownX) {
-    let point = viewport.offsetToContentPoint(offset);
+  _lineUp(markup, offset, upDownX) {
+    let point = markup.offsetToPoint(offset);
     if (upDownX === undefined)
       upDownX = point.x;
-    offset = viewport.contentPointToOffset({x: upDownX, y: point.y - viewport.lineHeight()}, RoundMode.Round);
+    offset = markup.pointToOffset({x: upDownX, y: point.y - markup.lineHeight()}, RoundMode.Round);
     return {offset, upDownX};
   }
 
   /**
-   * @param {!Viewport} viewport
+   * @param {!Markup} markup
    * @param {number} offset
    * @param {number} upDownX
    * @return {!{offset: number, upDownX: number}}
    */
-  _lineDown(viewport, offset, upDownX) {
-    let point = viewport.offsetToContentPoint(offset);
+  _lineDown(markup, offset, upDownX) {
+    let point = markup.offsetToPoint(offset);
     if (upDownX === undefined)
       upDownX = point.x;
-    offset = viewport.contentPointToOffset({x: upDownX, y: point.y + viewport.lineHeight()}, RoundMode.Round);
+    offset = markup.pointToOffset({x: upDownX, y: point.y + markup.lineHeight()}, RoundMode.Round);
     return {offset, upDownX};
   }
 };

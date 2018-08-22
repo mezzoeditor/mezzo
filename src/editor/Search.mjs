@@ -13,7 +13,6 @@ export class Search extends EventEmitter {
     super();
     this._chunkSize = CHUNK_SIZE;
     this._editor = editor;
-    this._viewport = editor.viewport();
     this._editor.addDecorationCallback(this._onDecorate.bind(this));
     this._document = editor.document();
     this._document.on(Document.Events.Changed, this._onDocumentChanged.bind(this));

@@ -18,7 +18,6 @@ export class JSHighlighter {
     this._onDecorateCallback = this._onDecorate.bind(this);
 
     this._editor = editor;
-    this._viewport = editor.viewport();
     this._editor.addDecorationCallback(this._onDecorateCallback);
     this._document = editor.document();
 
@@ -57,9 +56,6 @@ export class JSHighlighter {
       this._jobId = this._platformSupport.requestIdleCallback(this._doHighlight.bind(this));
   }
 
-  /**
-   * @param {!Viewport} viewport
-   */
   dispose() {
     this._editor.removeDecorationCallback(this._onDecorateCallback);
     EventEmitter.removeEventListeners(this._eventListeners);

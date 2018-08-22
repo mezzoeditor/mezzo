@@ -9,7 +9,6 @@ export class SelectedWordHighlighter {
    */
   constructor(editor) {
     this._editor = editor;
-    this._viewport = editor.viewport();
     this._document = editor.document();
     this._editor.addDecorationCallback(this._onDecorate.bind(this));
     this._document.on(Document.Events.Changed, ({selectionChanged}) => {

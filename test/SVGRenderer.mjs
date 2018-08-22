@@ -44,7 +44,7 @@ export class SVGRenderer {
     const document = viewport.document();
 
     const gutterLength = (Math.max(document.text().lineCount(), 100) + '').length + GUTTER_PADDING_RIGHT + GUTTER_PADDING_LEFT;
-    viewport.setMeasurer(SVGRenderer.measurer());
+    this._editor.markup().setMeasurer(SVGRenderer.measurer());
     viewport.setSize(this._width - gutterLength - SCROLLBAR_WIDTH, this._height);
     viewport.setPadding({
       left: EDITOR_PADDING,
