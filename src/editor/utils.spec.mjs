@@ -42,8 +42,7 @@ export class TestPlatformSupport {
 }
 
 export function createTestEditor() {
-  const platform = new TestPlatformSupport();
-  return new Editor(new TestMeasurer(), platform);
+  return new Editor(new TestMeasurer(), new TestPlatformSupport());
 }
 
 export function textWithCursors(editor) {

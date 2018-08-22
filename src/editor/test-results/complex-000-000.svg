@@ -68,10 +68,10 @@
     <rect x="49ch" y="0em" width="1ch" height="3.361em" fill="rgba(100, 100, 100, 0.4)"></rect>
     <rect x="4ch" y="19em" width="45ch" height="1em" fill="transparent" stroke="rgba(100, 100, 100, 0.2)"></rect>
     <rect x="4ch" y="19em" width="15.945ch" height="1em" fill="rgba(100, 100, 100, 0.4)"></rect>
-    <rect x="49ch" y="0.84em" width="1ch" height="0.168em" fill="hsla(36, 96%, 56%, 0.4)"></rect>
-    <rect x="49ch" y="8.403em" width="1ch" height="1.681em" fill="hsla(36, 96%, 56%, 0.4)"></rect>
     <rect x="49.4ch" y="6.555em" width="0.2ch" height="0.168em" fill="rgba(126, 188, 254, 0.6)"></rect>
     <rect x="49.4ch" y="7.395em" width="0.2ch" height="0.168em" fill="rgba(126, 188, 254, 0.6)"></rect>
     <rect x="49.4ch" y="8.067em" width="0.2ch" height="1.008em" fill="rgba(126, 188, 254, 0.6)"></rect>
+    <rect x="49ch" y="0.84em" width="1ch" height="0.168em" fill="hsla(36, 96%, 56%, 0.4)"></rect>
+    <rect x="49ch" y="8.403em" width="1ch" height="1.681em" fill="hsla(36, 96%, 56%, 0.4)"></rect>
   </g>
 </svg>

@@ -1,7 +1,6 @@
 import { Document } from '../core/Document.mjs';
 import { Decorator } from '../core/Decorator.mjs';
 import { Input } from './Input.mjs';
-import { Search } from './Search.mjs';
 import { DefaultHighlighter } from '../default/DefaultHighlighter.mjs';
 import { DefaultTokenizer } from '../default/DefaultTokenizer.mjs';
 import { Markup, Measurer } from '../core/Markup.mjs';
@@ -41,7 +40,6 @@ export class Editor extends EventEmitter {
     this.setTokenizer(new DefaultTokenizer());
     this._highlighter = null;
 
-    this._search = new Search(this);
     this._input = new Input(this);
 
     this._selectionDecorator = new SelectionDecorator(this._document);
@@ -134,13 +132,6 @@ export class Editor extends EventEmitter {
    */
   markup() {
     return this._markup;
-  }
-
-  /**
-   * @return {!Search}
-   */
-  search() {
-    return this._search;
   }
 
   /**

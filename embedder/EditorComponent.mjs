@@ -10,6 +10,7 @@ import { SelectedWordHighlighter } from '../plugins/SelectedWordHighlighter.mjs'
 import { SmartBraces } from '../plugins/SmartBraces.mjs';
 import { AddNextOccurence } from '../plugins/AddNextOccurence.mjs';
 import { BlockIndentation } from '../plugins/BlockIndentation.mjs';
+import { Search } from '../plugins/Search.mjs';
 import { SearchToolbar } from '../plugins/web/SearchToolbar.mjs';
 
 export class EditorComponent extends HTMLElement {
@@ -70,6 +71,7 @@ export class EditorComponent extends HTMLElement {
     this._editor = editor;
     this._renderer.setEditor(editor);
     if (this._editor) {
+      this._searchToolbar.setSearch(PluginManager.ensurePlugins(this._editor).search);
       this._eventListeners = [
         this._editor.document().on(Document.Events.Changed, ({selectionChanged}) => {
           if (selectionChanged)
@@ -78,6 +80,7 @@ export class EditorComponent extends HTMLElement {
       ];
       this._onSelectionChanged();
     } else {
+      this._searchToolbar.setSearch(null);
       this._selectionDescription.textContent = '';
     }
   }
@@ -108,12 +111,9 @@ export class EditorComponent extends HTMLElement {
 
   createEditor(mimeType) {
     const editor = new Editor(this._renderer.measurer(), WebPlatformSupport.instance());
+    PluginManager.ensurePlugins(editor);
     editor.document().setSelection([{anchor: 0, focus: 0}]);
 
-    const selectedWordHighlighter = new SelectedWordHighlighter(editor);
-    const smartBraces = new SmartBraces(editor);
-    const blockIndentation = new BlockIndentation(editor);
-    const addNextOccurence = new AddNextOccurence(editor);
     if (mimeType === 'text/javascript') {
       const highlighter = new JSHighlighter(editor);
       editor.setHighlighter(highlighter);
@@ -122,6 +122,28 @@ export class EditorComponent extends HTMLElement {
       editor.setHighlighter(highlighter);
     }
     return editor;
+  }
+}
+
+const pluginRegistrySymbol = Symbol('plugin registry');
+
+class PluginManager {
+  static ensurePlugins(editor) {
+    let registry = editor[pluginRegistrySymbol];
+    if (!registry) {
+      registry = new PluginManager(editor);
+      editor[pluginRegistrySymbol] = registry;
+    }
+    return registry;
+  }
+
+  constructor(editor) {
+    this.selectedWordHighlighter = new SelectedWordHighlighter(editor);
+    this.smartBraces = new SmartBraces(editor);
+    this.blockIndentation = new BlockIndentation(editor);
+    this.addNextOccurence = new AddNextOccurence(editor);
+    this.search = new Search(editor);
+    this.search.on(Search.Events.Changed, ({enabled}) => this.selectedWordHighlighter.setEnabled(!enabled));
   }
 }
 

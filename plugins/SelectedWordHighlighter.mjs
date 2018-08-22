@@ -1,7 +1,6 @@
 import { TextDecorator } from '../src/core/Decorator.mjs';
 import { Tokenizer } from "../src/editor/Tokenizer.mjs";
 import { Document } from "../src/core/Document.mjs";
-import { Search } from "../src/editor/Search.mjs";
 
 export class SelectedWordHighlighter {
   /**
@@ -15,7 +14,6 @@ export class SelectedWordHighlighter {
       if (selectionChanged)
         this._onSelectionChanged();
     });
-    editor.search().on(Search.Events.Changed, this._onSearchChanged.bind(this));
     this._selectedWord = '';
     this._selectedWordRange = null;
     this._enabled = true;
@@ -29,13 +27,6 @@ export class SelectedWordHighlighter {
       return;
     this._enabled = enabled;
     this._onSelectionChanged();
-  }
-
-  /**
-   * @param {!Object} event
-   */
-  _onSearchChanged({enabled}) {
-    this.setEnabled(!enabled);
   }
 
   _onSelectionChanged() {

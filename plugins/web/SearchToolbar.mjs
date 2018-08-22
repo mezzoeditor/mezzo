@@ -57,11 +57,29 @@ export class SearchToolbar {
   }
 
   /**
+   * @param {?Search} search
+   */
+  setSearch(search) {
+    this._search = search;
+    if (this._search) {
+      EventEmitter.removeEventListeners(this._eventListeners);
+      this._eventListeners = [
+        this._search.on('changed', ({currentMatchIndex, matchesCount}) => this._updateSearchUI(currentMatchIndex, matchesCount))
+      ];
+      this._updateSearchUI(search.currentMatchIndex(), search.matchesCount());
+      this._onSearchInput();
+    } else {
+      EventEmitter.removeEventListeners(this._eventListeners);
+      this._updateSearchUI(0, 0);
+    }
+  }
+
+  /**
    * @param {string} command
    */
   _onCommand(command) {
     const editor = this._renderer.editor();
-    if (!editor)
+    if (!editor || !this._search)
       return false;
     if (command === 'search.show') {
       const selectionRange = editor.document().selection()[0];
@@ -76,45 +94,42 @@ export class SearchToolbar {
       this._input.focus();
       this._input.select();
       this._onSearchInput();
-      EventEmitter.removeEventListeners(this._eventListeners);
-      this._eventListeners = [
-        editor.search().on('changed', this._onSearchChanged.bind(this))
-      ];
+      this._updateSearchUI(this._search.currentMatchIndex(), this._search.matchesCount());
       this._isShown = true;
       return true;
     }
     if (!this._isShown)
       return false;
     if (command === 'search.hide') {
-      editor.search().cancel();
+      this._search.cancel();
       this._element.style.setProperty('display', 'none');
       this._renderer.focus();
-      EventEmitter.removeEventListeners(this._eventListeners);
       this._isShown = false;
       return true;
     }
     if (command === 'search.prev' && this._element.contains(document.activeElement)) {
-      editor.search().previousMatch();
+      this._search.previousMatch();
       return true;
     }
     if (command === 'search.next' && this._element.contains(document.activeElement)) {
-      editor.search().nextMatch();
+      this._search.nextMatch();
       return true;
     }
     return false;
   }
 
   _onSearchInput() {
-    const editor = this._renderer.editor();
-    if (!editor)
+    if (!this._search || !this._isShown)
       return;
     if (!this._input.value)
-      editor.search().cancel();
+      this._search.cancel();
     else
-      editor.search().find(this._input.value, {caseInsensetive: this._caseInsensetive});
+      this._search.find(this._input.value, {caseInsensetive: this._caseInsensetive});
   }
 
-  _onSearchChanged({currentMatchIndex, matchesCount}) {
+  _updateSearchUI(currentMatchIndex, matchesCount) {
+    if (!this._isShown)
+      return;
     if (matchesCount === 0) {
       this._searchDetails.textContent = '0/0';
     } else {

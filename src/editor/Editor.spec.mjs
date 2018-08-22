@@ -1,6 +1,7 @@
 import {GoldenMatchers} from '../../utils/GoldenMatchers';
 import {TestPlatformSupport} from './utils.spec.mjs';
 import {SVGRenderer} from '../../test/SVGRenderer.mjs';
+import {Search} from '../../plugins/Search.mjs';
 import url from 'url';
 import path from 'path';
 
@@ -27,13 +28,14 @@ export function addTests(runner, expect) {
     function renderComplex(scrollLeft, scrollTop) {
       const platform = new TestPlatformSupport();
       const renderer = new SVGRenderer(platform);
+      const search = new Search(renderer.editor());
       const lines = [];
       for (let i = 0; i < 100; i++) {
         lines.push(Array((i % 10) + 10).join('Line' + i + ' '));
       }
       const document = renderer.editor().document();
       renderer.editor().reset(lines.join('\n'));
-      renderer.editor().search().find('Line5');
+      search.find('Line5');
       platform.runUntilIdle();
       document.setSelection([
         {anchor: document.text().positionToOffset({line: 48, column: 70}),

@@ -1,7 +1,7 @@
-import { LineDecorator } from '../core/Decorator.mjs';
-import { EventEmitter } from '../core/EventEmitter.mjs';
-import { WorkAllocator } from '../core/WorkAllocator.mjs';
-import { Document } from '../core/Document.mjs';
+import { LineDecorator } from '../src/core/Decorator.mjs';
+import { EventEmitter } from '../src/core/EventEmitter.mjs';
+import { WorkAllocator } from '../src/core/WorkAllocator.mjs';
+import { Document } from '../src/core/Document.mjs';
 
 const CHUNK_SIZE = 200000;
 

@@ -6,6 +6,7 @@ import { DefaultHighlighter } from "../src/default/DefaultHighlighter.mjs";
 
 import { SelectedWordHighlighter } from '../plugins/SelectedWordHighlighter.mjs';
 import { SmartBraces } from '../plugins/SmartBraces.mjs';
+import { Search } from '../plugins/Search.mjs';
 import { BlockIndentation } from '../plugins/BlockIndentation.mjs';
 import { AddNextOccurence } from '../plugins/AddNextOccurence.mjs';
 import { SearchToolbar } from '../plugins/web/SearchToolbar.mjs';
@@ -24,14 +25,17 @@ export class WebEmbedder {
     this._editor = new Editor(this._renderer.measurer(), WebPlatformSupport.instance());
     this._renderer.setEditor(this._editor);
 
-    this._plugins = [
-      new SelectedWordHighlighter(this._editor),
-      new SmartBraces(this._editor),
-      new BlockIndentation(this._editor),
-      new AddNextOccurence(this._editor),
-    ];
+    this._plugins = {
+      selectedWordHighlighter: new SelectedWordHighlighter(this._editor),
+      smartBraces: new SmartBraces(this._editor),
+      blockIndentation: new BlockIndentation(this._editor),
+      addNextOccurence: new AddNextOccurence(this._editor),
+      search: new Search(this._editor),
+    };
+    this._searchToolbar = new SearchToolbar(this._renderer);
+    this._searchToolbar.setSearch(this._plugins.search);
 
-    const searchToolbar = new SearchToolbar(this._renderer);
+    this._plugins.search.on(Search.Events.Changed, ({enabled}) => this._plugins.selectedWordHighlighter.setEnabled(!enabled));
 
     this.setMimeType('text/plain');
   }

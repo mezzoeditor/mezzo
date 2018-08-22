@@ -17,8 +17,10 @@ console.log(import.meta.url);
   (await import('../src/core/Text.spec.mjs')).addTests(runner, expect);
   (await import('../src/core/WorkAllocator.spec.mjs')).addTests(runner, expect);
 
+  // Plugin tests.
+  (await import('../plugins/Search.spec.mjs')).addTests(runner, expect);
+
   // Editor tests.
-  (await import('../src/editor/Search.spec.mjs')).addTests(runner, expect);
   (await import('../src/editor/Editor.spec.mjs')).addTests(runner, expect);
   (await import('../src/editor/Input.spec.mjs')).addTests(runner, expect);
 
