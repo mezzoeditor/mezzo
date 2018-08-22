@@ -1,3 +1,5 @@
+import {Editor} from './Editor.mjs';
+
 export class TestMeasurer {
   lineHeight() {
     return 10;
@@ -39,3 +41,17 @@ export class TestPlatformSupport {
   }
 }
 
+export function createTestEditor() {
+  const platform = new TestPlatformSupport();
+  return new Editor(new TestMeasurer(), platform);
+}
+
+export function textWithCursors(editor) {
+  let text = editor.document().text().content();
+  const selection = editor.document().sortedSelection();
+  for (let i = selection.length - 1; i >= 0; i--) {
+    const focus = selection[i].focus;
+    text = text.substring(0, focus) + '|' + text.substring(focus);
+  }
+  return text;
+}
