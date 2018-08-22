@@ -257,7 +257,7 @@ export class Metrics {
     if (from === to)
       return 0;
 
-    if (this._widthOneRegex && this._widthOneRegex.test(s))
+    if (this._widthOneRegex && this._widthOneRegex.test(s.substring(from, to)))
       return to - from;
 
     let result = 0;
