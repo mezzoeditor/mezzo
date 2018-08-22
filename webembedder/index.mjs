@@ -80,13 +80,6 @@ export class WebEmbedder {
   }
 
   /**
-   * @return {!Viewport}
-   */
-  viewport() {
-    return this._editor.viewport();
-  }
-
-  /**
    * @param {boolean} enabled
    */
   setUseMonospaceFont(enabled) {

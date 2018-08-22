@@ -1,6 +1,6 @@
 import {Editor} from '../src/editor/Editor.mjs';
 import {DefaultTheme} from '../src/default/DefaultTheme.mjs';
-import {Viewport} from '../src/core/Viewport.mjs';
+import {Frame} from '../src/core/Frame.mjs';
 
 // All sizes are in CH (if horizontal) and EM (if vertical).
 const GUTTER_PADDING_LEFT = 0.5;
@@ -40,23 +40,45 @@ export class SVGRenderer {
    * @return {string}
    */
   render(scrollLeft, scrollTop) {
-    const viewport = this._editor.viewport();
-    const document = viewport.document();
+    const document = this._editor.document();
 
     const gutterLength = (Math.max(document.text().lineCount(), 100) + '').length + GUTTER_PADDING_RIGHT + GUTTER_PADDING_LEFT;
     this._editor.markup().setMeasurer(SVGRenderer.measurer());
-    viewport.setSize(this._width - gutterLength - SCROLLBAR_WIDTH, this._height);
-    viewport.setPadding({
+
+    const width = this._width - gutterLength - SCROLLBAR_WIDTH;
+    const height = this._height;
+    const padding = {
       left: EDITOR_PADDING,
       right: EDITOR_PADDING,
       top: EDITOR_PADDING,
       bottom: this._height - LINE_HEIGHT - EDITOR_PADDING,
-    });
-    viewport.setScrollLeft(scrollLeft);
-    viewport.setScrollTop(scrollTop);
-    const beforeHeight = Viewport.test.setMinScrollbarDecorationHeight(0.001);
+    };
 
-    const frame = viewport.decorate(this._editor.decorationCallbacks());
+    const maxScrollTop = Math.max(0, this._editor.markup().contentHeight() - height + padding.top + padding.bottom);
+    const maxScrollLeft = Math.max(0, this._editor.markup().contentWidth() - width + padding.left + padding.right);
+    scrollLeft = Math.min(Math.max(scrollLeft, 0), maxScrollLeft);
+    scrollTop = Math.min(Math.max(scrollTop, 0), maxScrollTop);
+
+    const frame = new Frame();
+    frame.translateLeft = -scrollLeft + padding.left;
+    frame.translateTop = -scrollTop + padding.top;
+
+    frame.lineLeft = scrollLeft - Math.min(scrollLeft, padding.left);
+    frame.lineRight = scrollLeft - padding.left + width
+        + Math.min(maxScrollLeft - scrollLeft - padding.right, 0);
+
+    const contentRect = {
+      left: scrollLeft - padding.left,
+      top: scrollTop - padding.top,
+      width: width,
+      height: height
+    };
+    const scrollbar = {
+      ratio: height / (maxScrollTop + height),
+      minDecorationHeight: 0.001
+    }
+    this._editor.markup().buildFrame(frame, contentRect, scrollbar, this._editor.decorationCallbacks());
+
     const root = SVGNode.createRoot({
       width: this._width,
       height: this._height,
@@ -81,11 +103,10 @@ export class SVGRenderer {
     this._drawTextAndBackground(coords, frame);
 
     const scrollbarsElement = root.add('g', {id: 'scrollbars'});
-    this._drawVScrollbar(scrollbarsElement);
-    this._drawHScrollbar(scrollbarsElement, gutterLength);
+    this._drawVScrollbar(scrollbarsElement, height, scrollTop, maxScrollTop);
+    this._drawHScrollbar(scrollbarsElement, gutterLength, width, scrollLeft, maxScrollLeft);
     this._drawScrollbarMarkers(scrollbarsElement, frame);
 
-    Viewport.test.setMinScrollbarDecorationHeight(beforeHeight);
     return root.serialize();
   }
 
@@ -189,9 +210,8 @@ export class SVGRenderer {
     }
   }
 
-  _drawVScrollbar(svg) {
-    const viewport = this._editor.viewport();
-    const ratio = viewport.height() / (viewport.maxScrollTop() + viewport.height());
+  _drawVScrollbar(svg, height, scrollTop, maxScrollTop) {
+    const ratio = height / (maxScrollTop + height);
     svg.add('rect', {
       x: this._width - 1,
       y: 0,
@@ -202,18 +222,17 @@ export class SVGRenderer {
     });
     svg.add('rect', {
       x: this._width - 1,
-      y: viewport.scrollTop() * ratio,
+      y: scrollTop * ratio,
       width: 1,
-      height: viewport.height() * ratio,
+      height: height * ratio,
       fill: 'rgba(100, 100, 100, 0.4)'
     });
   }
 
-  _drawHScrollbar(svg, gutterLength) {
-    const viewport = this._editor.viewport();
-    if (!viewport.maxScrollLeft())
+  _drawHScrollbar(svg, gutterLength, width, scrollLeft, maxScrollLeft) {
+    if (!maxScrollLeft)
       return;
-    const ratio = viewport.width() / (viewport.maxScrollLeft() + viewport.width());
+    const ratio = width / (maxScrollLeft + width);
     svg.add('rect', {
       x: gutterLength,
       y: this._height - 1,
@@ -223,9 +242,9 @@ export class SVGRenderer {
       stroke: 'rgba(100, 100, 100, 0.2)',
     });
     svg.add('rect', {
-      x: gutterLength + viewport.scrollLeft() * ratio,
+      x: gutterLength + scrollLeft * ratio,
       y: this._height - 1,
-      width: viewport.width() * ratio,
+      width: width * ratio,
       height: 1,
       fill: 'rgba(100, 100, 100, 0.4)'
     });

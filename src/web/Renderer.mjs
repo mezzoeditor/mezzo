@@ -1,7 +1,7 @@
 import { RoundMode, Metrics } from '../core/Metrics.mjs';
-import { Measurer } from '../core/Markup.mjs';
+import { Markup, Measurer } from '../core/Markup.mjs';
+import { Frame } from '../core/Frame.mjs';
 import { Editor } from '../editor/Editor.mjs';
-import { Viewport } from '../core/Viewport.mjs';
 import { trace } from '../core/Trace.mjs';
 import { Document } from '../core/Document.mjs';
 import { DefaultTheme } from '../default/DefaultTheme.mjs';
@@ -169,7 +169,11 @@ export class Renderer {
       name: null,
     };
 
-    this._muteViewportChangedEvent = false;
+    this._scrollTop = 0;
+    this._scrollLeft = 0;
+    this._maxScrollTop = 0;
+    this._maxScrollLeft = 0;
+    this._padding = { left: 0, right: 0, top: 0, bottom: 0 };
 
     this._setupSelection();
     this._setupEventListeners();
@@ -217,6 +221,8 @@ export class Renderer {
       'Cmd/Ctrl-u': 'history.softundo',
       'Cmd/Ctrl-Shift-u': 'history.softredo',
     }, this._performCommand.bind(this));
+
+    this._invalidate();
   }
 
   measurer() {
@@ -224,24 +230,22 @@ export class Renderer {
   }
 
   setEditor(editor) {
+    // TODO: save/restore scroll positions.
     if (this._editor)
       EventEmitter.removeEventListeners(this._eventListeners);
     this._editor = editor;
     if (this._editor) {
       this._editor.markup().setMeasurer(this._measurer);
       this._eventListeners = [
-        this._editor.viewport().on(Viewport.Events.Changed, () => {
-          if (!this._muteViewportChangedEvent)
-            this.invalidate(this);
-        }),
         this._editor.on(Editor.Events.Raf, this.raf.bind(this)),
         this._editor.document().on(Document.Events.Changed, ({selectionChanged}) => {
           if (selectionChanged)
             this.raf();
         }),
         this._editor.on(Editor.Events.Reveal, this._reveal.bind(this)),
+        this._editor.markup().on(Markup.Events.Changed, this._invalidate.bind(this)),
       ];
-      this.invalidate();
+      this._invalidate();
     } else {
       this.raf();
     }
@@ -279,7 +283,7 @@ export class Renderer {
       return false;
     // Actions that don't require focus.
     if (command === 'selection.addnext')
-        return this._revealSelection(this._editor.input().runCommand(command, this._editor.viewport()), true /* center */) || true;
+        return this._revealSelection(this._editor.input().runCommand(command, this._editor.markup()), true /* center */) || true;
 
     if (this._domDocument.activeElement !== this._input)
       return false;
@@ -456,7 +460,7 @@ export class Renderer {
         theme['selection.focus'] = selectionFocusTheme;
       else
         delete theme['selection.focus'];
-      this.invalidate();
+      this._invalidate();
     };
     this._input.addEventListener('focusin', event => {
       toggleCursors();
@@ -487,7 +491,7 @@ export class Renderer {
     const lastCursor = this._editor.document().lastCursor();
     let focus = lastCursor ? lastCursor.focus : null;
     if (success && focus !== null) {
-      let vPadding = center ? this._editor.viewport().height() / 2 : 0;
+      let vPadding = center ? this._editorRect.height / 2 : 0;
       this._reveal({from: focus, to: focus}, {top: vPadding, bottom: vPadding});
     }
     return success;
@@ -535,7 +539,7 @@ export class Renderer {
     // scale change. We should detect that.
     // if (zoomHasChanged())
     //   this._editor.markup().setMeasurer(this._measurer);
-    this.invalidate();
+    this._invalidate();
 
     // Changing cavas width/height clears the canvas synchronously.
     // We need to re-render so that it doesn't blink on continious resizing.
@@ -550,7 +554,7 @@ export class Renderer {
     this._measurer = new ContextBasedMeasurer(this._canvas.getContext('2d'), this._monospace);
     if (this._editor)
       this._editor.markup().setMeasurer(this._measurer);
-    this.invalidate();
+    this._invalidate();
   }
 
   _mouseEventToCanvas(event) {
@@ -562,22 +566,21 @@ export class Renderer {
 
   positionToViewportPoint(position) {
     const offset = this._editor.document().text().positionToOffset(position, false /* strict */);
-    console.log(offset);
-    const point = this._editor.viewport().offsetToViewportPoint(offset);
+    const point = this._editor.markup().offsetToPoint(offset);
     if (!point)
       return null;
-    console.log(point);
     const bounds = this._canvas.getBoundingClientRect();
     return {
-      x: point.x + bounds.left + this._editorRect.x,
-      y: point.y + bounds.top + this._editorRect.y
+      x: point.x - this._scrollLeft + this._padding.left + bounds.left + this._editorRect.x,
+      y: point.y - this._scrollTop + this._padding.top + bounds.top + this._editorRect.y
     };
   }
 
   _canvasToTextOffset({x, y}) {
-    x -= this._editorRect.x;
-    y -= this._editorRect.y;
-    return this._editor.viewport().viewportPointToOffset({x, y}, RoundMode.Round);
+    return this._editor.markup().pointToOffset({
+      x: x - this._editorRect.x + this._scrollLeft - this._padding.left,
+      y: y - this._editorRect.y + this._scrollTop - this._padding.top
+    }, RoundMode.Round);
   }
 
   /**
@@ -591,8 +594,10 @@ export class Renderer {
   _onScroll(event) {
     if (!this._editor)
       return;
-    this._editor.viewport().advanceScroll(event.deltaY, event.deltaX);
     event.preventDefault();
+    this._scrollTop += event.deltaY;
+    this._scrollLeft += event.deltaX;
+    this._invalidate();
   }
 
   _onClick(event) {
@@ -611,7 +616,7 @@ export class Renderer {
     if (this._vScrollbar.hovered) {
       this._vScrollbar.dragged = true;
       this._mouseDownState.name = MouseDownStates.VSCROLL_DRAG;
-      this._mouseDownState.insideThumb = this._editor.viewport().scrollTop() * this._vScrollbar.ratio - (canvasPosition.y - this._vScrollbar.rect.y);
+      this._mouseDownState.insideThumb = this._scrollTop * this._vScrollbar.ratio - (canvasPosition.y - this._vScrollbar.rect.y);
       this.raf();
       event.stopPropagation();
       event.preventDefault();
@@ -621,7 +626,7 @@ export class Renderer {
     if (this._hScrollbar.hovered) {
       this._hScrollbar.dragged = true;
       this._mouseDownState.name = MouseDownStates.HSCROLL_DRAG;
-      this._mouseDownState.insideThumb = this._editor.viewport().scrollLeft() * this._hScrollbar.ratio - (canvasPosition.x - this._hScrollbar.rect.x);
+      this._mouseDownState.insideThumb = this._scrollLeft * this._hScrollbar.ratio - (canvasPosition.x - this._hScrollbar.rect.x);
       this.raf();
       event.stopPropagation();
       event.preventDefault();
@@ -646,10 +651,12 @@ export class Renderer {
       this.raf();
     } else if (this._mouseDownState.name === MouseDownStates.VSCROLL_DRAG) {
       let scrollbarOffset = canvasPosition.y - this._vScrollbar.rect.y + this._mouseDownState.insideThumb;
-      this._editor.viewport().setScrollTop(scrollbarOffset / this._vScrollbar.ratio);
+      this._scrollTop = scrollbarOffset / this._vScrollbar.ratio;
+      this._invalidate();
     } else if (this._mouseDownState.name === MouseDownStates.HSCROLL_DRAG) {
       let scrollbarOffset = canvasPosition.x - this._hScrollbar.rect.x + this._mouseDownState.insideThumb;
-      this._editor.viewport().setScrollLeft(scrollbarOffset / this._hScrollbar.ratio);
+      this._scrollLeft = scrollbarOffset / this._hScrollbar.ratio;
+      this._invalidate();
     }
   }
 
@@ -690,10 +697,11 @@ export class Renderer {
     window.removeEventListener('mouseup', this._windowListeners.mouseup, false);
   }
 
-  invalidate() {
+  _invalidate() {
     if (!this._editor || !this._cssWidth || !this._cssHeight || this._rendering)
       return;
     // To properly handle input events, we have to update rects synchronously.
+
     const gutterLength = (Math.max(this._editor.document().text().lineCount(), 100) + '').length;
     const gutterWidth = this._measurer.width9 * gutterLength;
     this._gutterRect.width = gutterWidth + GUTTER_PADDING_LEFT + GUTTER_PADDING_RIGHT;
@@ -703,46 +711,48 @@ export class Renderer {
     this._editorRect.width = this._cssWidth - this._gutterRect.width - SCROLLBAR_WIDTH;
     this._editorRect.height = this._cssHeight;
 
-    const viewport = this._editor.viewport();
-
-    this._muteViewportChangedEvent = true;
-    viewport.setSize(this._editorRect.width, this._editorRect.height);
-    viewport.setPadding({
+    this._padding = {
       left: 4,
       right: 4,
       top: 4,
       bottom: this._editorRect.height - this._measurer.lineHeight() - 4
-    });
-    this._muteViewportChangedEvent = false;
+    };
 
-    this._vScrollbar.ratio = viewport.height() / (viewport.maxScrollTop() + viewport.height());
+    this._maxScrollTop = Math.max(0, this._editor.markup().contentHeight() - this._editorRect.height + this._padding.top + this._padding.bottom);
+    this._maxScrollLeft = Math.max(0, this._editor.markup().contentWidth() - this._editorRect.width + this._padding.left + this._padding.right);
+    this._scrollLeft = Math.max(this._scrollLeft, 0);
+    this._scrollLeft = Math.min(this._scrollLeft, this._maxScrollLeft);
+    this._scrollTop = Math.max(this._scrollTop, 0);
+    this._scrollTop = Math.min(this._scrollTop, this._maxScrollTop);
+
+    this._vScrollbar.ratio = this._editorRect.height / (this._maxScrollTop + this._editorRect.height);
     this._vScrollbar.rect.x = this._cssWidth - SCROLLBAR_WIDTH;
     this._vScrollbar.rect.y = 0;
     this._vScrollbar.rect.width = SCROLLBAR_WIDTH;
     this._vScrollbar.rect.height = this._editorRect.height;
     this._vScrollbar.thumbRect.x = this._vScrollbar.rect.x;
-    this._vScrollbar.thumbRect.y = viewport.scrollTop() * this._vScrollbar.ratio;
+    this._vScrollbar.thumbRect.y = this._scrollTop * this._vScrollbar.ratio;
     this._vScrollbar.thumbRect.width = this._vScrollbar.rect.width;
-    this._vScrollbar.thumbRect.height = viewport.height() * this._vScrollbar.ratio;
+    this._vScrollbar.thumbRect.height = this._editorRect.height * this._vScrollbar.ratio;
     if (this._vScrollbar.thumbRect.height < MIN_THUMB_SIZE) {
       let delta = MIN_THUMB_SIZE - this._vScrollbar.thumbRect.height;
-      let percent = viewport.maxScrollTop() ? viewport.scrollTop() / viewport.maxScrollTop() : 1;
+      let percent = this._maxScrollTop ? this._scrollTop / this._maxScrollTop : 1;
       this._vScrollbar.thumbRect.y -= delta * percent;
       this._vScrollbar.thumbRect.height = MIN_THUMB_SIZE;
     }
 
-    this._hScrollbar.ratio = viewport.width() / (viewport.maxScrollLeft() + viewport.width());
+    this._hScrollbar.ratio = this._editorRect.width / (this._maxScrollLeft + this._editorRect.width);
     this._hScrollbar.rect.x = this._gutterRect.width;
     this._hScrollbar.rect.y = this._cssHeight - SCROLLBAR_WIDTH;
     this._hScrollbar.rect.width = this._editorRect.width;
-    this._hScrollbar.rect.height = viewport.maxScrollLeft() > 0 ? SCROLLBAR_WIDTH : 0;
-    this._hScrollbar.thumbRect.x = this._hScrollbar.rect.x + viewport.scrollLeft() * this._hScrollbar.ratio;
+    this._hScrollbar.rect.height = this._maxScrollLeft > 0 ? SCROLLBAR_WIDTH : 0;
+    this._hScrollbar.thumbRect.x = this._hScrollbar.rect.x + this._scrollLeft * this._hScrollbar.ratio;
     this._hScrollbar.thumbRect.y = this._hScrollbar.rect.y;
-    this._hScrollbar.thumbRect.width = viewport.width() * this._hScrollbar.ratio;
+    this._hScrollbar.thumbRect.width = this._editorRect.width * this._hScrollbar.ratio;
     this._hScrollbar.thumbRect.height = this._hScrollbar.rect.height;
     if (this._hScrollbar.thumbRect.width < MIN_THUMB_SIZE) {
       let delta = MIN_THUMB_SIZE - this._hScrollbar.thumbRect.width;
-      let percent = viewport.maxScrollLeft() ? viewport.scrollLeft() / viewport.maxScrollLeft() : 1;
+      let percent = this._maxScrollLeft ? this._scrollLeft / this._maxScrollLeft : 1;
       this._hScrollbar.thumbRect.x -= delta * percent;
       this._hScrollbar.thumbRect.width = MIN_THUMB_SIZE;
     }
@@ -763,32 +773,40 @@ export class Renderer {
     if (this._rendering)
       throw new Error('Cannot reveal while rendering');
 
-    const viewport = this._editor.viewport();
-
     rangePadding = Object.assign({
       left: 10,
       right: 10,
-      top: viewport.height() / 2,
-      bottom: viewport.height() / 2,
+      top: this._editorRect.height / 2,
+      bottom: this._editorRect.height / 2,
     }, rangePadding);
 
-    let from = viewport.offsetToViewportPoint(range.from);
-    from.x += viewport.scrollLeft();
-    from.y += viewport.scrollTop();
-    let to = viewport.offsetToViewportPoint(range.to);
-    to.x += viewport.scrollLeft();
-    to.y += viewport.scrollTop() + viewport.lineHeight();
+    let from = this._editor.markup().offsetToPoint(range.from);
+    if (!from)
+      return;
+    from = {
+      x: from.x + this._padding.left,
+      y: from.y + this._padding.top
+    };
 
-    if (viewport.scrollTop() > from.y) {
-      viewport.setScrollTop(Math.max(from.y - rangePadding.top, 0));
-    } else if (viewport.scrollTop() + viewport.height() < to.y) {
-      viewport.setScrollTop(Math.min(to.y - viewport.height() + rangePadding.bottom, viewport.maxScrollTop()));
+    let to = this._editor.markup().offsetToPoint(range.to);
+    if (!to)
+      return;
+    to = {
+      x: to.x + this._padding.left,
+      y: to.y + this._padding.top + this._editor.markup().lineHeight()
+    };
+
+    if (this._scrollTop > from.y) {
+      this._scrollTop = Math.max(from.y - rangePadding.top, 0);
+    } else if (this._scrollTop + this._editorRect.height < to.y) {
+      this._scrollTop = Math.min(to.y - this._editorRect.height + rangePadding.bottom, this._maxScrollTop);
     }
-    if (viewport.scrollLeft() > from.x) {
-      viewport.setScrollLeft(Math.max(from.x - rangePadding.left, 0));
-    } else if (viewport.scrollLeft() + viewport.width() < to.x) {
-      viewport.setScrollLeft(Math.min(to.x - viewport.width() + rangePadding.right, viewport.maxScrollLeft()));
+    if (this._scrollLeft > from.x) {
+      this._scrollLeft = Math.max(from.x - rangePadding.left, 0);
+    } else if (this._scrollLeft + this._editorRect.width < to.x) {
+      this._scrollLeft = Math.min(to.x - this._editorRect.width + rangePadding.right, this._maxScrollLeft);
     }
+    this._invalidate();
   }
 
   _render() {
@@ -810,7 +828,25 @@ export class Renderer {
     ctx.lineWidth = 1 / this._ratio;
 
     trace.begin('buildFrame');
-    const frame = this._editor.viewport().decorate(this._editor.decorationCallbacks());
+    const frame = new Frame();
+    frame.translateLeft = -this._scrollLeft + this._padding.left;
+    frame.translateTop = -this._scrollTop + this._padding.top;
+
+    frame.lineLeft = this._scrollLeft - Math.min(this._scrollLeft, this._padding.left);
+    frame.lineRight = this._scrollLeft - this._padding.left + this._editorRect.width
+        + Math.min(this._maxScrollLeft - this._scrollLeft - this._padding.right, 0);
+
+    const contentRect = {
+      left: this._scrollLeft - this._padding.left,
+      top: this._scrollTop - this._padding.top,
+      width: this._editorRect.width,
+      height: this._editorRect.height
+    };
+    const scrollbar = {
+      ratio: this._editorRect.height / (this._maxScrollTop + this._editorRect.height),
+      minDecorationHeight: 5
+    }
+    this._editor.markup().buildFrame(frame, contentRect, scrollbar, this._editor.decorationCallbacks());
     trace.end('buildFrame');
 
     trace.begin('drawGutter');
@@ -994,4 +1030,3 @@ export class Renderer {
     }
   }
 }
-

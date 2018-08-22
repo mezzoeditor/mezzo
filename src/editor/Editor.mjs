@@ -5,7 +5,6 @@ import { Search } from './Search.mjs';
 import { DefaultHighlighter } from '../default/DefaultHighlighter.mjs';
 import { DefaultTokenizer } from '../default/DefaultTokenizer.mjs';
 import { Markup, Measurer } from '../core/Markup.mjs';
-import { Viewport } from '../core/Viewport.mjs';
 import { EventEmitter } from '../core/EventEmitter.mjs';
 import { LineDecorator } from '../core/Decorator.mjs';
 
@@ -37,7 +36,6 @@ export class Editor extends EventEmitter {
     this._decorationCallbacks = [];
 
     this._markup = new Markup(measurer, this._document);
-    this._viewport = new Viewport(this._document, this._markup);
 
     this._tokenizer = null;
     this.setTokenizer(new DefaultTokenizer());
@@ -46,7 +44,6 @@ export class Editor extends EventEmitter {
     this._search = new Search(this);
     this._input = new Input(this);
 
-    // Add viewport decorator to style viewport.
     this._selectionDecorator = new SelectionDecorator(this._document);
     this._selectionDecorator.decorate(this);
 
@@ -130,10 +127,6 @@ export class Editor extends EventEmitter {
    */
   document() {
     return this._document;
-  }
-
-  viewport() {
-    return this._viewport;
   }
 
   /**
