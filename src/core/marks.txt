@@ -1,0 +1,84 @@
+constructor:
+    this._marks = new Decorator(true /* createHandles */);
+
+onReplace:
+    for (let mark of this._marks.replace(from, to, inserted)) {
+      delete mark[kMarkSymbol];
+      this.emit(Markup.Events.MarkCleared, mark);
+    }
+
+
+  /**
+   * @param {!Anchor} from
+   * @param {!Anchor} to
+   * @param {!Mark} mark
+   */
+  markRange(from, to, mark) {
+    if (from !== to)
+      throw new Error('Only empty ranges are supported for now');
+    if (mark[kMarkSymbol])
+      throw new Error('This mark is already used');
+    mark[kMarkSymbol] = this._marks.add(from, to, mark);
+    this._rechunk(this._text, from, to, to - from);
+  }
+
+
+  /**
+   * @param {!Mark} mark
+   */
+  clearMark(mark) {
+    if (!mark[kMarkSymbol])
+      throw new Error('The mark is not set');
+
+    let {from, to} = this._marks.resolve(mark[kMarkSymbol]);
+    this._marks.remove(mark[kMarkSymbol]);
+    delete mark[kMarkSymbol];
+    if (from !== to)
+      throw new Error('Inconsistent');
+
+    let split = this._tree.split(from, from);
+    let nodes = split.middle.collect();
+    if (nodes.some(node => !node.data))
+      throw new Error('Inconsistent');
+    let index = nodes.findIndex(node => node.data === mark);
+    if (index === -1)
+      throw new Error('Inconsistent');
+    nodes.splice(index, 1);
+    this._setTree(Tree.merge(split.left, Tree.merge(Tree.build(nodes), split.right)));
+  }
+
+
+_rechunk:
+    let tmp = split.left.split(newFrom, newFrom);
+    if (!tmp.right.empty())
+      throw new Error('Inconsistent');
+    split.left = tmp.left;
+
+    tmp = split.right.split(0, 0);
+    if (!tmp.left.empty())
+      throw new Error('Inconsistent');
+    split.right = tmp.right;
+
+
+_createNodes:
+    this._marks.visitTouching(from - 0.5, to + 1, decoration => {
+      if (decoration.from < from || decoration.to > to + 0.5)
+        return;
+      addNodes(Math.floor(decoration.from));
+      let mark = decoration.data;
+      let width = mark.width / this._defaultWidth;
+      let metrics = {length: 0, firstWidth: width, lastWidth: width, longestWidth: width};
+      nodes.push({metrics, data: mark});
+    });
+    addNodes(to);
+
+
+_buildFrameContents:
+        if (iterator.data) {
+          const mark = iterator.data;
+          frame.marks.push({x: x, y: line.y, mark});
+          x += mark.width;
+          // if (!iterator.data.end)
+          //   offsetToX[offset - line.from] = x;
+        } else {
+
