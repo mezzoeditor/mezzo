@@ -6,7 +6,7 @@ export function addTests(runner, expect) {
   const {it, fit, xit} = runner;
   const {beforeAll, beforeEach, afterAll, afterEach} = runner;
 
-  fdescribe('AddNextOccurence', () => {
+  describe('AddNextOccurence', () => {
     it('should work', () => {
       const editor = createTestEditor('|foo\nfoo');
       const addNextOccurence = new AddNextOccurence(editor);
