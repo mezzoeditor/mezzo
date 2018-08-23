@@ -310,7 +310,65 @@ export class Renderer {
     }
     if (command === 'selection.collapse')
       return this._revealSelection(this._editor.input().collapseSelection(), true /* center */);
-    return this._revealSelection(this._editor.input().runCommand(command, this._editor.markup()));
+
+    if (command === 'input.backspace')
+      return this._revealSelection(this._editor.input().deleteBefore());
+    if (command === 'input.backspace.word')
+      return this._revealSelection(this._editor.input().deleteWordBefore());
+    if (command === 'input.backspace.line')
+      return this._revealSelection(this._editor.input().deleteLineBefore());
+    if (command === 'input.delete')
+      return this._revealSelection(this._editor.input().deleteAfter());
+    if (command === 'input.newline')
+      return this._revealSelection(this._editor.input().insertNewLine());
+    if (command === 'input.indent')
+      return this._revealSelection(this._editor.input().insertIndent());
+    if (command === 'input.unindent')
+      return this._revealSelection(this._editor.input().removeIndent());
+    if (command === 'selection.move.up')
+      return this._revealSelection(this._editor.input().moveUp());
+    if (command === 'selection.move.down')
+      return this._revealSelection(this._editor.input().moveDown());
+    if (command === 'selection.move.documentstart')
+      return this._revealSelection(this._editor.input().moveDocumentStart());
+    if (command === 'selection.move.documentend')
+      return this._revealSelection(this._editor.input().moveDocumentEnd());
+    if (command === 'selection.move.left')
+      return this._revealSelection(this._editor.input().moveLeft());
+    if (command === 'selection.move.right')
+      return this._revealSelection(this._editor.input().moveRight());
+    if (command === 'selection.move.word.left')
+      return this._revealSelection(this._editor.input().moveWordLeft());
+    if (command === 'selection.move.word.right')
+      return this._revealSelection(this._editor.input().moveWordRight());
+    if (command === 'selection.move.linestart')
+      return this._revealSelection(this._editor.input().moveLineStart());
+    if (command === 'selection.move.lineend')
+      return this._revealSelection(this._editor.input().moveLineEnd());
+    if (command === 'selection.select.up')
+      return this._revealSelection(this._editor.input().selectUp());
+    if (command === 'selection.select.down')
+      return this._revealSelection(this._editor.input().selectDown());
+    if (command === 'selection.select.documentstart')
+      return this._revealSelection(this._editor.input().selectDocumentStart());
+    if (command === 'selection.select.documentend')
+      return this._revealSelection(this._editor.input().selectDocumentEnd());
+    if (command === 'selection.select.left')
+      return this._revealSelection(this._editor.input().selectLeft());
+    if (command === 'selection.select.right')
+      return this._revealSelection(this._editor.input().selectRight());
+    if (command === 'selection.select.word.left')
+      return this._revealSelection(this._editor.input().selectWordLeft());
+    if (command === 'selection.select.word.right')
+      return this._revealSelection(this._editor.input().selectWordRight());
+    if (command === 'selection.select.linestart')
+      return this._revealSelection(this._editor.input().selectLineStart());
+    if (command === 'selection.select.lineend')
+      return this._revealSelection(this._editor.input().selectLineEnd());
+    if (command === 'selection.select.all')
+      return this._revealSelection(this._editor.input().selectAll());
+    if (command === 'selection.collapse')
+      return this._revealSelection(this._editor.input().collapseSelection());
   }
 
   _setupEventListeners() {

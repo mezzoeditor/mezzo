@@ -26,40 +26,8 @@ export class Input {
     this._document = editor.document();
     this._indent = ' '.repeat(2);
     this._overrides = new Set();
-    this._commands = new Map();
 
     this._historyMetadata = Symbol('input.history');
-
-    this.addCommand('input.backspace', this.deleteBefore.bind(this));
-    this.addCommand('input.backspace.word', this.deleteWordBefore.bind(this));
-    this.addCommand('input.backspace.line', this.deleteLineBefore.bind(this));
-    this.addCommand('input.delete', this.deleteAfter.bind(this));
-    this.addCommand('input.newline', this.insertNewLine.bind(this));
-    this.addCommand('input.indent', this.insertIndent.bind(this));
-    this.addCommand('input.unindent', this.removeIndent.bind(this));
-
-    this.addCommand('selection.move.up', this.moveUp.bind(this));
-    this.addCommand('selection.move.down', this.moveDown.bind(this));
-    this.addCommand('selection.move.documentstart', this.moveDocumentStart.bind(this));
-    this.addCommand('selection.move.documentend', this.moveDocumentEnd.bind(this));
-    this.addCommand('selection.move.left', this.moveLeft.bind(this));
-    this.addCommand('selection.move.right', this.moveRight.bind(this));
-    this.addCommand('selection.move.word.left', this.moveWordLeft.bind(this));
-    this.addCommand('selection.move.word.right', this.moveWordRight.bind(this));
-    this.addCommand('selection.move.linestart', this.moveLineStart.bind(this));
-    this.addCommand('selection.move.lineend', this.moveLineEnd.bind(this));
-    this.addCommand('selection.select.up', this.selectUp.bind(this));
-    this.addCommand('selection.select.down', this.selectDown.bind(this));
-    this.addCommand('selection.select.documentstart', this.selectDocumentStart.bind(this));
-    this.addCommand('selection.select.documentend', this.selectDocumentEnd.bind(this));
-    this.addCommand('selection.select.left', this.selectLeft.bind(this));
-    this.addCommand('selection.select.right', this.selectRight.bind(this));
-    this.addCommand('selection.select.word.left', this.selectWordLeft.bind(this));
-    this.addCommand('selection.select.word.right', this.selectWordRight.bind(this));
-    this.addCommand('selection.select.linestart', this.selectLineStart.bind(this));
-    this.addCommand('selection.select.lineend', this.selectLineEnd.bind(this));
-    this.addCommand('selection.select.all', this.selectAll.bind(this));
-    this.addCommand('selection.collapse', this.collapseSelection.bind(this));
   }
 
   /**
@@ -74,17 +42,6 @@ export class Input {
    */
   addInputOverride(override) {
     this._overrides.add(override);
-  }
-
-  addCommand(command, handler) {
-    this._commands.set(command, handler);
-  }
-
-  runCommand(command, markup) {
-    const handler = this._commands.get(command);
-    if (!handler)
-      return false;
-    return handler.call(null, markup);
   }
 
   /**
