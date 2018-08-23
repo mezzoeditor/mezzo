@@ -20,12 +20,11 @@ import path from 'path';
 import {Parser, TokenTypes} from './index.mjs';
 import url from 'url';
 
-export function addTests(runner) {
+export function addTests(runner, expect, options) {
   const __dirname = path.dirname(new url.URL(import.meta.url).pathname);
   const TESTDIR = path.join(__dirname, 'test');
-
-  const resetResults = process.argv.includes('--reset-results');
-  const goldenMatchers = new GoldenMatchers(TESTDIR, TESTDIR, resetResults);
+  const OUTDIR = path.join(options.outputFolder, 'jslexer');
+  const goldenMatchers = new GoldenMatchers(TESTDIR, OUTDIR, options.resetResults);
 
   const tokenTypeNames = new Map();
   for (let typeName of Object.keys(TokenTypes)) {

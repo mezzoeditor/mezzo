@@ -23,10 +23,11 @@
   },
   "homepage": "https://github.com/dgozman/editor#readme",
   "devDependencies": {
-    "text-diff": "^1.0.1"
+    "text-diff": "^1.0.1",
+    "rimraf": "^2.6.2"
   },
   "dependencies": {
-    "chokidar": "^2.0.3",
+    "chokidar": "^2.0.4",
     "puppeteer": "^1.7.0"
   }
 }

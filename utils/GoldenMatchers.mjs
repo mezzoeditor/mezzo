@@ -122,8 +122,14 @@ function compare(goldenPath, outputPath, actual, goldenName, comparator) {
   };
 
   function ensureOutputDir() {
-    if (!fs.existsSync(outputPath))
-      fs.mkdirSync(outputPath);
+    if (fs.existsSync(outputPath))
+      return;
+    let folderPath = '';
+    for (const token of outputPath.split(path.sep)) {
+      folderPath += token + path.sep;
+      if (!fs.existsSync(folderPath))
+        fs.mkdirSync(folderPath);
+    }
   }
 }
 

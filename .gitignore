@@ -1,4 +1,5 @@
 .embedder_profile
+out/
 
 # Logs
 logs
