@@ -3,22 +3,21 @@ import { Tokenizer } from '../src/editor/Tokenizer.mjs';
 
 export class AddNextOccurence {
   constructor(editor) {
+    this._metadataSymbol = Symbol('AddNextOccurence.metadata');
     this._editor = editor;
     this._document = editor.document();
-
-    this._resetState();
-    this._muteChanged = false;
-    this._document.on(Document.Events.Changed, () => {
-      if (!this._muteChanged)
-        this._resetState();
-    });
   }
 
-  _resetState() {
-    this._nextOccurenceText = null;
-    this._nextOccurenceGroupOnly = false;
-    this._nextOccurenceSearchOffset = 0;
-    this._nextOccurenceSearchEnd = 0;
+  _state() {
+    const state = this._document.metadata(this._metadataSymbol);
+    if (state)
+      return Object.assign({}, state);
+    return {
+      nextOccurenceText: null,
+      nextOccurenceGroupOnly: false,
+      nextOccurenceSearchOffset: 0,
+      nextOccurenceSearchEnd: 0
+    };
   }
 
   addNext() {
@@ -26,6 +25,7 @@ export class AddNextOccurence {
     const selection = this._document.selection();
     if (!selection.length || !tokenizer)
       return false;
+    const state = this._state();
     let hasCollapsedRange = false;
     for (let range of selection)
       hasCollapsedRange = hasCollapsedRange || range.anchor === range.focus;
@@ -46,51 +46,47 @@ export class AddNextOccurence {
           ranges.push({anchor, focus, upDownX: range.upDownX});
         }
       }
-      this._nextOccurenceGroupOnly = true;
-      this._muteChanged = true;
+      state.nextOccurenceGroupOnly = true;
       this._document.setSelection(ranges);
-      this._muteChanged = false;
+      this._document.setMetadata(this._metadataSymbol, state);
       return true;
     }
     // Step 2: if all ranges are non-collapsed, figure the text to search for.
-    if (!this._nextOccurenceText) {
+    if (!state.nextOccurenceText) {
       let lastRange = selection[0];
       for (let range of selection) {
         if (range.anchor > lastRange.anchor)
           lastRange = range;
       }
-      this._nextOccurenceText = this._document.text().content(Math.min(lastRange.anchor, lastRange.focus), Math.max(lastRange.anchor, lastRange.focus));
-      this._nextOccurenceSearchOffset = Math.max(lastRange.anchor, lastRange.focus);
-      this._nextOccurenceSearchEnd = Math.min(lastRange.anchor, lastRange.focus);
+      state.nextOccurenceText = this._document.text().content(Math.min(lastRange.anchor, lastRange.focus), Math.max(lastRange.anchor, lastRange.focus));
+      state.nextOccurenceSearchOffset = Math.max(lastRange.anchor, lastRange.focus);
+      state.nextOccurenceSearchEnd = Math.min(lastRange.anchor, lastRange.focus);
     }
     // Step 3: search for the text below the initial range, and then from top.
-    while (this._nextOccurenceSearchOffset !== this._nextOccurenceSearchEnd) {
+    while (state.nextOccurenceSearchOffset !== state.nextOccurenceSearchEnd) {
       let it = null;
       // Decide which half we should search.
-      if (this._nextOccurenceSearchOffset < this._nextOccurenceSearchEnd)
-        it = this._document.text().iterator(this._nextOccurenceSearchOffset, this._nextOccurenceSearchOffset, this._nextOccurenceSearchEnd);
+      if (state.nextOccurenceSearchOffset < state.nextOccurenceSearchEnd)
+        it = this._document.text().iterator(state.nextOccurenceSearchOffset, state.nextOccurenceSearchOffset, state.nextOccurenceSearchEnd);
       else
-        it = this._document.text().iterator(this._nextOccurenceSearchOffset);
-      let result = it.find(this._nextOccurenceText);
+        it = this._document.text().iterator(state.nextOccurenceSearchOffset);
+      let result = it.find(state.nextOccurenceText);
       if (!result) {
-        this._nextOccurenceSearchOffset = it.offset > this._nextOccurenceSearchEnd ? 0 : it.offset;
+        state.nextOccurenceSearchOffset = it.offset > state.nextOccurenceSearchEnd ? 0 : it.offset;
         continue;
       }
-      this._nextOccurenceSearchOffset = it.offset + this._nextOccurenceText.length;
-      if (this._nextOccurenceGroupOnly) {
+      state.nextOccurenceSearchOffset = it.offset + state.nextOccurenceText.length;
+      if (state.nextOccurenceGroupOnly) {
         let range = Tokenizer.characterGroupRange(this._document, this._editor.tokenizer(), it.offset);
-        if (range.from !== it.offset || range.to !== it.offset + this._nextOccurenceText.length)
+        if (range.from !== it.offset || range.to !== it.offset + state.nextOccurenceText.length)
           continue;
       }
-      let initialLength = selection.length;
-      selection.push({anchor: it.offset, focus: it.offset + this._nextOccurenceText.length});
-      this._muteChanged = true;
-      this._document.setSelection(selection);
-      this._muteChanged = false;
-
+      selection.push({anchor: it.offset, focus: it.offset + state.nextOccurenceText.length});
       // If we managed to add a new range - return. Otherwise, continue searching.
-      if (this._document.selection().length > initialLength)
+      if (this._document.setSelection(selection)) {
+        this._document.setMetadata(this._metadataSymbol, state);
         return true;
+      }
     }
     return false;
   }

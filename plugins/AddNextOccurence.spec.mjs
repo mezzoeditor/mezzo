@@ -43,5 +43,24 @@ export function addTests(runner, expect) {
         {anchor: 11, focus: 13}
       ]);
     });
+    it('should work with history', () => {
+      const editor = createTestEditor('|foo\nfoofoo\nfoo');
+      const addNextOccurence = new AddNextOccurence(editor);
+      addNextOccurence.addNext();
+      addNextOccurence.addNext();
+      expect(editor.document().selection()).toBe([
+        {anchor: 0, focus: 3},
+        {anchor: 11, focus: 14}
+      ]);
+      editor.document().softUndo();
+      expect(editor.document().selection()).toBe([
+        {anchor: 0, focus: 3},
+      ]);
+      addNextOccurence.addNext();
+      expect(editor.document().selection()).toBe([
+        {anchor: 0, focus: 3},
+        {anchor: 11, focus: 14}
+      ]);
+    });
   });
 }

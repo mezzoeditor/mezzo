@@ -103,16 +103,18 @@ export class Document extends EventEmitter {
 
   /**
    * @param {!Array<!SelectionRange>} ranges
+   * @return {boolean}
    */
   setSelection(ranges) {
     if (this._dispatchingChangedEvent)
       throw new Error('Cannot modify document from-inside change event');
     ranges = normalizeSelection(this._text, ranges);
     if (checkSelectionsEqual(ranges, this._selection))
-      return;
+      return false;
     this._oldSelection = this._selection;
     this._selection = ranges;
     this._maybeEmit();
+    return true;
   }
 
   /**
