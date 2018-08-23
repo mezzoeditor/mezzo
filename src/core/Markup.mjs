@@ -63,7 +63,6 @@ export class Markup extends EventEmitter {
         this._replace(replacement);
     });
     this._text = document.text();
-    this._marks = new Decorator(true /* createHandles */);
     this._measurer = null;
     this._contentWidth = 0;
     this._contentHeight = 0;
@@ -114,51 +113,8 @@ export class Markup extends EventEmitter {
     let to = from + replacement.removed.length();
     let inserted = replacement.inserted.length();
 
-    for (let mark of this._marks.replace(from, to, inserted)) {
-      delete mark[kMarkSymbol];
-      this.emit(Markup.Events.MarkCleared, mark);
-    }
-
     this._rechunk(replacement.after, from, to, inserted);
     this._text = replacement.after;
-  }
-
-  /**
-   * @param {!Anchor} from
-   * @param {!Anchor} to
-   * @param {!Mark} mark
-   */
-  markRange(from, to, mark) {
-    if (from !== to)
-      throw new Error('Only empty ranges are supported for now');
-    if (mark[kMarkSymbol])
-      throw new Error('This mark is already used');
-    mark[kMarkSymbol] = this._marks.add(from, to, mark);
-    this._rechunk(this._text, from, to, to - from);
-  }
-
-  /**
-   * @param {!Mark} mark
-   */
-  clearMark(mark) {
-    if (!mark[kMarkSymbol])
-      throw new Error('The mark is not set');
-
-    let {from, to} = this._marks.resolve(mark[kMarkSymbol]);
-    this._marks.remove(mark[kMarkSymbol]);
-    delete mark[kMarkSymbol];
-    if (from !== to)
-      throw new Error('Inconsistent');
-
-    let split = this._tree.split(from, from);
-    let nodes = split.middle.collect();
-    if (nodes.some(node => !node.data))
-      throw new Error('Inconsistent');
-    let index = nodes.findIndex(node => node.data === mark);
-    if (index === -1)
-      throw new Error('Inconsistent');
-    nodes.splice(index, 1);
-    this._setTree(Tree.merge(split.left, Tree.merge(Tree.build(nodes), split.right)));
   }
 
   /**
@@ -238,16 +194,6 @@ export class Markup extends EventEmitter {
     let newFrom = split.left.metrics().length;
     let newTo = text.length() - split.right.metrics().length;
 
-    let tmp = split.left.split(newFrom, newFrom);
-    if (!tmp.right.empty())
-      throw new Error('Inconsistent');
-    split.left = tmp.left;
-
-    tmp = split.right.split(0, 0);
-    if (!tmp.left.empty())
-      throw new Error('Inconsistent');
-    split.right = tmp.right;
-
     let nodes;
     if (newTo - newFrom > kDefaultChunkSize && from - newFrom + inserted <= kDefaultChunkSize) {
       // For typical editing scenarios, we are most likely to replace at the
@@ -269,35 +215,21 @@ export class Markup extends EventEmitter {
    * @return {!Array<!{metrics: !TextMetrics, data: ?Mark}>}
    */
   _createNodes(text, from, to, chunkSize, firstChunkSize) {
-    let iterator = text.iterator(from, 0, text.length());
-    let nodes = [];
-
-    let addNodes = upTo => {
-      while (iterator.offset < upTo) {
-        let offset = iterator.offset;
-        let size = chunkSize;
-        if (offset === from && firstChunkSize != undefined)
-          size = firstChunkSize;
-        size = Math.min(upTo - iterator.offset, size);
-        let chunk = iterator.read(size);
-        if (Metrics.isSurrogate(chunk.charCodeAt(chunk.length - 1))) {
-          chunk += iterator.current;
-          iterator.next();
-        }
-        nodes.push({metrics: this._metrics.forString(chunk), data: null});
+    const nodes = [];
+    let iterator = text.iterator(from, from, to);
+    while (iterator.offset < to) {
+      let offset = iterator.offset;
+      let size = chunkSize;
+      if (offset === from && firstChunkSize != undefined)
+        size = firstChunkSize;
+      size = Math.min(to - iterator.offset, size);
+      let chunk = iterator.read(size);
+      if (Metrics.isSurrogate(chunk.charCodeAt(chunk.length - 1))) {
+        chunk += iterator.current;
+        iterator.next();
       }
-    };
-
-    this._marks.visitTouching(from - 0.5, to + 1, decoration => {
-      if (decoration.from < from || decoration.to > to + 0.5)
-        return;
-      addNodes(Math.floor(decoration.from));
-      let mark = decoration.data;
-      let width = mark.width / this._defaultWidth;
-      let metrics = {length: 0, firstWidth: width, lastWidth: width, longestWidth: width};
-      nodes.push({metrics, data: mark});
-    });
-    addNodes(to);
+      nodes.push({metrics: this._metrics.forString(chunk), data: null});
+    }
     return nodes;
   }
 
@@ -377,40 +309,31 @@ export class Markup extends EventEmitter {
       iterator.locateByOffset(line.from);
       // Skip processing text if we are scrolled past the end of the line, in which case
       // locateByOffset will point to undefined location.
-      while (iterator.before) {
-        if (iterator.data) {
-          const mark = iterator.data;
-          frame.marks.push({x: x, y: line.y, mark});
-          x += mark.width;
-          // if (!iterator.data.end)
-          //   offsetToX[offset - line.from] = x;
-        } else {
-          const after = Math.min(line.to, iterator.after ? iterator.after.offset : offset);
-          this._metrics.fillXMap(offsetToX, needsRtlBreakAfter, lineContent, offset - line.from, after - line.from, x, this._defaultWidth);
-          x = offsetToX[after - line.from];
+      while (iterator.before !== undefined) {
+        const after = Math.min(line.to, iterator.after ? iterator.after.offset : offset);
+        this._metrics.fillXMap(offsetToX, needsRtlBreakAfter, lineContent, offset - line.from, after - line.from, x, this._defaultWidth);
+        x = offsetToX[after - line.from];
 
-          for (let decorator of decorators.text) {
-            decorator.visitTouching(offset, after + 0.5, decoration => {
-              let from = Math.max(offset, Offset(decoration.from));
-              const to = Math.min(after, Offset(decoration.to));
-              while (from < to) {
-                let end = from + 1;
-                while (end < to && !needsRtlBreakAfter[end - line.from])
-                  end++;
-                frame.text.push({
-                  x: offsetToX[from - line.from],
-                  y: line.y,
-                  content: lineContent.substring(from - line.from, end - line.from),
-                  style: decoration.data
-                });
-                from = end;
-              }
-            });
-          }
-
-          offset = after;
+        for (let decorator of decorators.text) {
+          decorator.visitTouching(offset, after + 0.5, decoration => {
+            let from = Math.max(offset, Offset(decoration.from));
+            const to = Math.min(after, Offset(decoration.to));
+            while (from < to) {
+              let end = from + 1;
+              while (end < to && !needsRtlBreakAfter[end - line.from])
+                end++;
+              frame.text.push({
+                x: offsetToX[from - line.from],
+                y: line.y,
+                content: lineContent.substring(from - line.from, end - line.from),
+                style: decoration.data
+              });
+              from = end;
+            }
+          });
         }
 
+        offset = after;
         if (offset === line.to)
           break;
         if (!iterator.after)
@@ -535,7 +458,6 @@ function Offset(anchor) {
   return Math.floor(anchor);
 }
 
-const kMarkSymbol = Symbol('mark');
 const kDefaultChunkSize = 1000;
 
 Markup.test = {};
