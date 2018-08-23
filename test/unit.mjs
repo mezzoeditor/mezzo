@@ -31,6 +31,7 @@ if (fs.existsSync(options.outputFolder))
 
   // Plugin tests.
   (await import('../plugins/Search.spec.mjs')).addTests(runner, expect, options);
+  (await import('../plugins/AddNextOccurence.spec.mjs')).addTests(runner, expect, options);
 
   // Editor tests.
   (await import('../src/editor/Editor.spec.mjs')).addTests(runner, expect, options);
