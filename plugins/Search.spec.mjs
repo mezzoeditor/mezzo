@@ -8,10 +8,9 @@ export function addTests(runner, expect) {
 
   describe('Search', () => {
     it('should work', () => {
-      const editor = createTestEditor();
+      const editor = createTestEditor('Hello, world');
       const platform = editor.platformSupport();
       const search = new Search(editor);
-      editor.reset('Hello, world!');
 
       search.find('world');
       platform.runUntilIdle();
@@ -29,11 +28,10 @@ export function addTests(runner, expect) {
     });
 
     it('should work with overlapping matches', () => {
-      const editor = createTestEditor();
+      const editor = createTestEditor(' '.repeat(1000));
       const platform = editor.platformSupport();
       const search = new Search(editor);
       Search.test.setChunkSize(search, 20);
-      editor.reset(' '.repeat(1000));
 
       for (let size = 1; size < 10; ++size) {
         search.find(' '.repeat(size));
@@ -43,10 +41,9 @@ export function addTests(runner, expect) {
     });
 
     it('should work with query longer than text', () => {
-      const editor = createTestEditor();
+      const editor = createTestEditor('');
       const platform = editor.platformSupport();
       const search = new Search(editor);
-      editor.reset('');
 
       search.find('world');
       platform.runUntilIdle();

@@ -5,16 +5,15 @@ export function addTests(runner, expect) {
   const {it, fit, xit} = runner;
   const {beforeAll, beforeEach, afterAll, afterEach} = runner;
   describe('Input', () => {
-    it('should type', () => {
-      const editor = createTestEditor();
-      editor.reset('\n\n');
-      editor.document().setSelection([
-        {focus: 0, anchor: 0},
-        {focus: 1, anchor: 1},
-        {focus: 2, anchor: 2},
-      ]);
+    it('input.type', () => {
+      const editor = createTestEditor('|\n|\n|');
       editor.input().type('hello');
       expect(textWithCursors(editor)).toBe('hello|\nhello|\nhello|');
+    });
+    it('input.moveUp', () => {
+      const editor = createTestEditor('hello\nwor|ld');
+      editor.input().moveUp(editor.markup());
+      expect(textWithCursors(editor)).toBe('hel|lo\nworld');
     });
   });
 }

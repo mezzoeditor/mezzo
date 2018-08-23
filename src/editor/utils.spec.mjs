@@ -41,8 +41,28 @@ export class TestPlatformSupport {
   }
 }
 
-export function createTestEditor() {
-  return new Editor(new TestMeasurer(), new TestPlatformSupport());
+export function parseTextWithCursors(textWithCursors) {
+  const selection = [];
+  const tokens = textWithCursors.split('|');
+  let offset = 0;
+  for (const token of tokens) {
+    offset += token.length;
+    selection.push({focus: offset, anchor: offset});
+  }
+  // Last token has nothing to do with cursor.
+  selection.pop();
+  if (!selection.length)
+    selection.push({focus: 0, anchor: 0});
+  return {selection, text: tokens.join('')};
+}
+
+export function createTestEditor(textWithCursors = '') {
+  const editor = new Editor(new TestMeasurer(), new TestPlatformSupport());
+  if (!textWithCursors)
+    return editor;
+  const {text, selection} = parseTextWithCursors(textWithCursors);
+  editor.reset(text, selection)
+  return editor;
 }
 
 export function textWithCursors(editor) {

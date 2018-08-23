@@ -1,4 +1,5 @@
 import os from 'os';
+import {parseTextWithCursors} from '../editor/utils.spec.mjs';
 
 export function addTests(runner, expect) {
   const {describe, xdescribe, fdescribe} = runner;
@@ -38,6 +39,13 @@ export function addTests(runner, expect) {
         await gg.type('can type');
         expect(await gg.textWithCursors()).toBe('can type|');
       });
+      it('should move up and down', async({gg}) => {
+        await gg.setTextWithCursors('hel|lo\nworld');
+        await gg.shortcut('ArrowDown');
+        expect(await gg.textWithCursors()).toBe('hello\nwor|ld');
+        await gg.shortcut('ArrowUp');
+        expect(await gg.textWithCursors()).toBe('hel|lo\nworld');
+      });
     });
   });
 }
@@ -53,39 +61,60 @@ class GG {
 
   constructor(page) {
     this._page = page;
-    this._modifier = os.platform() === 'darwin' ? 'Meta' : 'Control';
+    this._isMac = os.platform() === 'darwin';
+    this._modifier = this._isMac ? 'Meta' : 'Control';
+  }
+
+  async setTextWithCursors(textWithCursors) {
+    const {text, selection} = parseTextWithCursors(textWithCursors);
+    await this._page.evaluate((text, selection) => {
+      editor.reset(text, selection);
+    }, text, selection);
   }
 
   async type(text) {
     await this._page.keyboard.type(text);
   }
 
+  /**
+   * @param {string} name shortcut name in the same format we use for renderer's keymaps.
+   */
+  async shortcut(descriptor) {
+    let tokens = descriptor.split('-');
+    let ctrlOrCmd = !!tokens.find(token => token.toUpperCase() === 'CMD/CTRL');
+    let ctrl = !!tokens.find(token => token.toUpperCase() === 'CTRL') || (ctrlOrCmd && !this._isMac);
+    let cmd = !!tokens.find(token => token.toUpperCase() === 'CMD') || (ctrlOrCmd && this._isMac);
+
+    let keys = [];
+    if (ctrl)
+      keys.push('Control');
+    if (cmd)
+      keys.push('Meta');
+    if (tokens.find(token => token.toUpperCase() === 'ALT'))
+      keys.push('Alt');
+    if (tokens.find(token => token.toUpperCase() === 'SHIFT'))
+      keys.push('Shift');
+    keys.push(...tokens.filter(token => token.toUpperCase() !== 'ALT' && token.toUpperCase() !== 'CTRL' && token.toUpperCase() !== 'SHIFT' && token.toUpperCase() !== 'CMD' && token.toUpperCase() !== 'CMD/CTRL'));
+    for (const key of keys)
+      await this._page.keyboard.down(key);
+    for (const key of keys)
+      await this._page.keyboard.up(key);
+  }
+
   async undo() {
-    await this._page.keyboard.down(this._modifier);
-    await this._page.keyboard.press('KeyZ');
-    await this._page.keyboard.up(this._modifier);
+    await this.shortcut('Cmd/Ctrl-z');
   }
 
   async redo() {
-    await this._page.keyboard.down(this._modifier);
-    await this._page.keyboard.down('Shift');
-    await this._page.keyboard.press('KeyZ');
-    await this._page.keyboard.up('Shift');
-    await this._page.keyboard.up(this._modifier);
+    await this.shortcut('Cmd/Ctrl-Shift-z');
   }
 
   async softUndo() {
-    await this._page.keyboard.down(this._modifier);
-    await this._page.keyboard.press('KeyU');
-    await this._page.keyboard.up(this._modifier);
+    await this.shortcut('Cmd/Ctrl-u');
   }
 
   async softRedo() {
-    await this._page.keyboard.down(this._modifier);
-    await this._page.keyboard.down('Shift');
-    await this._page.keyboard.press('KeyU');
-    await this._page.keyboard.up('Shift');
-    await this._page.keyboard.up(this._modifier);
+    await this.shortcut('Cmd/Ctrl-Shift-u');
   }
 
   async clickText(position) {

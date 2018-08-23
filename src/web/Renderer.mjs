@@ -326,9 +326,9 @@ export class Renderer {
     if (command === 'input.unindent')
       return this._revealSelection(this._editor.input().removeIndent());
     if (command === 'selection.move.up')
-      return this._revealSelection(this._editor.input().moveUp());
+      return this._revealSelection(this._editor.input().moveUp(this._editor.markup()));
     if (command === 'selection.move.down')
-      return this._revealSelection(this._editor.input().moveDown());
+      return this._revealSelection(this._editor.input().moveDown(this._editor.markup()));
     if (command === 'selection.move.documentstart')
       return this._revealSelection(this._editor.input().moveDocumentStart());
     if (command === 'selection.move.documentend')
@@ -346,9 +346,9 @@ export class Renderer {
     if (command === 'selection.move.lineend')
       return this._revealSelection(this._editor.input().moveLineEnd());
     if (command === 'selection.select.up')
-      return this._revealSelection(this._editor.input().selectUp());
+      return this._revealSelection(this._editor.input().selectUp(this._editor.markup()));
     if (command === 'selection.select.down')
-      return this._revealSelection(this._editor.input().selectDown());
+      return this._revealSelection(this._editor.input().selectDown(this._editor.markup()));
     if (command === 'selection.select.documentstart')
       return this._revealSelection(this._editor.input().selectDocumentStart());
     if (command === 'selection.select.documentend')

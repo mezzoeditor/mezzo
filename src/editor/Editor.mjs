@@ -50,8 +50,8 @@ export class Editor extends EventEmitter {
     this.reset('');
   }
 
-  reset(text) {
-    this._document.reset(text, [{focus: 0, anchor: 0}]);
+  reset(text, selection = [{focus: 0, anchor: 0}]) {
+    this._document.reset(text, selection);
   }
 
   /**

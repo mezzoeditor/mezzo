@@ -306,7 +306,7 @@ export class Metrics {
     if (!width)
       return {offset: from, width: 0};
 
-    if (this._widthOneRegex && this._widthOneRegex.test(s)) {
+    if (this._widthOneRegex && this._widthOneRegex.test(s.substring(from, to))) {
       if (width > to - from)
         return {offset: -1, width: to - from};
       let offset = Math.floor(width);
