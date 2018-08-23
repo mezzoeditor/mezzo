@@ -17,6 +17,17 @@ export class EditorComponent extends HTMLElement {
   constructor() {
     super();
     this._renderer = new Renderer(document);
+    this._renderer.keymapHandler().addKeymap({
+      'Cmd/Ctrl-d': 'selection.addnext',
+    }, command => {
+      if (!this._editor)
+        return false;
+      if (command === 'selection.addnext') {
+        PluginManager.ensurePlugins(this._editor).addNextOccurence.addNext();
+        return true;
+      }
+      return false;
+    });
     this._searchToolbar = new SearchToolbar(this._renderer);
     this._editor = null;
     this._eventListeners = [];

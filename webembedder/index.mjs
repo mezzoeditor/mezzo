@@ -32,6 +32,15 @@ export class WebEmbedder {
       addNextOccurence: new AddNextOccurence(this._editor),
       search: new Search(this._editor),
     };
+    this._renderer.keymapHandler().addKeymap({
+      'Cmd/Ctrl-d': 'selection.addnext',
+    }, command => {
+      if (command === 'selection.addnext') {
+        this._plugins.addNextOccurence.addNext();
+        return true;
+      }
+      return false;
+    });
     this._searchToolbar = new SearchToolbar(this._renderer);
     this._searchToolbar.setSearch(this._plugins.search);
 

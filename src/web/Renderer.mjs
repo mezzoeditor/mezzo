@@ -199,7 +199,6 @@ export class Renderer {
       'Cmd/Ctrl-a': 'selection.select.all',
       'Cmd-Left': 'selection.move.linestart',
       'Cmd-Right': 'selection.move.lineend',
-      'Cmd/Ctrl-d': 'selection.addnext',
       'Cmd-Up': 'selection.move.documentstart',
       'Cmd-Down': 'selection.move.documentend',
       'Cmd-Shift-Up': 'selection.select.documentstart',
@@ -281,9 +280,6 @@ export class Renderer {
   _performCommand(command) {
     if (!this._editor)
       return false;
-    // Actions that don't require focus.
-    if (command === 'selection.addnext')
-        return this._revealSelection(this._editor.input().runCommand(command, this._editor.markup()), true /* center */) || true;
 
     if (this._domDocument.activeElement !== this._input)
       return false;

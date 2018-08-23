@@ -12,7 +12,6 @@ export class AddNextOccurence {
       if (!this._muteChanged)
         this._resetState();
     });
-    this._editor.input().addCommand('selection.addnext', this._addNext.bind(this));
   }
 
   _resetState() {
@@ -22,7 +21,7 @@ export class AddNextOccurence {
     this._nextOccurenceSearchEnd = 0;
   }
 
-  _addNext() {
+  addNext() {
     let tokenizer = this._editor.tokenizer();
     const selection = this._document.selection();
     if (!selection.length || !tokenizer)
