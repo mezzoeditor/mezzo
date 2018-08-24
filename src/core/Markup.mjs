@@ -244,33 +244,93 @@ export class Markup extends EventEmitter {
 
     frame.lineHeight = this._lineHeight;
 
-    let y = this.offsetToPoint(this.pointToOffset({x: rect.left, y: rect.top})).y;
+    /** @type {!Array<!Line>} */
     const lines = [];
+    /** @type {!Array<!Range>} */
+    const ranges = [];
+
+    let y = this.offsetToPoint(this.pointToOffset({x: rect.left, y: rect.top})).y;
     for (; y <= rect.top + rect.height; y += this._lineHeight) {
-      // TODO: from/to do not include widgets on the edge.
-      let from = this.pointToOffset({x: rect.left, y: y});
-      let to = this.pointToOffset({x: rect.left + rect.width, y: y}, RoundMode.Ceil);
-      let start = this.pointToOffset({x: 0, y: y});
-      let end = this.pointToOffset({x: this._contentWidth, y: y});
-      let point = this.offsetToPoint(from);
-      if (point.y < y)
+      const iterator = this._tree.iterator();
+      const clamped = iterator.locateByPoint({x: rect.left / this._defaultWidth, y: y / this._lineHeight}, false /* strict */);
+
+      if (iterator.before === undefined)
+        iterator.next();
+      if (iterator.before === undefined) {
+        // Tree is empty - bail out.
+        lines.push({x: 0, y: 0, from: 0, to: 0, start: 0, end: 0, ranges: [{from: 0, to: 0, x:0}]});
         break;
-      lines.push({
-        from: from,
-        to: to,
-        x: point.x,
-        y: point.y,
-        start: start,
-        end: end
-      });
+      }
+
+      let {offset, x} = iterator.before;
+      let textChunk = null;
+      if (iterator.metrics !== undefined) {
+        textChunk = this._text.content(offset, offset + iterator.metrics.length);
+        const location = this._metrics.locateByPoint(textChunk, iterator.before, clamped, RoundMode.Floor, false /* strict */);
+        offset = location.offset;
+        x = location.x;
+      } else {
+        if (iterator.before.y < y / this._lineHeight)
+          break;
+      }
+      x *= this._defaultWidth;
+
+      const line = {
+        x: x,
+        y: y,
+        from: offset,
+        to: offset,
+        start: this.pointToOffset({x: 0, y: y}),
+        end: this.pointToOffset({x: this._contentWidth, y: y}),
+        ranges: []
+      };
+      lines.push(line);
+      if (iterator.after === undefined) {
+        line.ranges.push({from: offset, to: offset, x: x});
+        break;
+      }
+
+      while (x <= rect.left + rect.width) {
+        if (iterator.data === false) {
+          if (iterator.before.x !== iterator.after.x)
+            throw new Error('Inconsistent');
+        } else {
+          let after = iterator.after.offset;
+          let overflow = false;
+          const point = {x: (rect.left + rect.width) / this._defaultWidth, y: y / this._lineHeight};
+          if (iterator.after.y > point.y || (iterator.after.y === point.y && iterator.after.x >= point.x)) {
+            if (textChunk === null)
+              textChunk = this._text.content(offset, offset + iterator.metrics.length);
+            after = this._metrics.locateByPoint(textChunk, iterator.before, point, RoundMode.Ceil, false /* strict */).offset;
+            overflow = true;
+          }
+          textChunk = null;
+
+          ranges.push({from: offset, to: after});
+          if (line.ranges.length > 0 && line.ranges[line.ranges.length - 1].to === offset)
+            line.ranges[line.ranges.length - 1].to = after;
+          else
+            line.ranges.push({from: offset, to: after, x: x});
+          if (overflow)
+            break;
+        }
+        iterator.next();
+        x = iterator.before.x * this._defaultWidth;
+        offset = iterator.before.offset;
+        if (iterator.after === undefined)
+          break;
+      }
+
+      if (line.ranges.length)
+        line.to = line.ranges[line.ranges.length - 1].to;
     }
 
-    const ranges = joinRanges(lines, this._document);
-    const totalRange = ranges.length ? {from: ranges[0].from, to: ranges[ranges.length - 1].to} : {from: 0, to: 0};
+    const joined = joinRanges(ranges, this._document);
+    const totalRange = joined.length ? {from: joined[0].from, to: joined[joined.length - 1].to} : {from: 0, to: 0};
     const visibleContent = {
       document: this._document,
       range: totalRange,
-      ranges: ranges,
+      ranges: joined,
     };
 
     const decorators = {text: [], background: [], lines: []};
@@ -291,41 +351,34 @@ export class Markup extends EventEmitter {
 
   /**
    * @param {!Frame} frame
-   * @param {!Array<!{from: number, to: number, x: number, y: number, start: number, end: number}>} lines
+   * @param {!Array<!Line>} lines
    * @param {!DecorationResult} decorators
    */
   _buildFrameContents(frame, lines, decorators) {
     for (let line of lines) {
-      const offsetToX = new Float32Array(line.to - line.from + 1);
-      const needsRtlBreakAfter = new Int8Array(line.to - line.from + 1);
-      const lineContent = this._text.content(line.from, line.to);
-
-      let x = line.x;
-      let offset = line.from;
-      offsetToX[0] = x;
-      needsRtlBreakAfter[line.to - line.from] = 0;
-
-      const iterator = this._tree.iterator();
-      iterator.locateByOffset(line.from);
-      // Skip processing text if we are scrolled past the end of the line, in which case
-      // locateByOffset will point to undefined location.
-      while (iterator.before !== undefined) {
-        const after = Math.min(line.to, iterator.after ? iterator.after.offset : offset);
-        this._metrics.fillXMap(offsetToX, needsRtlBreakAfter, lineContent, offset - line.from, after - line.from, x, this._defaultWidth);
-        x = offsetToX[after - line.from];
+      for (let range of line.ranges) {
+        const offsetToX = new Float32Array(range.to - range.from + 1);
+        const needsRtlBreakAfter = new Int8Array(range.to - range.from + 1);
+        const rangeContent = this._text.content(range.from, range.to);
+        this._metrics.fillXMap(
+            offsetToX, needsRtlBreakAfter, rangeContent,
+            0, range.to - range.from + 1,
+            range.x, this._defaultWidth);
+        offsetToX[0] = range.x;
+        needsRtlBreakAfter[range.to - range.from] = 0;
 
         for (let decorator of decorators.text) {
-          decorator.visitTouching(offset, after + 0.5, decoration => {
-            let from = Math.max(offset, Offset(decoration.from));
-            const to = Math.min(after, Offset(decoration.to));
+          decorator.visitTouching(range.from, range.to + 0.5, decoration => {
+            let from = Math.max(range.from, Offset(decoration.from));
+            const to = Math.min(range.to, Offset(decoration.to));
             while (from < to) {
               let end = from + 1;
-              while (end < to && !needsRtlBreakAfter[end - line.from])
+              while (end < to && !needsRtlBreakAfter[end - range.from])
                 end++;
               frame.text.push({
-                x: offsetToX[from - line.from],
+                x: offsetToX[from - range.from],
                 y: line.y,
-                content: lineContent.substring(from - line.from, end - line.from),
+                content: rangeContent.substring(from - range.from, end - range.from),
                 style: decoration.data
               });
               from = end;
@@ -333,12 +386,24 @@ export class Markup extends EventEmitter {
           });
         }
 
-        offset = after;
-        if (offset === line.to)
-          break;
-        if (!iterator.after)
-          throw new Error('Inconsistent');
-        iterator.next();
+        for (let decorator of decorators.background) {
+          // Expand by a single character which is not visible to account for borders
+          // extending past viewport.
+          decorator.visitTouching(range.from - 1, range.to + 1, decoration => {
+            let from = Offset(decoration.from);
+            from = frame < line.start ? frame.lineLeft : offsetToX[Math.max(from, range.from) - range.from];
+            let to = Offset(decoration.to);
+            to = to > line.end ? frame.lineRight : offsetToX[Math.min(to, range.to) - range.from];
+            if (from <= to) {
+              frame.background.push({
+                x: from,
+                y: line.y,
+                width: to - from,
+                style: decoration.data
+              });
+            }
+          });
+        }
       }
 
       const lineStyles = [];
@@ -355,28 +420,8 @@ export class Markup extends EventEmitter {
         y: line.y,
         styles: lineStyles
       });
-
-      for (let decorator of decorators.background) {
-        // Expand by a single character which is not visible to account for borders
-        // extending past viewport.
-        decorator.visitTouching(line.from - 1, line.to + 1, decoration => {
-          // TODO: note that some editors only show selection up to line length. Setting?
-          let from = Offset(decoration.from);
-          from = from < line.from ? frame.lineLeft : offsetToX[from - line.from];
-          let to = Offset(decoration.to);
-          to = to > line.to ? frame.lineRight : offsetToX[to - line.from];
-          if (from <= to) {
-            frame.background.push({
-              x: from,
-              y: line.y,
-              width: to - from,
-              style: decoration.data
-            });
-          }
-        });
       }
     }
-  }
 
   /**
    * @param {!Frame} frame
@@ -457,6 +502,18 @@ function joinRanges(ranges, document) {
 function Offset(anchor) {
   return Math.floor(anchor);
 }
+
+/**
+ * @typedef {{
+ *   x: number,
+ *   y: number,
+ *   from: number,
+ *   to: number,
+ *   start: number,
+ *   end: number,
+ *   ranges: !Array<{from: number, to: number, x: number}>
+ * }} Line
+ */
 
 const kDefaultChunkSize = 1000;
 
