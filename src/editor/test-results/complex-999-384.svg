@@ -56,10 +56,10 @@
     <g id="background">
       <line x1="6.5ch" y1="6.1em" x2="6.5ch" y2="7.1em" stroke="rgb(33, 33, 33)"></line>
       <rect x="3.5ch" y="10.1em" width="45ch" height="1em" fill="rgba(126, 188, 254, 0.5)"></rect>
-      <rect x="3.5ch" y="11.1em" width="45ch" height="1em" fill="rgba(126, 188, 254, 0.5)"></rect>
-      <rect x="-14.5ch" y="12.1em" width="63ch" height="1em" fill="rgba(126, 188, 254, 0.5)"></rect>
-      <rect x="-7.5ch" y="13.1em" width="56ch" height="1em" fill="rgba(126, 188, 254, 0.5)"></rect>
-      <rect x="-0.5ch" y="14.1em" width="49ch" height="1em" fill="rgba(126, 188, 254, 0.5)"></rect>
+      <rect x="4ch" y="11.1em" width="44.5ch" height="1em" fill="rgba(126, 188, 254, 0.5)"></rect>
+      <rect x="4ch" y="12.1em" width="44.5ch" height="1em" fill="rgba(126, 188, 254, 0.5)"></rect>
+      <rect x="4ch" y="13.1em" width="44.5ch" height="1em" fill="rgba(126, 188, 254, 0.5)"></rect>
+      <rect x="4ch" y="14.1em" width="44.5ch" height="1em" fill="rgba(126, 188, 254, 0.5)"></rect>
       <rect x="3.5ch" y="15.1em" width="1ch" height="1em" fill="hsla(36, 96%, 56%, 0.4)"></rect>
       <rect x="3.5ch" y="16.1em" width="1ch" height="1em" fill="hsla(36, 96%, 56%, 0.4)"></rect>
       <rect x="6.5ch" y="16.1em" width="5ch" height="1em" fill="hsla(36, 96%, 56%, 0.4)"></rect>

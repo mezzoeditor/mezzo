@@ -34,7 +34,7 @@ export class Editor extends EventEmitter {
     /** @type {!Array<DecorationCallback>} */
     this._decorationCallbacks = [];
 
-    this._markup = new Markup(measurer, this._document);
+    this._markup = new Markup(measurer, this._document, platformSupport);
 
     this._tokenizer = null;
     this.setTokenizer(new DefaultTokenizer());

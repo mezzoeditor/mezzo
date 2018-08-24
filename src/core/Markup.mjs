@@ -1,15 +1,9 @@
 import { EventEmitter } from './EventEmitter.mjs';
 import { Document } from './Document.mjs';
-import { Decorator } from './Decorator.mjs';
 import { RoundMode, Metrics } from './Metrics.mjs';
 import { Tree } from './Tree.mjs';
 import { VisibleRange } from './Frame.mjs';
-
-/**
- * @typedef {{
- *   width: number
- * }} Mark
- */
+import { WorkAllocator } from './WorkAllocator.mjs';
 
  /**
  * Measurer converts strings to widths and provides line height.
@@ -49,8 +43,9 @@ export class Markup extends EventEmitter {
   /**
    * @param {!Measurer} measurer
    * @param {!Document} document
+   * @param {!PlatformSupport} platformSupport
    */
-  constructor(measurer, document) {
+  constructor(measurer, document, platformSupport) {
     super();
     this._frozen = false;
     this._document = document;
@@ -64,8 +59,12 @@ export class Markup extends EventEmitter {
     });
     this._text = document.text();
     this._measurer = null;
+    this._platformSupport = platformSupport;
     this._contentWidth = 0;
     this._contentHeight = 0;
+    this._allocator = new WorkAllocator(0);
+    this._jobId = 0;
+    this._tree = new Tree();
     this.setMeasurer(measurer);
   }
 
@@ -78,10 +77,10 @@ export class Markup extends EventEmitter {
     this._measurer = measurer;
     this._lineHeight = measurer.lineHeight();
     this._defaultWidth = measurer.defaultWidth();
-    let measure = s => measurer.measureString(s) / this._defaultWidth;
+    const measure = s => measurer.measureString(s) / this._defaultWidth;
     this._metrics = new Metrics(measurer.defaultWidthRegex(), measure, measure);
-    let nodes = this._createNodes(this._text, 0, this._text.length(), kDefaultChunkSize);
-    this._setTree(Tree.build(nodes));
+    this._allocator = new WorkAllocator(this._text.length());
+    this._rechunk();
   }
 
   /**
@@ -109,12 +108,20 @@ export class Markup extends EventEmitter {
    * @param {!Replacement} replacement
    */
   _replace(replacement) {
-    let from = replacement.offset;
-    let to = from + replacement.removed.length();
-    let inserted = replacement.inserted.length();
-
-    this._rechunk(replacement.after, from, to, inserted);
+    const from = replacement.offset;
+    const to = from + replacement.removed.length();
+    const inserted = replacement.inserted.length();
     this._text = replacement.after;
+    this._allocator.replace(from, to, inserted);
+
+    const split = this._tree.split(from, to);
+    const newFrom = split.left.metrics().length;
+    const newTo = this._text.length() - split.right.metrics().length;
+    this._allocator.undone(newFrom, newTo);
+    const node = this._unmeasuredNode(newTo - newFrom);
+    this._tree = Tree.merge(split.left, Tree.merge(Tree.build([node]), split.right));
+
+    this._rechunk();
   }
 
   /**
@@ -172,65 +179,75 @@ export class Markup extends EventEmitter {
     return this._metrics.locateByOffset(textChunk, iterator.before, offset);
   }
 
-  /**
-   * @param {!Tree<?Mark>} tree
-   */
-  _setTree(tree) {
-    this._tree = tree;
-    let metrics = tree.metrics();
+  _rechunk() {
+    let budget = kRechunkSize;
+    let range = null;
+    while (budget > 0 && (range = this._allocator.workRange())) {
+      let {from, to} = range;
+      if (to - from > budget)
+        to = from + budget;
+
+      const split = this._tree.split(from, to);
+      let newFrom = split.left.metrics().length;
+      let newTo = this._text.length() - split.right.metrics().length;
+      const nodes = [];
+      if (from - newFrom > 2 * kChunkSize) {
+        nodes.push(this._unmeasuredNode(from - newFrom));
+        newFrom = from;
+      }
+      let lastNode = null;
+      if (newTo - to > 2 * kChunkSize) {
+        lastNode = this._unmeasuredNode(newTo - to);
+        newTo = to;
+      }
+      nodes.push(...this._createNodes(newFrom, newTo));
+      if (lastNode)
+        nodes.push(lastNode);
+      this._tree = Tree.merge(split.left, Tree.merge(Tree.build(nodes), split.right));
+
+      this._allocator.done(newFrom, newTo);
+      budget -= to - from;
+    }
+
+    const metrics = this._tree.metrics();
     this._contentWidth = metrics.longestWidth * this._defaultWidth;
     this._contentHeight = (1 + (metrics.lineBreaks || 0)) * this._lineHeight;
     this.emit(Markup.Events.Changed);
-  }
 
-  /**
-   * @param {!Text} text
-   * @param {number} from
-   * @param {number} to
-   * @param {number} inserted
-   */
-  _rechunk(text, from, to, inserted) {
-    let split = this._tree.split(from, to);
-    let newFrom = split.left.metrics().length;
-    let newTo = text.length() - split.right.metrics().length;
-
-    let nodes;
-    if (newTo - newFrom > kDefaultChunkSize && from - newFrom + inserted <= kDefaultChunkSize) {
-      // For typical editing scenarios, we are most likely to replace at the
-      // end of insertion next time.
-      nodes = this._createNodes(text, newFrom, newTo, kDefaultChunkSize, from - newFrom + inserted);
-    } else {
-      nodes = this._createNodes(text, newFrom, newTo, kDefaultChunkSize);
+    if (!this._jobId && this._allocator.hasWork()) {
+      this._jobId = this._platformSupport.requestIdleCallback(() => {
+        this._jobId = 0;
+        this._rechunk();
+      });
     }
-
-    this._setTree(Tree.merge(split.left, Tree.merge(Tree.build(nodes), split.right)));
   }
 
   /**
-   * @param {!Text} text
    * @param {number} from
    * @param {number} to
-   * @param {number} chunkSize
-   * @param {number=} firstChunkSize
-   * @return {!Array<!{metrics: !TextMetrics, data: ?Mark}>}
+   * @return {!Array<!{metrics: !TextMetrics, data: IsVisibleChunk}>}
    */
-  _createNodes(text, from, to, chunkSize, firstChunkSize) {
+  _createNodes(from, to) {
     const nodes = [];
-    let iterator = text.iterator(from, from, to);
+    let iterator = this._text.iterator(from, from, to);
     while (iterator.offset < to) {
-      let offset = iterator.offset;
-      let size = chunkSize;
-      if (offset === from && firstChunkSize != undefined)
-        size = firstChunkSize;
-      size = Math.min(to - iterator.offset, size);
+      const size = Math.min(to - iterator.offset, kChunkSize);
       let chunk = iterator.read(size);
       if (Metrics.isSurrogate(chunk.charCodeAt(chunk.length - 1))) {
         chunk += iterator.current;
         iterator.next();
       }
-      nodes.push({metrics: this._metrics.forString(chunk), data: null});
+      nodes.push({metrics: this._metrics.forString(chunk), data: true});
     }
     return nodes;
+  }
+
+  /**
+   * @param {number} length
+   * @return {{metrics: !TextMetrics, data: IsVisibleChunk}}
+   */
+  _unmeasuredNode(length) {
+    return {metrics: {length, firstWidth: 0, lastWidth: 0, longestWidth: 0}, data: false};
   }
 
   /**
@@ -356,32 +373,27 @@ export class Markup extends EventEmitter {
    */
   _buildFrameContents(frame, lines, decorators) {
     for (let line of lines) {
-      for (let range of line.ranges) {
-        const offsetToX = new Float32Array(range.to - range.from + 1);
-        const needsRtlBreakAfter = new Int8Array(range.to - range.from + 1);
-        const rangeContent = this._text.content(range.from, range.to);
-        this._metrics.fillXMap(
-            offsetToX, needsRtlBreakAfter, rangeContent,
-            0, range.to - range.from + 1,
-            range.x, this._defaultWidth);
-        offsetToX[0] = range.x;
-        needsRtlBreakAfter[range.to - range.from] = 0;
+      for (let {from, to, x} of line.ranges) {
+        const offsetToX = new Float32Array(to - from + 1);
+        const needsRtlBreakAfter = new Int8Array(to - from + 1);
+        const rangeContent = this._text.content(from, to);
+        this._metrics.fillXMap(offsetToX, needsRtlBreakAfter, rangeContent, x, this._defaultWidth);
 
         for (let decorator of decorators.text) {
-          decorator.visitTouching(range.from, range.to + 0.5, decoration => {
-            let from = Math.max(range.from, Offset(decoration.from));
-            const to = Math.min(range.to, Offset(decoration.to));
-            while (from < to) {
-              let end = from + 1;
-              while (end < to && !needsRtlBreakAfter[end - range.from])
+          decorator.visitTouching(from, to + 0.5, decoration => {
+            let dFrom = Math.max(from, Offset(decoration.from));
+            const dTo = Math.min(to, Offset(decoration.to));
+            while (dFrom < dTo) {
+              let end = dFrom + 1;
+              while (end < dTo && !needsRtlBreakAfter[end - from])
                 end++;
               frame.text.push({
-                x: offsetToX[from - range.from],
+                x: offsetToX[dFrom - from],
                 y: line.y,
-                content: rangeContent.substring(from - range.from, end - range.from),
+                content: rangeContent.substring(dFrom - from, end - from),
                 style: decoration.data
               });
-              from = end;
+              dFrom = end;
             }
           });
         }
@@ -389,16 +401,16 @@ export class Markup extends EventEmitter {
         for (let decorator of decorators.background) {
           // Expand by a single character which is not visible to account for borders
           // extending past viewport.
-          decorator.visitTouching(range.from - 1, range.to + 1, decoration => {
-            let from = Offset(decoration.from);
-            from = frame < line.start ? frame.lineLeft : offsetToX[Math.max(from, range.from) - range.from];
-            let to = Offset(decoration.to);
-            to = to > line.end ? frame.lineRight : offsetToX[Math.min(to, range.to) - range.from];
-            if (from <= to) {
+          decorator.visitTouching(from - 1, to + 1, decoration => {
+            let dFrom = Offset(decoration.from);
+            let left = dFrom < line.start ? frame.lineLeft : offsetToX[Math.max(dFrom, from) - from];
+            let dTo = Offset(decoration.to);
+            let right = dTo > line.end ? frame.lineRight : offsetToX[Math.min(dTo, to) - from];
+            if (left <= right) {
               frame.background.push({
-                x: from,
+                x: left,
                 y: line.y,
-                width: to - from,
+                width: right - left,
                 style: decoration.data
               });
             }
@@ -420,8 +432,8 @@ export class Markup extends EventEmitter {
         y: line.y,
         styles: lineStyles
       });
-      }
     }
+  }
 
   /**
    * @param {!Frame} frame
@@ -460,7 +472,6 @@ export class Markup extends EventEmitter {
 
 Markup.Events = {
   Changed: 'changed',
-  MarkCleared: 'markCleared',
 };
 
 /**
@@ -496,6 +507,10 @@ function joinRanges(ranges, document) {
 }
 
 /**
+ * @typedef {boolean} IsVisibleChunk
+ */
+
+ /**
  * @param {!Anchor} anchor
  * @return {number}
  */
@@ -515,7 +530,8 @@ function Offset(anchor) {
  * }} Line
  */
 
-const kDefaultChunkSize = 1000;
+let kChunkSize = 1000;
+let kRechunkSize = 10000000;
 
 Markup.test = {};
 
@@ -524,6 +540,11 @@ Markup.test = {};
  * @param {number} chunkSize
  */
 Markup.test.rechunk = function(markup, chunkSize) {
-  let nodes = markup._createNodes(markup._text, 0, markup._text.length(), chunkSize);
-  markup._setTree(Tree.build(nodes));
+  let oldChunkSize = kChunkSize;
+  kChunkSize = chunkSize;
+  let oldRechunkSize = kRechunkSize;
+  kRechunkSize = markup._text.length();
+  markup._rechunk();
+  kChunkSize = oldChunkSize;
+  kRechunkSize = oldRechunkSize;
 };

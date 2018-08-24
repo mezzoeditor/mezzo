@@ -2,6 +2,7 @@ import {Random} from './Random.mjs';
 import {Metrics, RoundMode} from './Metrics.mjs';
 import {Document} from './Document.mjs';
 import {Markup} from './Markup.mjs';
+import {TestPlatformSupport} from '../../test/utils.mjs';
 
 export function addTests(runner, expect) {
   const {describe, xdescribe, fdescribe} = runner;
@@ -26,8 +27,11 @@ export function addTests(runner, expect) {
       let content = 'a'.repeat(6835);
       let document = new Document();
       document.reset(content);
-      let markup = new Markup(createTestMeasurer(), document);
+      const platformSupport = new TestPlatformSupport();
+      let markup = new Markup(createTestMeasurer(), document, platformSupport);
+      platformSupport.runUntilIdle();
       document.replace(1674, 6835, '');
+      platformSupport.runUntilIdle();
       expect(markup.contentWidth()).toBe(1674 * 1);
     });
 
@@ -69,8 +73,11 @@ export function addTests(runner, expect) {
       for (let chunkSize = 1; chunkSize <= 100; chunkSize++) {
         let document = new Document();
         document.reset(content);
-        let markup = new Markup(createTestMeasurer(), document);
+        const platformSupport = new TestPlatformSupport();
+        let markup = new Markup(createTestMeasurer(), document, platformSupport);
+        platformSupport.runUntilIdle();
         Markup.test.rechunk(markup, chunkSize);
+        platformSupport.runUntilIdle();
         expect(markup.contentWidth()).toBe(longest);
         expect(markup.contentHeight()).toBe((lineCount + 1) * 3);
         expect(markup.offsetToPoint(0)).toBe({x: 0, y: 0});

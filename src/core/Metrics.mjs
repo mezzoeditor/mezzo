@@ -178,13 +178,12 @@ export class Metrics {
    * @param {!Float32Array} xmap
    * @param {!Int8Array} breaks
    * @param {string} s
-   * @param {number} from
-   * @param {number} to
    * @param {number} x
    * @param {number} multiplier
    */
-  fillXMap(xmap, breaks, s, from, to, x, multiplier) {
-    for (let i = from; i < to; ) {
+  fillXMap(xmap, breaks, s, x, multiplier) {
+    xmap[0] = x;
+    for (let i = 0; i <= s.length; ) {
       let charCode = s.charCodeAt(i);
       if (charCode >= 0xD800 && charCode <= 0xDBFF && i + 1 < to) {
         xmap[i + 1] = x;
@@ -204,6 +203,7 @@ export class Metrics {
       }
       xmap[i] = x;
     }
+    breaks[s.length] = 0;
   }
 
   /**

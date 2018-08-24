@@ -56,14 +56,14 @@
       <line x1="12.5ch" y1="2.5em" x2="12.5ch" y2="3.5em" stroke="rgb(33, 33, 33)"></line>
       <line x1="24.5ch" y1="7.5em" x2="24.5ch" y2="8.5em" stroke="rgb(33, 33, 33)"></line>
       <rect x="10.5ch" y="11.5em" width="38.5ch" height="1em" fill="rgba(126, 188, 254, 0.5)"></rect>
-      <rect x="3.5ch" y="12.5em" width="45.5ch" height="1em" fill="rgba(126, 188, 254, 0.5)"></rect>
-      <rect x="3.5ch" y="13.5em" width="45.5ch" height="1em" fill="rgba(126, 188, 254, 0.5)"></rect>
-      <rect x="3.5ch" y="14.5em" width="45.5ch" height="1em" fill="rgba(126, 188, 254, 0.5)"></rect>
+      <rect x="4ch" y="12.5em" width="45ch" height="1em" fill="rgba(126, 188, 254, 0.5)"></rect>
+      <rect x="4ch" y="13.5em" width="45ch" height="1em" fill="rgba(126, 188, 254, 0.5)"></rect>
+      <rect x="4ch" y="14.5em" width="45ch" height="1em" fill="rgba(126, 188, 254, 0.5)"></rect>
       <rect x="3.5ch" y="14.5em" width="5ch" height="1em" fill="hsla(36, 96%, 56%, 0.4)"></rect>
-      <rect x="3.5ch" y="15.5em" width="45.5ch" height="1em" fill="rgba(126, 188, 254, 0.5)"></rect>
+      <rect x="4ch" y="15.5em" width="45ch" height="1em" fill="rgba(126, 188, 254, 0.5)"></rect>
       <rect x="3.5ch" y="15.5em" width="5ch" height="1em" fill="hsla(36, 96%, 56%, 0.4)"></rect>
       <rect x="10.5ch" y="15.5em" width="5ch" height="1em" fill="hsla(36, 96%, 56%, 0.4)"></rect>
-      <rect x="3.5ch" y="16.5em" width="17ch" height="1em" fill="rgba(126, 188, 254, 0.5)"></rect>
+      <rect x="4ch" y="16.5em" width="16.5ch" height="1em" fill="rgba(126, 188, 254, 0.5)"></rect>
       <line x1="20.5ch" y1="16.5em" x2="20.5ch" y2="17.5em" stroke="rgb(33, 33, 33)"></line>
       <rect x="3.5ch" y="16.5em" width="5ch" height="1em" fill="hsla(36, 96%, 56%, 0.4)"></rect>
       <rect x="10.5ch" y="16.5em" width="5ch" height="1em" fill="hsla(36, 96%, 56%, 0.4)"></rect>
