@@ -1,5 +1,5 @@
+import {createTestEditor} from '../test/utils.mjs';
 import {Search} from './Search.mjs';
-import {createTestEditor} from '../src/editor/utils.spec.mjs';
 
 export function addTests(runner, expect) {
   const {describe, xdescribe, fdescribe} = runner;

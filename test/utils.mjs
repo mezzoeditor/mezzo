@@ -1,4 +1,4 @@
-import {Editor} from './Editor.mjs';
+import {Editor} from '../src/editor/Editor.mjs';
 
 export class TestMeasurer {
   lineHeight() {

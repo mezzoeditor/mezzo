@@ -228,6 +228,14 @@ export class Renderer {
     return this._measurer;
   }
 
+  scrollTop() {
+    return this._scrollTop;
+  }
+
+  scrollLeft() {
+    return this._scrollLeft;
+  }
+
   setEditor(editor) {
     // TODO: save/restore scroll positions.
     if (this._editor)
@@ -540,15 +548,15 @@ export class Renderer {
   }
 
   _revealSelection(success, center = false) {
-    if (!this._editor)
+    if (!this._editor || !success)
       return false;
     const lastCursor = this._editor.document().lastCursor();
     let focus = lastCursor ? lastCursor.focus : null;
-    if (success && focus !== null) {
+    if (focus !== null) {
       let vPadding = center ? this._editorRect.height / 2 : 0;
       this._reveal({from: focus, to: focus}, {top: vPadding, bottom: vPadding});
     }
-    return success;
+    return true;
   }
 
   element() {

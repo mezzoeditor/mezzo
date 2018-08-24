@@ -1,0 +1,25 @@
+<link rel="stylesheet" href="../../plugins/web/search-toolbar.css">
+<style>
+html, body, .renderer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+}
+</style>
+<script type='module'>
+
+import { WebEmbedder } from '../index.mjs';
+
+const embedder = new WebEmbedder(document);
+embedder.element().classList.add('renderer');
+
+document.body.appendChild(embedder.element());
+embedder.renderer().resize();
+window.onresize = () => embedder.renderer().resize();
+
+// Expose renderer and editor on window.
+window.editor = embedder.editor();
+window.renderer = embedder.renderer();
+</script>

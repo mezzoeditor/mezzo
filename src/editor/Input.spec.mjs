@@ -1,4 +1,4 @@
-import {createTestEditor, textWithCursors} from './utils.spec.mjs';
+import {createTestEditor, textWithCursors} from '../../test/utils.mjs';
 
 export function addTests(runner, expect) {
   const {describe, xdescribe, fdescribe} = runner;

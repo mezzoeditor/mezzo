@@ -36,7 +36,13 @@ export class WebEmbedder {
       'Cmd/Ctrl-d': 'selection.addnext',
     }, command => {
       if (command === 'selection.addnext') {
-        this._plugins.addNextOccurence.addNext();
+        if (this._plugins.addNextOccurence.addNext()) {
+          const cursor = this._editor.document().lastCursor();
+          this._editor.revealRange({
+            from: cursor.anchor,
+            to: cursor.focus
+          });
+        }
         return true;
       }
       return false;
@@ -104,6 +110,10 @@ export class WebEmbedder {
    */
   editor() {
     return this._editor;
+  }
+
+  renderer() {
+    return this._renderer;
   }
 
   resize() {

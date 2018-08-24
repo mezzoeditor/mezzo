@@ -1,5 +1,5 @@
 import {GoldenMatchers} from '../../utils/GoldenMatchers';
-import {TestPlatformSupport} from './utils.spec.mjs';
+import {TestPlatformSupport} from '../../test/utils.mjs';
 import {SVGRenderer} from '../../test/SVGRenderer.mjs';
 import {Search} from '../../plugins/Search.mjs';
 import url from 'url';

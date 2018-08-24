@@ -1,5 +1,5 @@
+import {createTestEditor, textWithCursors} from '../test/utils.mjs';
 import {AddNextOccurence} from './AddNextOccurence.mjs';
-import {createTestEditor, textWithCursors} from '../src/editor/utils.spec.mjs';
 
 export function addTests(runner, expect) {
   const {describe, xdescribe, fdescribe} = runner;
