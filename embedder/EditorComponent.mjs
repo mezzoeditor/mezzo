@@ -23,7 +23,13 @@ export class EditorComponent extends HTMLElement {
       if (!this._editor)
         return false;
       if (command === 'selection.addnext') {
-        PluginManager.ensurePlugins(this._editor).addNextOccurence.addNext();
+        if (PluginManager.ensurePlugins(this._editor).addNextOccurence.addNext()) {
+          const cursor = this._editor.document().lastCursor();
+          this._editor.revealRange({
+            from: cursor.anchor,
+            to: cursor.focus,
+          });
+        }
         return true;
       }
       return false;
