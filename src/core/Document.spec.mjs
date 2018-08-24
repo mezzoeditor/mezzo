@@ -48,4 +48,31 @@ export function addTests(runner, expect) {
       }
     });
   });
+  describe('Document generations', () => {
+    it('should increase on replace', () => {
+      const document = new Document();
+      const initial = document.generation();
+      document.replace(0, 0, 'hello');
+      expect(document.generation()).not.toBe(initial);
+    });
+    it('should not increase on selection change', () => {
+      const document = new Document();
+      document.reset('hello');
+      const initial = document.generation();
+      document.setSelection([
+        {anchor: 1, focus: 2}
+      ]);
+      expect(document.generation()).toBe(initial);
+    });
+    it('should work with undo/redo', () => {
+      const document = new Document();
+      const initial = document.generation();
+      document.replace(0, 0, 'hello');
+      expect(document.generation()).not.toBe(initial);
+      document.undo();
+      expect(document.generation()).toBe(initial);
+      document.redo();
+      expect(document.generation()).not.toBe(initial);
+    });
+  });
 }

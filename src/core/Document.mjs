@@ -39,7 +39,8 @@ export class Document extends EventEmitter {
     this._dispatchingChangedEvent = false;
 
     this._muteHistory = false;
-    this._history = [new HistoryEntry([] /* replacements */, [] /* selection */)];
+    this._historyGeneration = 0;
+    this._history = [new HistoryEntry([] /* replacements */, [] /* selection */, ++this._historyGeneration)];
     this._historyIndex = 0;
   }
 
@@ -57,6 +58,13 @@ export class Document extends EventEmitter {
    */
   metadata(key) {
     return this._history[this._historyIndex].metadata.get(key);
+  }
+
+  /**
+   * @return {number}
+   */
+  generation() {
+    return this._history[this._historyIndex].generation;
   }
 
   /**
@@ -164,8 +172,8 @@ export class Document extends EventEmitter {
 
     // Update history.
     if (!this._muteHistory) {
-      const entry = this._history[this._historyIndex];
-      const newEntry = new HistoryEntry(replacements, this._selection);
+      let generation = replacements.length ? ++this._historyGeneration : this._history[this._historyIndex].generation;
+      const newEntry = new HistoryEntry(replacements, this._selection, generation);
       if (historyAction !== Document.History.Reset && this._historyIndex === 0 || this._historyIndex < this._history.length - 1)
         historyAction = Document.History.Push;
       if (historyAction === Document.History.Push) {
@@ -404,10 +412,11 @@ class HistoryEntry {
    * @param {!Array<!Replacement>} replacements
    * @param {!Array<!SelectionRange>} selection
    */
-  constructor(replacements, selection) {
+  constructor(replacements, selection, generation) {
     this.selection = selection;
     this.replacements = replacements;
     this.metadata = new Map();
+    this.generation = generation;
   }
 
   hasTextChanges() {
