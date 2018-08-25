@@ -60,14 +60,16 @@ window.addEventListener('DOMContentLoaded', () => {
       editor = renderer.createEditor(mimeType);
       editors.set(path, editor);
       const content = await window.fs.readFile(path);
-      editor.reset(content);
-      editor.document().setSelection([{focus: 0, anchor: 0}]);
+      editor.reset(content, [{focus: 0, anchor: 0}]);
+      markClean(editor);
+      editor.document().on('changed', () => tabstrip.setTabDirtyIcon(path, !isClean(editor)));
     }
     renderer.setEditor(editor);
     const lastCursor = editor.document().lastCursor();
     editor.revealOffset(lastCursor ? lastCursor.focus : 0);
     renderer.focus();
     statusbar.rightElement().textContent = mimeType;
+    tabstrip.setTabDirtyIcon(path, !isClean(editor));
   });
   tabstrip.restoreTabs();
 
@@ -131,6 +133,8 @@ window.addEventListener('DOMContentLoaded', () => {
       if (!editor)
         return false;
       window.fs.saveFile(path, editor.document().text().content());
+      markClean(editor);
+      tabstrip.setTabDirtyIcon(path, false);
       return true;
     } else if (command === 'ignore') {
       return true;
@@ -145,6 +149,15 @@ window.addEventListener('DOMContentLoaded', () => {
     const stubMessage = document.createElement('stub-message');
     stubMessage.textContent = `Hit ${isMac ? '⌘' : 'Ctrl'}-P to open files.`;
     return stubMessage;
+  }
+
+  const cleanSymbol = Symbol('editor.cleangeneration');
+  function markClean(editor) {
+    editor[cleanSymbol] = editor.document().generation();
+  }
+
+  function isClean(editor) {
+    return editor[cleanSymbol] === editor.document().generation();
   }
 });
 

@@ -19,6 +19,13 @@ export class TabStripComponent extends HTMLElement {
     this._selectedCallback = callback;
   }
 
+  setTabDirtyIcon(id, enabled) {
+    const tab = this._tabs.get(id);
+    if (!tab)
+      return;
+    tab.element.classList.toggle('dirty-icon', enabled);
+  }
+
   addTab(id) {
     const title = window.fs.fileName(id);
     const element = document.createElement('tabstrip-tab');

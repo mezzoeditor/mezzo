@@ -24,7 +24,6 @@ tabstrip-tab span {
 }
 
 tabstrip-tab .close-icon {
-  -webkit-mask-image: url(./close-icon.svg);
   -webkit-mask-size: var(--icon-size) var(--icon-size);
   -webkit-mask-position: 0 0;
   background-color: #333;
@@ -32,7 +31,20 @@ tabstrip-tab .close-icon {
   height: var(--icon-size);
   margin-left: 3px;
   flex-shrink: 0;
+}
+
+tabstrip-tab.dirty-icon .close-icon {
+  -webkit-mask-image: url(./dirty-icon.svg);
+  visibility: visible;
+}
+
+tabstrip-tab:not(.dirty-icon) .close-icon {
+  -webkit-mask-image: url(./close-icon.svg);
   visibility: hidden;
+}
+
+tabstrip-tab.dirty-icon .close-icon:hover {
+  -webkit-mask-image: url(./close-icon.svg);
 }
 
 tabstrip-tab:hover .close-icon {
