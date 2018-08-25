@@ -93,9 +93,9 @@ export class SearchToolbar {
       this._element.style.setProperty('display', 'flex');
       this._input.focus();
       this._input.select();
-      this._onSearchInput();
       this._updateSearchUI(this._search.currentMatchIndex(), this._search.matchesCount());
       this._isShown = true;
+      this._onSearchInput();
       return true;
     }
     if (!this._isShown)
