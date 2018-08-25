@@ -184,8 +184,11 @@ export class Markup extends EventEmitter {
     let range = null;
     while (budget > 0 && (range = this._allocator.workRange())) {
       let {from, to} = range;
-      if (to - from > budget)
+      if (to - from > budget) {
         to = from + budget;
+        if (to > from && Metrics.isSurrogate(this._text.iterator(to - 1).charCodeAt(0)))
+          to++;
+      }
 
       const split = this._tree.split(from, to);
       let newFrom = split.left.metrics().length;
@@ -234,6 +237,8 @@ export class Markup extends EventEmitter {
       const size = Math.min(to - iterator.offset, kChunkSize);
       let chunk = iterator.read(size);
       if (Metrics.isSurrogate(chunk.charCodeAt(chunk.length - 1))) {
+        if (iterator.offset === to)
+          throw new Error('Inconsistent');
         chunk += iterator.current;
         iterator.next();
       }
@@ -538,12 +543,14 @@ Markup.test = {};
 /**
  * @param {!Markup} markup
  * @param {number} chunkSize
+ * @param {number=} rechunkSize
  */
-Markup.test.rechunk = function(markup, chunkSize) {
+Markup.test.rechunk = function(markup, chunkSize, rechunkSize) {
   let oldChunkSize = kChunkSize;
   kChunkSize = chunkSize;
   let oldRechunkSize = kRechunkSize;
-  kRechunkSize = markup._text.length();
+  kRechunkSize = rechunkSize || markup._text.length();
+  markup._allocator.undone(0, markup._text.length());
   markup._rechunk();
   kChunkSize = oldChunkSize;
   kRechunkSize = oldRechunkSize;

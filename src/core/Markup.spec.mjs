@@ -35,6 +35,18 @@ export function addTests(runner, expect) {
       expect(markup.contentWidth()).toBe(1674 * 1);
     });
 
+    it('rechunk should respect utf', () => {
+      let content = '😀😀😀😀😀😀';
+      let document = new Document();
+      document.reset(content);
+      const platformSupport = new TestPlatformSupport();
+      let markup = new Markup(createTestMeasurer(), document, platformSupport);
+      platformSupport.runUntilIdle();
+      Markup.test.rechunk(markup, 3, 3);
+      platformSupport.runUntilIdle();
+      expect(markup.contentWidth()).toBe(6 * 100);
+    });
+
     it('markup points API all chunk sizes', () => {
       let testMetrics = createTestMetrics();
       let random = Random(143);
