@@ -29,7 +29,7 @@ export class GoldenMatchers {
     this._goldenDir = path.normalize(goldenDir);
     this._outputDir = path.normalize(outputDir);
     this._resetResults = resetResults;
-    if (resetResults) {
+    if (resetResults && fs.existsSync(this._outputDir)) {
       const files = fs.readdirSync(this._outputDir);
       for (const file of files) {
         if (file.includes(actualSuffix) || file.includes(expectedSuffix) || file.includes(diffSuffix))
