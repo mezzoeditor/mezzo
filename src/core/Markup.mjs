@@ -59,6 +59,7 @@ export class Markup extends EventEmitter {
     });
     this._text = document.text();
     this._measurer = null;
+    this._wordWrapLineWidth = null;
     this._platformSupport = platformSupport;
     this._contentWidth = 0;
     this._contentHeight = 0;
@@ -79,6 +80,17 @@ export class Markup extends EventEmitter {
     this._defaultWidth = measurer.defaultWidth();
     const measure = s => measurer.measureString(s) / this._defaultWidth;
     this._metrics = new Metrics(measurer.defaultWidthRegex(), measure, measure);
+    this._allocator = new WorkAllocator(this._text.length());
+    this._rechunk();
+  }
+
+  /**
+   * @param {number?} wordWrapLineWidth
+   */
+  setWordWrapLineWidth(wordWrapLineWidth) {
+    if (this._wordWrapLineWidth === wordWrapLineWidth)
+      return;
+    this._wordWrapLineWidth = wordWrapLineWidth;
     this._allocator = new WorkAllocator(this._text.length());
     this._rechunk();
   }
@@ -184,32 +196,27 @@ export class Markup extends EventEmitter {
     let range = null;
     while (budget > 0 && (range = this._allocator.workRange())) {
       let {from, to} = range;
-      if (to - from > budget) {
+      if (to - from > budget)
         to = from + budget;
-        if (to > from && Metrics.isSurrogate(this._text.iterator(to - 1).charCodeAt(0)))
-          to++;
-      }
 
       const split = this._tree.split(from, to);
       let newFrom = split.left.metrics().length;
       let newTo = this._text.length() - split.right.metrics().length;
-      const nodes = [];
-      if (from - newFrom > 2 * kChunkSize) {
-        nodes.push(this._unmeasuredNode(from - newFrom));
-        newFrom = from;
+
+      let correction = null;
+      if (newTo > newFrom + budget + 2 * kChunkSize) {
+        correction = newTo;
+        newTo = newFrom + budget;
       }
-      let lastNode = null;
-      if (newTo - to > 2 * kChunkSize) {
-        lastNode = this._unmeasuredNode(newTo - to);
-        newTo = to;
-      }
-      nodes.push(...this._createNodes(newFrom, newTo));
-      if (lastNode)
-        nodes.push(lastNode);
+      if (newTo > newFrom && Metrics.isSurrogate(this._text.iterator(newTo - 1).charCodeAt(0)))
+        newTo++;
+      const nodes = this._createNodes(newFrom, newTo);
+      if (correction !== null)
+        nodes.push(this._unmeasuredNode(correction - newTo));
       this._tree = Tree.merge(split.left, Tree.merge(Tree.build(nodes), split.right));
 
       this._allocator.done(newFrom, newTo);
-      budget -= to - from;
+      budget -= newTo - newFrom;
     }
 
     const metrics = this._tree.metrics();
@@ -228,7 +235,7 @@ export class Markup extends EventEmitter {
   /**
    * @param {number} from
    * @param {number} to
-   * @return {!Array<!{metrics: !TextMetrics, data: IsVisibleChunk}>}
+   * @return {!Array<!{metrics: !TextMetrics, data: ChunkStartX}>}
    */
   _createNodes(from, to) {
     const nodes = [];
@@ -242,17 +249,17 @@ export class Markup extends EventEmitter {
         chunk += iterator.current;
         iterator.next();
       }
-      nodes.push({metrics: this._metrics.forString(chunk), data: true});
+      nodes.push({metrics: this._metrics.forString(chunk), data: 1});
     }
     return nodes;
   }
 
   /**
    * @param {number} length
-   * @return {{metrics: !TextMetrics, data: IsVisibleChunk}}
+   * @return {{metrics: !TextMetrics, data: ChunkStartX}}
    */
   _unmeasuredNode(length) {
-    return {metrics: {length, firstWidth: 0, lastWidth: 0, longestWidth: 0}, data: false};
+    return {metrics: {length, firstWidth: 0, lastWidth: 0, longestWidth: 0}, data: -1};
   }
 
   /**
@@ -313,7 +320,7 @@ export class Markup extends EventEmitter {
       }
 
       while (x <= rect.left + rect.width) {
-        if (iterator.data === false) {
+        if (iterator.data < 0) {
           if (iterator.before.x !== iterator.after.x)
             throw new Error('Inconsistent');
         } else {
@@ -512,7 +519,12 @@ function joinRanges(ranges, document) {
 }
 
 /**
- * @typedef {boolean} IsVisibleChunk
+ * @typedef {number} ChunkStartX
+ *
+ * Non-negative value means an x-coordinate at
+ * the start of the chunk which was used for word wrap calculations.
+ *
+ * Negative value means invisible chunk.
  */
 
  /**
