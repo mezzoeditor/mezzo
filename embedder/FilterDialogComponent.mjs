@@ -2,7 +2,7 @@ import { FuzzySearch } from './FuzzySearch.mjs';
 import { Icons } from './Icons.mjs';
 
 // Number of search results to render immediately.
-const SEARCH_RENDER_COUNT = 50;
+const SEARCH_RENDER_COUNT = 25;
 
 export class FilterDialogComponent extends HTMLElement {
   constructor() {
