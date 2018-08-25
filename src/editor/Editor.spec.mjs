@@ -52,25 +52,25 @@ export function addTests(runner, expect, options) {
     }
 
     it('complex-000-000', () => {
-      golden.expectText(renderComplex(0.0, 0.0), 'complex-000-000.svg');
+      golden.expectSVG(renderComplex(0.0, 0.0), 'complex-000-000.svg');
     });
     it('complex-002-003', () => {
-      golden.expectText(renderComplex(0.2, 0.3), 'complex-002-003.svg');
+      golden.expectSVG(renderComplex(0.2, 0.3), 'complex-002-003.svg');
     });
     it('complex-640-370', () => {
-      golden.expectText(renderComplex(64.0, 37.0), 'complex-640-370.svg');
+      golden.expectSVG(renderComplex(64.0, 37.0), 'complex-640-370.svg');
     });
     it('complex-657-384', () => {
-      golden.expectText(renderComplex(65.7, 38.4), 'complex-657-384.svg');
+      golden.expectSVG(renderComplex(65.7, 38.4), 'complex-657-384.svg');
     });
     it('complex-000-384', () => {
-      golden.expectText(renderComplex(0.0, 38.4), 'complex-000-384.svg');
+      golden.expectSVG(renderComplex(0.0, 38.4), 'complex-000-384.svg');
     });
     it('complex-999-384', () => {
-      golden.expectText(renderComplex(99.9, 38.4), 'complex-999-384.svg');
+      golden.expectSVG(renderComplex(99.9, 38.4), 'complex-999-384.svg');
     });
     it('complex-999-999', () => {
-      golden.expectText(renderComplex(99.9, 99.9), 'complex-999-999.svg');
+      golden.expectSVG(renderComplex(99.9, 99.9), 'complex-999-999.svg');
     });
   });
 }

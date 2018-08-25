@@ -11,3 +11,19 @@ ins {
 del {
     background-color: #ff9e9e;
 }
+
+.svg-controls {
+  display: flex;
+}
+
+.svg-diff {
+  position: relative;
+  white-space: normal;
+}
+
+.svg-actual {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+

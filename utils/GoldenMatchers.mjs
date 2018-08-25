@@ -39,22 +39,75 @@ export class GoldenMatchers {
     }
   }
 
-  expectText(actual, goldenName) {
+  _expect(actual, goldenName, comparator) {
     if (goldenName.includes(actualSuffix) || goldenName.includes(expectedSuffix) || goldenName.includes(diffSuffix))
       throw new Error(`Invalid golden name: "${goldenName}". Name cannot contain "${actualSuffix}", "${expectedSuffix}" or ${diffSuffix}".`);
     if (this._resetResults) {
       this._overwrite(actual, goldenName);
       return;
     }
-    const result = compare(this._goldenDir, this._outputDir, actual, goldenName, plainTextComparator);
+    const result = compare(this._goldenDir, this._outputDir, actual, goldenName, comparator);
     if (!result.pass)
       throw new Error(result.message);
+  }
+
+  expectText(actual, goldenName) {
+    this._expect(actual, goldenName, plainTextComparator);
+  }
+
+  expectSVG(actual, goldenName) {
+    this._expect(actual, goldenName, svgComparator);
   }
 
   _overwrite(actual, goldenName) {
     const expectedPath = path.join(this._goldenDir, goldenName);
     fs.writeFileSync(expectedPath, actual);
   }
+}
+
+/**
+ * @param {?Object} actual
+ * @param {!Buffer} expectedBuffer
+ * @return {?{diff: (!Object:undefined), errorMessage: (string|undefined)}}
+ */
+function svgComparator(actual, expectedBuffer) {
+  if (typeof actual !== 'string')
+    return { errorMessage: 'Actual result should be string' };
+  const expected = expectedBuffer.toString('utf-8');
+  if (expected === actual)
+    return null;
+  const diff = new Diff();
+  const result = diff.main(expected, actual);
+  diff.cleanupSemantic(result);
+  let htmldiff = diff.prettyHtml(result);
+  const diffStylePath = path.join(__dirname, 'textdiff.css');
+  let html = `
+    <link rel="stylesheet" href="file://${diffStylePath}">
+    <h1>SVG Diff</h1>
+    <div class=svg-controls>
+      <label>actual opacity:</label><input type='range' name='opacity' min='0' max='100' value='0'/>
+    </div>
+    <div class=svg-diff>
+      <img class='svg-actual' src='data:image/svg+xml,${actual}'></img>
+      <img class='svg-expected' src='data:image/svg+xml,${expected}'></img>
+    </div>
+    <script>
+      const actual = document.querySelector('img.svg-actual');
+      actual.style.setProperty('opacity', 0);
+      const input = document.querySelector('input');
+      input.addEventListener('input', () => {
+        actual.style.setProperty('opacity', parseInt(input.value, 10) / 100);
+      });
+    </script>
+    <h1>Text Diff</h1>
+    <div>
+      ${htmldiff}
+    </div>
+  `;
+  return {
+    diff: html,
+    diffExtension: '.html'
+  };
 }
 
 /**
