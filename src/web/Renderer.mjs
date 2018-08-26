@@ -113,6 +113,7 @@ export class Renderer {
 
     this._theme = DefaultTheme;
     this._monospace = true;
+    this._wordWrap = false;
     this._eventListeners = [];
 
     this._animationFrameId = 0;
@@ -601,7 +602,10 @@ export class Renderer {
     // scale change. We should detect that.
     // if (zoomHasChanged())
     //   this._editor.markup().setMeasurer(this._measurer);
+
     this._invalidate();
+    if (this._editor && this._wordWrap)
+      this._editor.markup().setWordWrapLineWidth(this._wordWrapLineWidth());
 
     // Changing cavas width/height clears the canvas synchronously.
     // We need to re-render so that it doesn't blink on continious resizing.
@@ -617,6 +621,26 @@ export class Renderer {
     if (this._editor)
       this._editor.markup().setMeasurer(this._measurer);
     this._invalidate();
+  }
+
+  /**
+   * @param {boolean} wordWrap
+   */
+  setWordWrapActive(wordWrap) {
+    if (this._wordWrap === wordWrap)
+      return;
+    this._wordWrap = wordWrap;
+    if (this._editor)
+      this._editor.markup().setWordWrapLineWidth(this._wordWrapLineWidth());
+  }
+
+  /**
+   * @return {number?}
+   */
+  _wordWrapLineWidth() {
+    if (!this._wordWrap)
+      return null;
+    return Math.max(2 * this._measurer.defaultWidth(), this._editorRect.width - this._padding.left - this._padding.right);
   }
 
   _mouseEventToCanvas(event) {
@@ -981,10 +1005,22 @@ export class Renderer {
     ctx.fillStyle = 'rgb(128, 128, 128)';
     const textOffset = this._measurer.textOffset;
     const textX = this._gutterRect.width - GUTTER_PADDING_RIGHT;
-    for (let {first, y} of frame.lines) {
-      // TODO: show "first..last" range instead
-      const number = (first + 1) + '';
-      ctx.fillText(number, textX, y + textOffset);
+    let joinFirstTwo = false;
+    if (frame.lines.length >= 2 && frame.lines[0].first === frame.lines[1].first &&
+        frame.lines[0].y + frame.translateTop < 0) {
+      joinFirstTwo = true;
+    }
+    for (let i = 0; i < frame.lines.length; i++) {
+      const line = frame.lines[i];
+      if (i < 2 && joinFirstTwo) {
+        if (i === 0) {
+          const number = (line.first + 1) + '';
+          ctx.fillText(number, textX, -frame.translateTop + textOffset);
+        }
+      } else if (i === 0 || line.first !== frame.lines[i - 1].first) {
+        const number = (line.first + 1) + '';
+        ctx.fillText(number, textX, line.y + textOffset);
+      }
     }
   }
 

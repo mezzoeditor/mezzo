@@ -25,6 +25,10 @@ document.addEventListener('DOMContentLoaded', () => {
     embedder.setUseMonospaceFont(event.target.checked);
   }, false);
 
+  document.querySelector('.wordwrap').addEventListener('change', event => {
+    embedder.setWordWrapActive(event.target.checked);
+  }, false);
+
   document.body.appendChild(embedder.element());
   embedder.element().classList.add('editor');
 
@@ -59,6 +63,7 @@ function addExamples(embedder) {
       embedder.setText(new Array(100).fill(text).join(''));
     else
       embedder.setText(text);
+    // embedder.setText('abcdefg abcdefg abcdefg abcdefg abcdefg \nabcdefg\n abcdefg abcdefg abcdefg abcdefg\n abcdefg abcdefg abcdefg abcdefg abcdefg abcdefg\n abcdefg');
     embedder.focus();
 
     const selection = [];

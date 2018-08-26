@@ -47,7 +47,6 @@ export class Markup extends EventEmitter {
    */
   constructor(measurer, document, platformSupport) {
     super();
-    this._frozen = false;
     this._document = document;
     this._document.on(Document.Events.Changed, ({replacements}) => {
       if (!replacements.length)
@@ -58,14 +57,19 @@ export class Markup extends EventEmitter {
         this._replace(replacement);
     });
     this._text = document.text();
-    this._measurer = null;
-    this._wordWrapLineWidth = null;
     this._platformSupport = platformSupport;
+
+    this._frozen = false;
+    this._wordWrapLineWidth = null;
     this._contentWidth = 0;
     this._contentHeight = 0;
+    // All the undone ranges in allocator have character-adjusted boundaries,
+    // meaning they do not split surrogate pairs.
     this._allocator = new WorkAllocator(0);
     this._jobId = 0;
     this._tree = new Tree();
+
+    this._measurer = null;
     this.setMeasurer(measurer);
   }
 
@@ -88,8 +92,15 @@ export class Markup extends EventEmitter {
    * @param {number?} wordWrapLineWidth
    */
   setWordWrapLineWidth(wordWrapLineWidth) {
+    if (wordWrapLineWidth !== null)
+      wordWrapLineWidth /= this._defaultWidth;
     if (this._wordWrapLineWidth === wordWrapLineWidth)
       return;
+
+    // This is an approximation of "max character width".
+    if (wordWrapLineWidth !== null && wordWrapLineWidth < 2)
+      throw new Error('Word wrap line width cannot be too small');
+
     this._wordWrapLineWidth = wordWrapLineWidth;
     this._allocator = new WorkAllocator(this._text.length());
     this._rechunk();
@@ -129,9 +140,24 @@ export class Markup extends EventEmitter {
     const split = this._tree.split(from, to);
     const newFrom = split.left.metrics().length;
     const newTo = this._text.length() - split.right.metrics().length;
-    this._allocator.undone(newFrom, newTo);
-    const node = this._unmeasuredNode(newTo - newFrom);
-    this._tree = Tree.merge(split.left, Tree.merge(Tree.build([node]), split.right));
+
+    // This is a heuristic to most likely cover the word at the editing boundary
+    // which ensures proper word wrapping. Otherwise the chunk may split the word
+    // in the middle and calculate the wrapping incorrectly.
+    let undoneFrom = newFrom;
+    let undoneTo = newTo;
+    let tmp = split.right.splitFirst();
+    if (tmp.first !== null)
+      undoneTo = newTo + tmp.metrics.length;
+    tmp = split.left.splitLast();
+    if (tmp.last !== null)
+      undoneFrom = newFrom - tmp.metrics.length;
+    this._allocator.undone(undoneFrom, undoneTo);
+
+    const nodes = [];
+    if (newFrom !== newTo)
+      nodes.push(this._unmeasuredNode(newTo - newFrom));
+    this._tree = Tree.merge(split.left, Tree.merge(Tree.build(nodes), split.right));
 
     this._rechunk();
   }
@@ -160,7 +186,7 @@ export class Markup extends EventEmitter {
     let clamped = iterator.locateByPoint(point, strict);
     if (clamped === null)
       throw 'Point does not belong to the Markup';
-    if (iterator.data === undefined)
+    if (iterator.data === undefined || iterator.data < 0)
       return iterator.before ? iterator.before.offset : 0;
     let from = iterator.before.offset;
     let textChunk = this._text.content(from, from + iterator.metrics.length);
@@ -184,7 +210,7 @@ export class Markup extends EventEmitter {
     let iterator = this._tree.iterator();
     if (iterator.locateByOffset(offset, true /* strict */) === null)
       return null;
-    if (iterator.data === undefined)
+    if (iterator.data === undefined || iterator.data < 0)
       return iterator.before || {x: 0, y: 0};
     let from = iterator.before.offset;
     let textChunk = this._text.content(from, from + iterator.metrics.length);
@@ -192,7 +218,7 @@ export class Markup extends EventEmitter {
   }
 
   _rechunk() {
-    let budget = kRechunkSize;
+    let budget = this._wordWrapLineWidth === null ? kRechunkSize : kWordWrapRechunkSize;
     let range = null;
     while (budget > 0 && (range = this._allocator.workRange())) {
       let {from, to} = range;
@@ -210,11 +236,61 @@ export class Markup extends EventEmitter {
       }
       if (newTo > newFrom && Metrics.isSurrogate(this._text.iterator(newTo - 1).charCodeAt(0)))
         newTo++;
-      const nodes = this._createNodes(newFrom, newTo);
-      if (correction !== null)
-        nodes.push(this._unmeasuredNode(correction - newTo));
-      this._tree = Tree.merge(split.left, Tree.merge(Tree.build(nodes), split.right));
 
+      /** @type {!Array<!{metrics: !TextMetrics, data: ChunkStartX}>} */
+      const nodes = [];
+      const iterator = this._text.iterator(newFrom, Math.max(newFrom - 2, 0), newTo);
+      let metrics = split.left.metrics();
+
+      let lastChar = ' ';
+      if (newFrom > 0)
+        lastChar = iterator.charAt(-1);
+      if (Metrics.isSurrogate(lastChar.charCodeAt(0)))
+        lastChar = iterator.charAt(-2);
+
+      while (iterator.offset < newTo) {
+        const size = Math.min(newTo - iterator.offset, kChunkSize);
+        let chunk = iterator.read(size);
+        if (Metrics.isSurrogate(chunk.charCodeAt(chunk.length - 1))) {
+          if (iterator.offset === newTo)
+            throw new Error('Inconsistent');
+          chunk += iterator.current;
+          iterator.next();
+        }
+
+        if (this._wordWrapLineWidth !== null) {
+          const chunks = this._metrics.wordWrap(chunk, metrics.lastWidth, this._wordWrapLineWidth, lastChar);
+          let first = true;
+          for (let m of chunks) {
+            if (!first) {
+              const newLineMetrics = {length: 0, firstWidth: 0, lastWidth: 0, longestWidth: 0, lineBreaks: 1};
+              nodes.push({metrics: newLineMetrics, data: metrics.lastWidth});
+              metrics = Tree.combineMetrics(metrics, newLineMetrics);
+            }
+            first = false;
+            nodes.push({metrics: m, data: metrics.lastWidth});
+            metrics = Tree.combineMetrics(metrics, m);
+          }
+        } else {
+          const node = {metrics: this._metrics.forString(chunk), data: metrics.lastWidth};
+          metrics = Tree.combineMetrics(metrics, node.metrics);
+          nodes.push(node);
+        }
+
+        lastChar = chunk.charAt(chunk.length - 1);
+        if (Metrics.isSurrogate(lastChar.charCodeAt(0)))
+          lastChar = chunk.charAt(chunk.length - 2);
+      }
+
+      if (correction !== null && correction > newTo) {
+        nodes.push(this._unmeasuredNode(correction - newTo));
+      } else if (this._wordWrapLineWidth) {
+        const tmp = split.right.splitFirst();
+        if (tmp.first !== null && tmp.first !== metrics.lastWidth)
+          this._allocator.undone(newTo, newTo + tmp.metrics.length);
+      }
+
+      this._tree = Tree.merge(split.left, Tree.merge(Tree.build(nodes), split.right));
       this._allocator.done(newFrom, newTo);
       budget -= newTo - newFrom;
     }
@@ -230,28 +306,6 @@ export class Markup extends EventEmitter {
         this._rechunk();
       });
     }
-  }
-
-  /**
-   * @param {number} from
-   * @param {number} to
-   * @return {!Array<!{metrics: !TextMetrics, data: ChunkStartX}>}
-   */
-  _createNodes(from, to) {
-    const nodes = [];
-    let iterator = this._text.iterator(from, from, to);
-    while (iterator.offset < to) {
-      const size = Math.min(to - iterator.offset, kChunkSize);
-      let chunk = iterator.read(size);
-      if (Metrics.isSurrogate(chunk.charCodeAt(chunk.length - 1))) {
-        if (iterator.offset === to)
-          throw new Error('Inconsistent');
-        chunk += iterator.current;
-        iterator.next();
-      }
-      nodes.push({metrics: this._metrics.forString(chunk), data: 1});
-    }
-    return nodes;
   }
 
   /**
@@ -549,6 +603,7 @@ function Offset(anchor) {
 
 let kChunkSize = 1000;
 let kRechunkSize = 10000000;
+let kWordWrapRechunkSize = 1000000;
 
 Markup.test = {};
 

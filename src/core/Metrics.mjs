@@ -71,6 +71,84 @@ export class Metrics {
   }
 
   /**
+   * Performs a word wrap of the passed string.
+   * Returns the list of chunks which should be separated by the soft new line.
+   *
+   * |x| is the starting x-coordinate before the first character of the string,
+   * and |limit| is the maximum line length.
+   *
+   * @param {string} s
+   * @param {number} x
+   * @param {number} limit
+   * @param {string} lastChar
+   * @return {!Array<!TextMetrics>}
+   */
+  wordWrap(s, x, limit, lastChar) {
+    // TODO: this is very slow because of test() call here and
+    // in _measureString. We should optimize and increase kWordWrapRechunkSize.
+    const chunks = [];
+
+    let start = 0;
+    let offset = 0;
+    let wordEnding = false;
+    let metrics = {length: 0, firstWidth: 0, lastWidth: 0, longestWidth: 0};
+    const canWrapFirstWord = Metrics.nonWordCharacterRegex.test(lastChar);
+
+    const lineEndMetrics = () => {
+      if (!metrics.lineBreaks)
+        metrics.firstWidth = metrics.lastWidth;
+      metrics.longestWidth = Math.max(metrics.longestWidth, metrics.lastWidth);
+    };
+
+    const wrap = () => {
+      lineEndMetrics();
+      chunks.push(metrics);
+      metrics = {length: 0, firstWidth: 0, lastWidth: 0, longestWidth: 0};
+      x = 0;
+    };
+
+    const wordEnded = () => {
+      if (offset > start) {
+        const width = this._measureString(s, start, offset);
+        if (x + width > limit && x > 0 && (canWrapFirstWord || start > 0))
+          wrap();
+        metrics.lastWidth += width;
+        metrics.length += offset - start;
+        x += width;
+        start = offset;
+      }
+      wordEnding = false;
+    };
+
+    const lineBreakMetrics = () => {
+      lineEndMetrics();
+      metrics.lineBreaks = (metrics.lineBreaks || 0) + 1;
+      x = 0;
+      metrics.lastWidth = 0;
+    };
+
+    while (offset < s.length) {
+      if (s[offset] === '\n') {
+        wordEnded();
+        start++;
+        metrics.length++;
+        lineBreakMetrics();
+      } else if (Metrics.nonWordCharacterRegex.test(s[offset])) {
+        // TODO: does this work with unicode?
+        wordEnding = true;
+      } else if (wordEnding) {
+        wordEnded();
+      }
+      offset++;
+    }
+    wordEnded();
+    if (metrics.length > 0)
+      chunks.push(metrics);
+
+    return chunks;
+  }
+
+  /**
    * Returns location of a specific point in a string.
    *
    * |before| is a location at the start of a string, and |point| is the one
@@ -185,7 +263,7 @@ export class Metrics {
     xmap[0] = x;
     for (let i = 0; i <= s.length; ) {
       let charCode = s.charCodeAt(i);
-      if (charCode >= 0xD800 && charCode <= 0xDBFF && i + 1 < to) {
+      if (charCode >= 0xD800 && charCode <= 0xDBFF && i + 1 < s.length) {
         xmap[i + 1] = x;
         let codePoint = s.codePointAt(i);
         breaks[i] = Metrics.isRtlCodePoint(codePoint) ? 1 : 0;
@@ -357,5 +435,6 @@ Metrics.bmpRegex = /^[\u{0000}-\u{d7ff}]*$/u;
 Metrics.asciiRegex = /^[\u{0020}-\u{007e}]*$/u;
 Metrics.whitespaceRegex = /\s/u;
 Metrics.anythingRegex = /.*/u;
+Metrics.nonWordCharacterRegex = /^\W$/u;
 
 Metrics._lineBreakCharCode = '\n'.charCodeAt(0);

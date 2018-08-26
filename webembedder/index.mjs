@@ -105,6 +105,10 @@ export class WebEmbedder {
     this._renderer.setUseMonospaceFont(enabled);
   }
 
+  setWordWrapActive(value) {
+    this._renderer.setWordWrapActive(value);
+  }
+
   /**
    * @return {!Editor}
    */

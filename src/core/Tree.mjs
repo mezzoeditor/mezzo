@@ -136,21 +136,29 @@ export class Tree {
   /**
    * Splits the first node of the tree if any.
    *
-   * @return {!{first: ?T, rest: !Tree<T>}}
+   * @return {!{first: ?T, metrics: ?TextMetrics, rest: !Tree<T>}}
    */
   splitFirst() {
     let tmp = splitFirst(this._root);
-    return {first: tmp.left ? tmp.left.data : null, rest: wrap(tmp.right)};
+    return {
+      first: tmp.left ? tmp.left.data : null,
+      metrics: tmp.left ? tmp.left.metrics : null,
+      rest: wrap(tmp.right)
+    };
   }
 
   /**
    * Splits the last node of the tree if any.
    *
-   * @return {!{last: ?T, rest: !Tree<T>}}
+   * @return {!{last: ?T, metrics: ?TextMetrics, rest: !Tree<T>}}
    */
   splitLast() {
     let tmp = splitLast(this._root);
-    return {last: tmp.right ? tmp.right.data : null, rest: wrap(tmp.left)};
+    return {
+      last: tmp.right ? tmp.right.data : null,
+      metrics: tmp.right ? tmp.right.metrics : null,
+      rest: wrap(tmp.left)
+    };
   }
 
   /**
