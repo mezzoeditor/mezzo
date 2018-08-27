@@ -1,3 +1,4 @@
+import { EventEmitter } from '../src/core/EventEmitter.mjs';
 import { TextDecorator } from '../src/core/Decorator.mjs';
 import { Tokenizer } from "../src/editor/Tokenizer.mjs";
 import { Document } from "../src/core/Document.mjs";
@@ -9,14 +10,22 @@ export class SelectedWordHighlighter {
   constructor(editor) {
     this._editor = editor;
     this._document = editor.document();
-    this._editor.addDecorationCallback(this._onDecorate.bind(this));
-    this._document.on(Document.Events.Changed, ({selectionChanged}) => {
-      if (selectionChanged)
-        this._onSelectionChanged();
-    });
     this._selectedWord = '';
     this._selectedWordRange = null;
     this._enabled = true;
+
+    this._eventListeners = [
+      this._editor.addDecorationCallback(this._onDecorate.bind(this)),
+      this._document.on(Document.Events.Changed, ({selectionChanged}) => {
+        if (selectionChanged)
+          this._onSelectionChanged();
+      })
+    ];
+  }
+
+  dispose() {
+    EventEmitter.removeEventListeners(this._eventListeners);
+    this._editor.raf();
   }
 
   /**

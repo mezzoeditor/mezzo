@@ -15,14 +15,12 @@ export class JSHighlighter {
     this._jobId = 0;
     this._parser = null;
 
-    this._onDecorateCallback = this._onDecorate.bind(this);
-
     this._editor = editor;
-    this._editor.addDecorationCallback(this._onDecorateCallback);
     this._document = editor.document();
 
     this._eventListeners = [
-      this._document.on(Document.Events.Changed, this._onDocumentChanged.bind(this))
+      this._document.on(Document.Events.Changed, this._onDocumentChanged.bind(this)),
+      this._editor.addDecorationCallback(this._onDecorate.bind(this)),
     ];
 
     this._parser = new Parser(this._document.text().iterator(0), Parser.defaultState());
@@ -57,7 +55,6 @@ export class JSHighlighter {
   }
 
   dispose() {
-    this._editor.removeDecorationCallback(this._onDecorateCallback);
     EventEmitter.removeEventListeners(this._eventListeners);
     this._document.off(Document.Events.Changed, this._onReplaceCallback);
     if (this._jobId) {

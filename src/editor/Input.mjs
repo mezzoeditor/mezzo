@@ -39,9 +39,11 @@ export class Input {
 
   /**
    * @param {?function(!RangeEdit):?InputOverride} override
+   * @return {function()}
    */
   addInputOverride(override) {
     this._overrides.add(override);
+    return this.removeInputOverride.bind(this, override);
   }
 
   /**

@@ -1,3 +1,5 @@
+import {EventEmitter} from '../src/core/EventEmitter.mjs';
+
 export class SmartBraces {
   /**
    * @param {!Editor} editor
@@ -9,7 +11,14 @@ export class SmartBraces {
       '{}',
       '[]',
     ];
-    editor.input().addInputOverride(this._onEdit.bind(this));
+
+    this._eventListeners = [
+      editor.input().addInputOverride(this._onEdit.bind(this))
+    ];
+  }
+
+  dispose() {
+    EventEmitter.removeEventListeners(this._eventListeners);
   }
 
   /**

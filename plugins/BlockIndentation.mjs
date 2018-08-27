@@ -1,3 +1,5 @@
+import { EventEmitter } from '../src/core/EventEmitter.mjs';
+
 export class BlockIndentation {
   /**
    * @param {!Editor} editor
@@ -5,7 +7,9 @@ export class BlockIndentation {
   constructor(editor) {
     this._input = editor.input();
     this._document = editor.document();
-    this._input.addInputOverride(this._onInput.bind(this));
+    this._eventListeners = [
+      this._input.addInputOverride(this._onInput.bind(this)),
+    ];
   }
 
   /**
@@ -28,5 +32,12 @@ export class BlockIndentation {
       edit: { from: edit.from, to: edit.to, s},
       cursorOffset,
     };
+  }
+
+  /**
+   * @override
+   */
+  dispose() {
+    EventEmitter.removeEventListeners(this._eventListeners);
   }
 };

@@ -13,12 +13,9 @@ export class Search extends EventEmitter {
     super();
     this._chunkSize = CHUNK_SIZE;
     this._editor = editor;
-    this._editor.addDecorationCallback(this._onDecorate.bind(this));
     this._document = editor.document();
-    this._document.on(Document.Events.Changed, this._onDocumentChanged.bind(this));
 
     this._allocator = new WorkAllocator(0);
-
     this._decorator = new LineDecorator('search.match');
     this._currentMatchDecorator = new LineDecorator('search.match.current');
     this._options = null;
@@ -28,6 +25,11 @@ export class Search extends EventEmitter {
     this._lastEnabled = false;
     this._lastReportedCurrentMatchIndex = -1;
     this._lastReportedMatchesCount = 0;
+
+    this._eventListeners = [
+      this._document.on(Document.Events.Changed, this._onDocumentChanged.bind(this)),
+      this._editor.addDecorationCallback(this._onDecorate.bind(this)),
+    ];
   }
 
   /**
@@ -158,6 +160,12 @@ export class Search extends EventEmitter {
     if (this._allocator.hasWork())
       this._jobId = this._editor.platformSupport().requestIdleCallback(this._searchChunk.bind(this));
     this._emitUpdatedIfNeeded();
+  }
+
+  dispose() {
+    EventEmitter.removeEventListeners(this._eventListeners);
+    this._cancel();
+    this._editor.raf();
   }
 
   // ------ Internals -------

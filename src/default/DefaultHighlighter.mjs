@@ -1,14 +1,15 @@
 import { TextDecorator } from '../core/Decorator.mjs';
+import { EventEmitter } from '../core/EventEmitter.mjs';
 
 export class DefaultHighlighter {
   constructor(editor) {
-    this._onDecorateCallback = this._onDecorate.bind(this);
-    this._editor = editor;
-    this._editor.addDecorationCallback(this._onDecorateCallback);
+    this._eventListeners = [
+      editor.addDecorationCallback(this._onDecorate.bind(this)),
+    ];
   }
 
   dispose() {
-    this._editor.removeDecorationCallback(this._onDecorateCallback);
+    EventEmitter.removeEventListeners(this._eventListeners);
   }
 
   /**

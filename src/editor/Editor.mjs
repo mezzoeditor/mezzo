@@ -83,10 +83,12 @@ export class Editor extends EventEmitter {
 
   /**
    * @param {DecorationCallback} callback
+   * @return {function()}
    */
   addDecorationCallback(callback) {
     this._decorationCallbacks.push(callback);
     this.raf();
+    return this.removeDecorationCallback.bind(this, callback);
   }
 
   /**
