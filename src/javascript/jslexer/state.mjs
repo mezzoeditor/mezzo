@@ -141,3 +141,32 @@ export class Parser {
   }
 }
 
+export function isEqualState(a, b) {
+  const fastPath = a.options.ecmaVersion === b.options.ecmaVersion &&
+    a.options.sourceType === b.options.sourceType &&
+    a.options.allowHashBang === b.options.allowHashBang &&
+    // We should compare everything BUT offsets: they are stale
+    // and will be restored with 'setIterator' call.
+    // a.offset === b.offset &&
+    // a.startOffset === b.startOffset &&
+    // a.endOffset === b.endOffset &&
+    // a.lastTokEndOffset === b.lastTokEndOffset &&
+    // a.recoveryOffset === b.recoveryOffset &&
+    a.containsEsc === b.containsEsc &&
+    a.type === b.type &&
+    a.value === b.value &&
+    a.lineBreakSinceLastTokEnd === b.lineBreakSinceLastTokEnd &&
+    a.recoveryNeeded === b.recoveryNeeded &&
+    a.recoveryType === b.recoveryType &&
+    a.recoveryQuote === b.recoveryQuote &&
+    a.exprAllowed === b.exprAllowed &&
+    a.context.length === b.context.length;
+  if (!fastPath)
+    return false;
+  for (let i = 0; i < a.context.length; ++i) {
+    if (a.context[i] !== b.context[i])
+      return false;
+  }
+  return true;
+}
+

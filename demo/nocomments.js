@@ -8,7 +8,7 @@ trace.setup();
 
 const examples = [
   'index.js',
-  'nocomments.js',
+  'simple.js',
   'jquery.min.js',
   'shakespeare.txt',
   'megaline.txt',
@@ -24,10 +24,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.querySelector('.ismonospace').addEventListener('change', event => {
     embedder.setUseMonospaceFont(event.target.checked);
-  }, false);
-
-  document.querySelector('.wordwrap').addEventListener('change', event => {
-    embedder.setWordWrapActive(event.target.checked);
   }, false);
 
   document.body.appendChild(embedder.element());
@@ -58,15 +54,12 @@ function addExamples(embedder) {
 
     if (exampleName.indexOf('jquery') !== -1)
       embedder.setText(new Array(1000).fill(text).join(''));
-    if (exampleName.indexOf('nocomments') !== -1)
-      embedder.setText(new Array(10000).fill(text).join(''));
     else if (exampleName.indexOf('megacolumn') !== -1)
       embedder.setText(new Array(10000).fill(text).join(''));
     else if (exampleName.indexOf('unicodeperf') !== -1)
       embedder.setText(new Array(100).fill(text).join(''));
     else
       embedder.setText(text);
-    // embedder.setText('abcdefg abcdefg abcdefg abcdefg abcdefg \nabcdefg\n abcdefg abcdefg abcdefg abcdefg\n abcdefg abcdefg abcdefg abcdefg abcdefg abcdefg\n abcdefg');
     embedder.focus();
 
     const selection = [];
