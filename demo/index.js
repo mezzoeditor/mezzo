@@ -56,15 +56,15 @@ function addExamples(embedder) {
     const text = await fetch(exampleName).then(response => response.text());
 
     if (exampleName.endsWith('.js'))
-      embedder.setMimeType('text/javascript');
+      await embedder.setMimeType('text/javascript');
     else if (exampleName.endsWith('.css'))
-      embedder.setMimeType('text/css');
+      await embedder.setMimeType('text/css');
     else
-      embedder.setMimeType('text/plain');
+      await embedder.setMimeType('text/plain');
 
     if (exampleName.indexOf('jquery') !== -1)
       embedder.setText(new Array(1000).fill(text).join(''));
-    if (exampleName.indexOf('nocomments') !== -1)
+    else if (exampleName.indexOf('nocomments') !== -1)
       embedder.setText(new Array(10000).fill(text).join(''));
     else if (exampleName.indexOf('megacolumn') !== -1)
       embedder.setText(new Array(10000).fill(text).join(''));
