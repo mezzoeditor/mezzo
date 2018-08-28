@@ -1,0 +1,66 @@
+sidebar-component {
+  flex: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  user-select: none;
+  contain: content;
+  white-space: nowrap;
+}
+
+sidebar-component
+header {
+  padding: 0 11px;
+  color: #969696;
+  height: 30px;
+  align-items: center;
+  display: flex;
+}
+
+sidebar-component
+file-entry {
+  padding: 4px;
+  padding-left: calc(var(--depth) * 11px + 11px);
+  display: block;
+}
+
+sidebar-component
+file-entry-content {
+  --icon-size: 9px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+sidebar-component
+file-entry.selected {
+  background-color: rgba(126, 188, 254, 0.5);
+}
+
+sidebar-component
+expand-icon {
+  -webkit-mask-image: url(./expand-icon.svg);
+  -webkit-mask-size: var(--icon-size) var(--icon-size);
+  -webkit-mask-position: 0 0;
+  background-color: #a5a5a5;
+  width: var(--icon-size);
+  height: var(--icon-size);
+  margin-right: 4px;
+  transition: transform 100ms ease-in-out;
+  flex-shrink: 0;
+}
+
+expand-icon.expanded {
+  transform: rotate(90deg);
+}
+
+sidebar-component
+file-entry:hover:not(.selected) {
+  cursor: pointer;
+  background-color: #ddd;
+}
+
+sidebar-component
+file-navigator {
+  min-width: max-content;
+}
