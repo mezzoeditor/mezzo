@@ -7,6 +7,7 @@ import { trace } from "../src/core/Trace.mjs";
 trace.setup();
 
 const examples = [
+  'css.css',
   'index.js',
   'nocomments.js',
   'jquery.min.js',
@@ -54,7 +55,12 @@ function addExamples(embedder) {
   async function setupExample(embedder, exampleName) {
     const text = await fetch(exampleName).then(response => response.text());
 
-    embedder.setMimeType(exampleName.endsWith('.js') ? 'text/javascript' : 'text/plain');
+    if (exampleName.endsWith('.js'))
+      embedder.setMimeType('text/javascript');
+    else if (exampleName.endsWith('.css'))
+      embedder.setMimeType('text/css');
+    else
+      embedder.setMimeType('text/plain');
 
     if (exampleName.indexOf('jquery') !== -1)
       embedder.setText(new Array(1000).fill(text).join(''));

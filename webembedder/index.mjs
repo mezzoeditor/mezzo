@@ -1,7 +1,6 @@
 import { Renderer } from "../src/web/Renderer.mjs";
 import { WebPlatformSupport } from "../src/web/WebPlatformSupport.mjs";
 import { Editor } from "../src/editor/Editor.mjs";
-import { JSHighlighter } from "../src/javascript/JSHighlighter.mjs";
 import { DefaultHighlighter } from "../src/default/DefaultHighlighter.mjs";
 
 import { SelectedWordHighlighter } from '../plugins/SelectedWordHighlighter.mjs';
@@ -10,11 +9,6 @@ import { Search } from '../plugins/Search.mjs';
 import { BlockIndentation } from '../plugins/BlockIndentation.mjs';
 import { AddNextOccurence } from '../plugins/AddNextOccurence.mjs';
 import { SearchToolbar } from '../plugins/web/SearchToolbar.mjs';
-
-const mimeTypeMap = new Map(Object.entries({
-  'text/javascript': '../src/javascript/JSHighlighter.mjs',
-  'text/plain': '../src/default/DefaultHighlighter.mjs',
-}));
 
 export class WebEmbedder {
   /**
@@ -59,15 +53,21 @@ export class WebEmbedder {
    * @param {string} mimeType
    */
   async setMimeType(mimeType) {
-    if (!mimeTypeMap.has(mimeType))
-      mimeType = 'text/plain';
+    mimeType = mimeType.toLowerCase();
     if (this._mimeType === mimeType)
       return;
     this._mimeType = mimeType;
-    //debugger;
-    //const highlighter = await import(mimeTypeMap.get(mimeType));
-    const highlighter = mimeType.toLowerCase() === 'text/javascript' ? new JSHighlighter(this._editor) : new DefaultHighlighter(this._editor);
-    this._editor.setHighlighter(highlighter);
+    if (mimeType === 'text/javascript') {
+      const {JSHighlighter} = await import('../src/javascript/JSHighlighter.mjs');
+      this._editor.setHighlighter(new JSHighlighter(this._editor));
+      return;
+    }
+    if (mimeType === 'text/css') {
+      const {CMHighlighter} = await import('../cmmodes/CMHighlighter.mjs');
+      this._editor.setHighlighter(new CMHighlighter(this._editor, 'text/css'));
+      return;
+    }
+    this._editor.setHighlighter(new DefaultHighlighter(this._editor));
   }
 
   /**

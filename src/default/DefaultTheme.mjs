@@ -61,6 +61,11 @@ export let DefaultTheme = {
       color: 'hsl(240, 73%, 38%)',
     },
   },
+  'syntax.variable': {
+    text: {
+      color: 'rgb(0, 0, 128)',
+    },
+  },
   'syntax.comment': {
     text: {
       color: 'hsl(120, 100%, 23%)',
