@@ -64,7 +64,8 @@ export class WebEmbedder {
     }
     if (mimeType === 'text/css') {
       const {CMHighlighter} = await import('../cmmodes/CMHighlighter.mjs');
-      this._editor.setHighlighter(new CMHighlighter(this._editor, 'text/css'));
+      const highlighter = await CMHighlighter.createCSS(this._editor);
+      this._editor.setHighlighter(highlighter);
       return;
     }
     this._editor.setHighlighter(new DefaultHighlighter(this._editor));

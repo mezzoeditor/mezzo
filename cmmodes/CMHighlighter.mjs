@@ -2,15 +2,26 @@ import { Decorator, TextDecorator } from '../src/core/Decorator.mjs';
 import { EventEmitter } from '../src/core/EventEmitter.mjs';
 import { trace } from '../src/core/Trace.mjs';
 import {} from './modes/runmode-standalone.js';
-import {} from './modes/css.js';
 
 export class CMHighlighter {
-  constructor(editor, mimeType) {
+  static async createCSS(editor) {
+    await import('./modes/css.js');
+    return new CMHighlighter(editor, 'text/css', new Map(Object.entries({
+      'property': 'syntax.string',
+      'atom': 'syntax.keyword',
+      'number': 'syntax.number',
+      'comment': 'syntax.comment',
+      'variable-2': 'syntax.variable',
+    })));
+  }
+
+  constructor(editor, mimeType, cmtokensToTheme) {
     this._mimeType = mimeType;
     this._editor = editor;
     this._platformSupport = editor.platformSupport();
     this._document = editor.document();
     this._mode = CodeMirror.getMode({indentUnit: 2}, mimeType);
+    this._cmtokensToTheme = cmtokensToTheme;
 
     this._states = new Decorator();
     this._states.add(0, 0, CodeMirror.startState(this._mode));
@@ -98,21 +109,16 @@ export class CMHighlighter {
       const lineText = text.content(initial.to, range.to);
       const stream = new CodeMirror.StringStream(lineText);
       while (!stream.eol()) {
-        const type = this._mode.token(stream, state);
+        const token = this._mode.token(stream, state);
         const value = stream.current();
         let dType = 'syntax.default';
-        if (!type)
-          dType = 'syntax.default';
-        else if (type.includes('property') || type.includes('string') || type.includes('meta'))
-          dType = 'syntax.string';
-        else if (type.includes('atom'))
-          dType = 'syntax.keyword';
-        else if (type.includes('number'))
-          dType = 'syntax.number';
-        else if (type.includes('comment'))
-          dType = 'syntax.comment';
-        else if (type.includes('variable-2'))
-          dType = 'syntax.variable';
+        if (token) {
+          // Codemirror modes return a list of "styles". Pick
+          // the first we have a mapping for.
+          const type = token.split(' ').find(type => this._cmtokensToTheme.has(type));
+          if (type)
+            dType = this._cmtokensToTheme.get(type);
+        }
         decorator.add(initial.to + stream.start, initial.to + stream.start + value.length, dType);
         stream.start = stream.pos;
       }
