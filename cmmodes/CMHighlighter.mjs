@@ -15,6 +15,23 @@ export class CMHighlighter {
     })));
   }
 
+  static async createHTML(editor) {
+    await Promise.all([
+      import('./modes/css.js'),
+      import('./modes/xml.js'),
+      import('./modes/javascript.js'),
+      import('./modes/htmlmixed.js'),
+    ]);
+
+    return new CMHighlighter(editor, 'text/html', new Map(Object.entries({
+      'property': 'syntax.string',
+      'atom': 'syntax.keyword',
+      'number': 'syntax.number',
+      'comment': 'syntax.comment',
+      'variable-2': 'syntax.variable',
+    })));
+  }
+
   constructor(editor, mimeType, cmtokensToTheme) {
     this._mimeType = mimeType;
     this._editor = editor;
@@ -61,7 +78,7 @@ export class CMHighlighter {
     if (line + 1 >= text.lineCount())
       return;
     let lastOffset = initial.to;
-    const state = copyState(this._mode, initial.data);
+    const state = CodeMirror.copyState(this._mode, initial.data);
     let budget = 20000;
     while (budget > 0 && ++line < text.lineCount()) {
       const offset = text.positionToOffset({line: line, column: 0});
@@ -72,7 +89,7 @@ export class CMHighlighter {
         stream.start = stream.pos;
       }
       this._states.clearStarting(lastOffset + 0.5, offset);
-      this._states.add(offset - 0.5, offset, copyState(this._mode, state));
+      this._states.add(offset - 0.5, offset, CodeMirror.copyState(this._mode, state));
       budget -= lineText.length;
       lastOffset = offset;
     }
@@ -105,7 +122,7 @@ export class CMHighlighter {
         decorator.add(range.from, range.to, 'syntax.default');
         continue;
       }
-      const state = copyState(this._mode, initial.data);
+      const state = CodeMirror.copyState(this._mode, initial.data);
       const lineText = text.content(initial.to, range.to);
       const stream = new CodeMirror.StringStream(lineText);
       while (!stream.eol()) {
@@ -128,7 +145,7 @@ export class CMHighlighter {
   }
 };
 
-function copyState(mode, state) {
+CodeMirror.copyState = function(mode, state) {
   if (state === true)
     return state;
   if (mode.copyState)

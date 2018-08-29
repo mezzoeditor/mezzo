@@ -7,6 +7,7 @@ import { trace } from "../src/core/Trace.mjs";
 trace.setup();
 
 const examples = [
+  'index.html',
   'css.css',
   'index.js',
   'nocomments.js',
@@ -59,6 +60,8 @@ function addExamples(embedder) {
       await embedder.setMimeType('text/javascript');
     else if (exampleName.endsWith('.css'))
       await embedder.setMimeType('text/css');
+    else if (exampleName.endsWith('.html'))
+      await embedder.setMimeType('text/html');
     else
       await embedder.setMimeType('text/plain');
 
