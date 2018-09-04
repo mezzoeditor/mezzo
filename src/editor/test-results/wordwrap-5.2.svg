@@ -1,0 +1,63 @@
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" baseProfile="full" width="50ch" height="20em" style="font-family: monospace; font-size: 14px;">
+  <line x1="4ch" y1="0em" x2="4ch" y2="20em" stroke="rgb(187, 187, 187)" id="gutter-border"></line>
+  <g id="gutter">
+    <text x="3.5ch" y="0.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">1</text>
+    <text x="3.5ch" y="1.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">1</text>
+    <text x="3.5ch" y="2.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">1</text>
+    <text x="3.5ch" y="3.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">1</text>
+    <text x="3.5ch" y="4.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">1</text>
+    <text x="3.5ch" y="5.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">1</text>
+    <text x="3.5ch" y="6.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">1</text>
+    <text x="3.5ch" y="7.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">1</text>
+    <text x="3.5ch" y="8.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">1</text>
+    <text x="3.5ch" y="9.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">2</text>
+    <text x="3.5ch" y="10.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">2</text>
+    <text x="3.5ch" y="11.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">2</text>
+    <text x="3.5ch" y="12.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">2</text>
+    <text x="3.5ch" y="13.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">2</text>
+    <text x="3.5ch" y="14.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">2</text>
+    <text x="3.5ch" y="15.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">2</text>
+    <text x="3.5ch" y="16.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">2</text>
+    <text x="3.5ch" y="17.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">2</text>
+    <text x="3.5ch" y="18.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">2</text>
+    <text x="3.5ch" y="19.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">3</text>
+  </g>
+  <clipPath id="viewport-clip">
+    <rect x="4ch" y="0em" width="45ch" height="20em"></rect>
+  </clipPath>
+  <g id="viewport" clip-path="url(#viewport-clip)">
+    <g id="lines">
+      <rect x="4.5ch" y="0.5em" width="44ch" height="1em" fill="rgba(126, 188, 254, 0.1)"></rect>
+    </g>
+    <g id="background">
+      <line x1="4.5ch" y1="0.5em" x2="4.5ch" y2="1.5em" stroke="rgb(33, 33, 33)"></line>
+    </g>
+    <g id="text">
+      <text x="4.5ch" y="0.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">1 34 </text>
+      <text x="4.5ch" y="1.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">678 </text>
+      <text x="4.5ch" y="2.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">0123 </text>
+      <text x="4.5ch" y="3.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">56789 </text>
+      <text x="4.5ch" y="4.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">123456 </text>
+      <text x="4.5ch" y="5.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">8901234 </text>
+      <text x="4.5ch" y="6.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">67890123 </text>
+      <text x="4.5ch" y="7.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">567890123 </text>
+      <text x="4.5ch" y="8.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">5678901234</text>
+      <text x="4.5ch" y="9.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">12 </text>
+      <text x="4.5ch" y="10.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">456 </text>
+      <text x="4.5ch" y="11.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">8901 </text>
+      <text x="4.5ch" y="12.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">34567 </text>
+      <text x="4.5ch" y="13.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">901234 </text>
+      <text x="4.5ch" y="14.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">6789012 </text>
+      <text x="4.5ch" y="15.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">45678901 </text>
+      <text x="4.5ch" y="16.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">345678901 </text>
+      <text x="4.5ch" y="17.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">3456789012 </text>
+      <text x="4.5ch" y="18.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">45678901234</text>
+      <text x="4.5ch" y="19.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">123 </text>
+    </g>
+  </g>
+  <g id="scrollbars">
+    <rect x="49ch" y="0em" width="1ch" height="20em" fill="white" stroke="rgba(100, 100, 100, 0.2)"></rect>
+    <rect x="49ch" y="0em" width="1ch" height="0.396em" fill="rgba(100, 100, 100, 0.4)"></rect>
+    <rect x="49.4ch" y="0em" width="0.2ch" height="0.02em" fill="rgba(126, 188, 254, 0.6)"></rect>
+  </g>
+</svg>

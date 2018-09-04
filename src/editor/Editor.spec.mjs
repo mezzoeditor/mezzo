@@ -73,5 +73,63 @@ export function addTests(runner, expect, options) {
       golden.expectSVG(renderComplex(99.9, 99.9), 'complex-999-999.svg');
     });
   });
+
+  describe('WordWrap', () => {
+    function renderWordWrap(scrollLeft, scrollTop, wrapLineLength) {
+      const platform = new TestPlatformSupport();
+      const renderer = new SVGRenderer(platform);
+      const lines = [];
+      for (let i = 0; i < 100; i++) {
+        let line = [];
+        for (let j = 0; j < 10; j++)
+          line.push(Array(j + (i % 10) + 2).join('a'));
+        line = line.join(' ');
+        let res = '';
+        for (let j = 0; j < line.length; j++) {
+          if (line[j] === ' ')
+            res += ' ';
+          else
+            res += ((j + 1) % 10);
+        }
+        lines.push(res);
+      }
+      renderer.editor().reset(lines.join('\n'));
+      renderer.editor().markup().setWordWrapLineWidth(wrapLineLength);
+      platform.runUntilIdle();
+      return renderer.render(scrollLeft, scrollTop);
+    }
+
+    it('wordwrap-23', () => {
+      golden.expectSVG(renderWordWrap(0.0, 0.0, 23), 'wordwrap-23.svg');
+    });
+
+    it('wordwrap-23-scroll', () => {
+      golden.expectSVG(renderWordWrap(1.6, 5.8, 23), 'wordwrap-23-scroll.svg');
+    });
+
+    it('wordwrap-23-end', () => {
+      golden.expectSVG(renderWordWrap(99, 99, 23), 'wordwrap-23-end.svg');
+    });
+
+    it('wordwrap-14', () => {
+      golden.expectSVG(renderWordWrap(0.0, 0.0, 14), 'wordwrap-14.svg');
+    });
+
+    it('wordwrap-2.1', () => {
+      golden.expectSVG(renderWordWrap(0.0, 0.0, 2.1), 'wordwrap-2.1.svg');
+    });
+
+    it('wordwrap-100', () => {
+      golden.expectSVG(renderWordWrap(0.0, 0.0, 100), 'wordwrap-100.svg');
+    });
+
+    it('wordwrap-100-end', () => {
+      golden.expectSVG(renderWordWrap(0, 150, 100), 'wordwrap-100-end.svg');
+    });
+
+    it('wordwrap-5.2', () => {
+      golden.expectSVG(renderWordWrap(0.0, 0.0, 5.2), 'wordwrap-5.2.svg');
+    });
+  });
 }
 

@@ -335,6 +335,8 @@ export class Metrics {
     if (from === to)
       return 0;
 
+    // TODO: it seems that testing substring may be slower than the whole string.
+    // Needs investigation.
     if (this._widthOneRegex && this._widthOneRegex.test(s.substring(from, to)))
       return to - from;
 

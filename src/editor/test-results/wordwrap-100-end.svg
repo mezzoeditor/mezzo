@@ -1,0 +1,43 @@
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" baseProfile="full" width="50ch" height="20em" style="font-family: monospace; font-size: 14px;">
+  <line x1="4ch" y1="0em" x2="4ch" y2="20em" stroke="rgb(187, 187, 187)" id="gutter-border"></line>
+  <g id="gutter">
+    <text x="3.5ch" y="-0.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">95</text>
+    <text x="3.5ch" y="0.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">96</text>
+    <text x="3.5ch" y="1.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">96</text>
+    <text x="3.5ch" y="2.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">97</text>
+    <text x="3.5ch" y="3.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">97</text>
+    <text x="3.5ch" y="4.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">98</text>
+    <text x="3.5ch" y="5.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">98</text>
+    <text x="3.5ch" y="6.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">99</text>
+    <text x="3.5ch" y="7.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">99</text>
+    <text x="3.5ch" y="8.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">100</text>
+    <text x="3.5ch" y="9.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">100</text>
+  </g>
+  <clipPath id="viewport-clip">
+    <rect x="4ch" y="0em" width="45ch" height="20em"></rect>
+  </clipPath>
+  <g id="viewport" clip-path="url(#viewport-clip)">
+    <g id="lines"></g>
+    <g id="background"></g>
+    <g id="text">
+      <text x="4.5ch" y="-0.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">12345678901234</text>
+      <text x="4.5ch" y="0.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">123456 8901234 67890123 567890123 5678901234 </text>
+      <text x="4.5ch" y="1.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">012345678901234</text>
+      <text x="4.5ch" y="2.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">1234567 90123456 890123456 8901234567 9012345</text>
+      <text x="4.5ch" y="3.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">345678901234567 9012345678901234</text>
+      <text x="4.5ch" y="4.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">12345678 012345678 0123456789 12345678901 345</text>
+      <text x="4.5ch" y="5.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">1234567890123456 89012345678901234</text>
+      <text x="4.5ch" y="6.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">123456789 1234567890 23456789012 456789012345</text>
+      <text x="4.5ch" y="7.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">2345678901234567 90123456789012345 7890123456</text>
+      <text x="4.5ch" y="8.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">1234567890 23456789012 456789012345 789012345</text>
+      <text x="4.5ch" y="9.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">90123456789012345 789012345678901234 67890123</text>
+    </g>
+  </g>
+  <g id="scrollbars">
+    <rect x="49ch" y="0em" width="1ch" height="20em" fill="white" stroke="rgba(100, 100, 100, 0.2)"></rect>
+    <rect x="49ch" y="16.76em" width="1ch" height="2.235em" fill="rgba(100, 100, 100, 0.4)"></rect>
+    <rect x="4ch" y="19em" width="45ch" height="1em" fill="transparent" stroke="rgba(100, 100, 100, 0.2)"></rect>
+    <rect x="4ch" y="19em" width="18.578ch" height="1em" fill="rgba(100, 100, 100, 0.4)"></rect>
+    <rect x="49.4ch" y="0em" width="0.2ch" height="0.112em" fill="rgba(126, 188, 254, 0.6)"></rect>
+  </g>
+</svg>
