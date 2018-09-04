@@ -29,7 +29,7 @@ class ContextBasedMeasurer {
 
     this._defaultWidth = monospace ? ctx.measureText('M').width : 1;
     this._defaultRegex = monospace ? Metrics.asciiRegex : null;
-    this._defaultRegexWithNewLines = monospace ? Metrics.asciiRegexWithNewLine : null;
+    this._defaultRegexWithNewLines = monospace ? Metrics.asciiRegexWithNewLines : null;
     this._lineHeight = fontHeight;
     this._ctx = ctx;
   }

@@ -611,7 +611,7 @@ function Offset(anchor) {
 
 let kChunkSize = 1000;
 let kRechunkSize = 10000000;
-let kWordWrapRechunkSize = 1000000;
+let kWordWrapRechunkSize = 2000000;
 
 Markup.test = {};
 

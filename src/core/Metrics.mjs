@@ -87,16 +87,14 @@ export class Metrics {
    * @return {!Array<!TextMetrics>}
    */
   wordWrap(s, x, limit, lastChar) {
-    // TODO: this is very slow because of test() call here and
-    // in _measureString. We should optimize and increase kWordWrapRechunkSize.
     const chunks = [];
     const fastPath = this._widthOneRegexWithNewLines && this._widthOneRegexWithNewLines.test(s);
+    const canWrapFirstWord = Metrics.nonWordCharacterRegex.test(lastChar);
 
     let start = 0;
     let offset = 0;
     let wordEnding = false;
     let metrics = {length: 0, firstWidth: 0, lastWidth: 0, longestWidth: 0};
-    const canWrapFirstWord = Metrics.nonWordCharacterRegex.test(lastChar);
 
     const lineEndMetrics = () => {
       if (!metrics.lineBreaks)
@@ -131,20 +129,27 @@ export class Metrics {
       metrics.lastWidth = 0;
     };
 
-    while (offset < s.length) {
-      if (s[offset] === '\n') {
+    const lines = s.split("\n");
+    for (let i = 0; i < lines.length; i++) {
+      const words = lines[i].split(/(\W+)/u);
+      wordEnding = false;
+      for (let j = 0; j < words.length; j++) {
+        if (wordEnding) {
+          wordEnded();
+        } else if (j > 0) {
+          wordEnding = true;
+        }
+        offset += words[j].length
+      }
+      if (i < lines.length - 1) {
         wordEnded();
         start++;
         metrics.length++;
         lineBreakMetrics();
-      } else if (Metrics.nonWordCharacterRegex.test(s[offset])) {
-        // TODO: does this work with unicode?
-        wordEnding = true;
-      } else if (wordEnding) {
-        wordEnded();
+        offset++;
       }
-      offset++;
     }
+
     wordEnded();
     if (metrics.length > 0)
       chunks.push(metrics);
