@@ -32,6 +32,14 @@ export class Measurer {
   }
 
   /**
+   * Same as above, but should also match new lines.
+   *
+   * @return {?RegExp}
+   */
+  defaultWidthRegexWithNewLines() {
+  }
+
+  /**
    * Measures the width of a string.
    * @param {string} s
    */
@@ -83,7 +91,7 @@ export class Markup extends EventEmitter {
     this._lineHeight = measurer.lineHeight();
     this._defaultWidth = measurer.defaultWidth();
     const measure = s => measurer.measureString(s) / this._defaultWidth;
-    this._metrics = new Metrics(measurer.defaultWidthRegex(), measure, measure);
+    this._metrics = new Metrics(measurer.defaultWidthRegex(), measurer.defaultWidthRegexWithNewLines(), measure, measure);
     this._allocator = new WorkAllocator(this._text.length());
     this._rechunk();
   }

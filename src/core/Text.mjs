@@ -303,7 +303,7 @@ export class Text {
 // It might slow down common operations though. We should measure that and
 // consider different chunk sizes based on total document length.
 let kDefaultChunkSize = 1000;
-let metrics = new Metrics(Metrics.bmpRegex, char => 1, char => 1);
+let metrics = new Metrics(Metrics.bmpRegex, Metrics.bmpRegex, char => 1, char => 1);
 
 /**
  * @param {string} content

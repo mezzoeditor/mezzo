@@ -13,6 +13,10 @@ export class TestMeasurer {
     return /^.*$/;
   }
 
+  defaultWidthRegexWithNewLines() {
+    return /^.*$/s;
+  }
+
   measureString(s) {
     throw new Error('UNREACHABLE CODE');
   }

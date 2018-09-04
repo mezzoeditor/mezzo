@@ -13,8 +13,10 @@ export let RoundMode = {
 export class Metrics {
   /**
    * Regex for strings which consist only of characters of width equal to one.
-   * Used for fast-path calculations.
+   * Used for fast-path calculations. The new-lines variation should also match
+   * new lines.
    * @param {?RegExp} widthOneRegex
+   * @param {?RegExp} widthOneRegexWithNewLines
    *
    * Measures the width of a single BMP character.
    * Note that char.length === 1, meaning it has a single code unit and code point.
@@ -24,8 +26,9 @@ export class Metrics {
    * Note that char.length === 2, meaning it has two code units, but still a single code point.
    * @param {function(string):number} measureSupplementary
    */
-  constructor(widthOneRegex, measureBMP, measureSupplementary) {
+  constructor(widthOneRegex, widthOneRegexWithNewLines, measureBMP, measureSupplementary) {
     this._widthOneRegex = widthOneRegex;
+    this._widthOneRegexWithNewLines = widthOneRegexWithNewLines;
     this._measureBMP = measureBMP;
     this._measureSupplementary = measureSupplementary;
     this._bmp = new Float32Array(65536);
@@ -87,6 +90,7 @@ export class Metrics {
     // TODO: this is very slow because of test() call here and
     // in _measureString. We should optimize and increase kWordWrapRechunkSize.
     const chunks = [];
+    const fastPath = this._widthOneRegexWithNewLines && this._widthOneRegexWithNewLines.test(s);
 
     let start = 0;
     let offset = 0;
@@ -109,7 +113,7 @@ export class Metrics {
 
     const wordEnded = () => {
       if (offset > start) {
-        const width = this._measureString(s, start, offset);
+        const width = fastPath ? offset - start : this._measureString(s, start, offset);
         if (x + width > limit && x > 0 && (canWrapFirstWord || start > 0))
           wrap();
         metrics.lastWidth += width;
@@ -435,8 +439,8 @@ export class Metrics {
 
 Metrics.bmpRegex = /^[\u{0000}-\u{d7ff}]*$/u;
 Metrics.asciiRegex = /^[\u{0020}-\u{007e}]*$/u;
+Metrics.asciiRegexWithNewLines = /^[\n\u{0020}-\u{007e}]*$/u;
 Metrics.whitespaceRegex = /\s/u;
-Metrics.anythingRegex = /.*/u;
 Metrics.nonWordCharacterRegex = /^\W$/u;
 
 Metrics._lineBreakCharCode = '\n'.charCodeAt(0);

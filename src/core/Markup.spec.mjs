@@ -10,7 +10,7 @@ export function addTests(runner, expect) {
   const {beforeAll, beforeEach, afterAll, afterEach} = runner;
 
   function createTestMetrics() {
-    return new Metrics(null, s => s.charCodeAt(0) - 'a'.charCodeAt(0) + 1, s => 100);
+    return new Metrics(null, null, s => s.charCodeAt(0) - 'a'.charCodeAt(0) + 1, s => 100);
   }
 
   function createTestMeasurer() {
@@ -18,6 +18,7 @@ export function addTests(runner, expect) {
       defaultWidth: () => 1,
       lineHeight: () => 3,
       defaultWidthRegex: () => null,
+      defaultWidthRegexWithNewLines: () => null,
       measureString: s => s[0] <= 'z' ? s.charCodeAt(0) - 'a'.charCodeAt(0) + 1 : 100
     };
   }

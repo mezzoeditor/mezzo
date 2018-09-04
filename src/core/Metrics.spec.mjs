@@ -7,11 +7,11 @@ export function addTests(runner, expect) {
   const {beforeAll, beforeEach, afterAll, afterEach} = runner;
 
   function createTestMetrics() {
-    return new Metrics(null, s => s.charCodeAt(0) - 'a'.charCodeAt(0) + 1, s => 100);
+    return new Metrics(null, null, s => s.charCodeAt(0) - 'a'.charCodeAt(0) + 1, s => 100);
   }
 
   function createDefaultMetrics() {
-    return new Metrics(Metrics.bmpRegex, s => 1, s => 1);
+    return new Metrics(Metrics.bmpRegex, Metrics.bmpRegex, s => 1, s => 1);
   }
 
   describe('Metrics', () => {
