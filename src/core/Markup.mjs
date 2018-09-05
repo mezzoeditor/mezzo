@@ -5,7 +5,7 @@ import { Tree } from './Tree.mjs';
 import { VisibleRange } from './Frame.mjs';
 import { WorkAllocator } from './WorkAllocator.mjs';
 
- /**
+/**
  * Measurer converts strings to widths and provides line height.
  *
  * @interface
@@ -91,7 +91,7 @@ export class Markup extends EventEmitter {
     this._lineHeight = measurer.lineHeight();
     this._defaultWidth = measurer.defaultWidth();
     const measure = s => measurer.measureString(s) / this._defaultWidth;
-    this._metrics = new Metrics(measurer.defaultWidthRegex(), measurer.defaultWidthRegexWithNewLines(), measure, measure);
+    this._metrics = Metrics.createRegular(measurer.defaultWidthRegex(), measurer.defaultWidthRegexWithNewLines(), measure, measure);
     this._allocator = new WorkAllocator(this._text.length());
     this._rechunk();
   }

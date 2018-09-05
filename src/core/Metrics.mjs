@@ -5,17 +5,121 @@ export let RoundMode = {
 };
 
 /**
- * This class calculates metrics for string chunks. It is designed to work
+ * This interface calculates metrics for string chunks. It is designed to work
  * exclusively with an additive metric. Note that we only support fixed height equal to one.
- *
- * Internally it always measures a single code point and caches the result.
  */
 export class Metrics {
   /**
+   * Returns metrics for a string. See |TextMetrics| for definition.
+   *
+   * @return {!TextMetrics}
+   */
+  forString(s) {
+  }
+
+  /**
+   * Returns location of a specific point in a string.
+   *
+   * |before| is a location at the start of a string, and |point| is the one
+   * we are locating. Returned location is absolute, not relative to |before|.
+   *
+   * When the width does not point exaclty between two code points, |roundMode| controls
+   * which code point to snap to:
+   *   - RoundMode.Floor snaps to the first code point;
+   *   - RoundMode.Ceil snaps to the second code point;
+   *   - RoundMode.Round snaps to the first or second code point depending on
+   *     whether width is further from the left or right border of the second code point.
+   *
+   * If |strict|, throws on out-of-bounds positions.
+   *
+   * @param {string} s
+   * @param {!Location} before
+   * @param {!Point} point
+   * @param {!RoundMode} roundMode
+   * @param {boolean=} strict
+   * @return {!Location}
+   */
+  locateByPoint(s, before, point, roundMode, strict) {
+  }
+
+  /**
+   * Returns location of a specific offset in a string.
+   *
+   * |before| is a location at the start of a string, and |offset| is the one
+   * we are locating. Returned location is absolute, not relative to |before|.
+   *
+   * Throws if |offset| points to a middle of surrogate pair.
+   *
+   * @param {string} s
+   * @param {!Location} before
+   * @param {number} offset
+   * @param {boolean=} strict
+   * @return {!Location}
+   */
+  locateByOffset(s, before, offset, strict) {
+  }
+
+  /**
+   * Fills a map between offset in (from..to] range to x-coordinate,
+   * starting with |x| at position |from|.
+   *
+   * @param {!Float32Array} xmap
+   * @param {!Int8Array} breaks
+   * @param {string} s
+   * @param {number} x
+   * @param {number} multiplier
+   */
+  fillXMap(xmap, breaks, s, x, multiplier) {
+  }
+
+  /**
+   * Returns whether a specific offset does not split a surrogate pair.
+   *
+   * @param {string} s
+   * @param {number} offset
+   * @return {boolean}
+   */
+  static isValidOffset(s, offset) {
+    if (offset <= 0 || offset >= s.length)
+      return true;
+    let charCode = s.charCodeAt(offset - 1);
+    return charCode < 0xD800 || charCode > 0xDBFF;
+  }
+
+  /**
+   * Returns  whether a specific code point is RTL.
+   *
+   * @param {number} codePoint
+   * @return {boolean}
+   */
+  static isRtlCodePoint(codePoint) {
+    return (codePoint >= 0x0590 && codePoint <= 0x089F) ||
+        (codePoint === 0x200F) ||
+        (codePoint >= 0xFB1D && codePoint <= 0xFDFF) ||
+        (codePoint >= 0xFE70 && codePoint <= 0xFEFF) ||
+        (codePoint >= 0x10800 && codePoint <= 0x10FFF) ||
+        (codePoint >= 0x1E800 && codePoint <= 0x1EFFF);
+  }
+
+  /**
+   * Returns whether a specific char code is a surrogate.
+   *
+   * @param {number} charCode
+   * @return {boolean}
+   */
+  static isSurrogate(charCode) {
+    return charCode >= 0xD800 && charCode <= 0xDBFF;
+  }
+
+  /**
+   * Creates a typical metrics implementation.
+   * Internally it always measures a single code point and caches the result.
+   *
    * Regex for strings which consist only of characters of width equal to one.
    * Used for fast-path calculations. The new-lines variation should also match
    * new lines.
    * @param {?RegExp} widthOneRegex
+   * TODO: this one is unused.
    * @param {?RegExp} widthOneRegexWithNewLines
    *
    * Measures the width of a single BMP character.
@@ -24,6 +128,25 @@ export class Metrics {
    *
    * Measures the width of a single Supplementary character.
    * Note that char.length === 2, meaning it has two code units, but still a single code point.
+   * @param {function(string):number} measureSupplementary
+   */
+  static createRegular(widthOneRegex, widthOneRegexWithNewLines, measureBMP, measureSupplementary) {
+    return new RegularMetrics(widthOneRegex, widthOneRegexWithNewLines, measureBMP, measureSupplementary);
+  }
+};
+
+Metrics.bmpRegex = /^[\u{0000}-\u{d7ff}]*$/u;
+Metrics.asciiRegex = /^[\u{0020}-\u{007e}]*$/u;
+Metrics.asciiRegexWithNewLines = /^[\n\u{0020}-\u{007e}]*$/u;
+Metrics.whitespaceRegex = /\s/u;
+Metrics.nonWordCharacterRegex = /^\W$/u;
+Metrics.lineBreakCharCode = '\n'.charCodeAt(0);
+
+export class RegularMetrics {
+  /**
+   * @param {?RegExp} widthOneRegex
+   * @param {?RegExp} widthOneRegexWithNewLines
+   * @param {function(string):number} measureBMP
    * @param {function(string):number} measureSupplementary
    */
   constructor(widthOneRegex, widthOneRegexWithNewLines, measureBMP, measureSupplementary) {
@@ -37,8 +160,7 @@ export class Metrics {
   }
 
   /**
-   * Returns metrics for a string. See |TextMetrics| for definition.
-   *
+   * @override
    * @return {!TextMetrics}
    */
   forString(s) {
@@ -158,20 +280,7 @@ export class Metrics {
   }
 
   /**
-   * Returns location of a specific point in a string.
-   *
-   * |before| is a location at the start of a string, and |point| is the one
-   * we are locating. Returned location is absolute, not relative to |before|.
-   *
-   * When the width does not point exaclty between two code points, |roundMode| controls
-   * which code point to snap to:
-   *   - RoundMode.Floor snaps to the first code point;
-   *   - RoundMode.Ceil snaps to the second code point;
-   *   - RoundMode.Round snaps to the first or second code point depending on
-   *     whether width is further from the left or right border of the second code point.
-   *
-   * If |strict|, throws on out-of-bounds positions.
-   *
+   * @override
    * @param {string} s
    * @param {!Location} before
    * @param {!Point} point
@@ -213,13 +322,7 @@ export class Metrics {
   }
 
   /**
-   * Returns location of a specific offset in a string.
-   *
-   * |before| is a location at the start of a string, and |offset| is the one
-   * we are locating. Returned location is absolute, not relative to |before|.
-   *
-   * Throws if |offset| points to a middle of surrogate pair.
-   *
+   * @override
    * @param {string} s
    * @param {!Location} before
    * @param {number} offset
@@ -259,9 +362,7 @@ export class Metrics {
   }
 
   /**
-   * Fills a map between offset in (from..to] range to x-coordinate,
-   * starting with |x| at position |from|.
-   *
+   * @override
    * @param {!Float32Array} xmap
    * @param {!Int8Array} breaks
    * @param {string} s
@@ -294,47 +395,7 @@ export class Metrics {
   }
 
   /**
-   * Returns whether a specific offset does not split a surrogate pair.
-   *
-   * @param {string} s
-   * @param {number} offset
-   * @return {boolean}
-   */
-  static isValidOffset(s, offset) {
-    if (offset <= 0 || offset >= s.length)
-      return true;
-    let charCode = s.charCodeAt(offset - 1);
-    return charCode < 0xD800 || charCode > 0xDBFF;
-  }
-
-  /**
-   * Returns  whether a specific code point is RTL.
-   *
-   * @param {number} codePoint
-   * @return {boolean}
-   */
-  static isRtlCodePoint(codePoint) {
-    return (codePoint >= 0x0590 && codePoint <= 0x089F) ||
-        (codePoint === 0x200F) ||
-        (codePoint >= 0xFB1D && codePoint <= 0xFDFF) ||
-        (codePoint >= 0xFE70 && codePoint <= 0xFEFF) ||
-        (codePoint >= 0x10800 && codePoint <= 0x10FFF) ||
-        (codePoint >= 0x1E800 && codePoint <= 0x1EFFF);
-  }
-
-  /**
-   * Returns whether a specific char code is a surrogate.
-   *
-   * @param {number} charCode
-   * @return {boolean}
-   */
-  static isSurrogate(charCode) {
-    return charCode >= 0xD800 && charCode <= 0xDBFF;
-  }
-
-  /**
    * Returns the total width of a substring, which must not contain line breaks.
-   *
    * @param {string} s
    * @param {number} from
    * @param {number} to
@@ -352,7 +413,7 @@ export class Metrics {
     let result = 0;
     for (let i = from; i < to; ) {
       let charCode = s.charCodeAt(i);
-      if (charCode === Metrics._lineBreakCharCode)
+      if (charCode === Metrics.lineBreakCharCode)
         throw new Error('Cannot measure line breaks');
       if (charCode >= 0xD800 && charCode <= 0xDBFF && i + 1 < to) {
         let codePoint = s.codePointAt(i);
@@ -371,19 +432,6 @@ export class Metrics {
   }
 
   /**
-   * Returns measurements for a particular code point at given width in a given substring.
-   *
-   * Returned |offset| does belong to [from, to], and measures the [from, offset] substring.
-   * If the substrig is not wide enough, returns |offset === -1| instead,
-   * and measures width of [from, to].
-   *
-   * When the width does not point exaclty between two code points, |roundMode| controls
-   * which code point to snap to:
-   *   - RoundMode.Floor snaps to the first code point;
-   *   - RoundMode.Ceil snaps to the second code point;
-   *   - RoundMode.Round snaps to the first or second code point depending on
-   *     whether width is further from the left or right border of the second code point.
-   *
    * @param {string} s
    * @param {number} from
    * @param {number} to
@@ -441,11 +489,3 @@ export class Metrics {
     return {offset: to, width: w};
   }
 };
-
-Metrics.bmpRegex = /^[\u{0000}-\u{d7ff}]*$/u;
-Metrics.asciiRegex = /^[\u{0020}-\u{007e}]*$/u;
-Metrics.asciiRegexWithNewLines = /^[\n\u{0020}-\u{007e}]*$/u;
-Metrics.whitespaceRegex = /\s/u;
-Metrics.nonWordCharacterRegex = /^\W$/u;
-
-Metrics._lineBreakCharCode = '\n'.charCodeAt(0);

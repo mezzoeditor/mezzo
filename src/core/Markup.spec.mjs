@@ -10,7 +10,7 @@ export function addTests(runner, expect) {
   const {beforeAll, beforeEach, afterAll, afterEach} = runner;
 
   function createTestMetrics() {
-    return new Metrics(null, null, s => s.charCodeAt(0) - 'a'.charCodeAt(0) + 1, s => 100);
+    return Metrics.createRegular(null, null, s => s.charCodeAt(0) - 'a'.charCodeAt(0) + 1, s => 100);
   }
 
   function createTestMeasurer() {
