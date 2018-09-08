@@ -7,11 +7,11 @@ export function addTests(runner, expect) {
   const {beforeAll, beforeEach, afterAll, afterEach} = runner;
 
   function createTestMetrics() {
-    return Metrics.createRegular(null, null, s => s.charCodeAt(0) - 'a'.charCodeAt(0) + 1, s => 100);
+    return Metrics.createRegular(null, s => s.charCodeAt(0) - 'a'.charCodeAt(0) + 1, s => 100);
   }
 
   function createDefaultMetrics() {
-    return Metrics.createRegular(Metrics.bmpRegex, Metrics.bmpRegex, s => 1, s => 1);
+    return Metrics.createRegular(Metrics.bmpRegex, s => 1, s => 1);
   }
 
   describe('Metrics', () => {
@@ -78,22 +78,22 @@ export function addTests(runner, expect) {
 
     it('Metrics.forString', () => {
       let defaultMetrics = createDefaultMetrics();
-      expect(defaultMetrics.forString('one line')).toBe({length: 8, firstWidth: 8, lastWidth: 8, longestWidth: 8});
-      expect(defaultMetrics.forString('\none line')).toBe({length: 9, firstWidth: 0, lastWidth: 8, longestWidth: 8, lineBreaks: 1});
-      expect(defaultMetrics.forString('one line\n')).toBe({length: 9, firstWidth: 8, lastWidth: 0, longestWidth: 8, lineBreaks: 1});
-      expect(defaultMetrics.forString('\none line\n')).toBe({length: 10, firstWidth: 0, lastWidth: 0, longestWidth: 8, lineBreaks: 2});
-      expect(defaultMetrics.forString('short\nlongest\nlonger\ntiny')).toBe({length: 25, firstWidth: 5, lastWidth: 4, longestWidth: 7, lineBreaks: 3});
+      expect(defaultMetrics.forString('one line', null).metrics).toBe({length: 8, firstWidth: 8, lastWidth: 8, longestWidth: 8});
+      expect(defaultMetrics.forString('\none line', null).metrics).toBe({length: 9, firstWidth: 0, lastWidth: 8, longestWidth: 8, lineBreaks: 1});
+      expect(defaultMetrics.forString('one line\n', null).metrics).toBe({length: 9, firstWidth: 8, lastWidth: 0, longestWidth: 8, lineBreaks: 1});
+      expect(defaultMetrics.forString('\none line\n', null).metrics).toBe({length: 10, firstWidth: 0, lastWidth: 0, longestWidth: 8, lineBreaks: 2});
+      expect(defaultMetrics.forString('short\nlongest\nlonger\ntiny', null).metrics).toBe({length: 25, firstWidth: 5, lastWidth: 4, longestWidth: 7, lineBreaks: 3});
 
       let testMetrics = createTestMetrics();
-      expect(testMetrics.forString('a')).toBe({length: 1, firstWidth: 1, lastWidth: 1, longestWidth: 1});
-      expect(testMetrics.forString('a\nb')).toBe({length: 3, lineBreaks: 1, firstWidth: 1, lastWidth: 2, longestWidth: 2});
-      expect(testMetrics.forString('b\na')).toBe({length: 3, lineBreaks: 1, firstWidth: 2, lastWidth: 1, longestWidth: 2});
-      expect(testMetrics.forString('bac')).toBe({length: 3, firstWidth: 6, lastWidth: 6, longestWidth: 6});
-      expect(testMetrics.forString('b\na\nc')).toBe({length: 5, lineBreaks: 2, firstWidth: 2, lastWidth: 3, longestWidth: 3});
-      expect(testMetrics.forString('b\naaaa\nc')).toBe({length: 8, lineBreaks: 2, firstWidth: 2, lastWidth: 3, longestWidth: 4});
-      expect(testMetrics.forString('b😀😀')).toBe({length: 5, firstWidth: 202, lastWidth: 202, longestWidth: 202});
-      expect(testMetrics.forString('😀\n𐀀😀\n𐀀a')).toBe({length: 11, lineBreaks: 2, firstWidth: 100, lastWidth: 101, longestWidth: 200});
-      expect(testMetrics.forString('\n𐀀')).toBe({length: 3, lineBreaks: 1, firstWidth: 0, lastWidth: 100, longestWidth: 100});
+      expect(testMetrics.forString('a', null).metrics).toBe({length: 1, firstWidth: 1, lastWidth: 1, longestWidth: 1});
+      expect(testMetrics.forString('a\nb', null).metrics).toBe({length: 3, lineBreaks: 1, firstWidth: 1, lastWidth: 2, longestWidth: 2});
+      expect(testMetrics.forString('b\na', null).metrics).toBe({length: 3, lineBreaks: 1, firstWidth: 2, lastWidth: 1, longestWidth: 2});
+      expect(testMetrics.forString('bac', null).metrics).toBe({length: 3, firstWidth: 6, lastWidth: 6, longestWidth: 6});
+      expect(testMetrics.forString('b\na\nc', null).metrics).toBe({length: 5, lineBreaks: 2, firstWidth: 2, lastWidth: 3, longestWidth: 3});
+      expect(testMetrics.forString('b\naaaa\nc', null).metrics).toBe({length: 8, lineBreaks: 2, firstWidth: 2, lastWidth: 3, longestWidth: 4});
+      expect(testMetrics.forString('b😀😀', null).metrics).toBe({length: 5, firstWidth: 202, lastWidth: 202, longestWidth: 202});
+      expect(testMetrics.forString('😀\n𐀀😀\n𐀀a', null).metrics).toBe({length: 11, lineBreaks: 2, firstWidth: 100, lastWidth: 101, longestWidth: 200});
+      expect(testMetrics.forString('\n𐀀', null).metrics).toBe({length: 3, lineBreaks: 1, firstWidth: 0, lastWidth: 100, longestWidth: 100});
     });
 
     it('Metrics.locateBy*', () => {
@@ -107,9 +107,9 @@ export function addTests(runner, expect) {
         {chunk: '1\n23\n456\n78\n9\n0', before: {offset: 15, x: 5, y: 10}, location: {offset: 28, x: 1, y: 14}},
       ];
       for (let test of tests) {
-        expect(defaultMetrics.locateByOffset(test.chunk, test.before, test.location.offset)).toBe(test.location);
-        expect(defaultMetrics.locateByOffset(test.chunk, test.before, test.location.offset, true /* strict */)).toBe(test.location);
-        expect(defaultMetrics.locateByPoint(test.chunk, test.before, test.location, RoundMode.Floor, true /* strict */)).toBe(test.location);
+        expect(defaultMetrics.locateByOffset(test.chunk, null, test.before, test.location.offset)).toBe(test.location);
+        expect(defaultMetrics.locateByOffset(test.chunk, null, test.before, test.location.offset, true /* strict */)).toBe(test.location);
+        expect(defaultMetrics.locateByPoint(test.chunk, null, test.before, test.location, RoundMode.Floor, true /* strict */)).toBe(test.location);
       }
 
       let nonStrict = [
@@ -119,7 +119,7 @@ export function addTests(runner, expect) {
         {chunk: '1\n23\n456\n78\n9\n0', before: {offset: 15, x: 5, y: 10}, point: {x: 42, y: 14}, result: {offset: 28, x: 1, y: 14}},
       ];
       for (let test of nonStrict)
-        expect(defaultMetrics.locateByPoint(test.chunk, test.before, test.point, RoundMode.Floor)).toBe(test.result);
+        expect(defaultMetrics.locateByPoint(test.chunk, null, test.before, test.point, RoundMode.Floor)).toBe(test.result);
     });
 
     it('Metrics.locateBy* with non-bmp', () => {
@@ -133,9 +133,9 @@ export function addTests(runner, expect) {
         {chunk: 'a\n😀b\n𐀀ca\n𐀀𐀀\n😀\n0', before: {offset: 15, x: 5, y: 10}, location: {offset: 33, x: 100, y: 14}},
       ];
       for (let test of tests) {
-        expect(metrics.locateByOffset(test.chunk, test.before, test.location.offset)).toBe(test.location);
-        expect(metrics.locateByOffset(test.chunk, test.before, test.location.offset, true /* strict */)).toBe(test.location);
-        expect(metrics.locateByPoint(test.chunk, test.before, test.location, RoundMode.Floor, true /* strict */)).toBe(test.location);
+        expect(metrics.locateByOffset(test.chunk, null, test.before, test.location.offset)).toBe(test.location);
+        expect(metrics.locateByOffset(test.chunk, null, test.before, test.location.offset, true /* strict */)).toBe(test.location);
+        expect(metrics.locateByPoint(test.chunk, null, test.before, test.location, RoundMode.Floor, true /* strict */)).toBe(test.location);
       }
 
       let nonStrict = [
@@ -145,12 +145,12 @@ export function addTests(runner, expect) {
         {chunk: 'a\n😀b\n𐀀ca\n𐀀𐀀\n😀\n0', before: {offset: 15, x: 5, y: 10}, point: {x: 420, y: 14.5}, result: {offset: 33, x: 100, y: 14}},
       ];
       for (let test of nonStrict)
-        expect(metrics.locateByPoint(test.chunk, test.before, test.point, RoundMode.Floor)).toBe(test.result);
+        expect(metrics.locateByPoint(test.chunk, null, test.before, test.point, RoundMode.Floor)).toBe(test.result);
     });
 
     it('Metrics.locateByOffset non-strict', () => {
       let metrics = createTestMetrics();
-      expect(metrics.locateByOffset('😀😀', {offset: 3, x: 3, y: 3}, 6)).toBe({offset: 5, x: 103, y: 3});
+      expect(metrics.locateByOffset('😀😀', null, {offset: 3, x: 3, y: 3}, 6)).toBe({offset: 5, x: 103, y: 3});
     });
 
     it('Metrics.locateByPoint with round modes', () => {
@@ -181,7 +181,7 @@ export function addTests(runner, expect) {
         {point: {x: 42, y: 13}, location: {offset: 27, x: 6, y: 13}},
       ];
       for (let test of tests)
-        expect(testMetrics.locateByPoint(chunk, before, test.point, test.roundMode || RoundMode.Floor, !!test.strict)).toBe(test.location);
+        expect(testMetrics.locateByPoint(chunk, null, before, test.point, test.roundMode || RoundMode.Floor, !!test.strict)).toBe(test.location);
     });
   });
 }

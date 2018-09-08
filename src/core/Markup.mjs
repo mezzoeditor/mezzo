@@ -90,8 +90,18 @@ export class Markup extends EventEmitter {
     this._measurer = measurer;
     this._lineHeight = measurer.lineHeight();
     this._defaultWidth = measurer.defaultWidth();
-    const measure = s => measurer.measureString(s) / this._defaultWidth;
-    this._metrics = Metrics.createRegular(measurer.defaultWidthRegex(), measurer.defaultWidthRegexWithNewLines(), measure, measure);
+    this._recreateMetrics();
+  }
+
+  _recreateMetrics() {
+    const measure = s => this._measurer.measureString(s) / this._defaultWidth;
+    if (this._wordWrapLineWidth !== null) {
+      this._metrics = Metrics.createWordWrapping(
+          this._measurer.defaultWidthRegex(), this._measurer.defaultWidthRegexWithNewLines(),
+          measure, measure, this._wordWrapLineWidth);
+    } else {
+      this._metrics = Metrics.createRegular(this._measurer.defaultWidthRegex(), measure, measure);
+    }
     this._allocator = new WorkAllocator(this._text.length());
     this._rechunk();
   }
@@ -110,8 +120,7 @@ export class Markup extends EventEmitter {
       throw new Error('Word wrap line width cannot be too small');
 
     this._wordWrapLineWidth = wordWrapLineWidth;
-    this._allocator = new WorkAllocator(this._text.length());
-    this._rechunk();
+    this._recreateMetrics();
   }
 
   /**
@@ -194,11 +203,11 @@ export class Markup extends EventEmitter {
     let clamped = iterator.locateByPoint(point, strict);
     if (clamped === null)
       throw 'Point does not belong to the Markup';
-    if (iterator.data === undefined || iterator.data < 0)
+    if (iterator.data === undefined || !iterator.data.metrics)
       return iterator.before ? iterator.before.offset : 0;
     let from = iterator.before.offset;
     let textChunk = this._text.content(from, from + iterator.metrics.length);
-    return this._metrics.locateByPoint(textChunk, iterator.before, clamped, roundMode, strict).offset;
+    return iterator.data.metrics.locateByPoint(textChunk, iterator.data.stateBefore, iterator.before, clamped, roundMode, strict).offset;
   }
 
   /**
@@ -218,11 +227,11 @@ export class Markup extends EventEmitter {
     let iterator = this._tree.iterator();
     if (iterator.locateByOffset(offset, true /* strict */) === null)
       return null;
-    if (iterator.data === undefined || iterator.data < 0)
+    if (iterator.data === undefined || !iterator.data.metrics)
       return iterator.before || {x: 0, y: 0};
     let from = iterator.before.offset;
     let textChunk = this._text.content(from, from + iterator.metrics.length);
-    return this._metrics.locateByOffset(textChunk, iterator.before, offset);
+    return iterator.data.metrics.locateByOffset(textChunk, iterator.data.stateBefore, iterator.before, offset);
   }
 
   _rechunk() {
@@ -245,16 +254,11 @@ export class Markup extends EventEmitter {
       if (newTo > newFrom && Metrics.isSurrogate(this._text.iterator(newTo - 1).charCodeAt(0)))
         newTo++;
 
-      /** @type {!Array<!{metrics: !TextMetrics, data: ChunkStartX}>} */
+      /** @type {!Array<!{metrics: !TextMetrics, data: !ChunkData}>} */
       const nodes = [];
       const iterator = this._text.iterator(newFrom, Math.max(newFrom - 2, 0), newTo);
-      let metrics = split.left.metrics();
-
-      let lastChar = ' ';
-      if (newFrom > 0)
-        lastChar = iterator.charAt(-1);
-      if (Metrics.isSurrogate(lastChar.charCodeAt(0)))
-        lastChar = iterator.charAt(-2);
+      let tmp = split.left.splitLast();
+      let state = tmp.last !== null ? tmp.last.stateAfter : undefined;
 
       while (iterator.offset < newTo) {
         const size = Math.min(newTo - iterator.offset, kChunkSize);
@@ -265,36 +269,15 @@ export class Markup extends EventEmitter {
           chunk += iterator.current;
           iterator.next();
         }
-
-        if (this._wordWrapLineWidth !== null) {
-          const chunks = this._metrics.wordWrap(chunk, metrics.lastWidth, this._wordWrapLineWidth, lastChar);
-          let first = true;
-          for (let m of chunks) {
-            if (!first) {
-              const newLineMetrics = {length: 0, firstWidth: 0, lastWidth: 0, longestWidth: 0, lineBreaks: 1};
-              nodes.push({metrics: newLineMetrics, data: metrics.lastWidth});
-              metrics = Tree.combineMetrics(metrics, newLineMetrics);
-            }
-            first = false;
-            nodes.push({metrics: m, data: metrics.lastWidth});
-            metrics = Tree.combineMetrics(metrics, m);
-          }
-        } else {
-          const node = {metrics: this._metrics.forString(chunk), data: metrics.lastWidth};
-          metrics = Tree.combineMetrics(metrics, node.metrics);
-          nodes.push(node);
+        const measured = this._metrics.forString(chunk, state);
+        nodes.push({metrics: measured.metrics, data: {metrics: this._metrics, stateBefore: state, stateAfter: measured.state}});
         }
-
-        lastChar = chunk.charAt(chunk.length - 1);
-        if (Metrics.isSurrogate(lastChar.charCodeAt(0)))
-          lastChar = chunk.charAt(chunk.length - 2);
-      }
 
       if (correction !== null && correction > newTo) {
         nodes.push(this._unmeasuredNode(correction - newTo));
-      } else if (this._wordWrapLineWidth) {
-        const tmp = split.right.splitFirst();
-        if (tmp.first !== null && tmp.first !== metrics.lastWidth)
+      } else {
+        tmp = split.right.splitFirst();
+        if (tmp.first !== null && (tmp.first.metrics !== this._metrics || !Metrics.stateMatches(tmp.first.stateBefore, state)))
           this._allocator.undone(newTo, newTo + tmp.metrics.length);
       }
 
@@ -318,10 +301,13 @@ export class Markup extends EventEmitter {
 
   /**
    * @param {number} length
-   * @return {{metrics: !TextMetrics, data: ChunkStartX}}
+   * @return {{metrics: !TextMetrics, data: ChunkData}}
    */
   _unmeasuredNode(length) {
-    return {metrics: {length, firstWidth: 0, lastWidth: 0, longestWidth: 0}, data: -1};
+    return {
+      metrics: {length, firstWidth: 0, lastWidth: 0, longestWidth: 0},
+      data: {metrics: null, stateBefore: null, stateAfter: null}
+    };
   }
 
   /**
@@ -349,7 +335,7 @@ export class Markup extends EventEmitter {
         iterator.next();
       if (iterator.before === undefined) {
         // Tree is empty - bail out.
-        lines.push({x: 0, y: 0, from: 0, to: 0, start: 0, end: 0, ranges: [{from: 0, to: 0, x:0}]});
+        lines.push({x: 0, y: 0, from: 0, to: 0, start: 0, end: 0, ranges: [{from: 0, to: 0, x: 0, metrics: this._metrics}]});
         break;
       }
 
@@ -357,7 +343,7 @@ export class Markup extends EventEmitter {
       let textChunk = null;
       if (iterator.metrics !== undefined) {
         textChunk = this._text.content(offset, offset + iterator.metrics.length);
-        const location = this._metrics.locateByPoint(textChunk, iterator.before, clamped, RoundMode.Floor, false /* strict */);
+        const location = iterator.data.metrics.locateByPoint(textChunk, iterator.data.stateBefore, iterator.before, clamped, RoundMode.Floor, false /* strict */);
         offset = location.offset;
         x = location.x;
       } else {
@@ -377,12 +363,12 @@ export class Markup extends EventEmitter {
       };
       lines.push(line);
       if (iterator.after === undefined) {
-        line.ranges.push({from: offset, to: offset, x: x});
+        line.ranges.push({from: offset, to: offset, x: x, metrics: this._metrics});
         break;
       }
 
       while (x <= rect.left + rect.width) {
-        if (iterator.data < 0) {
+        if (!iterator.data.metrics) {
           if (iterator.before.x !== iterator.after.x)
             throw new Error('Inconsistent');
         } else {
@@ -392,16 +378,22 @@ export class Markup extends EventEmitter {
           if (iterator.after.y > point.y || (iterator.after.y === point.y && iterator.after.x >= point.x)) {
             if (textChunk === null)
               textChunk = this._text.content(offset, offset + iterator.metrics.length);
-            after = this._metrics.locateByPoint(textChunk, iterator.before, point, RoundMode.Ceil, false /* strict */).offset;
+            after = iterator.data.metrics.locateByPoint(textChunk, iterator.data.stateBefore, iterator.before, point, RoundMode.Ceil, false /* strict */).offset;
             overflow = true;
           }
           textChunk = null;
 
           ranges.push({from: offset, to: after});
-          if (line.ranges.length > 0 && line.ranges[line.ranges.length - 1].to === offset)
+          let canJoin = false;
+          if (line.ranges.length > 0) {
+            const prev = line.ranges[line.ranges.length - 1];
+            if (prev.to === offset && prev.metrics === iterator.data.metrics)
+              canJoin = true;
+          }
+          if (canJoin)
             line.ranges[line.ranges.length - 1].to = after;
           else
-            line.ranges.push({from: offset, to: after, x: x});
+            line.ranges.push({from: offset, to: after, x: x, metrics: iterator.data.metrics});
           if (overflow)
             break;
         }
@@ -447,11 +439,11 @@ export class Markup extends EventEmitter {
    */
   _buildFrameContents(frame, lines, decorators) {
     for (let line of lines) {
-      for (let {from, to, x} of line.ranges) {
+      for (let {from, to, x, metrics} of line.ranges) {
         const offsetToX = new Float32Array(to - from + 1);
         const needsRtlBreakAfter = new Int8Array(to - from + 1);
         const rangeContent = this._text.content(from, to);
-        this._metrics.fillXMap(offsetToX, needsRtlBreakAfter, rangeContent, x, this._defaultWidth);
+        metrics.fillXMap(offsetToX, needsRtlBreakAfter, rangeContent, x, this._defaultWidth);
 
         for (let decorator of decorators.text) {
           decorator.visitTouching(from, to + 0.5, decoration => {
@@ -581,12 +573,8 @@ function joinRanges(ranges, document) {
 }
 
 /**
- * @typedef {number} ChunkStartX
- *
- * Non-negative value means an x-coordinate at
- * the start of the chunk which was used for word wrap calculations.
- *
- * Negative value means invisible chunk.
+ * @typedef {{metrics: !Metrics, stateBefore: *, stateAfter: *}} ChunkData
+ * Null metrics means unmeasured chunk.
  */
 
  /**
@@ -605,13 +593,13 @@ function Offset(anchor) {
  *   to: number,
  *   start: number,
  *   end: number,
- *   ranges: !Array<{from: number, to: number, x: number}>
+ *   ranges: !Array<{from: number, to: number, x: number, metrics: !Metrics}>
  * }} Line
  */
 
 let kChunkSize = 1000;
 let kRechunkSize = 10000000;
-let kWordWrapRechunkSize = 2000000;
+let kWordWrapRechunkSize = 5000000;
 
 Markup.test = {};
 

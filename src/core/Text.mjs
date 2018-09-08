@@ -167,7 +167,7 @@ export class Text {
       return null;
     let location = iterator.data === undefined
         ? iterator.before || {x: 0, y: 0}
-        : metrics.locateByOffset(iterator.data, iterator.before, offset);
+        : metrics.locateByOffset(iterator.data, null, iterator.before, offset);
     return {line: location.y, column: location.x};
   }
 
@@ -183,7 +183,7 @@ export class Text {
       throw 'Position does not belong to text';
     if (iterator.data === undefined)
       return iterator.before ? iterator.before.offset : 0;
-    return metrics.locateByPoint(iterator.data, iterator.before, clamped, strict).offset;
+    return metrics.locateByPoint(iterator.data, null, iterator.before, clamped, strict).offset;
   }
 
   /**
@@ -210,12 +210,15 @@ export class Text {
       this._tree = Tree.build(chunks(this._string));
       delete this._string;
     } else if (this._chunks) {
-      let chunks = this._chunks.map(chunk => ({data: chunk, metrics: metrics.forString(chunk)}));
+      const chunks = this._chunks.map(chunk => {
+        const measured = metrics.forString(chunk, null);
+        return {data: chunk, metrics: measured.metrics};
+      });
       this._tree = Tree.build(chunks);
       delete this._chunks;
     } else if (this._middle) {
-      let leftTree = Tree.build(chunks(this._left));
-      let rightTree = Tree.build(chunks(this._right));
+      const leftTree = Tree.build(chunks(this._left));
+      const rightTree = Tree.build(chunks(this._right));
       this._tree = Tree.merge(leftTree, Tree.merge(this._middle, rightTree));
       delete this._left;
       delete this._right;
@@ -263,7 +266,10 @@ export class Text {
     }
 
     if (this._chunks) {
-      let chunks = this._chunks.map(chunk => ({data: chunk, metrics: metrics.forString(chunk)}));
+      const chunks = this._chunks.map(chunk => {
+        const measured = metrics.forString(chunk, null);
+        return {data: chunk, metrics: measured.metrics};
+      });
       return Tree.build(chunks(left).concat(chunks).concat(chunks(right)));
     }
 
@@ -303,7 +309,9 @@ export class Text {
 // It might slow down common operations though. We should measure that and
 // consider different chunk sizes based on total document length.
 let kDefaultChunkSize = 1000;
-let metrics = Metrics.createRegular(Metrics.bmpRegex, Metrics.bmpRegex, char => 1, char => 1);
+
+// Note: we imply that |metrics.forString().state| is unused and never store it.
+let metrics = Metrics.createRegular(Metrics.bmpRegex, char => 1, char => 1);
 
 /**
  * @param {string} content
@@ -319,7 +327,8 @@ function chunks(content, chunkSize) {
     if (!Metrics.isValidOffset(content, index + length))
       length++;
     let chunk = content.substring(index, index + length);
-    chunks.push({data: chunk, metrics: metrics.forString(chunk)});
+    const measured = metrics.forString(chunk, null);
+    chunks.push({data: chunk, metrics: measured.metrics});
     index += length;
   }
   return chunks;
