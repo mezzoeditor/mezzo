@@ -170,9 +170,12 @@ export class Metrics {
    * @return {boolean}
    */
   static stateMatches(s1, s2) {
-    if (!s1 || !s2)
-      return !s1 && !s2;
-    return s1.startWidth === s2.startWidth && s1.lastCharIsNonWord === s2.lastCharIsNonWord;
+    if (s1 === undefined)
+      s1 = null;
+    if (s2 === undefined)
+      s2 = null;
+    // Note: this should take into account any possible state of any Metrics implementation.
+    return s1 === s2;
   }
 
   /**
@@ -516,10 +519,10 @@ export class RegularMetrics extends Metrics {
 };
 
 /**
- * @typedef {{
- *   startWidth: number,
- *   lastCharIsNonWord: boolean,
- * }} WordWrapState
+ * This is a "start width" value, from which we started
+ * the chunk before wrapping.
+ *
+ * @typedef {number} WordWrapState
  */
 
 export class WordWrapMetrics extends Metrics {
@@ -541,13 +544,12 @@ export class WordWrapMetrics extends Metrics {
    */
   _wrap(s, state) {
     const widthOne = this._widthOneRegex && this._widthOneRegex.test(s);
-    const canWrapFirstWord = state.lastCharIsNonWord;
     const limit = this._maxLineWidth;
 
     const result = [];
     let wordStart = 0;
     let offset = 0;
-    let width = state.startWidth;
+    let width = state;
 
     const lines = s.split("\n");
     for (let i = 0; ;) {
@@ -555,10 +557,17 @@ export class WordWrapMetrics extends Metrics {
       for (let j = 0; ;) {
         const wordEnded = (j && !(j % 2)) || j === words.length;
         if (offset > wordStart && wordEnded) {
-          const w = widthOne ? offset - wordStart : this._measureString(s, wordStart, offset);
-          if (width + w > limit && width > 0 && (canWrapFirstWord || wordStart > 0)) {
-            result.push({offset: wordStart, width});
-            width = 0;
+          let w = widthOne ? offset - wordStart : this._measureString(s, wordStart, offset);
+          while (width + w > limit) {
+            if (width > 0) {
+              result.push({offset: wordStart, width});
+              width = 0;
+            } else {
+              const located = this._locateByWidth(s, wordStart, offset, limit, RoundMode.Floor);
+              result.push({offset: located.offset, width: located.width});
+              w -= located.width;
+              wordStart = located.offset;
+            }
           }
           width += w;
           wordStart = offset;
@@ -577,7 +586,7 @@ export class WordWrapMetrics extends Metrics {
         break;
     }
 
-    result[0].width -= state.startWidth;
+    result[0].width -= state;
     return result;
   }
 
@@ -595,10 +604,7 @@ export class WordWrapMetrics extends Metrics {
       metrics.lineBreaks++;
       metrics.lastWidth = width;
     }
-    const newState = {
-      startWidth: metrics.lastWidth,
-      lastCharIsNonWord: s.length ? Metrics.nonWordCharacterRegex.test(s[s.length - 1]) : state.lastCharIsNonWord
-    };
+    const newState = metrics.lineBreaks ? metrics.lastWidth : metrics.lastWidth + state;
     return {metrics, state: newState};
   }
 
@@ -651,4 +657,4 @@ export class WordWrapMetrics extends Metrics {
 };
 
 /** @type {!WordWrapState} */
-WordWrapMetrics.defaultState = {startWidth: 0, lastCharIsNonWord: true};
+WordWrapMetrics.defaultState = 0;

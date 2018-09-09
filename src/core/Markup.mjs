@@ -247,7 +247,7 @@ export class Markup extends EventEmitter {
 
       /** @type {!Array<!{metrics: !TextMetrics, data: !ChunkData}>} */
       const nodes = [];
-      const iterator = this._text.iterator(newFrom, Math.max(newFrom - 2, 0), newTo);
+      const iterator = this._text.iterator(newFrom, newFrom, newTo);
       let tmp = split.left.splitLast();
       let state = tmp.last !== null ? tmp.last.stateAfter : undefined;
 
@@ -262,7 +262,8 @@ export class Markup extends EventEmitter {
         }
         const measured = this._metrics.forString(chunk, state);
         nodes.push({metrics: measured.metrics, data: {metrics: this._metrics, stateBefore: state, stateAfter: measured.state}});
-        }
+        state = measured.state;
+      }
 
       if (correction !== null && correction > newTo) {
         nodes.push(this._unmeasuredNode(correction - newTo));
