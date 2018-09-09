@@ -6,7 +6,7 @@
     - [x] no line or column limit
     - [x] `O(log T)` editing
     - [x] `O(log D)` decoration updates
-    - [ ] `O(log T)` undo/redo
+    - [x] `O(log T)` undo/redo
     - [x] `O(C * log T)` multiple cursors editing
     - [x] `O(C + log T)` memory overhead
 * [x] full unicode support for monospace fonts
@@ -17,21 +17,23 @@
         * [ ] gutter
         * [ ] multi-line
     - [ ] displaying document ranges
-* [ ] decorations
+* [x] decorations
     - [x] text
     - [x] background
     - [x] scrollbar
-    - [ ] gutter
+    - [x] gutter
     - [x] line
 * [ ] plugins system
     - [ ] extensible history
-    - [ ] interoperability by default
-    - [ ] synchronous updates
-    - [ ] async processing
+    - [ ] extensible editing
+    - [ ] extensible decorations
+    - [x] synchronous updates in one frame
+    - [ ] async processing primitives
 
 #### Tier 1 features
 * [x] all kinds of editing commands
-* [x] search/replace
+* [x] search
+* [ ] replace
 * [x] keyboard bindings
 * [x] auto-indent
 * [ ] line wrapping
@@ -145,11 +147,11 @@ Decoration                       [xxxx]
   [2 - 2.5]
 ```
 
-After insertion: HENIO
+After insertion: HNEIO
 
 ```
 Code unit index        0       1       2       3       4
-                   |   H   |   E   |   N   |   I   |   O   |
+                   |   H   |   N   |   E   |   I   |   O   |
 Anchor "before"  0 |     1 |     2 |     3 |     4 |     5 |
 Offset             0       1       2       3       4       5
 Anchor "after"     |0.5    |1.5    |2.5    |3.5    |4.5    |5.5
@@ -157,11 +159,11 @@ Decoration                               [xxxx]
   [3 - 3.5]
 ```
 
-After replacment: HENBO
+After replacment: HNEBO
 
 ```
 Code unit index        0       1       2       3       4
-                   |   H   |   E   |   N   |   B   |   O   |
+                   |   H   |   N   |   E   |   B   |   O   |
 Anchor "before"  0 |     1 |     2 |     3 |     4 |     5 |
 Offset             0       1       2       3       4       5
 Anchor "after"     |0.5    |1.5    |2.5    |3.5    |4.5    |5.5
@@ -169,11 +171,11 @@ Decoration                               [xxxx]
   [3 - 3.5]
 ```
 
-After insertion: HENIBO
+After insertion: HNEIBO
 
 ```
 Code unit index        0       1       2       3       4       5
-                   |   H   |   E   |   N   |   I   |   B   |   O   |
+                   |   H   |   N   |   E   |   I   |   B   |   O   |
 Anchor "before"  0 |     1 |     2 |     3 |     4 |     5 |     6 |
 Offset             0       1       2       3       4       5       6
 Anchor "after"     |0.5    |1.5    |2.5    |3.5    |4.5    |5.5    |6.5
@@ -183,14 +185,13 @@ Decoration                               [xxxxxxxxxxxx]
 
 ---
 
-### Extensibility (TODO: rewrite)
+### Extensibility
 
 Typical plugin can be integrated at multiple points:
-* Edit document with `Document.replace`.
-* Reveal text ranges with `Editor.revealRange`.
-* Listen to document changes with `replaceCallback`.
-* Decorate viewport with `decorationCallback`.
-* Do asynchronous work with `idleCallback`.
-* Provide content-dependent data with `setHighlighter` or `setTokenizer`.
-* Use public APIs of other plugins, e.g. `selection.setRanges`.
-
+* Edit the document (text and selection).
+* Reveal text ranges.
+* Listen to document changes (text and selection).
+* Synchronously decorate viewport.
+* Do asynchronous work using platform support.
+* Provide content-dependent data (TODO).
+* Inject into default editing (TODO).
