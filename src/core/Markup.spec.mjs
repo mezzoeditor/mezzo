@@ -18,7 +18,6 @@ export function addTests(runner, expect) {
       defaultWidth: () => 1,
       lineHeight: () => 3,
       defaultWidthRegex: () => null,
-      defaultWidthRegexWithNewLines: () => null,
       measureString: s => s[0] <= 'z' ? s.charCodeAt(0) - 'a'.charCodeAt(0) + 1 : 100
     };
   }

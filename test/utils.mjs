@@ -10,10 +10,6 @@ export class TestMeasurer {
   }
 
   defaultWidthRegex() {
-    return /^.*$/;
-  }
-
-  defaultWidthRegexWithNewLines() {
     return /^.*$/s;
   }
 

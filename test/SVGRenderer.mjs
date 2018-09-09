@@ -272,7 +272,6 @@ export class SVGRenderer {
       defaultWidth: () => 1, // in CHs
       lineHeight: () => 1, // in EMs
       defaultWidthRegex: () => null,
-      defaultWidthRegexWithNewLines: () => null,
       measureString: s => s.length
     };
   }

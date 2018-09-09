@@ -131,8 +131,7 @@ export class Metrics {
    * Internally it always measures a single code point and caches the result.
    *
    * Regex for strings which consist only of characters of width equal to one.
-   * Used for fast-path calculations. The new-lines variation should also match
-   * new lines.
+   * Used for fast-path calculations. If provided, this regex also must match new lines.
    * @param {?RegExp} widthOneRegex
    *
    * Measures the width of a single BMP character.
@@ -153,16 +152,13 @@ export class Metrics {
    * Creates a metrics implementation performing word wrapping.
    * See above for parameters.
    *
-   * Same as |widthOneRegex|, but should also match new lines if non-null.
-   * @param {?RegExp} widthOneRegexWithNewLines
-   *
    * The maximum line width allowed.
    * @param {number} maxLineWidth
    *
    * @return {!Metrics}
    */
-  static createWordWrapping(widthOneRegex, widthOneRegexWithNewLines, measureBMP, measureSupplementary, maxLineWidth) {
-    return new WordWrapMetrics(widthOneRegex, widthOneRegexWithNewLines, measureBMP, measureSupplementary, maxLineWidth);
+  static createWordWrapping(widthOneRegex, measureBMP, measureSupplementary, maxLineWidth) {
+    return new WordWrapMetrics(widthOneRegex, measureBMP, measureSupplementary, maxLineWidth);
   }
 
   /**
@@ -446,12 +442,13 @@ export class RegularMetrics extends Metrics {
       longestWidth: 0
     };
 
+    const widthOne = this._widthOneRegex && this._widthOneRegex.test(s);
     let lineBreaks = 0;
     let offset = 0;
     while (true) {
       let lineBreakOffset = s.indexOf('\n', offset);
       let lineEndOffset = lineBreakOffset === -1 ? s.length : lineBreakOffset;
-      let width = this._measureString(s, offset, lineEndOffset);
+      let width = widthOne ? lineEndOffset - offset : this._measureString(s, offset, lineEndOffset);
 
       if (offset === 0)
         metrics.firstWidth = width;
@@ -528,14 +525,12 @@ export class RegularMetrics extends Metrics {
 export class WordWrapMetrics extends Metrics {
   /**
    * @param {?RegExp} widthOneRegex
-   * @param {?RegExp} widthOneRegexWithNewLines
    * @param {function(string):number} measureBMP
    * @param {function(string):number} measureSupplementary
    * @param {number} maxLineWidth
    */
-  constructor(widthOneRegex, widthOneRegexWithNewLines, measureBMP, measureSupplementary, maxLineWidth) {
+  constructor(widthOneRegex, measureBMP, measureSupplementary, maxLineWidth) {
     super(widthOneRegex, measureBMP, measureSupplementary);
-    this._widthOneRegexWithNewLines = widthOneRegexWithNewLines;
     this._maxLineWidth = maxLineWidth;
   }
 
@@ -545,7 +540,7 @@ export class WordWrapMetrics extends Metrics {
    * @return {!Array<{offset: number, width: number}>}
    */
   _wrap(s, state) {
-    const fastPath = this._widthOneRegexWithNewLines && this._widthOneRegexWithNewLines.test(s);
+    const widthOne = this._widthOneRegex && this._widthOneRegex.test(s);
     const canWrapFirstWord = state.lastCharIsNonWord;
     const limit = this._maxLineWidth;
 
@@ -560,7 +555,7 @@ export class WordWrapMetrics extends Metrics {
       for (let j = 0; ;) {
         const wordEnded = (j && !(j % 2)) || j === words.length;
         if (offset > wordStart && wordEnded) {
-          const w = fastPath ? offset - wordStart : this._measureString(s, wordStart, offset);
+          const w = widthOne ? offset - wordStart : this._measureString(s, wordStart, offset);
           if (width + w > limit && width > 0 && (canWrapFirstWord || wordStart > 0)) {
             result.push({offset: wordStart, width});
             width = 0;

@@ -24,19 +24,11 @@ export class Measurer {
 
   /**
    * Regex for strings which consist only of characters with default width and height.
-   * Used for fast-path calculations.
+   * Used for fast-path calculations. If non-null, must also match the new lines.
    *
    * @return {?RegExp}
    */
   defaultWidthRegex() {
-  }
-
-  /**
-   * Same as above, but should also match new lines.
-   *
-   * @return {?RegExp}
-   */
-  defaultWidthRegexWithNewLines() {
   }
 
   /**
@@ -97,8 +89,7 @@ export class Markup extends EventEmitter {
     const measure = s => this._measurer.measureString(s) / this._defaultWidth;
     if (this._wordWrapLineWidth !== null) {
       this._metrics = Metrics.createWordWrapping(
-          this._measurer.defaultWidthRegex(), this._measurer.defaultWidthRegexWithNewLines(),
-          measure, measure, this._wordWrapLineWidth);
+          this._measurer.defaultWidthRegex(), measure, measure, this._wordWrapLineWidth);
     } else {
       this._metrics = Metrics.createRegular(this._measurer.defaultWidthRegex(), measure, measure);
     }
