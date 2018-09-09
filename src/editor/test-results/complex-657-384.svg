@@ -94,25 +94,25 @@
       <rect x="43.8ch" y="19.1em" width="5ch" height="1em" fill="hsla(36, 96%, 56%, 0.4)"></rect>
     </g>
     <g id="text">
-      <text x="3.8ch" y="-0.9em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">ne37 Line37 Line37 Line37 Line37 Line37 Line37</text>
-      <text x="3.8ch" y="0.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">ne38 Line38 Line38 Line38 Line38 Line38 Line38</text>
-      <text x="3.8ch" y="1.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">ne39 Line39 Line39 Line39 Line39 Line39 Line39</text>
-      <text x="3.8ch" y="3.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">ne41 </text>
-      <text x="3.8ch" y="4.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">ne42 Line42 </text>
-      <text x="3.8ch" y="5.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">ne43 Line43 Line43 </text>
-      <text x="3.8ch" y="6.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">ne44 Line44 Line44 Line44 </text>
-      <text x="3.8ch" y="7.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">ne45 Line45 Line45 Line45 Line45 </text>
-      <text x="3.8ch" y="8.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">ne46 Line46 Line46 Line46 Line46 Line46 </text>
-      <text x="3.8ch" y="9.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">ne47 Line47 Line47 Line47 Line47 Line47 Line47</text>
-      <text x="3.8ch" y="10.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">ne48 Line48 Line48 Line48 Line48 Line48 Line48</text>
-      <text x="3.8ch" y="11.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">ne49 Line49 Line49 Line49 Line49 Line49 Line49</text>
-      <text x="3.8ch" y="13.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">ne51 </text>
-      <text x="3.8ch" y="14.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">ne52 Line52 </text>
-      <text x="3.8ch" y="15.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">ne53 Line53 Line53 </text>
-      <text x="3.8ch" y="16.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">ne54 Line54 Line54 Line54 </text>
-      <text x="3.8ch" y="17.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">ne55 Line55 Line55 Line55 Line55 </text>
-      <text x="3.8ch" y="18.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">ne56 Line56 Line56 Line56 Line56 Line56 </text>
-      <text x="3.8ch" y="19.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">ne57 Line57 Line57 Line57 Line57 Line57 Line57</text>
+      <text x="3.8ch" y="-0.9em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">ne37 Line37 Line37 Line37 Line37 Line37 Line37</text>
+      <text x="3.8ch" y="0.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">ne38 Line38 Line38 Line38 Line38 Line38 Line38</text>
+      <text x="3.8ch" y="1.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">ne39 Line39 Line39 Line39 Line39 Line39 Line39</text>
+      <text x="3.8ch" y="3.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">ne41 </text>
+      <text x="3.8ch" y="4.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">ne42 Line42 </text>
+      <text x="3.8ch" y="5.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">ne43 Line43 Line43 </text>
+      <text x="3.8ch" y="6.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">ne44 Line44 Line44 Line44 </text>
+      <text x="3.8ch" y="7.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">ne45 Line45 Line45 Line45 Line45 </text>
+      <text x="3.8ch" y="8.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">ne46 Line46 Line46 Line46 Line46 Line46 </text>
+      <text x="3.8ch" y="9.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">ne47 Line47 Line47 Line47 Line47 Line47 Line47</text>
+      <text x="3.8ch" y="10.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">ne48 Line48 Line48 Line48 Line48 Line48 Line48</text>
+      <text x="3.8ch" y="11.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">ne49 Line49 Line49 Line49 Line49 Line49 Line49</text>
+      <text x="3.8ch" y="13.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">ne51 </text>
+      <text x="3.8ch" y="14.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">ne52 Line52 </text>
+      <text x="3.8ch" y="15.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">ne53 Line53 Line53 </text>
+      <text x="3.8ch" y="16.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">ne54 Line54 Line54 Line54 </text>
+      <text x="3.8ch" y="17.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">ne55 Line55 Line55 Line55 Line55 </text>
+      <text x="3.8ch" y="18.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">ne56 Line56 Line56 Line56 Line56 Line56 </text>
+      <text x="3.8ch" y="19.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">ne57 Line57 Line57 Line57 Line57 Line57 Line57</text>
     </g>
   </g>
   <g id="scrollbars">

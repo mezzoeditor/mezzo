@@ -11,8 +11,8 @@
     <g id="lines"></g>
     <g id="background"></g>
     <g id="text">
-      <text x="3.5ch" y="-0.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">98 Line98 Line98 Line98 Line98 Line98 </text>
-      <text x="3.5ch" y="0.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">99 Line99 Line99 Line99 Line99 Line99 Line99 </text>
+      <text x="3.5ch" y="-0.5em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">98 Line98 Line98 Line98 Line98 Line98 </text>
+      <text x="3.5ch" y="0.5em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">99 Line99 Line99 Line99 Line99 Line99 Line99 </text>
     </g>
   </g>
   <g id="scrollbars">

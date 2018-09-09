@@ -33,26 +33,26 @@
       <line x1="4.5ch" y1="0.5em" x2="4.5ch" y2="1.5em" stroke="rgb(33, 33, 33)"></line>
     </g>
     <g id="text">
-      <text x="4.5ch" y="0.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">1 34 </text>
-      <text x="4.5ch" y="1.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">678 </text>
-      <text x="4.5ch" y="2.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">0123 </text>
-      <text x="4.5ch" y="3.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">56789</text>
-      <text x="4.5ch" y="4.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)"> </text>
-      <text x="4.5ch" y="5.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">12345</text>
-      <text x="4.5ch" y="6.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">6 </text>
-      <text x="4.5ch" y="7.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">89012</text>
-      <text x="4.5ch" y="8.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">34 </text>
-      <text x="4.5ch" y="9.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">67890</text>
-      <text x="4.5ch" y="10.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">123 </text>
-      <text x="4.5ch" y="11.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">56789</text>
-      <text x="4.5ch" y="12.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">0123 </text>
-      <text x="4.5ch" y="13.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">56789</text>
-      <text x="4.5ch" y="14.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">01234</text>
-      <text x="4.5ch" y="15.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">12 </text>
-      <text x="4.5ch" y="16.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">456 </text>
-      <text x="4.5ch" y="17.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">8901 </text>
-      <text x="4.5ch" y="18.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">34567</text>
-      <text x="4.5ch" y="19.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)"> </text>
+      <text x="4.5ch" y="0.5em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">1 34 </text>
+      <text x="4.5ch" y="1.5em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">678 </text>
+      <text x="4.5ch" y="2.5em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">0123 </text>
+      <text x="4.5ch" y="3.5em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">56789</text>
+      <text x="4.5ch" y="4.5em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)"> </text>
+      <text x="4.5ch" y="5.5em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">12345</text>
+      <text x="4.5ch" y="6.5em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">6 </text>
+      <text x="4.5ch" y="7.5em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">89012</text>
+      <text x="4.5ch" y="8.5em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">34 </text>
+      <text x="4.5ch" y="9.5em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">67890</text>
+      <text x="4.5ch" y="10.5em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">123 </text>
+      <text x="4.5ch" y="11.5em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">56789</text>
+      <text x="4.5ch" y="12.5em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">0123 </text>
+      <text x="4.5ch" y="13.5em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">56789</text>
+      <text x="4.5ch" y="14.5em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">01234</text>
+      <text x="4.5ch" y="15.5em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">12 </text>
+      <text x="4.5ch" y="16.5em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">456 </text>
+      <text x="4.5ch" y="17.5em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">8901 </text>
+      <text x="4.5ch" y="18.5em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">34567</text>
+      <text x="4.5ch" y="19.5em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)"> </text>
     </g>
   </g>
   <g id="scrollbars">

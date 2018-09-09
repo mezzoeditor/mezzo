@@ -39,6 +39,12 @@ export class Measurer {
   }
 };
 
+export const WrappingMode = {
+  None: 0,
+  Line: 1,
+  Word: 2,
+}
+
 export class Markup extends EventEmitter {
   /**
    * @param {!Measurer} measurer
@@ -60,7 +66,8 @@ export class Markup extends EventEmitter {
     this._platformSupport = platformSupport;
 
     this._frozen = false;
-    this._wordWrapLineWidth = null;
+    this._wrappingMode = WrappingMode.None;
+    this._wrappingLimit = null;
     this._contentWidth = 0;
     this._contentHeight = 0;
     // All the undone ranges in allocator have character-adjusted boundaries,
@@ -87,30 +94,35 @@ export class Markup extends EventEmitter {
 
   _recreateMetrics() {
     const measure = s => this._measurer.measureString(s) / this._defaultWidth;
-    if (this._wordWrapLineWidth !== null) {
-      this._metrics = Metrics.createWordWrapping(
-          this._measurer.defaultWidthRegex(), measure, measure, this._wordWrapLineWidth);
-    } else {
+    if (this._wrappingMode === WrappingMode.None) {
       this._metrics = Metrics.createRegular(this._measurer.defaultWidthRegex(), measure, measure);
+    } else if (this._wrappingMode === WrappingMode.Line) {
+      this._metrics = Metrics.createLineWrapping(
+        this._measurer.defaultWidthRegex(), measure, measure, this._wrappingLimit);
+    } else {
+      this._metrics = Metrics.createWordWrapping(
+        this._measurer.defaultWidthRegex(), measure, measure, this._wrappingLimit);
     }
     this._allocator = new WorkAllocator(this._text.length());
     this._rechunk();
   }
 
   /**
-   * @param {number?} wordWrapLineWidth
+   * @param {!WrappingMode} wrappingMode
+   * @param {number?} wrappingLimit
    */
-  setWordWrapLineWidth(wordWrapLineWidth) {
-    if (wordWrapLineWidth !== null)
-      wordWrapLineWidth /= this._defaultWidth;
-    if (this._wordWrapLineWidth === wordWrapLineWidth)
+  setWrappingMode(wrappingMode, wrappingLimit) {
+    if (wrappingLimit !== null)
+    wrappingLimit /= this._defaultWidth;
+    if (this._wrappingMode === wrappingMode && this._wrappingLimit === wrappingLimit)
       return;
 
     // This is an approximation of "max character width".
-    if (wordWrapLineWidth !== null && wordWrapLineWidth < 2)
+    if (wrappingLimit !== null && wrappingLimit < 2)
       throw new Error('Word wrap line width cannot be too small');
 
-    this._wordWrapLineWidth = wordWrapLineWidth;
+    this._wrappingMode = wrappingMode;
+    this._wrappingLimit = wrappingLimit;
     this._recreateMetrics();
   }
 
@@ -150,7 +162,7 @@ export class Markup extends EventEmitter {
     const newTo = this._text.length() - split.right.metrics().length;
 
     // This is a heuristic to most likely cover the word at the editing boundary
-    // which ensures proper word wrapping. Otherwise the chunk may split the word
+    // which ensures proper wrapping. Otherwise the chunk may split the word
     // in the middle and calculate the wrapping incorrectly.
     let undoneFrom = newFrom;
     let undoneTo = newTo;
@@ -226,7 +238,7 @@ export class Markup extends EventEmitter {
   }
 
   _rechunk() {
-    let budget = this._wordWrapLineWidth === null ? kRechunkSize : kWordWrapRechunkSize;
+    let budget = this._wrappingMode === WrappingMode.None ? kRechunkSize : kWrappingRechunkSize;
     let range = null;
     while (budget > 0 && (range = this._allocator.workRange())) {
       let {from, to} = range;
@@ -591,7 +603,7 @@ function Offset(anchor) {
 
 let kChunkSize = 1000;
 let kRechunkSize = 10000000;
-let kWordWrapRechunkSize = 5000000;
+let kWrappingRechunkSize = 5000000;
 
 Markup.test = {};
 

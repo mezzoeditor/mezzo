@@ -117,27 +117,27 @@
       <rect x="46.5ch" y="19.1em" width="3ch" height="1em" fill="hsla(36, 96%, 56%, 0.4)"></rect>
     </g>
     <g id="text">
-      <text x="4.5ch" y="-0.9em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line37 Line37 Line37 Line37 Line37 Line37 Lin</text>
-      <text x="4.5ch" y="0.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line38 Line38 Line38 Line38 Line38 Line38 Lin</text>
-      <text x="4.5ch" y="1.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line39 Line39 Line39 Line39 Line39 Line39 Lin</text>
-      <text x="4.5ch" y="2.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line40 Line40 Line40 Line40 Line40 Line40 Lin</text>
-      <text x="4.5ch" y="3.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line41 Line41 Line41 Line41 Line41 Line41 Lin</text>
-      <text x="4.5ch" y="4.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line42 Line42 Line42 Line42 Line42 Line42 Lin</text>
-      <text x="4.5ch" y="5.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line43 Line43 Line43 Line43 Line43 Line43 Lin</text>
-      <text x="4.5ch" y="6.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line44 Line44 Line44 Line44 Line44 Line44 Lin</text>
-      <text x="4.5ch" y="7.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line45 Line45 Line45 Line45 Line45 Line45 Lin</text>
-      <text x="4.5ch" y="8.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line46 Line46 Line46 Line46 Line46 Line46 Lin</text>
-      <text x="4.5ch" y="9.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line47 Line47 Line47 Line47 Line47 Line47 Lin</text>
-      <text x="4.5ch" y="10.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line48 Line48 Line48 Line48 Line48 Line48 Lin</text>
-      <text x="4.5ch" y="11.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line49 Line49 Line49 Line49 Line49 Line49 Lin</text>
-      <text x="4.5ch" y="12.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line50 Line50 Line50 Line50 Line50 Line50 Lin</text>
-      <text x="4.5ch" y="13.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line51 Line51 Line51 Line51 Line51 Line51 Lin</text>
-      <text x="4.5ch" y="14.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line52 Line52 Line52 Line52 Line52 Line52 Lin</text>
-      <text x="4.5ch" y="15.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line53 Line53 Line53 Line53 Line53 Line53 Lin</text>
-      <text x="4.5ch" y="16.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line54 Line54 Line54 Line54 Line54 Line54 Lin</text>
-      <text x="4.5ch" y="17.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line55 Line55 Line55 Line55 Line55 Line55 Lin</text>
-      <text x="4.5ch" y="18.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line56 Line56 Line56 Line56 Line56 Line56 Lin</text>
-      <text x="4.5ch" y="19.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line57 Line57 Line57 Line57 Line57 Line57 Lin</text>
+      <text x="4.5ch" y="-0.9em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line37 Line37 Line37 Line37 Line37 Line37 Lin</text>
+      <text x="4.5ch" y="0.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line38 Line38 Line38 Line38 Line38 Line38 Lin</text>
+      <text x="4.5ch" y="1.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line39 Line39 Line39 Line39 Line39 Line39 Lin</text>
+      <text x="4.5ch" y="2.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line40 Line40 Line40 Line40 Line40 Line40 Lin</text>
+      <text x="4.5ch" y="3.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line41 Line41 Line41 Line41 Line41 Line41 Lin</text>
+      <text x="4.5ch" y="4.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line42 Line42 Line42 Line42 Line42 Line42 Lin</text>
+      <text x="4.5ch" y="5.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line43 Line43 Line43 Line43 Line43 Line43 Lin</text>
+      <text x="4.5ch" y="6.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line44 Line44 Line44 Line44 Line44 Line44 Lin</text>
+      <text x="4.5ch" y="7.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line45 Line45 Line45 Line45 Line45 Line45 Lin</text>
+      <text x="4.5ch" y="8.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line46 Line46 Line46 Line46 Line46 Line46 Lin</text>
+      <text x="4.5ch" y="9.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line47 Line47 Line47 Line47 Line47 Line47 Lin</text>
+      <text x="4.5ch" y="10.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line48 Line48 Line48 Line48 Line48 Line48 Lin</text>
+      <text x="4.5ch" y="11.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line49 Line49 Line49 Line49 Line49 Line49 Lin</text>
+      <text x="4.5ch" y="12.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line50 Line50 Line50 Line50 Line50 Line50 Lin</text>
+      <text x="4.5ch" y="13.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line51 Line51 Line51 Line51 Line51 Line51 Lin</text>
+      <text x="4.5ch" y="14.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line52 Line52 Line52 Line52 Line52 Line52 Lin</text>
+      <text x="4.5ch" y="15.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line53 Line53 Line53 Line53 Line53 Line53 Lin</text>
+      <text x="4.5ch" y="16.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line54 Line54 Line54 Line54 Line54 Line54 Lin</text>
+      <text x="4.5ch" y="17.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line55 Line55 Line55 Line55 Line55 Line55 Lin</text>
+      <text x="4.5ch" y="18.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line56 Line56 Line56 Line56 Line56 Line56 Lin</text>
+      <text x="4.5ch" y="19.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line57 Line57 Line57 Line57 Line57 Line57 Lin</text>
     </g>
   </g>
   <g id="scrollbars">

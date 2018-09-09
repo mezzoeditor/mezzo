@@ -1,4 +1,5 @@
 import { TextDecorator } from "../src/core/Decorator.mjs";
+import { WrappingMode } from "../src/core/Markup.mjs";
 
 import { WebEmbedder } from "../webembedder/index.mjs";
 
@@ -28,8 +29,9 @@ document.addEventListener('DOMContentLoaded', () => {
     embedder.setUseMonospaceFont(event.target.checked);
   }, false);
 
-  document.querySelector('.wordwrap').addEventListener('change', event => {
-    embedder.setWordWrapActive(event.target.checked);
+  document.querySelector('.wrapping').addEventListener('input', event => {
+    let map = new Map([['none', WrappingMode.None], ['line', WrappingMode.Line], ['word', WrappingMode.Word]]);
+    embedder.setWrappingMode(map.get(event.target.value));
   }, false);
 
   document.body.appendChild(embedder.element());

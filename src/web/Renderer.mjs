@@ -1,5 +1,5 @@
 import { RoundMode, Metrics } from '../core/Metrics.mjs';
-import { Markup, Measurer } from '../core/Markup.mjs';
+import { WrappingMode, Markup, Measurer } from '../core/Markup.mjs';
 import { Frame } from '../core/Frame.mjs';
 import { Editor } from '../editor/Editor.mjs';
 import { trace } from '../core/Trace.mjs';
@@ -113,7 +113,7 @@ export class Renderer {
 
     this._theme = DefaultTheme;
     this._monospace = true;
-    this._wordWrap = false;
+    this._wrappingMode = WrappingMode.None;
     this._eventListeners = [];
 
     this._animationFrameId = 0;
@@ -604,8 +604,8 @@ export class Renderer {
     //   this._editor.markup().setMeasurer(this._measurer);
 
     this._invalidate();
-    if (this._editor && this._wordWrap)
-      this._editor.markup().setWordWrapLineWidth(this._wordWrapLineWidth());
+    if (this._editor && this._wrappingMode !== WrappingMode.None)
+      this._editor.markup().setWrappingMode(this._wrappingMode, this._wrappingLimit());
 
     // Changing cavas width/height clears the canvas synchronously.
     // We need to re-render so that it doesn't blink on continious resizing.
@@ -624,21 +624,21 @@ export class Renderer {
   }
 
   /**
-   * @param {boolean} wordWrap
+   * @param {!WrappingMode} wrappingMode
    */
-  setWordWrapActive(wordWrap) {
-    if (this._wordWrap === wordWrap)
+  setWrappingMode(wrappingMode) {
+    if (this._wrappingMode === wrappingMode)
       return;
-    this._wordWrap = wordWrap;
+    this._wrappingMode = wrappingMode;
     if (this._editor)
-      this._editor.markup().setWordWrapLineWidth(this._wordWrapLineWidth());
+      this._editor.markup().setWrappingMode(this._wrappingMode, this._wrappingLimit());
   }
 
   /**
    * @return {number?}
    */
-  _wordWrapLineWidth() {
-    if (!this._wordWrap)
+  _wrappingLimit() {
+    if (this._wrappingMode === WrappingMode.None)
       return null;
     return Math.max(2 * this._measurer.defaultWidth(), this._editorRect.width - this._padding.left - this._padding.right);
   }

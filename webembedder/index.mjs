@@ -112,8 +112,8 @@ export class WebEmbedder {
     this._renderer.setUseMonospaceFont(enabled);
   }
 
-  setWordWrapActive(value) {
-    this._renderer.setWordWrapActive(value);
+  setWrappingMode(value) {
+    this._renderer.setWrappingMode(value);
   }
 
   /**

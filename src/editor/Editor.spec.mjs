@@ -2,6 +2,7 @@ import {GoldenMatchers} from '../../utils/GoldenMatchers';
 import {TestPlatformSupport} from '../../test/utils.mjs';
 import {SVGRenderer} from '../../test/SVGRenderer.mjs';
 import {Search} from '../../plugins/Search.mjs';
+import {WrappingMode} from '../core/Markup.mjs';
 import url from 'url';
 import path from 'path';
 
@@ -74,8 +75,8 @@ export function addTests(runner, expect, options) {
     });
   });
 
-  describe('WordWrap', () => {
-    function renderWordWrap(scrollLeft, scrollTop, wrapLineLength) {
+  describe('Wrapping', () => {
+    function renderWrapping(scrollLeft, scrollTop, wrappingMode, wrapLineLength) {
       const platform = new TestPlatformSupport();
       const renderer = new SVGRenderer(platform);
       const lines = [];
@@ -94,9 +95,17 @@ export function addTests(runner, expect, options) {
         lines.push(res);
       }
       renderer.editor().reset(lines.join('\n'));
-      renderer.editor().markup().setWordWrapLineWidth(wrapLineLength);
+      renderer.editor().markup().setWrappingMode(wrappingMode, wrapLineLength);
       platform.runUntilIdle();
       return renderer.render(scrollLeft, scrollTop);
+    }
+
+    function renderWordWrap(scrollLeft, scrollTop, wrapLineLength) {
+      return renderWrapping(scrollLeft, scrollTop, WrappingMode.Word, wrapLineLength);
+    }
+
+    function renderLineWrap(scrollLeft, scrollTop, wrapLineLength) {
+      return renderWrapping(scrollLeft, scrollTop, WrappingMode.Line, wrapLineLength);
     }
 
     it('wordwrap-23', () => {
@@ -129,6 +138,10 @@ export function addTests(runner, expect, options) {
 
     it('wordwrap-5.2', () => {
       golden.expectSVG(renderWordWrap(0.0, 0.0, 5.2), 'wordwrap-5.2.svg');
+    });
+
+    it('linewrap-23-scroll', () => {
+      golden.expectSVG(renderLineWrap(1.6, 5.8, 23), 'linewrap-23-scroll.svg');
     });
   });
 }

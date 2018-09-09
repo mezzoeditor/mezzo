@@ -204,6 +204,7 @@ export class SVGRenderer {
         text.add('text', {
           x, y,
           'alignment-baseline': 'hanging',
+          'style': 'white-space: pre;',
           fill: theme.text.color || 'rgb(33, 33, 33)',
         }, content);
       }

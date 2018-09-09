@@ -41,26 +41,26 @@
       <rect x="4.3ch" y="5.2em" width="5ch" height="1em" rx="0" ry="0" stroke="hsl(39, 96%, 28%)" fill="transparent"></rect>
     </g>
     <g id="text">
-      <text x="4.3ch" y="0.2em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line0 Line0 Line0 Line0 Line0 Line0 Line0 Lin</text>
-      <text x="4.3ch" y="1.2em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line1 Line1 Line1 Line1 Line1 Line1 Line1 Lin</text>
-      <text x="4.3ch" y="2.2em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line2 Line2 Line2 Line2 Line2 Line2 Line2 Lin</text>
-      <text x="4.3ch" y="3.2em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line3 Line3 Line3 Line3 Line3 Line3 Line3 Lin</text>
-      <text x="4.3ch" y="4.2em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line4 Line4 Line4 Line4 Line4 Line4 Line4 Lin</text>
-      <text x="4.3ch" y="5.2em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line5 Line5 Line5 Line5 Line5 Line5 Line5 Lin</text>
-      <text x="4.3ch" y="6.2em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line6 Line6 Line6 Line6 Line6 Line6 Line6 Lin</text>
-      <text x="4.3ch" y="7.2em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line7 Line7 Line7 Line7 Line7 Line7 Line7 Lin</text>
-      <text x="4.3ch" y="8.2em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line8 Line8 Line8 Line8 Line8 Line8 Line8 Lin</text>
-      <text x="4.3ch" y="9.2em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line9 Line9 Line9 Line9 Line9 Line9 Line9 Lin</text>
-      <text x="4.3ch" y="10.2em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line10 Line10 Line10 Line10 Line10 Line10 Lin</text>
-      <text x="4.3ch" y="11.2em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line11 Line11 Line11 Line11 Line11 Line11 Lin</text>
-      <text x="4.3ch" y="12.2em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line12 Line12 Line12 Line12 Line12 Line12 Lin</text>
-      <text x="4.3ch" y="13.2em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line13 Line13 Line13 Line13 Line13 Line13 Lin</text>
-      <text x="4.3ch" y="14.2em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line14 Line14 Line14 Line14 Line14 Line14 Lin</text>
-      <text x="4.3ch" y="15.2em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line15 Line15 Line15 Line15 Line15 Line15 Lin</text>
-      <text x="4.3ch" y="16.2em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line16 Line16 Line16 Line16 Line16 Line16 Lin</text>
-      <text x="4.3ch" y="17.2em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line17 Line17 Line17 Line17 Line17 Line17 Lin</text>
-      <text x="4.3ch" y="18.2em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line18 Line18 Line18 Line18 Line18 Line18 Lin</text>
-      <text x="4.3ch" y="19.2em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">Line19 Line19 Line19 Line19 Line19 Line19 Lin</text>
+      <text x="4.3ch" y="0.2em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line0 Line0 Line0 Line0 Line0 Line0 Line0 Lin</text>
+      <text x="4.3ch" y="1.2em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line1 Line1 Line1 Line1 Line1 Line1 Line1 Lin</text>
+      <text x="4.3ch" y="2.2em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line2 Line2 Line2 Line2 Line2 Line2 Line2 Lin</text>
+      <text x="4.3ch" y="3.2em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line3 Line3 Line3 Line3 Line3 Line3 Line3 Lin</text>
+      <text x="4.3ch" y="4.2em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line4 Line4 Line4 Line4 Line4 Line4 Line4 Lin</text>
+      <text x="4.3ch" y="5.2em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line5 Line5 Line5 Line5 Line5 Line5 Line5 Lin</text>
+      <text x="4.3ch" y="6.2em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line6 Line6 Line6 Line6 Line6 Line6 Line6 Lin</text>
+      <text x="4.3ch" y="7.2em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line7 Line7 Line7 Line7 Line7 Line7 Line7 Lin</text>
+      <text x="4.3ch" y="8.2em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line8 Line8 Line8 Line8 Line8 Line8 Line8 Lin</text>
+      <text x="4.3ch" y="9.2em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line9 Line9 Line9 Line9 Line9 Line9 Line9 Lin</text>
+      <text x="4.3ch" y="10.2em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line10 Line10 Line10 Line10 Line10 Line10 Lin</text>
+      <text x="4.3ch" y="11.2em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line11 Line11 Line11 Line11 Line11 Line11 Lin</text>
+      <text x="4.3ch" y="12.2em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line12 Line12 Line12 Line12 Line12 Line12 Lin</text>
+      <text x="4.3ch" y="13.2em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line13 Line13 Line13 Line13 Line13 Line13 Lin</text>
+      <text x="4.3ch" y="14.2em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line14 Line14 Line14 Line14 Line14 Line14 Lin</text>
+      <text x="4.3ch" y="15.2em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line15 Line15 Line15 Line15 Line15 Line15 Lin</text>
+      <text x="4.3ch" y="16.2em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line16 Line16 Line16 Line16 Line16 Line16 Lin</text>
+      <text x="4.3ch" y="17.2em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line17 Line17 Line17 Line17 Line17 Line17 Lin</text>
+      <text x="4.3ch" y="18.2em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line18 Line18 Line18 Line18 Line18 Line18 Lin</text>
+      <text x="4.3ch" y="19.2em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">Line19 Line19 Line19 Line19 Line19 Line19 Lin</text>
     </g>
   </g>
   <g id="scrollbars">

@@ -1,4 +1,4 @@
-export let RoundMode = {
+export const RoundMode = {
   Floor: 0,
   Round: 1,
   Ceil: 2
@@ -158,7 +158,17 @@ export class Metrics {
    * @return {!Metrics}
    */
   static createWordWrapping(widthOneRegex, measureBMP, measureSupplementary, maxLineWidth) {
-    return new WordWrapMetrics(widthOneRegex, measureBMP, measureSupplementary, maxLineWidth);
+    return new WordWrappingMetrics(widthOneRegex, measureBMP, measureSupplementary, maxLineWidth);
+  }
+
+  /**
+   * Same as above, but performs line wrapping at the middle of the
+   * words.
+   *
+   * @return {!Metrics}
+   */
+  static createLineWrapping(widthOneRegex, measureBMP, measureSupplementary, maxLineWidth) {
+    return new LineWrappingMetrics(widthOneRegex, measureBMP, measureSupplementary, maxLineWidth);
   }
 
   /**
@@ -374,7 +384,7 @@ export class Metrics {
    * @param {!Location} before
    * @param {number} offset
    * @param {boolean} strict
-   * @param {!WordWrapState} state
+   * @param {!WrapState} state
    * @return {!Location}
    */
   _locateByOffset(s, state, before, offset, strict) {
@@ -522,10 +532,10 @@ export class RegularMetrics extends Metrics {
  * This is a "start width" value, from which we started
  * the chunk before wrapping.
  *
- * @typedef {number} WordWrapState
+ * @typedef {number} WrapState
  */
 
-export class WordWrapMetrics extends Metrics {
+export class WrappingMetrics extends Metrics {
   /**
    * @param {?RegExp} widthOneRegex
    * @param {function(string):number} measureBMP
@@ -539,55 +549,10 @@ export class WordWrapMetrics extends Metrics {
 
   /**
    * @param {string} s
-   * @param {!WordWrapState} state
+   * @param {!WrapState} state
    * @return {!Array<{offset: number, width: number}>}
    */
   _wrap(s, state) {
-    const widthOne = this._widthOneRegex && this._widthOneRegex.test(s);
-    const limit = this._maxLineWidth;
-
-    const result = [];
-    let wordStart = 0;
-    let offset = 0;
-    let width = state;
-
-    const lines = s.split("\n");
-    for (let i = 0; ;) {
-      const words = lines[i].split(/(\W+)/u);
-      for (let j = 0; ;) {
-        const wordEnded = (j && !(j % 2)) || j === words.length;
-        if (offset > wordStart && wordEnded) {
-          let w = widthOne ? offset - wordStart : this._measureString(s, wordStart, offset);
-          while (width + w > limit) {
-            if (width > 0) {
-              result.push({offset: wordStart, width});
-              width = 0;
-            } else {
-              const located = this._locateByWidth(s, wordStart, offset, limit, RoundMode.Floor);
-              result.push({offset: located.offset, width: located.width});
-              w -= located.width;
-              wordStart = located.offset;
-            }
-          }
-          width += w;
-          wordStart = offset;
-        }
-        if (j === words.length)
-          break;
-        offset += words[j++].length;
-      }
-
-      if (++i !== lines.length)
-        offset++;
-      result.push({offset, width});
-      width = 0;
-      wordStart = offset;
-      if (i === lines.length)
-        break;
-    }
-
-    result[0].width -= state;
-    return result;
   }
 
   /**
@@ -597,7 +562,7 @@ export class WordWrapMetrics extends Metrics {
    */
   forString(s, state) {
     const metrics = {length: s.length, firstWidth: 0, lastWidth: 0, longestWidth: 0, lineBreaks: -1};
-    for (const {offset, width} of this._wrap(s, state || WordWrapMetrics.defaultState)) {
+    for (const {offset, width} of this._wrap(s, state || WrappingMetrics.defaultState)) {
       if (metrics.lineBreaks === -1)
         metrics.firstWidth = width;
       metrics.longestWidth = Math.max(metrics.longestWidth, width);
@@ -618,7 +583,7 @@ export class WordWrapMetrics extends Metrics {
    * @return {{lineStartOffset: number, lineEndOffset: number, x: number, y: number}}
    */
   _locateLineByPoint(s, state, x, y, point) {
-    const wrapped = this._wrap(s, state || WordWrapMetrics.defaultState);
+    const wrapped = this._wrap(s, state || WrappingMetrics.defaultState);
     let lineIndex = 0;
     while (y + 1 <= point.y) {
       if (lineIndex === wrapped.length - 1)
@@ -645,7 +610,7 @@ export class WordWrapMetrics extends Metrics {
    * @return {{lineStartOffset: number, x: number, y: number}}
    */
   _locateLineByOffset(s, state, offset, x, y) {
-    const wrapped = this._wrap(s, state || WordWrapMetrics.defaultState);
+    const wrapped = this._wrap(s, state || WrappingMetrics.defaultState);
     let lineIndex = 0;
     while (lineIndex < wrapped.length && offset >= wrapped[lineIndex].offset)
       lineIndex++;
@@ -656,5 +621,123 @@ export class WordWrapMetrics extends Metrics {
   }
 };
 
-/** @type {!WordWrapState} */
-WordWrapMetrics.defaultState = 0;
+export class WordWrappingMetrics extends WrappingMetrics {
+  /**
+   * @param {?RegExp} widthOneRegex
+   * @param {function(string):number} measureBMP
+   * @param {function(string):number} measureSupplementary
+   * @param {number} maxLineWidth
+   */
+  constructor(widthOneRegex, measureBMP, measureSupplementary, maxLineWidth) {
+    super(widthOneRegex, measureBMP, measureSupplementary, maxLineWidth);
+  }
+
+  /**
+   * @param {string} s
+   * @param {!WrapState} state
+   * @return {!Array<{offset: number, width: number}>}
+   */
+  _wrap(s, state) {
+    const widthOne = this._widthOneRegex && this._widthOneRegex.test(s);
+    const limit = this._maxLineWidth;
+
+    const result = [];
+    let wordStart = 0;
+    let offset = 0;
+    let width = state;
+
+    const lines = s.split("\n");
+    for (let i = 0; ;) {
+      const words = lines[i].split(/(\W+)/u);
+      for (let j = 0; ;) {
+        const wordEnded = (j && !(j % 2)) || j === words.length;
+        if (offset > wordStart && wordEnded) {
+          let w = widthOne ? offset - wordStart : this._measureString(s, wordStart, offset);
+          while (width + w > limit) {
+            if (width > 0) {
+              result.push({offset: wordStart, width});
+              width = 0;
+            } else {
+              // TODO: we could probably optimize then next call by computing |widthOne| once.
+              const located = this._locateByWidth(s, wordStart, offset, limit, RoundMode.Floor);
+              result.push({offset: located.offset, width: located.width});
+              w -= located.width;
+              wordStart = located.offset;
+            }
+          }
+          width += w;
+          wordStart = offset;
+        }
+        if (j === words.length)
+          break;
+        offset += words[j++].length;
+      }
+
+      if (++i !== lines.length)
+        offset++;
+      result.push({offset, width});
+      width = 0;
+      wordStart = offset;
+      if (i === lines.length)
+        break;
+    }
+
+    result[0].width -= state;
+    return result;
+  }
+};
+
+export class LineWrappingMetrics extends WrappingMetrics {
+  /**
+   * @param {?RegExp} widthOneRegex
+   * @param {function(string):number} measureBMP
+   * @param {function(string):number} measureSupplementary
+   * @param {number} maxLineWidth
+   */
+  constructor(widthOneRegex, measureBMP, measureSupplementary, maxLineWidth) {
+    super(widthOneRegex, measureBMP, measureSupplementary, maxLineWidth);
+  }
+
+  /**
+   * @param {string} s
+   * @param {!WrapState} state
+   * @return {!Array<{offset: number, width: number}>}
+   */
+  _wrap(s, state) {
+    const limit = this._maxLineWidth;
+    const result = [];
+    let offset = 0;
+    let width = state;
+
+    const lines = s.split("\n");
+    for (let i = 0; ;) {
+      let lineEnd = offset + lines[i].length;
+      while (offset < lineEnd) {
+        // TODO: we could probably optimize then next call by computing |widthOne| once.
+        const located = this._locateByWidth(s, offset, lineEnd, limit - width, RoundMode.Floor);
+        if (located.offset === -1)
+          located.offset = lineEnd;
+        result.push({offset: located.offset, width: located.width});
+        offset = located.offset;
+        width = 0;
+      }
+
+      if (++i === lines.length)
+        break;
+
+      offset++;
+      if (!lines[i - 1].length) {
+        result.push({offset, width});
+        width = 0;
+      } else {
+        result[result.length - 1].offset++;
+      }
+    }
+
+    result[0].width -= state;
+    return result;
+  }
+};
+
+/** @type {!WrapState} */
+WrappingMetrics.defaultState = 0;

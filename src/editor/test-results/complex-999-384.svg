@@ -77,21 +77,21 @@
       <rect x="27.5ch" y="19.1em" width="5ch" height="1em" fill="hsla(36, 96%, 56%, 0.4)"></rect>
     </g>
     <g id="text">
-      <text x="3.5ch" y="-0.9em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">37 Line37 Line37 Line37 Line37 </text>
-      <text x="3.5ch" y="0.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">38 Line38 Line38 Line38 Line38 Line38 </text>
-      <text x="3.5ch" y="1.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">39 Line39 Line39 Line39 Line39 Line39 Line39 </text>
-      <text x="3.5ch" y="5.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">43 </text>
-      <text x="3.5ch" y="6.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">44 Line44 </text>
-      <text x="3.5ch" y="7.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">45 Line45 Line45 </text>
-      <text x="3.5ch" y="8.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">46 Line46 Line46 Line46 </text>
-      <text x="3.5ch" y="9.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">47 Line47 Line47 Line47 Line47 </text>
-      <text x="3.5ch" y="10.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">48 Line48 Line48 Line48 Line48 Line48 </text>
-      <text x="3.5ch" y="11.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">49 Line49 Line49 Line49 Line49 Line49 Line49 </text>
-      <text x="3.5ch" y="15.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">53 </text>
-      <text x="3.5ch" y="16.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">54 Line54 </text>
-      <text x="3.5ch" y="17.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">55 Line55 Line55 </text>
-      <text x="3.5ch" y="18.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">56 Line56 Line56 Line56 </text>
-      <text x="3.5ch" y="19.1em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">57 Line57 Line57 Line57 Line57 </text>
+      <text x="3.5ch" y="-0.9em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">37 Line37 Line37 Line37 Line37 </text>
+      <text x="3.5ch" y="0.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">38 Line38 Line38 Line38 Line38 Line38 </text>
+      <text x="3.5ch" y="1.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">39 Line39 Line39 Line39 Line39 Line39 Line39 </text>
+      <text x="3.5ch" y="5.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">43 </text>
+      <text x="3.5ch" y="6.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">44 Line44 </text>
+      <text x="3.5ch" y="7.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">45 Line45 Line45 </text>
+      <text x="3.5ch" y="8.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">46 Line46 Line46 Line46 </text>
+      <text x="3.5ch" y="9.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">47 Line47 Line47 Line47 Line47 </text>
+      <text x="3.5ch" y="10.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">48 Line48 Line48 Line48 Line48 Line48 </text>
+      <text x="3.5ch" y="11.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">49 Line49 Line49 Line49 Line49 Line49 Line49 </text>
+      <text x="3.5ch" y="15.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">53 </text>
+      <text x="3.5ch" y="16.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">54 Line54 </text>
+      <text x="3.5ch" y="17.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">55 Line55 Line55 </text>
+      <text x="3.5ch" y="18.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">56 Line56 Line56 Line56 </text>
+      <text x="3.5ch" y="19.1em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">57 Line57 Line57 Line57 Line57 </text>
     </g>
   </g>
   <g id="scrollbars">

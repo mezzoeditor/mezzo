@@ -23,10 +23,10 @@
       <line x1="7.5ch" y1="3.5em" x2="7.5ch" y2="4.5em" stroke="rgb(33, 33, 33)"></line>
     </g>
     <g id="text">
-      <text x="4.5ch" y="0.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">hello</text>
-      <text x="4.5ch" y="1.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">asdf</text>
-      <text x="4.5ch" y="2.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">asdf</text>
-      <text x="4.5ch" y="3.5em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">asdf</text>
+      <text x="4.5ch" y="0.5em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">hello</text>
+      <text x="4.5ch" y="1.5em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">asdf</text>
+      <text x="4.5ch" y="2.5em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">asdf</text>
+      <text x="4.5ch" y="3.5em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">asdf</text>
     </g>
   </g>
   <g id="scrollbars">

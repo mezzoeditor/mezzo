@@ -30,27 +30,27 @@
     <g id="lines"></g>
     <g id="background"></g>
     <g id="text">
-      <text x="4.5ch" y="-0.3em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">901234 6789012 </text>
-      <text x="4.5ch" y="0.7em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">45678901 345678901 </text>
-      <text x="4.5ch" y="1.7em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">3456789012 45678901234</text>
-      <text x="4.5ch" y="2.7em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">123 5678 01234 678901 </text>
-      <text x="4.5ch" y="3.7em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">3456789 12345678 </text>
-      <text x="4.5ch" y="4.7em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">012345678 0123456789 </text>
-      <text x="4.5ch" y="5.7em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">12345678901 </text>
-      <text x="4.5ch" y="6.7em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">345678901234</text>
-      <text x="4.5ch" y="7.7em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">1234 67890 234567 </text>
-      <text x="4.5ch" y="8.7em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">9012345 78901234 </text>
-      <text x="4.5ch" y="9.7em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">678901234 6789012345 </text>
-      <text x="4.5ch" y="10.7em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">78901234567 </text>
-      <text x="4.5ch" y="11.7em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">901234567890 </text>
-      <text x="4.5ch" y="12.7em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">2345678901234</text>
-      <text x="4.5ch" y="13.7em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">12345 789012 4567890 </text>
-      <text x="4.5ch" y="14.7em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">23456789 123456789 </text>
-      <text x="4.5ch" y="15.7em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">1234567890 23456789012 </text>
-      <text x="4.5ch" y="16.7em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">456789012345 </text>
-      <text x="4.5ch" y="17.7em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">7890123456789 </text>
-      <text x="4.5ch" y="18.7em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">12345678901234</text>
-      <text x="4.5ch" y="19.7em" alignment-baseline="hanging" fill="rgb(33, 33, 33)">123456 8901234 </text>
+      <text x="4.5ch" y="-0.3em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">901234 6789012 </text>
+      <text x="4.5ch" y="0.7em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">45678901 345678901 </text>
+      <text x="4.5ch" y="1.7em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">3456789012 45678901234</text>
+      <text x="4.5ch" y="2.7em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">123 5678 01234 678901 </text>
+      <text x="4.5ch" y="3.7em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">3456789 12345678 </text>
+      <text x="4.5ch" y="4.7em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">012345678 0123456789 </text>
+      <text x="4.5ch" y="5.7em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">12345678901 </text>
+      <text x="4.5ch" y="6.7em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">345678901234</text>
+      <text x="4.5ch" y="7.7em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">1234 67890 234567 </text>
+      <text x="4.5ch" y="8.7em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">9012345 78901234 </text>
+      <text x="4.5ch" y="9.7em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">678901234 6789012345 </text>
+      <text x="4.5ch" y="10.7em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">78901234567 </text>
+      <text x="4.5ch" y="11.7em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">901234567890 </text>
+      <text x="4.5ch" y="12.7em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">2345678901234</text>
+      <text x="4.5ch" y="13.7em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">12345 789012 4567890 </text>
+      <text x="4.5ch" y="14.7em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">23456789 123456789 </text>
+      <text x="4.5ch" y="15.7em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">1234567890 23456789012 </text>
+      <text x="4.5ch" y="16.7em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">456789012345 </text>
+      <text x="4.5ch" y="17.7em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">7890123456789 </text>
+      <text x="4.5ch" y="18.7em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">12345678901234</text>
+      <text x="4.5ch" y="19.7em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">123456 8901234 </text>
     </g>
   </g>
   <g id="scrollbars">
