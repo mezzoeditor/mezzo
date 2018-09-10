@@ -9,11 +9,7 @@ const runner = new TestRunner();
 const {expect} = new Matchers();
 
 const headless = (process.env.HEADLESS || 'true').trim().toLowerCase() === 'true';
-const browserOptions = {
-  // @see https://github.com/GoogleChrome/puppeteer/issues/3084
-  args: ['--disable-gpu'],
-  headless
-};
+const browserOptions = { headless };
 
 (async () => {
   const {describe, xdescribe, fdescribe} = runner;
