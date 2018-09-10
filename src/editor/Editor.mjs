@@ -18,6 +18,11 @@ export class PlatformSupport {
    * @param {number} callbackId
    */
   cancelIdleCallback(id) { }
+
+  /**
+   * @param {number} ms
+   */
+  throttle(ms) { }
 }
 
 export class Editor extends EventEmitter {

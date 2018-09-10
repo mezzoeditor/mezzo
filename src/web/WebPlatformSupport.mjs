@@ -9,20 +9,79 @@ export class WebPlatformSupport {
       this._requestIdleCallback = window.requestAnimationFrame.bind(window);
       this._cancelIdleCallback = window.cancelAnimationFrame.bind(window);
     }
+    this._throttleId = null;
+    this._lastId = 0;
+    this._map = new Map();
   }
 
   /**
    * @return {number}
    */
   requestIdleCallback(callback) {
-    return this._requestIdleCallback.call(null, callback);
+    const id = ++this._lastId;
+    this._map.set(id, {callback, platformId: 0});
+    if (!this._throttleId)
+      this._schedule(id);
+    return id;
   }
 
   /**
-   * @param {number} callbackId
+   * @param {number} id
    */
   cancelIdleCallback(id) {
-    this._cancelIdleCallback.call(null, id);
+    const o = this._map.get(id);
+    if (!o)
+      return;
+    if (o.platformId)
+      this._cancel(id);
+    this._map.delete(id);
+  }
+
+  /**
+   * @param {number} ms
+   */
+  throttle(ms) {
+    if (this._throttleId) {
+      window.clearTimeout(this._throttleId);
+    } else {
+      for (const [id, o] of this._map) {
+        if (o.platformId)
+          this._cancel(id);
+      }
+    }
+    this._throttleId = window.setTimeout(() => {
+      this._throttleId = 0;
+      for (const [id, o] of this._map) {
+        if (!o.platformId)
+          this._schedule(id);
+      }
+    }, ms);
+  }
+
+  /**
+   * @param {number} id
+   */
+  _schedule(id) {
+    this._map.get(id).platformId =
+        this._requestIdleCallback.call(null, this._runCallback.bind(this, id));
+  }
+
+  /**
+   * @param {number} id
+   */
+  _cancel(id) {
+    const o = this._map.get(id);
+    this._cancelIdleCallback.call(null, o.platformId);
+    o.platformId = 0;
+  }
+
+  /**
+   * @param {number} id
+   */
+  _runCallback(id) {
+    const callback = this._map.get(id).callback;
+    this._map.delete(id);
+    callback();
   }
 
   static instance() {

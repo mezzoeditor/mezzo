@@ -22,15 +22,23 @@ export class GG {
     return await this._page.evaluate(...args);
   }
 
+  async waitUntilIdle() {
+    await this._page.evaluate(async () => {
+      await new Promise(f => editor.platformSupport().requestIdleCallback(f));
+    });
+  }
+
   async setTextWithCursors(textWithCursors) {
     const {text, selection} = parseTextWithCursors(textWithCursors);
     await this._page.evaluate((text, selection) => {
       editor.reset(text, selection);
     }, text, selection);
+    await this.waitUntilIdle();
   }
 
   async type(text) {
     await this._page.keyboard.type(text);
+    await this.waitUntilIdle();
   }
 
   /**
@@ -56,6 +64,7 @@ export class GG {
       await this._page.keyboard.down(key);
     for (const key of keys)
       await this._page.keyboard.up(key);
+    await this.waitUntilIdle();
   }
 
   async undo() {
@@ -77,6 +86,7 @@ export class GG {
   async clickText(position) {
     const point = await this._page.evaluate(position => renderer.positionToViewportPoint(position), position);
     await this._page.mouse.click(point.x, point.y);
+    await this.waitUntilIdle();
   }
 
   async text() {

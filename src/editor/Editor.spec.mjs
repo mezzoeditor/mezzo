@@ -18,12 +18,14 @@ export function addTests(runner, expect, options) {
 
   describe('Viewport decoration', () => {
     it('simple', () => {
-      const renderer = new SVGRenderer(new TestPlatformSupport());
+      const platform = new TestPlatformSupport();
+      const renderer = new SVGRenderer(platform);
       renderer.editor().reset('hello\nasdf\nasdf\nasdf\n');
       renderer.editor().document().setSelection([
         {anchor: 0, focus: 7},
         {anchor: 19, focus: 19},
       ]);
+      platform.runUntilIdle();
       golden.expectText(renderer.render(1.1, 0), 'simple.svg');
     });
 

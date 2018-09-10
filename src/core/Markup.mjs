@@ -61,6 +61,7 @@ export class Markup extends EventEmitter {
         throw new Error('Document modification during decoration is prohibited');
       for (const replacement of replacements)
         this._replace(replacement);
+      this._rechunkLastFrameRange();
     });
     this._text = document.text();
     this._platformSupport = platformSupport;
@@ -74,6 +75,7 @@ export class Markup extends EventEmitter {
     // meaning they do not split surrogate pairs.
     this._allocator = new WorkAllocator(0);
     this._jobId = 0;
+    this._lastFrameRange = {from: 0, to: 0};
     this._tree = new Tree();
 
     this._measurer = null;
@@ -104,7 +106,7 @@ export class Markup extends EventEmitter {
         this._measurer.defaultWidthRegex(), measure, measure, this._wrappingLimit);
     }
     this._allocator = new WorkAllocator(this._text.length());
-    this._rechunk();
+    this._rechunkLastFrameRange();
   }
 
   /**
@@ -154,6 +156,7 @@ export class Markup extends EventEmitter {
     const from = replacement.offset;
     const to = from + replacement.removed.length();
     const inserted = replacement.inserted.length();
+    this._lastFrameRange = this._rebaseLastFrameRange(this._lastFrameRange, from, to, inserted);
     this._text = replacement.after;
     this._allocator.replace(from, to, inserted);
 
@@ -178,8 +181,21 @@ export class Markup extends EventEmitter {
     if (newFrom !== newTo)
       nodes.push(this._unmeasuredNode(newTo - newFrom));
     this._tree = Tree.merge(split.left, Tree.merge(Tree.build(nodes), split.right));
+  }
 
-    this._rechunk();
+  /**
+   * @param {!Range} r
+   * @param {number} from
+   * @param {number} to
+   * @param {number} inserted
+   * @return {!Range}
+   */
+  _rebaseLastFrameRange(r, from, to, inserted) {
+    if (r.from >= to) {
+      const delta = inserted - (to - from);
+      return { from: r.from + delta, to: r.to + delta };
+    }
+    return r;
   }
 
   /**
@@ -237,57 +253,27 @@ export class Markup extends EventEmitter {
     return iterator.data.metrics.locateByOffset(textChunk, iterator.data.stateBefore, iterator.before, offset);
   }
 
-  _rechunk() {
+  _rechunkLastFrameRange() {
+    this._rechunk(this._lastFrameRange.from, this._lastFrameRange.to);
+  }
+
+  _rechunkEverything() {
+    this._rechunk(0, this._text.length());
+  }
+
+  /**
+   * @param {number} rechunkFrom
+   * @param {number} rechunkTo
+   */
+  _rechunk(rechunkFrom, rechunkTo) {
     let budget = this._wrappingMode === WrappingMode.None ? kRechunkSize : kWrappingRechunkSize;
     let range = null;
-    while (budget > 0 && (range = this._allocator.workRange())) {
+    while (budget > 0 && (range = this._allocator.workRange(rechunkFrom, rechunkTo))) {
       let {from, to} = range;
       if (to - from > budget)
         to = from + budget;
-
-      const split = this._tree.split(from, to);
-      let newFrom = split.left.metrics().length;
-      let newTo = this._text.length() - split.right.metrics().length;
-
-      let correction = null;
-      if (newTo > newFrom + budget + 2 * kChunkSize) {
-        correction = newTo;
-        newTo = newFrom + budget;
-      }
-      if (newTo > newFrom && Metrics.isSurrogate(this._text.iterator(newTo - 1).charCodeAt(0)))
-        newTo++;
-
-      /** @type {!Array<!{metrics: !TextMetrics, data: !ChunkData}>} */
-      const nodes = [];
-      const iterator = this._text.iterator(newFrom, newFrom, newTo);
-      let tmp = split.left.splitLast();
-      let state = tmp.last !== null ? tmp.last.stateAfter : undefined;
-
-      while (iterator.offset < newTo) {
-        const size = Math.min(newTo - iterator.offset, kChunkSize);
-        let chunk = iterator.read(size);
-        if (Metrics.isSurrogate(chunk.charCodeAt(chunk.length - 1))) {
-          if (iterator.offset === newTo)
-            throw new Error('Inconsistent');
-          chunk += iterator.current;
-          iterator.next();
-        }
-        const measured = this._metrics.forString(chunk, state);
-        nodes.push({metrics: measured.metrics, data: {metrics: this._metrics, stateBefore: state, stateAfter: measured.state}});
-        state = measured.state;
-      }
-
-      if (correction !== null && correction > newTo) {
-        nodes.push(this._unmeasuredNode(correction - newTo));
-      } else {
-        tmp = split.right.splitFirst();
-        if (tmp.first !== null && (tmp.first.metrics !== this._metrics || !Metrics.stateMatches(tmp.first.stateBefore, state)))
-          this._allocator.undone(newTo, newTo + tmp.metrics.length);
-      }
-
-      this._tree = Tree.merge(split.left, Tree.merge(Tree.build(nodes), split.right));
-      this._allocator.done(newFrom, newTo);
-      budget -= newTo - newFrom;
+      range = this._rechunkRange(from, to, budget);
+      budget -= range.to - range.from;
     }
 
     const metrics = this._tree.metrics();
@@ -298,9 +284,64 @@ export class Markup extends EventEmitter {
     if (!this._jobId && this._allocator.hasWork()) {
       this._jobId = this._platformSupport.requestIdleCallback(() => {
         this._jobId = 0;
-        this._rechunk();
+        this._rechunkEverything();
       });
     }
+  }
+
+  /**
+   * @param {number} from
+   * @param {number} to
+   * @param {number} budget
+   * @return {!Range}
+   */
+  _rechunkRange(from, to, budget) {
+    const split = this._tree.split(from, to);
+    let newFrom = split.left.metrics().length;
+    let newTo = this._text.length() - split.right.metrics().length;
+
+    // Do not rechunk too much.
+    let correction = null;
+    if (newTo > newFrom + budget + 2 * kChunkSize) {
+      correction = newTo;
+      newTo = newFrom + budget;
+    }
+    if (newTo > newFrom && Metrics.isSurrogate(this._text.iterator(newTo - 1).charCodeAt(0)))
+      newTo++;
+
+    /** @type {!Array<!{metrics: !TextMetrics, data: !ChunkData}>} */
+    const nodes = [];
+    const iterator = this._text.iterator(newFrom, newFrom, newTo);
+    let tmp = split.left.splitLast();
+    let state = tmp.last !== null ? tmp.last.stateAfter : undefined;
+
+    while (iterator.offset < newTo) {
+      const size = Math.min(newTo - iterator.offset, kChunkSize);
+      let chunk = iterator.read(size);
+      if (Metrics.isSurrogate(chunk.charCodeAt(chunk.length - 1))) {
+        if (iterator.offset === newTo)
+          throw new Error('Inconsistent');
+        chunk += iterator.current;
+        iterator.next();
+      }
+      const measured = this._metrics.forString(chunk, state);
+      nodes.push({metrics: measured.metrics, data: {metrics: this._metrics, stateBefore: state, stateAfter: measured.state}});
+      state = measured.state;
+    }
+
+    if (correction !== null && correction > newTo) {
+      nodes.push(this._unmeasuredNode(correction - newTo));
+    } else {
+      // Mark next chunk as undone if metrics have to be recalculated
+      // because of the new state before produced by last chunk.
+      tmp = split.right.splitFirst();
+      if (tmp.first !== null && (tmp.first.metrics !== this._metrics || !Metrics.stateMatches(tmp.first.stateBefore, state)))
+        this._allocator.undone(newTo, newTo + tmp.metrics.length);
+    }
+
+    this._tree = Tree.merge(split.left, Tree.merge(Tree.build(nodes), split.right));
+    this._allocator.done(newFrom, newTo);
+    return { from: newFrom, to: newTo };
   }
 
   /**
@@ -434,6 +475,7 @@ export class Markup extends EventEmitter {
     this._buildFrameScrollbar(frame, decorators, scrollbarParams);
 
     this._frozen = false;
+    this._lastFrameRange = totalRange;
   }
 
   /**
@@ -618,7 +660,7 @@ Markup.test.rechunk = function(markup, chunkSize, rechunkSize) {
   let oldRechunkSize = kRechunkSize;
   kRechunkSize = rechunkSize || markup._text.length();
   markup._allocator.undone(0, markup._text.length());
-  markup._rechunk();
+  markup._rechunkEverything();
   kChunkSize = oldChunkSize;
   kRechunkSize = oldRechunkSize;
 };

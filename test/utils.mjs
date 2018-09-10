@@ -32,6 +32,9 @@ export class TestPlatformSupport {
     this._callbacks.delete(id);
   }
 
+  throttle(ms) {
+  }
+
   runUntilIdle() {
     while (this._callbacks.size) {
       const [id, callback] = this._callbacks[Symbol.iterator]().next().value;
@@ -62,6 +65,7 @@ export function createTestEditor(textWithCursors = '') {
     return editor;
   const {text, selection} = parseTextWithCursors(textWithCursors);
   editor.reset(text, selection)
+  editor.platformSupport().runUntilIdle();
   return editor;
 }
 
