@@ -84,21 +84,18 @@ function svgComparator(actual, expectedBuffer) {
   let html = `
     <link rel="stylesheet" href="file://${diffStylePath}">
     <h1>SVG Diff</h1>
-    <div class=svg-controls>
-      <label>actual opacity:</label><input type='range' name='opacity' min='0' max='100' value='0'/>
-    </div>
-    <div class=svg-diff>
+    <div class=svg-output>
+      <h3>Actual</h3>
+      <h3>Expected</h3>
       <img class='svg-actual' src='data:image/svg+xml,${actual}'></img>
       <img class='svg-expected' src='data:image/svg+xml,${expected}'></img>
+      <h3>Difference</h3> <h3></h3>
+      <div class=svg-difference>
+        <img class=svg-difference-actual src='data:image/svg+xml,${actual}'></img>
+        <img src='data:image/svg+xml,${expected}'></img>
+      </div>
     </div>
-    <script>
-      const actual = document.querySelector('img.svg-actual');
-      actual.style.setProperty('opacity', 0);
-      const input = document.querySelector('input');
-      input.addEventListener('input', () => {
-        actual.style.setProperty('opacity', parseInt(input.value, 10) / 100);
-      });
-    </script>
+
     <h1>Text Diff</h1>
     <div>
       ${htmldiff}
