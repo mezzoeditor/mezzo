@@ -4,10 +4,12 @@ import { Frame } from '../core/Frame.mjs';
 import { Editor } from '../editor/Editor.mjs';
 import { trace } from '../core/Trace.mjs';
 import { Document } from '../core/Document.mjs';
-import { DefaultTheme } from '../default/DefaultTheme.mjs';
 import { Tokenizer } from '../editor/Tokenizer.mjs';
 import { EventEmitter } from '../core/EventEmitter.mjs';
 import { KeymapHandler } from './KeymapHandler.mjs';
+
+import DefaultTheme from '../../themes/default.mjs';
+import {Theme} from '../../themes/Theme.mjs';
 
 /**
  * @implements Measurer
@@ -111,7 +113,7 @@ export class Renderer {
 
     this._element.appendChild(this._input);
 
-    this._theme = DefaultTheme;
+    this._theme = new Theme(DefaultTheme);
     this._monospace = true;
     this._wrappingMode = WrappingMode.None;
     this._eventListeners = [];
@@ -513,7 +515,7 @@ export class Renderer {
   }
 
   _setupSelection() {
-    let theme = this._theme;
+    let theme = this._theme.decorations;
     let selectionFocusTheme = theme['selection.focus'];
     let cursorsVisible = false;
     let cursorsTimeout;
@@ -986,16 +988,16 @@ export class Renderer {
     ctx.translate(0, frame.translateTop);
     for (let {y, styles} of frame.lines) {
       for (let style of styles) {
-        const theme = this._theme[style];
+        const theme = this._theme.decorations[style];
         if (!theme || !theme.gutter)
           continue;
-        if (theme.gutter.color) {
-          ctx.fillStyle = theme.gutter.color;
+        if (theme.gutter.backgroundColor) {
+          ctx.fillStyle = theme.gutter.backgroundColor;
           ctx.fillRect(0, y, this._gutterRect.width, frame.lineHeight);
         }
-        if (theme.gutter.border) {
-          ctx.strokeStyle = theme.gutter.border;
-          ctx.lineWidth = 1 / this._ratio;
+        if (theme.gutter.borderWidth) {
+          ctx.strokeStyle = theme.gutter.borderColor || 'black';
+          ctx.lineWidth = theme.gutter.borderWidth / this._ratio;
           ctx.beginPath();
           ctx.moveTo(0, y);
           ctx.lineTo(this._gutterRect.width, y);
@@ -1032,16 +1034,16 @@ export class Renderer {
   _drawTextAndBackground(ctx, frame) {
     for (let {y, styles} of frame.lines) {
       for (let style of styles) {
-        const theme = this._theme[style];
+        const theme = this._theme.decorations[style];
         if (!theme || !theme.line)
           continue;
-        if (theme.line.background && theme.line.background.color) {
-          ctx.fillStyle = theme.line.background.color;
+        if (theme.line.backgroundColor) {
+          ctx.fillStyle = theme.line.backgroundColor;
           ctx.fillRect(frame.lineLeft, y, frame.lineRight - frame.lineLeft, frame.lineHeight);
         }
-        if (theme.line.border && theme.line.border.color) {
-          ctx.strokeStyle = theme.line.border.color;
-          ctx.lineWidth = (theme.line.border.width || 1) / this._ratio;
+        if (theme.line.borderWidth && theme.line.borderColor) {
+          ctx.strokeStyle = theme.line.borderColor;
+          ctx.lineWidth = theme.line.borderWidth / this._ratio;
           ctx.beginPath();
           ctx.moveTo(frame.lineLeft, y);
           ctx.lineTo(frame.lineRight, y);
@@ -1053,21 +1055,21 @@ export class Renderer {
     }
 
     for (let {x, y, width, style} of frame.background) {
-      const theme = this._theme[style];
-      if (!theme)
+      const theme = this._theme.decorations[style];
+      if (!theme || !theme.self)
         continue;
 
-      if (theme.background && theme.background.color) {
-        ctx.fillStyle = theme.background.color;
+      if (theme.self.backgroundColor) {
+        ctx.fillStyle = theme.self.backgroundColor;
         ctx.fillRect(x, y, width, frame.lineHeight);
       }
 
-      if (theme.border) {
+      if (theme.self.borderWidth && theme.self.borderColor) {
         // TODO: lines of width not divisble by ratio should be snapped by 1 / ratio.
         // Note: border decorations spanning multiple lines are not supported,
         // and we silently crop them per line.
-        ctx.strokeStyle = theme.border.color || 'transparent';
-        ctx.lineWidth = (theme.border.width || 1) / this._ratio;
+        ctx.strokeStyle = theme.self.borderColor;
+        ctx.lineWidth = theme.self.borderWidth / this._ratio;
 
         ctx.beginPath();
         if (!width) {
@@ -1075,7 +1077,7 @@ export class Renderer {
           ctx.lineTo(x, y + frame.lineHeight);
         } else {
           // TODO: border.radius should actually clip background.
-          const radius = Math.min(theme.border.radius || 0, Math.min(frame.lineHeight, width) / 2) / this._ratio;
+          const radius = Math.min(theme.self.borderRadius || 0, Math.min(frame.lineHeight, width) / 2) / this._ratio;
           if (radius)
             roundRect(ctx, x, y, width, frame.lineHeight, radius);
           else
@@ -1087,9 +1089,9 @@ export class Renderer {
 
     const textOffset = this._measurer.textOffset;
     for (let {x, y, content, style} of frame.text) {
-      const theme = this._theme[style];
-      if (theme && theme.text) {
-        ctx.fillStyle = theme.text.color || 'rgb(33, 33, 33)';
+      const theme = this._theme.decorations[style];
+      if (theme && theme.self) {
+        ctx.fillStyle = theme.self.color || 'rgb(33, 33, 33)';
         ctx.fillText(content, x, y + textOffset);
       }
     }
@@ -1123,12 +1125,12 @@ export class Renderer {
 
   _drawScrollbarMarkers(ctx, frame, rect) {
     for (let {y, height, style} of frame.scrollbar) {
-      const theme = this._theme[style];
-      if (!theme || !theme.line || !theme.line.scrollbar || !theme.line.scrollbar || !theme.line.scrollbar.color)
+      const theme = this._theme.decorations[style];
+      if (!theme || !theme.scrollbar)
         continue;
-      ctx.fillStyle = theme.line.scrollbar.color;
-      let left = Math.round(rect.width * (theme.line.scrollbar.left || 0) / 100);
-      let right = Math.round(rect.width * (theme.line.scrollbar.right || 100) / 100);
+      ctx.fillStyle = theme.scrollbar.backgroundColor;
+      let left = Math.round(rect.width * (theme.scrollbar.left || 0) / 100);
+      let right = Math.round(rect.width * (theme.scrollbar.right || 100) / 100);
       ctx.fillRect(rect.x + left, rect.y + y, right - left, height);
     }
   }

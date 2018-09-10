@@ -55,8 +55,8 @@
     </g>
     <g id="background">
       <rect x="10.8ch" y="1.1em" width="5ch" height="1em" fill="rgba(126, 188, 254, 0.5)"></rect>
-      <line x1="10.8ch" y1="1.1em" x2="10.8ch" y2="2.1em" stroke="rgb(33, 33, 33)"></line>
-      <line x1="22.8ch" y1="6.1em" x2="22.8ch" y2="7.1em" stroke="rgb(33, 33, 33)"></line>
+      <line x1="10.8ch" y1="1.1em" x2="10.8ch" y2="2.1em" stroke-width="2px" stroke="rgb(33, 33, 33)"></line>
+      <line x1="22.8ch" y1="6.1em" x2="22.8ch" y2="7.1em" stroke-width="2px" stroke="rgb(33, 33, 33)"></line>
       <rect x="8.8ch" y="10.1em" width="40.2ch" height="1em" fill="rgba(126, 188, 254, 0.5)"></rect>
       <rect x="4ch" y="11.1em" width="45ch" height="1em" fill="rgba(126, 188, 254, 0.5)"></rect>
       <rect x="4ch" y="12.1em" width="45ch" height="1em" fill="rgba(126, 188, 254, 0.5)"></rect>
@@ -66,7 +66,7 @@
       <rect x="3.8ch" y="14.1em" width="3ch" height="1em" fill="hsla(36, 96%, 56%, 0.4)"></rect>
       <rect x="8.8ch" y="14.1em" width="5ch" height="1em" fill="hsla(36, 96%, 56%, 0.4)"></rect>
       <rect x="4ch" y="15.1em" width="14.8ch" height="1em" fill="rgba(126, 188, 254, 0.5)"></rect>
-      <line x1="18.8ch" y1="15.1em" x2="18.8ch" y2="16.1em" stroke="rgb(33, 33, 33)"></line>
+      <line x1="18.8ch" y1="15.1em" x2="18.8ch" y2="16.1em" stroke-width="2px" stroke="rgb(33, 33, 33)"></line>
       <rect x="3.8ch" y="15.1em" width="3ch" height="1em" fill="hsla(36, 96%, 56%, 0.4)"></rect>
       <rect x="8.8ch" y="15.1em" width="5ch" height="1em" fill="hsla(36, 96%, 56%, 0.4)"></rect>
       <rect x="15.8ch" y="15.1em" width="5ch" height="1em" fill="hsla(36, 96%, 56%, 0.4)"></rect>

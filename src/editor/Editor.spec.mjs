@@ -26,7 +26,7 @@ export function addTests(runner, expect, options) {
         {anchor: 19, focus: 19},
       ]);
       platform.runUntilIdle();
-      golden.expectText(renderer.render(1.1, 0), 'simple.svg');
+      golden.expectSVG(renderer.render(1.1, 0), 'simple.svg');
     });
 
     function renderComplex(scrollLeft, scrollTop) {

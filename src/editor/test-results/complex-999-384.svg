@@ -54,7 +54,7 @@
       <rect x="4ch" y="15.1em" width="44.5ch" height="1em" fill="rgba(126, 188, 254, 0.1)"></rect>
     </g>
     <g id="background">
-      <line x1="6.5ch" y1="6.1em" x2="6.5ch" y2="7.1em" stroke="rgb(33, 33, 33)"></line>
+      <line x1="6.5ch" y1="6.1em" x2="6.5ch" y2="7.1em" stroke-width="2px" stroke="rgb(33, 33, 33)"></line>
       <rect x="3.5ch" y="10.1em" width="45ch" height="1em" fill="rgba(126, 188, 254, 0.5)"></rect>
       <rect x="4ch" y="11.1em" width="44.5ch" height="1em" fill="rgba(126, 188, 254, 0.5)"></rect>
       <rect x="4ch" y="12.1em" width="44.5ch" height="1em" fill="rgba(126, 188, 254, 0.5)"></rect>

@@ -19,8 +19,8 @@
     <g id="background">
       <rect x="4.5ch" y="0.5em" width="44ch" height="1em" fill="rgba(126, 188, 254, 0.5)"></rect>
       <rect x="4.5ch" y="1.5em" width="1ch" height="1em" fill="rgba(126, 188, 254, 0.5)"></rect>
-      <line x1="5.5ch" y1="1.5em" x2="5.5ch" y2="2.5em" stroke="rgb(33, 33, 33)"></line>
-      <line x1="7.5ch" y1="3.5em" x2="7.5ch" y2="4.5em" stroke="rgb(33, 33, 33)"></line>
+      <line x1="5.5ch" y1="1.5em" x2="5.5ch" y2="2.5em" stroke-width="2px" stroke="rgb(33, 33, 33)"></line>
+      <line x1="7.5ch" y1="3.5em" x2="7.5ch" y2="4.5em" stroke-width="2px" stroke="rgb(33, 33, 33)"></line>
     </g>
     <g id="text">
       <text x="4.5ch" y="0.5em" alignment-baseline="hanging" style="white-space: pre;" fill="rgb(33, 33, 33)">hello</text>

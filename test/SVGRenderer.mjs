@@ -1,5 +1,6 @@
 import {Editor} from '../src/editor/Editor.mjs';
-import {DefaultTheme} from '../src/default/DefaultTheme.mjs';
+import DefaultTheme from '../themes/default.mjs';
+import {Theme} from '../themes/Theme.mjs';
 import {Frame} from '../src/core/Frame.mjs';
 
 // All sizes are in CH (if horizontal) and EM (if vertical).
@@ -24,7 +25,7 @@ export class SVGRenderer {
     this._editor = new Editor(SVGRenderer.measurer(), platformSupport);
     this._width = width;
     this._height = height;
-    this._theme = DefaultTheme;
+    this._theme = new Theme(DefaultTheme);
   }
 
   /**
@@ -113,23 +114,25 @@ export class SVGRenderer {
   _drawGutter(svg, gutterLength, frame) {
     for (let {y, styles} of frame.lines) {
       for (let style of styles) {
-        const theme = this._theme[style];
+        const theme = this._theme.decorations[style];
         if (!theme || !theme.gutter)
           continue;
-        if (theme.gutter.color) {
+        if (theme.gutter.backgroundColor) {
           svg.add('rect', {
             x: 0, y, width: gutterLength,
-            height: frame.lineHeight, fill: theme.gutter.color
+            height: frame.lineHeight, fill: theme.gutter.backgroundColor
           });
         }
-        if (theme.gutter.border) {
+        if (theme.gutter.borderWidth) {
           svg.add('line', {
             x1: 0, y1: y, x2: gutterLength, y2: y,
-            stroke: theme.gutter.border
+            'stroke-width': `${theme.gutter.borderWidth || 1}px`,
+            stroke: theme.gutter.borderColor,
           });
           svg.add('line', {
             x1: 0, y1: y + frame.lineHeight, x2: gutterLength, y2: y + frame.lineHeight,
-            stroke: theme.gutter.border
+            'stroke-width': `${theme.gutter.borderWidth || 1}px`,
+            stroke: theme.gutter.borderColor,
           });
         }
       }
@@ -147,20 +150,21 @@ export class SVGRenderer {
     const lines = svg.add('g', {id: 'lines'});
     for (const {y, styles} of frame.lines) {
       for (const style of styles) {
-        const theme = this._theme[style];
+        const theme = this._theme.decorations[style];
         if (!theme || !theme.line)
           continue;
-        if (theme.line.background && theme.line.background.color) {
+        if (theme.line.backgroundColor) {
           lines.add('rect', {
             x: frame.lineLeft, y, width: frame.lineRight - frame.lineLeft, height: frame.lineHeight,
-            fill: theme.line.background.color,
+            fill: theme.line.backgroundColor,
           });
         }
-        if (theme.line.border && theme.line.border.color) {
+        if (theme.line.borderWidth && theme.line.borderColor) {
           lines.add('rect', {
             x: frame.lineleft, y, width: frame.lineRight - frame.lineLeft, height: frame.lineHeight,
             fill: transparent,
-            stroke: theme.line.border.color,
+            'stroke-width': `${theme.line.borderWidth || 1}px`,
+            stroke: theme.line.borderColor,
           });
         }
       }
@@ -168,29 +172,31 @@ export class SVGRenderer {
 
     const background = svg.add('g', {id: 'background'});
     for (let {x, y, width, style} of frame.background) {
-      const theme = this._theme[style];
+      const theme = this._theme.decorations[style];
       if (!theme)
         continue;
-      if (theme.background && theme.background.color && width) {
+      if (theme.self.backgroundColor && width) {
         background.add('rect', {
           x, y, width, height: LINE_HEIGHT,
-          fill: theme.background.color,
+          fill: theme.self.backgroundColor,
         });
       }
 
-      if (theme.border) {
-        if (!width && theme.border.color) {
+      if (theme.self.borderWidth && theme.self.borderColor) {
+        if (!width && theme.self.borderColor) {
           background.add('line', {
             x1: x, y1: y, x2: x, y2: y + LINE_HEIGHT,
-            stroke: theme.border.color,
+            'stroke-width': `${theme.self.borderWidth || 1}px`,
+            stroke: theme.self.borderColor,
           });
         } else if (width) {
-          const radius = theme.border.radius || 0;
+          const radius = theme.self.borderRadius || 0;
           background.add('rect', {
             x, y, width, height: LINE_HEIGHT,
             rx: radius,
             ry: radius,
-            stroke: theme.border.color,
+            'stroke-width': `${theme.self.borderWidth || 1}px`,
+            stroke: theme.self.borderColor,
             fill: 'transparent',
           });
         }
@@ -199,13 +205,13 @@ export class SVGRenderer {
 
     const text = svg.add('g', {id: 'text'});
     for (let {x, y, content, style} of frame.text) {
-      const theme = this._theme[style];
-      if (theme && theme.text) {
+      const theme = this._theme.decorations[style];
+      if (theme && theme.self) {
         text.add('text', {
           x, y,
           'alignment-baseline': 'hanging',
           'style': 'white-space: pre;',
-          fill: theme.text.color || 'rgb(33, 33, 33)',
+          fill: theme.self.color || 'rgb(33, 33, 33)',
         }, content);
       }
     }
@@ -253,17 +259,17 @@ export class SVGRenderer {
 
   _drawScrollbarMarkers(svg, frame) {
     for (let {y, height, style} of frame.scrollbar) {
-      const theme = this._theme[style];
-      if (!theme || !theme.line.scrollbar || !theme.line.scrollbar || !theme.line.scrollbar.color)
+      const theme = this._theme.decorations[style];
+      if (!theme || !theme.scrollbar || !theme.scrollbar.backgroundColor)
         continue;
-      const left = ((theme.line.scrollbar.left || 0) / 100);
-      const right = ((theme.line.scrollbar.right || 100) / 100);
+      const left = ((theme.scrollbar.left || 0) / 100);
+      const right = ((theme.scrollbar.right || 100) / 100);
       svg.add('rect', {
         x: this._width - 1 + left,
         y: y,
         width: right - left,
         height: height,
-        fill: theme.line.scrollbar.color,
+        fill: theme.scrollbar.backgroundColor,
       });
     }
   }
@@ -325,7 +331,12 @@ class SVGNode {
       }
       const tag = [];
       tag.push(u.name);
-      tag.push(...Object.entries(u.attrs).map(([key, value]) => {
+      tag.push(...Object.entries(u.attrs).filter(([key, value]) => {
+        // Filter out trivial SVG values to reduce noize.
+        if (key === 'stroke-width' && value === '1px')
+          return false;
+        return true;
+      }).map(([key, value]) => {
         if (typeof value === 'number') {
           if (key === 'x' || key === 'x1' || key === 'x2')
             value = round(value + translateX) + 'ch';
