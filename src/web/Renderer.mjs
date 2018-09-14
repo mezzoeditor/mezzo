@@ -921,7 +921,9 @@ export class Renderer {
     trace.begin('buildFrame');
     const frame = new Frame();
     frame.translateLeft = -this._scrollLeft + this._padding.left;
+    const translateLeft = -this._scrollLeft + this._padding.left;
     frame.translateTop = -this._scrollTop + this._padding.top;
+    const translateTop = -this._scrollTop + this._padding.top;
 
     frame.lineLeft = this._scrollLeft - Math.min(this._scrollLeft, this._padding.left);
     frame.lineRight = this._scrollLeft - this._padding.left + this._editorRect.width
@@ -941,24 +943,11 @@ export class Renderer {
     trace.end('buildFrame');
 
     trace.begin('drawGutter');
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(this._gutterRect.x, this._gutterRect.y, this._gutterRect.width, this._gutterRect.height);
-    ctx.clip();
-    this._drawGutter(ctx, frame);
-    ctx.restore();
+    this._drawGutter(ctx, frame, translateLeft, translateTop);
     trace.end('drawGutter');
 
     trace.beginGroup('drawContent');
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(this._editorRect.x, this._editorRect.y, this._editorRect.width, this._editorRect.height);
-    ctx.clip();
-    ctx.translate(this._editorRect.x, this._editorRect.y);
-    ctx.translate(frame.translateLeft, frame.translateTop);
-    this._drawTextAndBackground(ctx, frame);
-    this._drawMarks(ctx, frame);
-    ctx.restore();
+    this._drawTextAndBackground(ctx, frame, translateLeft, translateTop);
     trace.endGroup('drawContent');
 
     trace.beginGroup('drawScrollbar');
@@ -973,17 +962,25 @@ export class Renderer {
     trace.endGroup('render', 50);
   }
 
-  _drawGutter(ctx, frame) {
+  _drawGutter(ctx, frame, tx, ty) {
+    const width = this._gutterRect.width;
+    const height = this._gutterRect.height;
+
+    ctx.save();
+    ctx.translate(this._gutterRect.x, this._gutterRect.y);
+
     ctx.fillStyle = 'white';
-    ctx.fillRect(0, 0, this._gutterRect.width, this._gutterRect.height);
+    ctx.fillRect(0, 0, width, height);
     ctx.strokeStyle = 'rgb(187, 187, 187)';
     ctx.lineWidth = 1 / this._ratio;
     ctx.beginPath();
-    ctx.moveTo(this._gutterRect.width, 0);
-    ctx.lineTo(this._gutterRect.width, this._gutterRect.height);
+    ctx.moveTo(width, 0);
+    ctx.lineTo(width, 0 + height);
     ctx.stroke();
 
-    ctx.translate(0, frame.translateTop);
+    ctx.beginPath();
+    ctx.rect(0, 0, width, height);
+    ctx.clip();
     for (let {y, styles} of frame.lines) {
       for (let style of styles) {
         const theme = this._theme[style];
@@ -991,16 +988,15 @@ export class Renderer {
           continue;
         if (theme.gutter.color) {
           ctx.fillStyle = theme.gutter.color;
-          ctx.fillRect(0, y, this._gutterRect.width, frame.lineHeight);
+          ctx.fillRect(0, y + ty, width, frame.lineHeight);
         }
         if (theme.gutter.border) {
           ctx.strokeStyle = theme.gutter.border;
-          ctx.lineWidth = 1 / this._ratio;
           ctx.beginPath();
-          ctx.moveTo(0, y);
-          ctx.lineTo(this._gutterRect.width, y);
-          ctx.moveTo(0, y + frame.lineHeight);
-          ctx.lineTo(this._gutterRect.width, y + frame.lineHeight);
+          ctx.moveTo(0, y + ty);
+          ctx.lineTo(width, y + ty);
+          ctx.moveTo(0, y + frame.lineHeight + ty);
+          ctx.lineTo(width, y + frame.lineHeight + ty);
           ctx.stroke();
         }
       }
@@ -1009,10 +1005,11 @@ export class Renderer {
     ctx.textAlign = 'right';
     ctx.fillStyle = 'rgb(128, 128, 128)';
     const textOffset = this._measurer.textOffset;
-    const textX = this._gutterRect.width - GUTTER_PADDING_RIGHT;
+    const textX = width - GUTTER_PADDING_RIGHT;
     let joinFirstTwo = false;
-    if (frame.lines.length >= 2 && frame.lines[0].first === frame.lines[1].first &&
-        frame.lines[0].y + frame.translateTop < 0) {
+    if (frame.lines.length >= 2 &&
+        frame.lines[0].first === frame.lines[1].first &&
+        frame.lines[0].y + ty < 0) {
       joinFirstTwo = true;
     }
     for (let i = 0; i < frame.lines.length; i++) {
@@ -1020,16 +1017,28 @@ export class Renderer {
       if (i < 2 && joinFirstTwo) {
         if (i === 0) {
           const number = (line.first + 1) + '';
-          ctx.fillText(number, textX, -frame.translateTop + textOffset);
+          ctx.fillText(number, textX, textOffset);
         }
       } else if (i === 0 || line.first !== frame.lines[i - 1].first) {
         const number = (line.first + 1) + '';
-        ctx.fillText(number, textX, line.y + textOffset);
+        ctx.fillText(number, textX, line.y + ty + textOffset);
       }
     }
+    ctx.restore();
   }
 
-  _drawTextAndBackground(ctx, frame) {
+  _drawTextAndBackground(ctx, frame, tx, ty) {
+    const lineLeft = frame.lineLeft;
+    const lineRight = frame.lineRight;
+    const lineHeight = frame.lineHeight;
+
+    ctx.save();
+    ctx.translate(this._editorRect.x, this._editorRect.y);
+
+    ctx.beginPath();
+    ctx.rect(0, 0, this._editorRect.width, this._editorRect.height);
+    ctx.clip();
+
     for (let {y, styles} of frame.lines) {
       for (let style of styles) {
         const theme = this._theme[style];
@@ -1037,16 +1046,16 @@ export class Renderer {
           continue;
         if (theme.line.background && theme.line.background.color) {
           ctx.fillStyle = theme.line.background.color;
-          ctx.fillRect(frame.lineLeft, y, frame.lineRight - frame.lineLeft, frame.lineHeight);
+          ctx.fillRect(tx + lineLeft, ty + y, lineRight - lineLeft, lineHeight);
         }
         if (theme.line.border && theme.line.border.color) {
           ctx.strokeStyle = theme.line.border.color;
           ctx.lineWidth = (theme.line.border.width || 1) / this._ratio;
           ctx.beginPath();
-          ctx.moveTo(frame.lineLeft, y);
-          ctx.lineTo(frame.lineRight, y);
-          ctx.moveTo(frame.lineLeft, y + frame.lineHeight);
-          ctx.lineTo(frame.lineRight, y + frame.lineHeight);
+          ctx.moveTo(tx + lineLeft, ty + y);
+          ctx.lineTo(tx + lineRight, ty + y);
+          ctx.moveTo(tx + lineLeft, ty + y + lineHeight);
+          ctx.lineTo(tx + lineRight, ty + y + lineHeight);
           ctx.stroke();
         }
       }
@@ -1059,7 +1068,7 @@ export class Renderer {
 
       if (theme.background && theme.background.color) {
         ctx.fillStyle = theme.background.color;
-        ctx.fillRect(x, y, width, frame.lineHeight);
+        ctx.fillRect(tx + x, ty + y, width, lineHeight);
       }
 
       if (theme.border) {
@@ -1071,15 +1080,15 @@ export class Renderer {
 
         ctx.beginPath();
         if (!width) {
-          ctx.moveTo(x, y);
-          ctx.lineTo(x, y + frame.lineHeight);
+          ctx.moveTo(tx + x, ty + y);
+          ctx.lineTo(tx + x, ty + y + lineHeight);
         } else {
           // TODO: border.radius should actually clip background.
-          const radius = Math.min(theme.border.radius || 0, Math.min(frame.lineHeight, width) / 2) / this._ratio;
+          const radius = Math.min(theme.border.radius || 0, Math.min(lineHeight, width) / 2) / this._ratio;
           if (radius)
-            roundRect(ctx, x, y, width, frame.lineHeight, radius);
+            roundRect(ctx, tx + x, ty + y, width, lineHeight, radius);
           else
-            ctx.rect(x, y, width, frame.lineHeight);
+            ctx.rect(tx + x, ty + y, width, lineHeight);
         }
         ctx.stroke();
       }
@@ -1090,9 +1099,11 @@ export class Renderer {
       const theme = this._theme[style];
       if (theme && theme.text) {
         ctx.fillStyle = theme.text.color || 'rgb(33, 33, 33)';
-        ctx.fillText(content, x, y + textOffset);
+        ctx.fillText(content, tx + x, ty + y + textOffset);
       }
     }
+
+    ctx.restore();
   }
 
   _drawMarks(ctx, frame) {

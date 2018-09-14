@@ -60,8 +60,8 @@ export class SVGRenderer {
     scrollTop = Math.min(Math.max(scrollTop, 0), maxScrollTop);
 
     const frame = new Frame();
-    frame.translateLeft = -scrollLeft + padding.left;
-    frame.translateTop = -scrollTop + padding.top;
+    const translateLeft = -scrollLeft + padding.left;
+    const translateTop = -scrollTop + padding.top;
 
     frame.lineLeft = scrollLeft - Math.min(scrollLeft, padding.left);
     frame.lineRight = scrollLeft - padding.left + width
@@ -90,7 +90,7 @@ export class SVGRenderer {
       stroke: 'rgb(187, 187, 187)',
       id: 'gutter-border',
     });
-    const gutter = root.add('g', {id: 'gutter'}).pushCoordinateSystem(0, frame.translateTop);
+    const gutter = root.add('g', {id: 'gutter'}).pushCoordinateSystem(0, translateTop);
     this._drawGutter(gutter, gutterLength, frame);
 
     root.add('clipPath', {id: 'viewport-clip'}).add('rect', {
@@ -99,7 +99,7 @@ export class SVGRenderer {
       height: this._height
     });
     const coords = root.add('g', {id: 'viewport', 'clip-path': 'url(#viewport-clip)'})
-        .pushCoordinateSystem(gutterLength + frame.translateLeft, frame.translateTop);
+        .pushCoordinateSystem(gutterLength + translateLeft, translateTop);
     this._drawTextAndBackground(coords, frame);
 
     const scrollbarsElement = root.add('g', {id: 'scrollbars'});

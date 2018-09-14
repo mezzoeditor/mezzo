@@ -23,13 +23,6 @@ import { Document } from './Document.mjs';
 export class Frame {
   constructor() {
     /**
-     * These should be applied before drawing text, background, marks and lines.
-     * All other coordinates are relative to these offsets.
-     */
-    this.translateLeft = 0;
-    this.translateTop = 0;
-
-    /**
      * These are the X-coordinates of left-most and right-most visible
      * points of any line.
      */
