@@ -4,6 +4,7 @@ import { RoundMode, Metrics } from './Metrics.mjs';
 import { Tree } from './Tree.mjs';
 import { VisibleRange } from './Frame.mjs';
 import { WorkAllocator } from './WorkAllocator.mjs';
+import { Decorator } from './Decorator.mjs';
 
 /**
  * Measurer converts strings to widths and provides line height.
@@ -74,6 +75,7 @@ export class Markup extends EventEmitter {
     // All the undone ranges in allocator have character-adjusted boundaries,
     // meaning they do not split surrogate pairs.
     this._allocator = new WorkAllocator(0);
+    this._hiddenRanges = new Decorator(false /* createHandles */);
     this._jobId = 0;
     this._lastFrameRange = {from: 0, to: 0};
     this._tree = new Tree();
@@ -150,6 +152,18 @@ export class Markup extends EventEmitter {
   }
 
   /**
+   * @param {!Anchor} from
+   * @param {!Anchor} to
+   */
+  hideRange(from, to) {
+    if (this._hiddenRanges.countTouching(from, to))
+      throw new Error('Hidden ranges cannot intersect');
+    this._hiddenRanges.add(from, to, null);
+    this._allocator.undone(Offset(from), Offset(to));
+    this._rechunkLastFrameRange();
+  }
+
+  /**
    * @param {!Replacement} replacement
    */
   _replace(replacement) {
@@ -159,6 +173,7 @@ export class Markup extends EventEmitter {
     this._lastFrameRange = this._rebaseLastFrameRange(this._lastFrameRange, from, to, inserted);
     this._text = replacement.after;
     this._allocator.replace(from, to, inserted);
+    this._hiddenRanges.replace(from, to, inserted);
 
     const split = this._tree.split(from, to);
     const newFrom = split.left.metrics().length;
@@ -315,18 +330,29 @@ export class Markup extends EventEmitter {
     let tmp = split.left.splitLast();
     let state = tmp.last !== null ? tmp.last.stateAfter : undefined;
 
-    while (iterator.offset < newTo) {
-      const size = Math.min(newTo - iterator.offset, kChunkSize);
-      let chunk = iterator.read(size);
-      if (Metrics.isSurrogate(chunk.charCodeAt(chunk.length - 1))) {
-        if (iterator.offset === newTo)
-          throw new Error('Inconsistent');
-        chunk += iterator.current;
-        iterator.next();
+    const hiddenRanges = [{from: newFrom, to: newFrom}];
+    hiddenRanges.push(...this._hiddenRanges.listTouching(newFrom, newTo));
+    hiddenRanges.push({from: newTo + 0.5, to: newTo + 0.5});
+    for (let hiddenIndex = 0; hiddenIndex < hiddenRanges.length - 1; hiddenIndex++) {
+      const rangeFrom = Offset(hiddenRanges[hiddenIndex].to);
+      if (iterator.offset < rangeFrom) {
+        nodes.push(this._unmeasuredNode(rangeFrom - iterator.offset));
+        iterator.reset(rangeFrom);
       }
-      const measured = this._metrics.forString(chunk, state);
-      nodes.push({metrics: measured.metrics, data: {metrics: this._metrics, stateBefore: state, stateAfter: measured.state}});
-      state = measured.state;
+      const rangeTo = Offset(hiddenRanges[hiddenIndex + 1].from);
+      while (iterator.offset < rangeTo) {
+        const size = Math.min(rangeTo - iterator.offset, kChunkSize);
+        let chunk = iterator.read(size);
+        if (Metrics.isSurrogate(chunk.charCodeAt(chunk.length - 1))) {
+          if (iterator.offset === newTo)
+            throw new Error('Inconsistent');
+          chunk += iterator.current;
+          iterator.next();
+        }
+        const measured = this._metrics.forString(chunk, state);
+        nodes.push({metrics: measured.metrics, data: {metrics: this._metrics, stateBefore: state, stateAfter: measured.state}});
+        state = measured.state;
+      }
     }
 
     if (correction !== null && correction > newTo) {
@@ -485,6 +511,7 @@ export class Markup extends EventEmitter {
    */
   _buildFrameContents(frame, lines, decorators) {
     for (let line of lines) {
+      let rangeIndex = 0;
       for (let {from, to, x, metrics} of line.ranges) {
         const offsetToX = new Float32Array(to - from + 1);
         const needsRtlBreakAfter = new Int8Array(to - from + 1);
@@ -510,14 +537,16 @@ export class Markup extends EventEmitter {
           });
         }
 
+        const rangeLeft = rangeIndex === 0 ? frame.lineLeft : offsetToX[0];
+        const rangeRight = rangeIndex === line.ranges.length - 1 ? frame.lineRight : offsetToX[to - from];
         for (let decorator of decorators.background) {
           // Expand by a single character which is not visible to account for borders
           // extending past viewport.
           decorator.visitTouching(from - 1, to + 1, decoration => {
             let dFrom = Offset(decoration.from);
-            let left = dFrom < line.start ? frame.lineLeft : offsetToX[Math.max(dFrom, from) - from];
+            let left = dFrom < line.start ? rangeLeft : offsetToX[Math.max(dFrom, from) - from];
             let dTo = Offset(decoration.to);
-            let right = dTo > line.end ? frame.lineRight : offsetToX[Math.min(dTo, to) - from];
+            let right = dTo > line.end ? rangeRight : offsetToX[Math.min(dTo, to) - from];
             if (left <= right) {
               frame.background.push({
                 x: left,
@@ -528,21 +557,22 @@ export class Markup extends EventEmitter {
             }
           });
         }
+        rangeIndex++;
       }
 
-      const lineStyles = [];
+      const lineStyles = new Set();
       for (let decorator of decorators.lines) {
         // We deliberately do not include |line.start| here
         // to allow line decorations to span the whole line without
         // affecting the next one.
         if (decorator.countTouching(line.start + 0.5, line.end + 0.5) > 0)
-          lineStyles.push(decorator.style());
+          lineStyles.add(decorator.style());
       }
       frame.lines.push({
         first: this._text.offsetToPosition(line.start).line,
         last: this._text.offsetToPosition(line.end).line,
         y: line.y,
-        styles: lineStyles
+        styles: Array.from(lineStyles)
       });
     }
   }

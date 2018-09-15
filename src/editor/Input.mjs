@@ -446,6 +446,8 @@ export class Input {
   }
 
   selectAll() {
+    if (this._frozen)
+      throw new Error('Cannot change selection while frozen');
     this._document.setSelection([{
       anchor: 0,
       focus: this._document.text().length()
@@ -456,6 +458,8 @@ export class Input {
    * @return {boolean}
    */
   collapseSelection() {
+    if (this._frozen)
+      throw new Error('Cannot change selection while frozen');
     const selection = this._document.sortedSelection();
     if (selection.length === 0)
       return false;

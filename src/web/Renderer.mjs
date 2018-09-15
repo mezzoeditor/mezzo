@@ -208,6 +208,8 @@ export class Renderer {
       'Shift-Cmd-Right': 'selection.select.lineend',
       'Escape': 'selection.collapse',
 
+      'Cmd/Ctrl-h': 'hideselection',
+
       'Enter': 'input.newline',
       'Backspace': 'input.backspace',
       'Delete': 'input.delete',
@@ -378,6 +380,15 @@ export class Renderer {
       return this._revealSelection(this._editor.input().selectAll());
     if (command === 'selection.collapse')
       return this._revealSelection(this._editor.input().collapseSelection());
+    if (command === 'hideselection') {
+      const lastCursor = this._editor.document().lastCursor();
+      if (!lastCursor)
+        return false;
+      const min = Math.min(lastCursor.anchor, lastCursor.focus);
+      const max = Math.max(lastCursor.anchor, lastCursor.focus);
+      this._editor.markup().hideRange(min, max + 0.5);
+      return true;
+    }
   }
 
   _setupEventListeners() {
