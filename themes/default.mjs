@@ -10,99 +10,99 @@ export default {
     //
     'selection.focus': {
       self: {
-        'border-color': 'rgb(33, 33, 33)',
-        'border-width': 2,
+        borderColor: 'rgb(33, 33, 33)',
+        borderWidth: 2,
       }
     },
     'selection.range': {
       self: {
-        'background-color': 'rgba(126, 188, 254, 0.5)',
+        backgroundColor: 'rgba(126, 188, 254, 0.5)',
       },
       line: {
-        'background-color': 'rgba(126, 188, 254, 0.1)',
+        backgroundColor: 'rgba(126, 188, 254, 0.1)',
       },
       scrollbar: {
-        'background-color': 'rgba(126, 188, 254, 0.6)',
-        'left': 40,
-        'right': 60,
+        backgroundColor: 'rgba(126, 188, 254, 0.6)',
+        left: 40,
+        right: 60,
       }
     },
     'search.match': {
       self: {
-        'background-color': 'hsla(36, 96%, 56%, 0.4)',
+        backgroundColor: 'hsla(36, 96%, 56%, 0.4)',
       },
       scrollbar: {
-        'background-color': 'hsla(36, 96%, 56%, 0.4)',
-        'left': 0,
-        'right': 100,
+        backgroundColor: 'hsla(36, 96%, 56%, 0.4)',
+        left: 0,
+        right: 100,
       },
       gutter: {
-        'border-color': 'hsla(36, 96%, 56%, 0.7)',
-        'border-width': 1,
+        borderColor: 'hsla(36, 96%, 56%, 0.7)',
+        borderWidth: 1,
       }
     },
     'search.match.current': {
       self: {
-        'border-width': 1,
-        'border-color': 'hsl(39, 96%, 28%)',
+        borderWidth: 1,
+        borderColor: 'hsl(39, 96%, 28%)',
       }
     },
     'syntax.default': {
       self: {
-        'color': 'rgb(33, 33, 33)',
+        color: 'rgb(33, 33, 33)',
       }
     },
     'syntax.keyword': {
       self: {
-        'color': 'hsl(310, 86%, 36%)',
+        color: 'hsl(310, 86%, 36%)',
       }
     },
     'syntax.string': {
       self: {
-        'color': 'hsl(1, 80%, 43%)',
+        color: 'hsl(1, 80%, 43%)',
       }
     },
     'syntax.number': {
       self: {
-        'color': 'hsl(240, 73%, 38%)',
+        color: 'hsl(240, 73%, 38%)',
       }
     },
     'syntax.variable': {
       self: {
-        'color': 'rgb(0, 0, 128)',
+        color: 'rgb(0, 0, 128)',
       }
     },
     'syntax.comment': {
       self: {
-        'color': 'hsl(120, 100%, 23%)',
+        color: 'hsl(120, 100%, 23%)',
       }
     },
     'red': {
       self: {
-        'color': 'red',
-        'background-color': 'rgba(255, 0, 0, 0.2)',
-        'border-color': 'black',
-        'border-width': 1,
-        'border-radius': 4,
+        color: 'red',
+        backgroundColor: 'rgba(255, 0, 0, 0.2)',
+        borderColor: 'black',
+        borderWidth: 1,
+        borderRadius: 4,
       }
     },
     'green': {
       self: {
-        'color': 'green',
-        'background-color': 'rgba(0, 255, 0, 0.2)',
+        color: 'green',
+        backgroundColor: 'rgba(0, 255, 0, 0.2)',
       }
     },
     'blue': {
       self: {
-        'color': 'blue',
-        'background-color': 'rgba(0, 0, 255, 0.2)',
-        'border-color': 'rgb(0, 0, 50)',
-        'border-width': 2,
+        color: 'blue',
+        backgroundColor: 'rgba(0, 0, 255, 0.2)',
+        borderColor: 'rgb(0, 0, 50)',
+        borderWidth: 2,
       }
     },
     'the-range': {
       self: {
-        'background-color': 'rgba(0, 0, 0, 0.4)',
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
       }
     }
   }
