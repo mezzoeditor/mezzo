@@ -38,6 +38,8 @@ let random = Random(42);
  *   firstWidth: number,
  *   lastWidth: number,
  *   longestWidth: number,
+ *   startNotIncluded: boolean|undefined,
+ *   endIncluded: boolean|undefined,
  * }} TextMetrics;
  */
 
@@ -117,11 +119,11 @@ export class Tree {
   }
 
   /**
-   * Splits the tree by two offsets, putting the nodes containing |from| and |to|
+   * Splits the tree by two anchors, putting the nodes containing |from| and |to|
    * to the middle part.
    *
-   * @param {number} from
-   * @param {number} to
+   * @param {!Anchor} from
+   * @param {!Anchor} to
    * @return {!{left: !Tree<T>, right: !Tree<T>, middle: !Tree<T>}}
    */
   split(from, to) {
@@ -181,6 +183,8 @@ export class Tree {
    * @return {!TextMetrics}
    */
   static combineMetrics(left, right) {
+    if (left.endIncluded && !right.startNotIncluded)
+      throw new Error('Metrics have intersecting anchors');
     let result = {
       longestWidth: Math.max(Math.max(left.longestWidth, left.lastWidth + right.firstWidth), right.longestWidth),
       firstWidth: left.firstWidth + (left.lineBreaks ? 0 : right.firstWidth),
@@ -189,6 +193,10 @@ export class Tree {
     }
     if (left.lineBreaks || right.lineBreaks)
       result.lineBreaks = (left.lineBreaks || 0) + (right.lineBreaks || 0);
+    if (left.startNotIncluded)
+      result.startNotIncluded = true;
+    if (right.endIncluded)
+      result.endIncluded = true;
     return result;
   }
 };
@@ -235,40 +243,51 @@ class TreeIterator {
   }
 
   /**
-   * Moves iterator to a first node which covers or starts at |offset|, or
-   * to the position after the last node, if |offset| is exacty the last offset.
+   * Moves iterator to a first node which covers |anchor|, or
+   * to the position after the last node, if |anchor| is the last anchor.
    *
-   * In |strict| mode, does not modify iterator when |offset| is out of bounds
-   * and returns false.
-   * In non-|strict| mode, clamps |offset| to the bounds and returns the clamped offset.
+   * In |strict| mode, does not modify iterator when |anchor| is out of bounds
+   * and returns null.
+   * In non-|strict| mode, clamps |anchor| to bounds and returns the clamped anchor.
    *
-   * @param {number} offset
+   * @param {!Anchor} anchor
    * @param {boolean=} strict
    * @return {?number}
    */
-  locateByOffset(offset, strict) {
-    if (offset < 0) {
+  locateByOffset(anchor, strict) {
+    const min = this._root && this._root.startNotIncluded ? 0.5 : 0;
+    if (anchor < min) {
       if (strict)
         return null;
-      offset = 0;
+      anchor = min;
     }
-    let max = this._root ? this._root.metrics.length : 0;
-    if (offset > max) {
+    let max = 0;
+    if (this._root)
+      max = this._root.metrics.length + (this._root.metrics.endIncluded ? 0.5 : 0);
+    if (anchor > max) {
       if (strict)
         return null;
-      offset = max;
+      anchor = max;
+      this._locate({anchor});
+      return anchor;
     }
-    this._locate({offset});
-    return offset;
+    this._locate({anchor: anchor - 0.5});
+    if (this.metrics) {
+      const after = this.after.offset + (this.metrics.endIncluded ? 0.5 : 0);
+      const before = this.before.offset + (this.metrics.startNotIncluded ? 0.5 : 0);
+      if (after <= anchor && before < anchor)
+        this.next();
+    }
+    return anchor;
   }
 
   /**
-   * Moves iterator to a first node which covers or starts at |point|, or
-   * to the position after the last node, if |point| is exactly the last point.
+   * Moves iterator to a first node which covers |point|, or
+   * to the position after the last node, if |point| is the last point.
    *
    * In |strict| mode, does not modify iterator when |point| is out of bounds
    * and returns false.
-   * In non-|strict| mode, clamps |point| to the bounds and returns clamped point.
+   * In non-|strict| mode, clamps |point| to bounds and returns the clamped point.
    *
    * @param {!Point} point
    * @param {boolean=} strict
@@ -305,47 +324,37 @@ class TreeIterator {
     if (!this._root)
       return;
     this._stack = [];
-    let location = origin;
+    /** @type {!FindLocation} */
+    let location = {anchor: 0, x: 0, y: 0};
     let node = this._root;
     while (true) {
       this._stack.push({node, location});
       if (node.left) {
-        let next = advanceLocation(location, node.left.metrics);
-        if (this._locationIsGreater(next, key)) {
+        let next = advanceFindLocation(location, node.left.metrics);
+        if (findLocationIsGreater(next, key)) {
           node = node.left;
           continue;
         }
         location = next;
       }
-      let next = advanceLocation(location, node.selfMetrics || node.metrics);
-      if (this._locationIsGreater(next, key)) {
+      let next = advanceFindLocation(location, node.selfMetrics || node.metrics);
+      if (findLocationIsGreater(next, key)) {
         this.metrics = node.selfMetrics || node.metrics;
         this.data = node.data;
-        this.before = location;
-        this.after = next;
+        this.before = findLocationToLocation(location);
+        this.after = findLocationToLocation(next);
         return;
       }
       if (!node.right) {
         this.metrics = undefined;
         this.data = undefined;
-        this.before = next;
+        this.before = findLocationToLocation(next);
         this.after = undefined;
         return;
       }
       location = next;
       node = node.right;
     }
-  }
-
-  /**
-   * @param {!Location} location
-   * @param {!FindKey} key
-   * @return {boolean}
-   */
-  _locationIsGreater(location, key) {
-    if (key.offset !== undefined)
-      return location.offset > key.offset;
-    return location.y > key.y || (location.y + 1 > key.y && location.x > key.x);
   }
 
   /**
@@ -363,8 +372,8 @@ class TreeIterator {
       // |node| is a first node already.
     } else if (node.right) {
       if (node.left)
-        location = advanceLocation(location, node.left.metrics);
-      location = advanceLocation(location, node.selfMetrics || node.metrics);
+        location = advanceFindLocation(location, node.left.metrics);
+      location = advanceFindLocation(location, node.selfMetrics || node.metrics);
       node = node.right;
       while (true) {
         this._stack.push({node, location});
@@ -389,11 +398,11 @@ class TreeIterator {
     }
 
     if (node.left)
-      location = advanceLocation(location, node.left.metrics);
+      location = advanceFindLocation(location, node.left.metrics);
     this.metrics = node.selfMetrics || node.metrics;
     this.data = node.data;
     this.before = this.after;
-    this.after = advanceLocation(location, this.metrics);
+    this.after = findLocationToLocation(advanceFindLocation(location, this.metrics));
     return true;
   }
 
@@ -417,8 +426,8 @@ class TreeIterator {
         if (!node.right)
           break;
         if (node.left)
-          location = advanceLocation(location, node.left.metrics);
-        location = advanceLocation(location, node.selfMetrics || node.metrics);
+          location = advanceFindLocation(location, node.left.metrics);
+        location = advanceFindLocation(location, node.selfMetrics || node.metrics);
         node = node.right;
       }
     } else {
@@ -438,11 +447,11 @@ class TreeIterator {
     }
 
     if (node.left)
-      location = advanceLocation(location, node.left.metrics);
+      location = advanceFindLocation(location, node.left.metrics);
     this.metrics = node.selfMetrics || node.metrics;
     this.data = node.data;
     this.after = this.before;
-    this.before = location;
+    this.before = findLocationToLocation(location);
     return true;
   }
 };
@@ -461,10 +470,18 @@ class TreeIterator {
 
 /**
  * @typedef {{
- *   offset: number|undefined,
+ *   anchor: Anchor|undefined,
  *   x: number|undefined,
  *   y: number|undefined,
  * }} FindKey;
+ */
+
+/**
+ * @typedef {{
+ *   anchor: Anchor,
+ *   x: number,
+ *   y: number,
+ * }} FindLocation;
  */
 
 const kClone = true;
@@ -474,16 +491,39 @@ const kSplitIntersectionToLeft = true;
 const kSplitIntersectionToRight = false;
 
 /**
- * @param {!Location} location
- * @param {!TextMetrics} metrics
+ * @param {!FindLocation} location
  * @return {!Location}
  */
-function advanceLocation(location, metrics) {
+function findLocationToLocation(location) {
   return {
-    offset: location.offset + metrics.length,
+    offset: Math.floor(location.anchor),
+    y: location.y,
+    x: location.x
+  };
+}
+
+/**
+ * @param {!FindLocation} location
+ * @param {!TextMetrics} metrics
+ * @return {!FindLocation}
+ */
+function advanceFindLocation(location, metrics) {
+  return {
+    anchor: Math.floor(location.anchor) + metrics.length + (metrics.endIncluded ? 0.5 : 0),
     y: location.y + (metrics.lineBreaks || 0),
     x: metrics.lastWidth + (metrics.lineBreaks ? 0 : location.x)
   };
+}
+
+/**
+ * @param {!FindLocation} location
+ * @param {!FindKey} key
+ * @return {boolean}
+ */
+function findLocationIsGreater(location, key) {
+  if (key.anchor !== undefined)
+    return location.anchor > key.anchor;
+  return location.y > key.y || (location.y + 1 > key.y && location.x > key.x);
 }
 
 /**
@@ -589,25 +629,28 @@ function build(nodes) {
  * unless |intersectionToLeft| is true.
  *
  * @param {!TreeNode<T>|undefined} root
- * @param {number} offset
+ * @param {!Anchor} anchor
  * @param {boolean} intersectionToLeft
  * @param {number} current
  * @return {{left: !TreeNode<T>|undefined, right: !TreeNode<T>|undefined}}
  */
-function split(root, offset, intersectionToLeft, current) {
+function split(root, anchor, intersectionToLeft, current) {
   if (!root)
     return {};
 
   let before = current + (root.left ? root.left.metrics.length : 0);
   let after = before + (root.selfMetrics || root.metrics).length;
-  let rootToLeft = intersectionToLeft === kSplitIntersectionToLeft ?
-    before < offset || after <= offset :
-    !(after > offset || before >= offset);
+  if ((root.selfMetrics || root.metrics).startNotIncluded)
+    before += 0.5;
+  if ((root.selfMetrics || root.metrics).endIncluded)
+    after += 0.5;
+  let rootToLeft = before >= anchor ? false :
+      (after <= anchor ? true : intersectionToLeft === kSplitIntersectionToLeft);
   if (rootToLeft) {
-    let tmp = split(root.right, offset, intersectionToLeft, after);
+    let tmp = split(root.right, anchor, intersectionToLeft, Math.floor(after));
     return {left: setChildren(root, root.left, tmp.left, kClone), right: tmp.right};
   } else {
-    let tmp = split(root.left, offset, intersectionToLeft, current);
+    let tmp = split(root.left, anchor, intersectionToLeft, current);
     return {left: tmp.left, right: setChildren(root, tmp.right, root.right, kClone)};
   }
 }

@@ -111,8 +111,8 @@ export function addTests(runner, expect) {
 
       tmp = tree.split(0, 3);
       expect(tmp.left.collect()).toBe([]);
-      expect(tmp.middle.collect()).toBe([node1, node2, node0]);
-      expect(tmp.right.collect()).toBe([node3, node4, node0]);
+      expect(tmp.middle.collect()).toBe([node1]);
+      expect(tmp.right.collect()).toBe([node2, node0, node3, node4, node0]);
 
       tmp = tree.split(2, 5);
       expect(tmp.left.collect()).toBe([]);
@@ -131,13 +131,212 @@ export function addTests(runner, expect) {
 
       tmp = tree.split(3, 9);
       expect(tmp.left.collect()).toBe([node1]);
-      expect(tmp.middle.collect()).toBe([node2, node0, node3, node4, node0]);
-      expect(tmp.right.collect()).toBe([]);
+      expect(tmp.middle.collect()).toBe([node2, node0, node3, node4]);
+      expect(tmp.right.collect()).toBe([node0]);
 
       tmp = tree.split(12, 15);
       expect(tmp.left.collect()).toBe([node1, node2, node0, node3, node4, node0]);
       expect(tmp.middle.collect()).toBe([]);
       expect(tmp.right.collect()).toBe([]);
+    });
+
+    it('anchors 1', () => {
+      const metrics1 = {length: 1, firstWidth: 1, lastWidth: 1, longestWidth: 1, startNotIncluded: true, endIncluded: true};
+      const metrics2 = {length: 2, firstWidth: 2, lastWidth: 2, longestWidth: 2, startNotIncluded: true};
+      const tree = Tree.build([{data: 1, metrics: metrics1}, {data: 2, metrics: metrics2}]);
+      const iterator = tree.iterator();
+
+      iterator.locateByOffset(0);
+      expect(iterator.before).toBe({x: 0, y: 0, offset: 0});
+      expect(iterator.data).toBe(1);
+      expect(iterator.metrics).toBe(metrics1);
+      expect(iterator.after).toBe({x: 1, y: 0, offset: 1});
+
+      iterator.prev();
+      expect(iterator.before).toBe(undefined);
+      expect(iterator.data).toBe(undefined);
+      expect(iterator.metrics).toBe(undefined);
+      expect(iterator.after).toBe({x: 0, y: 0, offset: 0});
+
+      iterator.locateByOffset(1);
+      expect(iterator.before).toBe({x: 0, y: 0, offset: 0});
+      expect(iterator.data).toBe(1);
+      expect(iterator.metrics).toBe(metrics1);
+      expect(iterator.after).toBe({x: 1, y: 0, offset: 1});
+
+      iterator.locateByOffset(2);
+      expect(iterator.before).toBe({x: 1, y: 0, offset: 1});
+      expect(iterator.data).toBe(2);
+      expect(iterator.metrics).toBe(metrics2);
+      expect(iterator.after).toBe({x: 3, y: 0, offset: 3});
+
+      iterator.locateByOffset(2.5);
+      expect(iterator.before).toBe({x: 1, y: 0, offset: 1});
+      expect(iterator.data).toBe(2);
+      expect(iterator.metrics).toBe(metrics2);
+      expect(iterator.after).toBe({x: 3, y: 0, offset: 3});
+
+      iterator.locateByOffset(3);
+      expect(iterator.before).toBe({x: 3, y: 0, offset: 3});
+      expect(iterator.data).toBe(undefined);
+      expect(iterator.metrics).toBe(undefined);
+      expect(iterator.after).toBe(undefined);
+    });
+
+    it('anchors 2', () => {
+      const metrics1 = {length: 1, firstWidth: 1, lastWidth: 1, longestWidth: 1};
+      const metrics2 = {length: 0, firstWidth: 0, lastWidth: 0, longestWidth: 0};
+      const metrics3 = {length: 1, firstWidth: 1, lastWidth: 1, longestWidth: 1};
+      const tree = Tree.build([{data: 1, metrics: metrics1}, {data: 2, metrics: metrics2}, {data: 3, metrics: metrics3}]);
+      const iterator = tree.iterator();
+      let tmp;
+
+      iterator.locateByOffset(1);
+      expect(iterator.before).toBe({x: 1, y: 0, offset: 1});
+      expect(iterator.data).toBe(2);
+      expect(iterator.metrics).toBe(metrics2);
+      expect(iterator.after).toBe({x: 1, y: 0, offset: 1});
+
+      iterator.locateByOffset(1.5);
+      expect(iterator.before).toBe({x: 1, y: 0, offset: 1});
+      expect(iterator.data).toBe(3);
+      expect(iterator.metrics).toBe(metrics3);
+      expect(iterator.after).toBe({x: 2, y: 0, offset: 2});
+
+      iterator.locateByOffset(2);
+      expect(iterator.before).toBe({x: 2, y: 0, offset: 2});
+      expect(iterator.data).toBe(undefined);
+      expect(iterator.metrics).toBe(undefined);
+      expect(iterator.after).toBe(undefined);
+
+      tmp = tree.split(1, 1);
+      expect(tmp.left.collect().map(n => n.data)).toBe([1]);
+      expect(tmp.middle.collect().map(n => n.data)).toBe([]);
+      expect(tmp.right.collect().map(n => n.data)).toBe([2, 3]);
+
+      tmp = tree.split(1, 1.5);
+      expect(tmp.left.collect().map(n => n.data)).toBe([1]);
+      expect(tmp.middle.collect().map(n => n.data)).toBe([2, 3]);
+      expect(tmp.right.collect().map(n => n.data)).toBe([]);
+
+      tmp = tree.split(1.5, 1.5);
+      expect(tmp.left.collect().map(n => n.data)).toBe([1, 2]);
+      expect(tmp.middle.collect().map(n => n.data)).toBe([3]);
+      expect(tmp.right.collect().map(n => n.data)).toBe([]);
+
+      tmp = tree.split(1.5, 2);
+      expect(tmp.left.collect().map(n => n.data)).toBe([1, 2]);
+      expect(tmp.middle.collect().map(n => n.data)).toBe([3]);
+      expect(tmp.right.collect().map(n => n.data)).toBe([]);
+
+      tmp = tree.split(2, 2);
+      expect(tmp.left.collect().map(n => n.data)).toBe([1, 2, 3]);
+      expect(tmp.middle.collect().map(n => n.data)).toBe([]);
+      expect(tmp.right.collect().map(n => n.data)).toBe([]);
+    });
+
+    it('anchors 3', () => {
+      const metrics1 = {length: 1, firstWidth: 1, lastWidth: 1, longestWidth: 1};
+      const metrics2 = {length: 0, firstWidth: 0, lastWidth: 0, longestWidth: 0, startNotIncluded: true, endIncluded: true};
+      const metrics3 = {length: 1, firstWidth: 1, lastWidth: 1, longestWidth: 1, startNotIncluded: true};
+      const tree = Tree.build([{data: 1, metrics: metrics1}, {data: 2, metrics: metrics2}, {data: 3, metrics: metrics3}]);
+      const iterator = tree.iterator();
+      let tmp;
+
+      iterator.locateByOffset(1);
+      expect(iterator.before).toBe({x: 1, y: 0, offset: 1});
+      expect(iterator.data).toBe(2);
+      expect(iterator.metrics).toBe(metrics2);
+      expect(iterator.after).toBe({x: 1, y: 0, offset: 1});
+
+      iterator.locateByOffset(1.5);
+      expect(iterator.before).toBe({x: 1, y: 0, offset: 1});
+      expect(iterator.data).toBe(2);
+      expect(iterator.metrics).toBe(metrics2);
+      expect(iterator.after).toBe({x: 1, y: 0, offset: 1});
+
+      iterator.locateByOffset(2);
+      expect(iterator.before).toBe({x: 2, y: 0, offset: 2});
+      expect(iterator.data).toBe(undefined);
+      expect(iterator.metrics).toBe(undefined);
+      expect(iterator.after).toBe(undefined);
+
+      tmp = tree.split(1, 1);
+      expect(tmp.left.collect().map(n => n.data)).toBe([1]);
+      expect(tmp.middle.collect().map(n => n.data)).toBe([]);
+      expect(tmp.right.collect().map(n => n.data)).toBe([2, 3]);
+
+      tmp = tree.split(1, 1.5);
+      expect(tmp.left.collect().map(n => n.data)).toBe([1]);
+      expect(tmp.middle.collect().map(n => n.data)).toBe([]);
+      expect(tmp.right.collect().map(n => n.data)).toBe([2, 3]);
+
+      tmp = tree.split(1.5, 1.5);
+      expect(tmp.left.collect().map(n => n.data)).toBe([1]);
+      expect(tmp.middle.collect().map(n => n.data)).toBe([]);
+      expect(tmp.right.collect().map(n => n.data)).toBe([2, 3]);
+
+      tmp = tree.split(1.5, 2);
+      expect(tmp.left.collect().map(n => n.data)).toBe([1]);
+      expect(tmp.middle.collect().map(n => n.data)).toBe([2, 3]);
+      expect(tmp.right.collect().map(n => n.data)).toBe([]);
+
+      tmp = tree.split(2, 2);
+      expect(tmp.left.collect().map(n => n.data)).toBe([1, 2, 3]);
+      expect(tmp.middle.collect().map(n => n.data)).toBe([]);
+      expect(tmp.right.collect().map(n => n.data)).toBe([]);
+    });
+
+    it('anchors 4', () => {
+      const metrics1 = {length: 1, firstWidth: 1, lastWidth: 1, longestWidth: 1, endIncluded: true};
+      const metrics2 = {length: 0, firstWidth: 0, lastWidth: 0, longestWidth: 0, startNotIncluded: true, endIncluded: true};
+      const metrics3 = {length: 1, firstWidth: 1, lastWidth: 1, longestWidth: 1, startNotIncluded: true};
+      const tree = Tree.build([{data: 1, metrics: metrics1}, {data: 2, metrics: metrics2}, {data: 3, metrics: metrics3}]);
+      const iterator = tree.iterator();
+      let tmp;
+
+      iterator.locateByOffset(1);
+      expect(iterator.before).toBe({x: 0, y: 0, offset: 0});
+      expect(iterator.data).toBe(1);
+      expect(iterator.metrics).toBe(metrics1);
+      expect(iterator.after).toBe({x: 1, y: 0, offset: 1});
+
+      iterator.locateByOffset(1.5);
+      expect(iterator.before).toBe({x: 1, y: 0, offset: 1});
+      expect(iterator.data).toBe(2);
+      expect(iterator.metrics).toBe(metrics2);
+      expect(iterator.after).toBe({x: 1, y: 0, offset: 1});
+
+      iterator.locateByOffset(2);
+      expect(iterator.before).toBe({x: 2, y: 0, offset: 2});
+      expect(iterator.data).toBe(undefined);
+      expect(iterator.metrics).toBe(undefined);
+      expect(iterator.after).toBe(undefined);
+
+      tmp = tree.split(1, 1);
+      expect(tmp.left.collect().map(n => n.data)).toBe([]);
+      expect(tmp.middle.collect().map(n => n.data)).toBe([1]);
+      expect(tmp.right.collect().map(n => n.data)).toBe([2, 3]);
+
+      tmp = tree.split(1, 1.5);
+      expect(tmp.left.collect().map(n => n.data)).toBe([]);
+      expect(tmp.middle.collect().map(n => n.data)).toBe([1]);
+      expect(tmp.right.collect().map(n => n.data)).toBe([2, 3]);
+
+      tmp = tree.split(1.5, 1.5);
+      expect(tmp.left.collect().map(n => n.data)).toBe([1]);
+      expect(tmp.middle.collect().map(n => n.data)).toBe([]);
+      expect(tmp.right.collect().map(n => n.data)).toBe([2, 3]);
+
+      tmp = tree.split(1.5, 2);
+      expect(tmp.left.collect().map(n => n.data)).toBe([1]);
+      expect(tmp.middle.collect().map(n => n.data)).toBe([2, 3]);
+      expect(tmp.right.collect().map(n => n.data)).toBe([]);
+
+      tmp = tree.split(2, 2);
+      expect(tmp.left.collect().map(n => n.data)).toBe([1, 2, 3]);
+      expect(tmp.middle.collect().map(n => n.data)).toBe([]);
+      expect(tmp.right.collect().map(n => n.data)).toBe([]);
     });
 
     it('iterator', () => {
@@ -182,8 +381,11 @@ export function addTests(runner, expect) {
       let iterator = tree.iterator();
       for (let start = -1; start <= total.offset + 1; start++) {
         let i = 0;
-        while (i < nodes.length && before[i].offset + nodes[i].metrics.length <= start)
+        while (i < nodes.length &&
+               before[i].offset + nodes[i].metrics.length <= start &&
+               before[i].offset < start) {
           i++;
+        }
 
         expect(iterator.locateByOffset(start, false /* strict */)).toBe(Math.max(0, Math.min(start, total.offset)));
         for (let j = i; j < nodes.length; j++) {
