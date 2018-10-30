@@ -44,6 +44,10 @@ export class Document extends EventEmitter {
     this._historyIndex = 0;
   }
 
+  static importable() {
+    return {name: this.name, url: import.meta.url};
+  }
+
   /**
    * @param {*} key
    * @param {*} value

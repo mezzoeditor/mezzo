@@ -16,7 +16,7 @@ export class WebEmbedder {
    */
   constructor(document) {
     this._renderer = new Renderer(document);
-    this._editor = new Editor(this._renderer.measurer(), WebPlatformSupport.instance());
+    this._editor = Editor.create(this._renderer.measurer(), WebPlatformSupport.instance());
     this._renderer.setEditor(this._editor);
 
     this._plugins = {

@@ -21,7 +21,7 @@ export class SVGRenderer {
    */
   constructor(platformSupport, width = 50, height = 20) {
     // TODO: implement reveal when needed.
-    this._editor = new Editor(SVGRenderer.measurer(), platformSupport);
+    this._editor = Editor.create(SVGRenderer.measurer(), platformSupport);
     this._width = width;
     this._height = height;
     this._theme = DefaultTheme;

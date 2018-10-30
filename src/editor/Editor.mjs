@@ -35,11 +35,40 @@ export class Editor extends EventEmitter {
   /**
    * @param {!Measurer} measurer
    * @param {!Platform} platformSupport
+   * @param {!Thread} thread
+   * @return {!Promise<!Editor>}
    */
-  constructor(measurer, platformSupport) {
+  static async createWithRemoteDocument(measurer, platformSupport, thread) {
+    const document = new Document();
+    const documentRPC = await thread.createRPC();
+    const remoteDocument = await thread.evaluate((Document, rpc) => {
+      const document = new Document();
+      rpc.expose.replace = document.replace.bind(document);
+      return document;
+    }, Document, documentRPC);
+    return new Editor(document, measurer, platformSupport, remoteDocument, documentRPC);
+  }
+
+  /**
+   * @param {!Measurer} measurer
+   * @param {!Platform} platformSupport
+   * @return {!Editor}
+   */
+  static create(measurer, platformSupport) {
+    return new Editor(new Document(), measurer, platformSupport, null);
+  }
+
+  /**
+   * @param {!Document} document
+   * @param {!Measurer} measurer
+   * @param {!Platform} platformSupport
+   * @param {?Handle} remoteDocument
+   * @param {?RPCHandle} documentRPC
+   */
+  constructor(document, measurer, platformSupport, remoteDocument, documentRPC) {
     super();
     this._handles = new Decorator(true /* createHandles */);
-    this._document = new Document();
+    this._document = document;
     this._document.on(Document.Events.Changed, this._onDocumentChanged.bind(this));
     this._platformSupport = platformSupport;
     /** @type {!Array<DecorationCallback>} */
@@ -58,7 +87,14 @@ export class Editor extends EventEmitter {
 
     this.setHighlighter(new DefaultHighlighter(this));
 
+    this._remoteDocument = remoteDocument;
+    this._documentRPC = documentRPC;
+
     this.reset('');
+  }
+
+  remoteDocument() {
+    return this._remoteDocument;
   }
 
   reset(text, selection = [{focus: 0, anchor: 0}]) {
@@ -173,6 +209,8 @@ export class Editor extends EventEmitter {
     for (const {offset, removed, inserted} of replacements) {
       for (let removedHandle of this._handles.replace(offset, offset + removed.length(), inserted.length()))
         removedHandle[RangeHandle._symbol]._wasRemoved();
+      if (this._documentRPC)
+        this._documentRPC.remote.replace(offset, offset + removed.length(), inserted.content());
     }
   }
 }

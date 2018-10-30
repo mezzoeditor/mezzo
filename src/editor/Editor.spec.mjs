@@ -1,7 +1,9 @@
 import {GoldenMatchers} from '../../utils/GoldenMatchers';
-import {TestPlatformSupport} from '../../test/utils.mjs';
+import {TestPlatformSupport, TestMeasurer} from '../../test/utils.mjs';
 import {SVGRenderer} from '../../test/SVGRenderer.mjs';
 import {Search} from '../../plugins/Search.mjs';
+import {Editor} from './Editor.mjs';
+import {Thread} from './Thread.mjs';
 import {WrappingMode} from '../core/Markup.mjs';
 import url from 'url';
 import path from 'path';
@@ -15,6 +17,23 @@ export function addTests(runner, expect, options) {
   const TESTDIR = path.join(__dirname, 'test-results');
   const OUTDIR = path.join(options.outputFolder, 'editor');
   const golden = new GoldenMatchers(TESTDIR, OUTDIR, options.resetResults);
+
+  describe('Editor.createWithRemoteDocument', () => {
+    beforeEach(async state => {
+      state.platform = new TestPlatformSupport();
+      state.thread = await Thread.create(state.platform);
+    });
+    afterEach(state => {
+      state.thread.dispose();
+      state.thread = null;
+      state.platform = null;
+    });
+    it('should sync remote document', async ({platform, thread}) => {
+      const editor = await Editor.createWithRemoteDocument(new TestMeasurer(), platform, thread);
+      editor.reset('hello world!');
+      expect(await thread.evaluate(doc => doc.text().content(), editor.remoteDocument())).toBe('hello world!');
+    });
+  });
 
   describe('Viewport decoration', () => {
     it('simple', () => {

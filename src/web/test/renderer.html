@@ -14,7 +14,7 @@ import { Editor } from '../../editor/Editor.mjs';
 import { DefaultHighlighter } from '../../default/DefaultHighlighter.mjs';
 
 const renderer = new Renderer(document);
-const editor = new Editor(renderer.measurer(), WebPlatformSupport.instance());
+const editor = Editor.create(renderer.measurer(), WebPlatformSupport.instance());
 renderer.setEditor(editor);
 
 renderer.element().classList.add('renderer');

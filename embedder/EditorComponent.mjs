@@ -127,7 +127,7 @@ export class EditorComponent extends HTMLElement {
   }
 
   createEditor(mimeType) {
-    const editor = new Editor(this._renderer.measurer(), WebPlatformSupport.instance());
+    const editor = Editor.create(this._renderer.measurer(), WebPlatformSupport.instance());
     PluginManager.ensurePlugins(editor);
     editor.document().setSelection([{anchor: 0, focus: 0}]);
 

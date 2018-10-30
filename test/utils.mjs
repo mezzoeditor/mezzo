@@ -117,7 +117,7 @@ export function parseTextWithCursors(textWithCursors) {
 }
 
 export function createTestEditor(textWithCursors = '') {
-  const editor = new Editor(new TestMeasurer(), new TestPlatformSupport());
+  const editor = Editor.create(new TestMeasurer(), new TestPlatformSupport());
   if (!textWithCursors)
     return editor;
   const {text, selection} = parseTextWithCursors(textWithCursors);
