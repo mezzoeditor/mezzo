@@ -32,6 +32,7 @@ const mimeTypes = {
     userDataDir: path.join(__dirname, '.embedder_profile'),
     handleSIGINT: false,
     args: [
+      '--enable-experimental-web-platform-features',
       '--allow-file-access-from-files',
       `--app=http://localhost:${port}/embedder/main.html`
     ]

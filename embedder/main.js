@@ -1,4 +1,6 @@
 import { KeymapHandler } from '../src/web/KeymapHandler.mjs';
+import { Thread } from '../src/editor/Thread.mjs';
+import { WebPlatformSupport } from '../src/web/WebPlatformSupport.mjs';
 
 import { FileSystem } from './FileSystem.mjs';
 import { SplitComponent } from './SplitComponent.mjs';
@@ -13,7 +15,7 @@ window.fs = new FileSystem();
 if (window._bindingInitialDirectory)
   window.fs.initialize(window._bindingInitialDirectory);
 
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
   document.body.classList.add('vbox');
 
   const split = new SplitComponent();
@@ -26,6 +28,7 @@ window.addEventListener('DOMContentLoaded', () => {
   split.rightElement().appendChild(tabstrip);
 
   const renderer = new EditorComponent();
+  const thread = await Thread.create(WebPlatformSupport.instance());
   split.rightElement().appendChild(renderer);
 
   const stubMessage = createStubMessage();
@@ -57,7 +60,7 @@ window.addEventListener('DOMContentLoaded', () => {
     let mimeType = window.fs.mimeType(path);
     let editor = editors.get(path);
     if (!editor) {
-      editor = renderer.createEditor(mimeType);
+      editor = await renderer.createEditor(mimeType, thread);
       editors.set(path, editor);
       const content = await window.fs.readFile(path);
       editor.reset(content, [{focus: 0, anchor: 0}]);

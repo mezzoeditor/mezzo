@@ -126,8 +126,8 @@ export class EditorComponent extends HTMLElement {
     this._resizeObserver = null;
   }
 
-  createEditor(mimeType) {
-    const editor = Editor.create(this._renderer.measurer(), WebPlatformSupport.instance());
+  async createEditor(mimeType, thread) {
+    const editor = await Editor.createWithRemoteDocument(this._renderer.measurer(), WebPlatformSupport.instance(), thread);
     PluginManager.ensurePlugins(editor);
     editor.document().setSelection([{anchor: 0, focus: 0}]);
 
