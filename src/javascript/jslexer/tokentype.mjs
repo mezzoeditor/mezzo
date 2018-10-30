@@ -149,3 +149,19 @@ export const types = {
   _void: kw("void", {beforeExpr: true, prefix: true, startsExpr: true}),
   _delete: kw("delete", {beforeExpr: true, prefix: true, startsExpr: true})
 }
+
+const typeToName = new Map();
+for (const [name, type] of Object.entries(types))
+  typeToName.set(type, name);
+
+export function serializeTokenType(type) {
+  if (!type)
+    return null;
+  return typeToName.get(type);
+}
+
+export function deserializeTokenType(typeName) {
+  if (!typeName)
+    return null;
+  return types[typeName];
+}

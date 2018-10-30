@@ -1,5 +1,5 @@
 import {keywords} from "./identifier.mjs"
-import {types as tt} from "./tokentype.mjs"
+import {types as tt, serializeTokenType, deserializeTokenType} from "./tokentype.mjs"
 
 function keywordRegexp(words) {
   return new RegExp("^(?:" + words.replace(/ /g, "|") + ")$")
@@ -141,6 +141,19 @@ export class Parser {
   }
 }
 
+export function serializeState(state) {
+  return Object.assign({}, state, {
+    type: serializeTokenType(state.type),
+    recoveryType: serializeTokenType(state.recoveryType),
+  });
+}
+
+export function deserializeState(state) {
+  return Object.assign({}, state, {
+    type: deserializeTokenType(state.type),
+    recoveryType: deserializeTokenType(state.recoveryType),
+  });
+}
 export function isEqualState(a, b) {
   const fastPath = a.options.ecmaVersion === b.options.ecmaVersion &&
     a.options.sourceType === b.options.sourceType &&
