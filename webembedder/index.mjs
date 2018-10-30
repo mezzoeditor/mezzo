@@ -2,6 +2,7 @@ import { Renderer } from "../src/web/Renderer.mjs";
 import { WebPlatformSupport } from "../src/web/WebPlatformSupport.mjs";
 import { Editor } from "../src/editor/Editor.mjs";
 import { DefaultHighlighter } from "../src/default/DefaultHighlighter.mjs";
+import { Thread } from '../src/editor/Thread.mjs';
 
 import { SelectedWordHighlighter } from '../plugins/SelectedWordHighlighter.mjs';
 import { SmartBraces } from '../plugins/SmartBraces.mjs';
@@ -11,12 +12,26 @@ import { AddNextOccurence } from '../plugins/AddNextOccurence.mjs';
 import { SearchToolbar } from '../plugins/web/SearchToolbar.mjs';
 
 export class WebEmbedder {
+  static async createWithWorker(document) {
+    const thread = await Thread.create(WebPlatformSupport.instance());
+    const renderer = new Renderer(document);
+    const editor = await Editor.createWithRemoteDocument(renderer.measurer(), WebPlatformSupport.instance(), thread);
+    return new WebEmbedder(renderer, editor);
+  }
+
+  static create(document) {
+    const renderer = new Renderer(document);
+    const editor = Editor.create(renderer.measurer(), WebPlatformSupport.instance());
+    return new WebEmbedder(renderer, editor);
+  }
+
   /**
-   * @param {!Document} document
+   * @param {!Renderer} renderer
+   * @param {!Editor} editor
    */
-  constructor(document) {
-    this._renderer = new Renderer(document);
-    this._editor = Editor.create(this._renderer.measurer(), WebPlatformSupport.instance());
+  constructor(renderer, editor) {
+    this._renderer = renderer;
+    this._editor = editor;
     this._renderer.setEditor(this._editor);
 
     this._plugins = {

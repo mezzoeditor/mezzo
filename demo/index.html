@@ -18,15 +18,42 @@ body {
   padding: 4px;
   box-shadow: 1px 1px 6px 2px lightgrey;
   white-space: nowrap;
+  display: flex;
 }
+
+.top > * {
+  margin-right: 1ex;
+}
+
+.thread-good::after {
+  content: 'OK';
+  color: green;
+  font-weight: bold;
+}
+
+.thread-bad::after {
+  content: 'FAILED';
+  color: red;
+  font-weight: bold;
+}
+
+.worker-thread {
+  border-bottom: 1px dashed black;
+  cursor: help;
+}
+
 </style>
 <div class=top>
   <select class=examples></select>
   <select class=highlights></select>
-  <input type=checkbox class=ismonospace checked>Monospace</input>
+  <div>
+    <input type=checkbox class=ismonospace id=monospace-checkbox checked></input>
+    <label for=monospace-checkbox>Monospace</label>
+  </div>
   <select class=wrapping>
     <option value=none selected=true>No wrapping</option>
     <option value=line>Line wrapping</option>
     <option value=word>Word wrapping</option>
   </select>
+  <div><span title='Require ES6 dynamic import in WebWorkers' class='worker-thread'>Worker thread:</span> <span id="thread-status"></span></div>
 </div>

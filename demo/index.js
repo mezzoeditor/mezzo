@@ -21,8 +21,16 @@ const examples = [
   'unicodeperf.txt',
 ];
 
-document.addEventListener('DOMContentLoaded', () => {
-  const embedder = new WebEmbedder(document);
+document.addEventListener('DOMContentLoaded', async () => {
+  let workerThreadStatus = document.querySelector('#thread-status');
+  let embedder = null;
+  try {
+    embedder = await WebEmbedder.createWithWorker(document);
+    workerThreadStatus.classList.add('thread-good');
+  } catch (e) {
+    embedder = WebEmbedder.create(document);
+    workerThreadStatus.classList.add('thread-bad');
+  }
   window.editor = embedder;
 
   document.querySelector('.ismonospace').addEventListener('change', event => {

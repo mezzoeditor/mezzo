@@ -12,7 +12,7 @@ html, body, .renderer {
 
 import { WebEmbedder } from '../index.mjs';
 
-const embedder = new WebEmbedder(document);
+const embedder = WebEmbedder.create(document);
 embedder.element().classList.add('renderer');
 
 document.body.appendChild(embedder.element());
