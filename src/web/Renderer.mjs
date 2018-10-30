@@ -625,7 +625,8 @@ export class Renderer {
 
     // Throttle while resizing to allow time for new frames
     // instead of background processing.
-    this._editor.platformSupport().throttle(100);
+    if (this._editor)
+      this._editor.platformSupport().throttle(100);
   }
 
   /**
