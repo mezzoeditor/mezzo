@@ -132,7 +132,7 @@ export class EditorComponent extends HTMLElement {
     editor.document().setSelection([{anchor: 0, focus: 0}]);
 
     if (mimeType === 'text/javascript') {
-      const highlighter = new JSHighlighter(editor);
+      const highlighter = await JSHighlighter.create(editor);
       editor.setHighlighter(highlighter);
     } else {
       const highlighter = new DefaultHighlighter(editor);

@@ -2,18 +2,99 @@ import { Decorator} from '../core/Decorator.mjs';
 import { Document } from '../core/Document.mjs';
 import { EventEmitter } from '../core/EventEmitter.mjs';
 
-export class CumulativeIndexer {
+export class RemoteCumulativeIndexer extends EventEmitter {
+  static async create(remoteDocument, Delegate, options) {
+    const delegate = new Delegate();
+
+    // Step 1. Handle RPC events from worker that
+    // update highlight.
+    const indexerRPC = await remoteDocument.thread().createRPC();
+    const remoteIndexer = new RemoteCumulativeIndexer(new Delegate(), indexerRPC);
+    // Step 2. Initialize Worker subsystem.
+    const args = [Delegate, CumulativeIndexer, remoteDocument, options, indexerRPC];
+    const thread = remoteDocument.thread();
+    await thread.evaluate((Delegate, CumulativeIndexer, document, options, rpc) => {
+      const delegate = new Delegate();
+      const indexer = new CumulativeIndexer(document, self.platformSupport, delegate, options);
+      const eventListeners = [
+        indexer.on(CumulativeIndexer.Events.Changed, changes => {
+          const points = [];
+          for (const {from, to} of changes) {
+            const newPoints = indexer._states.listTouching(from, to + 0.5).map(e => ({offset: e.from, state: delegate.serialize(e.data)}))
+            points.push(...newPoints);
+          }
+          rpc.remote.indexerChanged(changes, points);
+        }),
+        document.on('changed', ({replacements}) => {
+          if (!replacements.length)
+            return;
+          rpc.remote.documentChanged(replacements.map(replacement => ({
+            from: replacement.offset,
+            to: replacement.offset + replacement.removed.length(),
+            length: replacement.inserted.length()
+          })));
+        }),
+      ];
+
+      rpc.expose.dispose = () => {
+        eventListeners.forEach(removeListener => removeListener());
+        indexer.dispose();
+      }
+    }, ...args);
+
+    return remoteIndexer;
+  }
+
+  constructor(delegate, indexerRPC) {
+    super();
+    this._delegate = delegate;
+    this._indexerRPC = indexerRPC;
+    this._states = new Decorator();
+    //TODO: this initialization should be dispatched by CumulativeIndexer
+    this._states.add(0, 0, delegate.initialState());
+    indexerRPC.expose.indexerChanged = this._onIndexerChanged.bind(this);
+    indexerRPC.expose.documentChanged = this._onDocumentChanged.bind(this);
+  }
+
+  _onDocumentChanged(replacements) {
+    for (const {from, to, length} of replacements)
+      this._states.replace(from, to, length);
+  }
+
+  _onIndexerChanged(changes, points) {
+    for (const {from, to} of changes)
+      this._states.clearTouching(from, to + 0.5);
+    for (const point of points)
+      this._states.add(point.offset, point.offset, this._delegate.deserialize(point.state));
+    this.emit(CumulativeIndexer.Events.Changed, changes);
+  }
+
+  states() {
+    return this._states;
+  }
+
+  async dispose() {
+    await Promise.all([
+      this._indexerRPC.worker.dispose(),
+      this._indexerRPC.dispose(),
+    ]);
+    this._indexerRPC = null;
+  }
+}
+
+export class CumulativeIndexer extends EventEmitter {
   /**
-   * @param {!Editor} editor
+   * @param {!Document} document
+   * @param {!PlatformSupport} platformSupport
    * @param {!CumulativeIndexer.Delegate} delegate
    * @param {{budget: number, density: number}=} options
    */
-  constructor(editor, delegate, options) {
+  constructor(document, platformSupport, delegate, options) {
+    super();
     this._budget = options.budget || 20000;
     this._density = options.density || 2000;
-    this._editor = editor;
-    this._document = editor.document();
-    this._platformSupport = editor.platformSupport();
+    this._document = document;
+    this._platformSupport = platformSupport;
     this._delegate = delegate;
 
     this._states = new Decorator();
@@ -27,6 +108,11 @@ export class CumulativeIndexer {
 
     this._jobId = 0;
     this._scheduleHighlight();
+    this._convergingTimeStamp = null;
+  }
+
+  static importable() {
+    return {url: import.meta.url, name: this.name};
   }
 
   states() {
@@ -34,10 +120,14 @@ export class CumulativeIndexer {
   }
 
   _doHighlight() {
+    if (!this._convergingTimeStamp)
+      this._convergingTimeStamp = Date.now();
     this._jobId = 0;
 
     let budget = this._budget;
     const STATE_CHUNK = this._density;
+    const stateChanges = [];
+    const newStates = [];
     while (budget > 0) {
       const cursor = this._cursors.firstAll();
       if (!cursor || cursor.from >= this._document.text().length() - STATE_CHUNK) {
@@ -80,6 +170,7 @@ export class CumulativeIndexer {
       if (successfulConvergence) {
         this._cursors.clearStarting(cursor.from, lastTrustedStateOffset);
         budget -= lastTrustedStateOffset - cursor.from;
+        stateChanges.push({from: cursor.from, to: lastTrustedStateOffset});
         continue;
       }
       // Otherwise, eat the rest of the budget to push the cursor as far as
@@ -91,13 +182,19 @@ export class CumulativeIndexer {
       lastTrustedStateOffset = to;
       this._cursors.clearStarting(cursor.from, lastTrustedStateOffset);
       this._cursors.add(lastTrustedStateOffset, lastTrustedStateOffset);
+      stateChanges.push({from: cursor.from, to: lastTrustedStateOffset});
       break;
     }
 
     // If there's at least one cursor - schedule more work.
     if (this._cursors.countAll())
       this._scheduleHighlight();
-    this._editor.raf();
+    else {
+      console.log('Converged in: ' + (Date.now() - this._convergingTimeStamp) / 1000 + 's');
+      this._convergingTimeStamp = null;
+    }
+    if (stateChanges.length)
+      this.emit(CumulativeIndexer.Events.Changed, stateChanges);
   }
 
   _scheduleHighlight() {
@@ -132,6 +229,10 @@ export class CumulativeIndexer {
     this._scheduleHighlight();
   }
 }
+
+CumulativeIndexer.Events = {
+  Changed: 'changed'
+};
 
 CumulativeIndexer.Delegate = class {
   initialState() { }

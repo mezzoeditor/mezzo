@@ -59,7 +59,7 @@ export class WebEmbedder {
     this._mimeType = mimeType;
     if (mimeType === 'text/javascript') {
       const {JSHighlighter} = await import('../src/javascript/JSHighlighter.mjs');
-      this._editor.setHighlighter(new JSHighlighter(this._editor));
+      this._editor.setHighlighter(await JSHighlighter.create(this._editor));
       return;
     }
     if (mimeType === 'text/css') {

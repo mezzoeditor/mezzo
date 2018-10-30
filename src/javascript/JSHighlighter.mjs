@@ -1,20 +1,31 @@
 import { EventEmitter } from '../core/EventEmitter.mjs';
-import { Parser, TokenTypes, isEqualState } from './jslexer/index.mjs';
+import { Parser, TokenTypes, isEqualState, serializeState, deserializeState } from './jslexer/index.mjs';
 import { TextDecorator } from '../core/Decorator.mjs';
-import { CumulativeIndexer } from '../editor/CumulativeIndexer.mjs';
+import { CumulativeIndexer, RemoteCumulativeIndexer } from '../editor/CumulativeIndexer.mjs';
 import { trace } from '../core/Trace.mjs';
 
 const HIGHLIGHT_CHUNK = 20000;
 const STATE_CHUNK = 2000;
 
 export class JSHighlighter {
-  constructor(editor) {
-    this._indexer = new CumulativeIndexer(editor, new JSHighlighterIndexer(), {
-      budget: HIGHLIGHT_CHUNK,
+  static async create(editor) {
+    const options = {
+      budget: HIGHLIGHT_CHUNK * 10,
       density: STATE_CHUNK
-    });
+    };
+    if (editor.remoteDocument()) {
+      const indexer = await RemoteCumulativeIndexer.create(editor.remoteDocument(), JSHighlighterIndexer, options);
+      return new JSHighlighter(editor, indexer);
+    }
+    const indexer = new CumulativeIndexer(editor.document(), editor.platformSupport(), new JSHighlighterIndexer(), options);
+    return new JSHighlighter(editor, indexer);
+  }
+
+  constructor(editor, indexer) {
+    this._indexer = indexer;
 
     this._eventListeners = [
+      indexer.on(CumulativeIndexer.Events.Changed, () => editor.raf()),
       editor.addDecorationCallback(this._onDecorate.bind(this)),
     ];
   }
@@ -60,13 +71,25 @@ export class JSHighlighter {
   }
 };
 
-class JSHighlighterIndexer extends CumulativeIndexer.Delegate {
+export class JSHighlighterIndexer extends CumulativeIndexer.Delegate {
+  static importable() {
+    return {url: import.meta.url, name: this.name};
+  }
+
   initialState() {
     return Parser.defaultState();
   }
 
   isEqualStates(state1, state2) {
     return isEqualState(state1, state2);
+  }
+
+  serialize(state) {
+    return serializeState(state);
+  }
+
+  deserialize(state) {
+    return deserializeState(state);
   }
 
   /**
