@@ -88,6 +88,13 @@ function addExamples(embedder) {
     // embedder.setText('abcdefg abcdefg abcdefg abcdefg abcdefg \nabcdefg\n abcdefg abcdefg abcdefg abcdefg\n abcdefg abcdefg abcdefg abcdefg abcdefg abcdefg\n abcdefg');
     embedder.focus();
 
+    let size = embedder.document().text().length();
+    const suffixes = ['B', 'KB', 'MB'];
+    let suffixIndex = 0;
+    for (suffixIndex = 0; suffixIndex < suffixes.length && size > 1024; ++suffixIndex)
+      size /= 1024;
+    document.querySelector('.text-size').textContent = Math.round(size) + suffixes[suffixIndex];
+
     const selection = [];
     for (let i = 0; i < 20; i++) {
       const offset = embedder.document().text().positionToOffset({line: 4 * i, column: 3});
