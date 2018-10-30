@@ -7,9 +7,9 @@ import path from 'path';
 
 const runner = new TestRunner();
 const {expect} = new Matchers();
-
 const headless = (process.env.HEADLESS || 'true').trim().toLowerCase() === 'true';
-const browserOptions = { headless };
+const dumpio = !!process.env.DUMPIO;
+const browserOptions = { dumpio, headless};
 
 (async () => {
   const {describe, xdescribe, fdescribe} = runner;

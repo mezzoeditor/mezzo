@@ -36,6 +36,7 @@ if (fs.existsSync(options.outputFolder))
   // Editor tests.
   (await import('../src/editor/Editor.spec.mjs')).addTests(runner, expect, options);
   (await import('../src/editor/Input.spec.mjs')).addTests(runner, expect, options);
+  (await import('../src/editor/Thread.spec.mjs')).addTests(runner, expect, options);
 
   // JSLexer unit tests
   (await import('../src/javascript/jslexer/tokenizer.spec.mjs')).addTests(runner, expect, options);

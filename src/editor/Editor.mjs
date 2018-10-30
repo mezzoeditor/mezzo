@@ -23,6 +23,12 @@ export class PlatformSupport {
    * @param {number} ms
    */
   throttle(ms) { }
+
+  /**
+   * @param {function(port)} workerFunction
+   * @return {?Worker}
+   */
+  createWorker(workerFunction) { }
 }
 
 export class Editor extends EventEmitter {

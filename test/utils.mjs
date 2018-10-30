@@ -1,4 +1,6 @@
 import {Editor} from '../src/editor/Editor.mjs';
+import {fork} from 'child_process';
+import path from 'path';
 
 export class TestMeasurer {
   lineHeight() {
@@ -19,9 +21,10 @@ export class TestMeasurer {
 }
 
 export class TestPlatformSupport {
-  constructor() {
+  constructor(supportWorkers = true) {
     this._id = 0;
     this._callbacks = new Map();
+    this._supportWorkers = supportWorkers;
   }
 
   requestIdleCallback(callback) {
@@ -42,7 +45,61 @@ export class TestPlatformSupport {
       callback.call(null);
     }
   }
+
+  createWorker(script) {
+    if (!this._supportWorkers)
+      return null;
+    return new NodeWorker(script);
+  }
 }
+
+class NodeWorker {
+  constructor(script) {
+    function runWorkerInitialization(workerFunction) {
+      global.self = global;
+      const port = {
+        onmessage: null,
+        postMessage: msg => process.send(msg),
+      };
+
+      process.on('message', data => {
+        if (port.onmessage)
+          port.onmessage.call(null, {data});
+      });
+      workerFunction.call(null, port);
+    }
+    const code = [
+      `global.platformSupport = new (${TestPlatformSupport.toString()})(false /*supportWorkers*/);`,
+      `(${runWorkerInitialization.toString()})(${script});`,
+      '//# sourceURL=nodeworker.js'
+    ].join('\n');
+    const url = new URL('node_worker.js', import.meta.url);
+    this._child = fork(url2path(url.href), [code], {
+      stdio: [ 'inherit', 'inherit', 'inherit', 'ipc' ]
+    });
+    this._child.on('message', this._onMessage.bind(this));
+    this.onmessage = null;
+  }
+
+  postMessage(msg) {
+    this._child.send(msg);
+  }
+
+  terminate() {
+    this._child.kill('SIGTERM');
+  }
+
+  _onMessage(data) {
+    if (this.onmessage)
+      this.onmessage.call(null, {data});
+  }
+}
+
+export function url2path(url) {
+  const {pathname} = new URL(url);
+  return pathname.replace('/', path.sep);
+}
+
 
 export function parseTextWithCursors(textWithCursors) {
   const selection = [];
