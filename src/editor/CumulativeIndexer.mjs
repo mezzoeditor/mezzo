@@ -75,7 +75,7 @@ export class RemoteCumulativeIndexer extends EventEmitter {
 
   async dispose() {
     await Promise.all([
-      this._indexerRPC.worker.dispose(),
+      this._indexerRPC.remote.dispose(),
       this._indexerRPC.dispose(),
     ]);
     this._indexerRPC = null;
