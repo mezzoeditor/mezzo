@@ -1,5 +1,6 @@
-import {keywords} from "./identifier.mjs"
-import {types as tt, serializeTokenType, deserializeTokenType} from "./tokentype.mjs"
+import {keywords} from "./identifier.mjs";
+import {types as tt, serializeTokenType, deserializeTokenType} from "./tokentype.mjs";
+import {types, serializeTokenContext, deserializeTokenContext} from './tokencontext.mjs';
 
 function keywordRegexp(words) {
   return new RegExp("^(?:" + words.replace(/ /g, "|") + ")$")
@@ -57,7 +58,7 @@ export class Parser {
     // The context stack is used to superficially track syntactic
     // context to predict whether a regular expression is allowed in a
     // given position.
-    state.context = [Parser.prototype.initialContext()];
+    state.context = [types.b_stat];
     state.exprAllowed = true
     return state;
   }
@@ -141,8 +142,49 @@ export class Parser {
   }
 }
 
+Parser.prototype.braceIsBlock = function(prevType) {
+  let parent = this.curContext()
+  if (parent === types.f_expr || parent === types.f_stat)
+    return true
+  if (prevType === tt.colon && (parent === types.b_stat || parent === types.b_expr))
+    return !parent.isExpr
+
+  // The check for `tt.name && exprAllowed` detects whether we are
+  // after a `yield` or `of` construct. See the `updateContext` for
+  // `tt.name`.
+  if (prevType === tt._return || prevType == tt.name && this.exprAllowed)
+    return this.lineBreakSinceLastTokEnd;
+  if (prevType === tt._else || prevType === tt.semi || prevType === tt.eof || prevType === tt.parenR || prevType == tt.arrow)
+    return true
+  if (prevType == tt.braceL)
+    return parent === types.b_stat
+  if (prevType == tt._var || prevType == tt.name)
+    return false
+  return !this.exprAllowed
+}
+
+Parser.prototype.inGeneratorContext = function() {
+  for (let i = this.context.length - 1; i >= 1; i--) {
+    let context = this.context[i]
+    if (context.token === "function")
+      return context.generator
+  }
+  return false
+}
+
+Parser.prototype.updateContext = function(prevType) {
+  let update, type = this.type
+  if (type.keyword && prevType == tt.dot)
+    this.exprAllowed = false
+  else if (update = type.updateContext)
+    update.call(this, prevType)
+  else
+    this.exprAllowed = type.beforeExpr
+}
+
 export function serializeState(state) {
   return Object.assign({}, state, {
+    context: state.context.map(serializeTokenContext),
     type: serializeTokenType(state.type),
     recoveryType: serializeTokenType(state.recoveryType),
   });
@@ -150,6 +192,7 @@ export function serializeState(state) {
 
 export function deserializeState(state) {
   return Object.assign({}, state, {
+    context: state.context.map(deserializeTokenContext),
     type: deserializeTokenType(state.type),
     recoveryType: deserializeTokenType(state.recoveryType),
   });

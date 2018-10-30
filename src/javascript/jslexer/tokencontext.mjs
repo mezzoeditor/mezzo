@@ -2,7 +2,6 @@
 // given point in the program is loosely based on sweet.js' approach.
 // See https://github.com/mozilla/sweet.js/wiki/design
 
-import {Parser} from "./state.mjs"
 import {types as tt} from "./tokentype.mjs"
 import {lineBreak} from "./whitespace.mjs"
 
@@ -29,50 +28,20 @@ export const types = {
   f_gen: new TokContext("function", false, false, null, true)
 }
 
-const pp = Parser.prototype
+const typeToName = new Map();
+for (const [name, type] of Object.entries(types))
+  typeToName.set(type, name);
 
-pp.initialContext = function() {
-  return types.b_stat;
+export function serializeTokenContext(type) {
+  if (!type)
+    return null;
+  return typeToName.get(type);
 }
 
-pp.braceIsBlock = function(prevType) {
-  let parent = this.curContext()
-  if (parent === types.f_expr || parent === types.f_stat)
-    return true
-  if (prevType === tt.colon && (parent === types.b_stat || parent === types.b_expr))
-    return !parent.isExpr
-
-  // The check for `tt.name && exprAllowed` detects whether we are
-  // after a `yield` or `of` construct. See the `updateContext` for
-  // `tt.name`.
-  if (prevType === tt._return || prevType == tt.name && this.exprAllowed)
-    return this.lineBreakSinceLastTokEnd;
-  if (prevType === tt._else || prevType === tt.semi || prevType === tt.eof || prevType === tt.parenR || prevType == tt.arrow)
-    return true
-  if (prevType == tt.braceL)
-    return parent === types.b_stat
-  if (prevType == tt._var || prevType == tt.name)
-    return false
-  return !this.exprAllowed
-}
-
-pp.inGeneratorContext = function() {
-  for (let i = this.context.length - 1; i >= 1; i--) {
-    let context = this.context[i]
-    if (context.token === "function")
-      return context.generator
-  }
-  return false
-}
-
-pp.updateContext = function(prevType) {
-  let update, type = this.type
-  if (type.keyword && prevType == tt.dot)
-    this.exprAllowed = false
-  else if (update = type.updateContext)
-    update.call(this, prevType)
-  else
-    this.exprAllowed = type.beforeExpr
+export function deserializeTokenContext(typeName) {
+  if (!typeName)
+    return null;
+  return types[typeName];
 }
 
 // Token-specific context update code
