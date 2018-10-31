@@ -15,16 +15,12 @@ export class WebPlatformSupport {
   }
 
   createWorker(workerFunction) {
-    function setupPlatformSupport(self) {
-      self.platformSupport = {
+    const code = [
+      `(${workerFunction.toString()})(self, {
         createWorker: () => null,
         requestIdleCallback: callback => setTimeout(callback, 0),
         cancelIdleCallback: id => clearTimeout(id),
-      };
-    }
-    const code = [
-      `(${setupPlatformSupport.toString()})(self);`,
-      `(${workerFunction.toString()})(self);`,
+      });`,
       '//# sourceURL=webworker.js'
     ].join('\n');
     const url = URL.createObjectURL(new Blob([code], {

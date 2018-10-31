@@ -55,7 +55,7 @@ export class TestPlatformSupport {
 
 class NodeWorker {
   constructor(script) {
-    function runWorkerInitialization(workerFunction) {
+    function runWorkerInitialization(workerFunction, platformSupport) {
       global.self = global;
       const port = {
         onmessage: null,
@@ -66,11 +66,13 @@ class NodeWorker {
         if (port.onmessage)
           port.onmessage.call(null, {data});
       });
-      workerFunction.call(null, port);
+      workerFunction.call(null, port, platformSupport);
     }
     const code = [
-      `global.platformSupport = new (${TestPlatformSupport.toString()})(false /*supportWorkers*/);`,
-      `(${runWorkerInitialization.toString()})(${script});`,
+      `(${runWorkerInitialization.toString()})(
+        (${script}),
+        new (${TestPlatformSupport.toString()})(false /* supportWorkers */)
+      );`,
       '//# sourceURL=nodeworker.js'
     ].join('\n');
     const url = new URL('node_worker.js', import.meta.url);

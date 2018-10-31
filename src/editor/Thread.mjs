@@ -147,7 +147,8 @@ function serializeArg(arg) {
   return {value: arg};
 }
 
-async function workerFunction(port) {
+async function workerFunction(port, platformSupport) {
+  self.platformSupport = platformSupport;
   let lastObjectId = 0;
   let lastRequestId = 0;
   const objects = new Map();

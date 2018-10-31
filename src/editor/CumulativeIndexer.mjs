@@ -4,13 +4,8 @@ import { EventEmitter } from '../core/EventEmitter.mjs';
 
 export class RemoteCumulativeIndexer extends EventEmitter {
   static async create(remoteDocument, Delegate, options) {
-    const delegate = new Delegate();
-
-    // Step 1. Handle RPC events from worker that
-    // update highlight.
     const indexerRPC = await remoteDocument.thread().createRPC();
     const remoteIndexer = new RemoteCumulativeIndexer(new Delegate(), indexerRPC);
-    // Step 2. Initialize Worker subsystem.
     const args = [Delegate, CumulativeIndexer, remoteDocument, options, indexerRPC];
     const thread = remoteDocument.thread();
     await thread.evaluate((Delegate, CumulativeIndexer, document, options, rpc) => {
@@ -127,7 +122,6 @@ export class CumulativeIndexer extends EventEmitter {
     let budget = this._budget;
     const STATE_CHUNK = this._density;
     const stateChanges = [];
-    const newStates = [];
     while (budget > 0) {
       const cursor = this._cursors.firstAll();
       if (!cursor || cursor.from >= this._document.text().length() - STATE_CHUNK) {
