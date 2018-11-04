@@ -21,6 +21,22 @@ const examples = [
   'unicodeperf.txt',
 ];
 
+let rafid = 0;
+function updateTotalSize(embedder) {
+  if (rafid)
+    return;
+  rafid = requestAnimationFrame(() => {
+    rafid = 0;
+    let size = embedder.document().text().length();
+    const suffixes = ['B', 'KB', 'MB'];
+    let suffixIndex = 0;
+    for (suffixIndex = 0; suffixIndex < suffixes.length && size > 1024; ++suffixIndex)
+      size /= 1024;
+    document.querySelector('.text-size').textContent = Math.round(size) + suffixes[suffixIndex];
+  });
+
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   let workerThreadStatus = document.querySelector('#thread-status');
   let embedder = null;
@@ -31,6 +47,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     embedder = WebEmbedder.create(document);
     workerThreadStatus.classList.add('thread-bad');
   }
+  embedder.document().on('changed', updateTotalSize.bind(null, embedder));
   window.editor = embedder;
 
   document.querySelector('.ismonospace').addEventListener('change', event => {
@@ -88,12 +105,6 @@ function addExamples(embedder) {
     // embedder.setText('abcdefg abcdefg abcdefg abcdefg abcdefg \nabcdefg\n abcdefg abcdefg abcdefg abcdefg\n abcdefg abcdefg abcdefg abcdefg abcdefg abcdefg\n abcdefg');
     embedder.focus();
 
-    let size = embedder.document().text().length();
-    const suffixes = ['B', 'KB', 'MB'];
-    let suffixIndex = 0;
-    for (suffixIndex = 0; suffixIndex < suffixes.length && size > 1024; ++suffixIndex)
-      size /= 1024;
-    document.querySelector('.text-size').textContent = Math.round(size) + suffixes[suffixIndex];
 
     const selection = [];
     for (let i = 0; i < 20; i++) {
