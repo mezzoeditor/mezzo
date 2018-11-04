@@ -29,6 +29,8 @@ export class PlatformSupport {
    * @return {?Worker}
    */
   createWorker(workerFunction) { }
+
+  debugLogger(namespace) { return () => {} }
 }
 
 export class Editor extends EventEmitter {
@@ -39,14 +41,10 @@ export class Editor extends EventEmitter {
    * @return {!Promise<!Editor>}
    */
   static async createWithRemoteDocument(measurer, platformSupport, thread) {
-    const document = new Document();
-    const documentRPC = await thread.createRPC();
-    const remoteDocument = await thread.evaluate((Document, rpc) => {
-      const document = new Document();
-      rpc.expose.replace = document.replace.bind(document);
-      return document;
-    }, Document, documentRPC);
-    return new Editor(document, measurer, platformSupport, remoteDocument, documentRPC);
+    const remoteDocument = await thread.evaluate((t, Document) => {
+      return t.expose(new Document());
+    }, Document);
+    return new Editor(new Document(), measurer, platformSupport, remoteDocument);
   }
 
   /**
@@ -63,9 +61,8 @@ export class Editor extends EventEmitter {
    * @param {!Measurer} measurer
    * @param {!Platform} platformSupport
    * @param {?Handle} remoteDocument
-   * @param {?RPCHandle} documentRPC
    */
-  constructor(document, measurer, platformSupport, remoteDocument, documentRPC) {
+  constructor(document, measurer, platformSupport, remoteDocument) {
     super();
     this._handles = new Decorator(true /* createHandles */);
     this._document = document;
@@ -88,7 +85,6 @@ export class Editor extends EventEmitter {
     this.setHighlighter(new DefaultHighlighter(this));
 
     this._remoteDocument = remoteDocument;
-    this._documentRPC = documentRPC;
 
     this.reset('');
   }
@@ -209,8 +205,8 @@ export class Editor extends EventEmitter {
     for (const {offset, removed, inserted} of replacements) {
       for (let removedHandle of this._handles.replace(offset, offset + removed.length(), inserted.length()))
         removedHandle[RangeHandle._symbol]._wasRemoved();
-      if (this._documentRPC)
-        this._documentRPC.remote.replace(offset, offset + removed.length(), inserted.content());
+      if (this._remoteDocument)
+        this._remoteDocument.rpc.replace(offset, offset + removed.length(), inserted.content());
     }
   }
 }

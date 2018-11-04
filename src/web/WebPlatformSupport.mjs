@@ -14,6 +14,10 @@ export class WebPlatformSupport {
     this._map = new Map();
   }
 
+  debugLogger() {
+    return () => {};
+  }
+
   createWorker(moduleURL, mainFunctionName) {
     const code = [
       `(async () => {
@@ -21,6 +25,7 @@ export class WebPlatformSupport {
           createWorker: () => null,
           requestIdleCallback: callback => setTimeout(callback, 0),
           cancelIdleCallback: id => clearTimeout(id),
+          debugLogger: function() { return () => {}; },
         };
         const module = await import('${moduleURL}');
         module['${mainFunctionName}'](self, platformSupport);

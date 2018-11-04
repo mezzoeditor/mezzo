@@ -4,13 +4,30 @@ import { EventEmitter } from '../core/EventEmitter.mjs';
 
 export class RemoteCumulativeIndexer extends EventEmitter {
   static async create(remoteDocument, Delegate, options) {
-    const indexerRPC = await remoteDocument.thread().createRPC();
-    const remoteIndexer = new RemoteCumulativeIndexer(new Delegate(), indexerRPC);
-    const args = [Delegate, CumulativeIndexer, remoteDocument, options, indexerRPC];
-    const thread = remoteDocument.thread();
-    await thread.evaluate((Delegate, CumulativeIndexer, document, options, rpc) => {
+    const indexer = new RemoteCumulativeIndexer(new Delegate());
+    await indexer._setup(remoteDocument, Delegate, options);
+    return indexer;
+  }
+
+  async _setup(remoteDocument, Delegate, options) {
+    const thread = remoteDocument.runtime();
+    const params = {
+      Delegate,
+      CumulativeIndexer,
+      document: remoteDocument,
+      options,
+      remoteIndexer: thread.expose(this),
+    };
+    this._backend = await thread.evaluate((t, params) => {
+      const {
+        Delegate,
+        CumulativeIndexer,
+        document,
+        options,
+        remoteIndexer,
+      } = params;
       const delegate = new Delegate();
-      const indexer = new CumulativeIndexer(document, self.platformSupport, delegate, options);
+      const indexer = new CumulativeIndexer(document, t.platformSupport(), delegate, options);
       const eventListeners = [
         indexer.on(CumulativeIndexer.Events.Changed, changes => {
           const points = [];
@@ -18,12 +35,12 @@ export class RemoteCumulativeIndexer extends EventEmitter {
             const newPoints = indexer._states.listTouching(from, to + 0.5).map(e => ({offset: e.from, state: delegate.serialize(e.data)}))
             points.push(...newPoints);
           }
-          rpc.remote.indexerChanged(changes, points);
+          remoteIndexer.rpc._onIndexerChanged(changes, points);
         }),
         document.on('changed', ({replacements}) => {
           if (!replacements.length)
             return;
-          rpc.remote.documentChanged(replacements.map(replacement => ({
+          remoteIndexer.rpc._onDocumentChanged(replacements.map(replacement => ({
             from: replacement.offset,
             to: replacement.offset + replacement.removed.length(),
             length: replacement.inserted.length()
@@ -31,24 +48,23 @@ export class RemoteCumulativeIndexer extends EventEmitter {
         }),
       ];
 
-      rpc.expose.dispose = () => {
-        eventListeners.forEach(removeListener => removeListener());
-        indexer.dispose();
-      }
-    }, ...args);
-
-    return remoteIndexer;
+      return t.expose({
+        dispose: async () => {
+          await remoteIndexer.dispose();
+          eventListeners.forEach(removeListener => removeListener());
+          indexer.dispose();
+        },
+      });
+    }, params);
   }
 
-  constructor(delegate, indexerRPC) {
+  constructor(delegate) {
     super();
     this._delegate = delegate;
-    this._indexerRPC = indexerRPC;
+    this._backend = null;
     this._states = new Decorator();
     //TODO: this initialization should be dispatched by CumulativeIndexer
     this._states.add(0, 0, delegate.initialState());
-    indexerRPC.expose.indexerChanged = this._onIndexerChanged.bind(this);
-    indexerRPC.expose.documentChanged = this._onDocumentChanged.bind(this);
   }
 
   _onDocumentChanged(replacements) {
@@ -69,11 +85,9 @@ export class RemoteCumulativeIndexer extends EventEmitter {
   }
 
   async dispose() {
-    await Promise.all([
-      this._indexerRPC.remote.dispose(),
-      this._indexerRPC.dispose(),
-    ]);
-    this._indexerRPC = null;
+    await this._backend.rpc.dispose(),
+    await this._backend.dispose(),
+    this._backend = null;
   }
 }
 

@@ -1,6 +1,7 @@
 import {Editor} from '../src/editor/Editor.mjs';
 import {fork} from 'child_process';
 import path from 'path';
+import debug from 'debug';
 
 export class TestMeasurer {
   lineHeight() {
@@ -36,6 +37,10 @@ export class TestPlatformSupport {
   }
 
   throttle(ms) {
+  }
+
+  debugLogger(namespace) {
+    return debug(namespace);
   }
 
   runUntilIdle() {

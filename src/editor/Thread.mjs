@@ -1,35 +1,250 @@
-import { EventEmitter } from '../core/EventEmitter.mjs';
-
-class Handle {
-  constructor(thread, objectId) {
-    this._thread = thread;
-    this._objectId = objectId;
-    this.expose = {};
-    this.remote = new Proxy({}, {
+/**
+ * Represents an object in a remote runtime. Remote objects are
+ * created
+ * Remote methods could be called using RemoteObjec.rpc.* methods.
+ *
+ * NOTE: RPC invocations DO NOT support RemoteObject passing.
+ * This limitation is currently in place to make use of fast
+ * structural clone that is available in web browsers.
+ *
+ * NOTE: *every* RemoteObject should be "disposed" when not needed
+ * to avoid memory leaks.
+ */
+class RemoteObject {
+  constructor(runtime, remoteObjectId) {
+    this._runtime = runtime;
+    this._remoteObjectId = remoteObjectId;
+    this.rpc = new Proxy({}, {
       get(target, propKey, receiver) {
-        return async (...args) => await thread._send({
-          type: 'proxymethodcall',
-          objectId,
+        return async (...args) => await runtime._send({
+          type: 'rpc',
+          remoteObjectId,
           method: propKey,
-          args: args.map(serializeArg),
-        }).then(result => result.value);
+          args,
+        });
       }
     });
   }
 
-  thread() {
-    return this._thread;
+  runtime() {
+    return this._runtime;
   }
 
+  /**
+   * Must be called to free up resources.
+   */
   async dispose() {
-    await this._thread._send({
-      type: 'dispose',
-      objectId: this._objectId,
-    });
+    await this._runtime._dispose(this);
   }
 }
 
-export class Thread {
+const SPECIAL_OBJECT_KEY = 'hRmU4CzGcj6A46J6dgWf3ek7zneBUjFU';
+const localObjectSymbol = Symbol('LocalObject');
+
+/**
+ * Runtime encapsulates access to the remote javascript runtime.
+ */
+class Runtime {
+  constructor(name, port, platformSupport) {
+    this._name = name;
+    this._port = port;
+    this._port.onmessage = this._onMessage.bind(this);
+    this._platformSupport = platformSupport;
+    this._lastRequestId = 0;
+    this._lastObjectId = 0;
+    this._localObjects = new Map();
+    this._remoteObjects = new Map();
+    this._pendingMessages = new Map();
+    this._debug = platformSupport.debugLogger('thread');
+  }
+
+  /**
+   * Mark object as exposed. When transfered using either arguments
+   * or return value of `runtime.evaluate`, it'll be transformed to
+   * RemoteObject on the other end.
+   */
+  expose(obj) {
+    // Mark object as exposed.
+    // Do not retain until it is transfered / serialized.
+    if (!obj[localObjectSymbol])
+      obj[localObjectSymbol] = {localObjectId: ''};
+    return obj;
+  }
+
+  platformSupport() {
+    return this._platformSupport;
+  }
+
+  /**
+   * Evaluate a piece of code in the runtime.
+   * Both arguments and return value are smartly serialized:
+   * - RemoteObjects are expanded as local objects and vice versa
+   * - Classes that have `importable()` field are imported using ESM
+   *
+   * NOTE: function |fun| is always called with instance of Runtime as
+   * the first argument.
+   */
+  async evaluate(fun, ...args) {
+    let result = await this._send({
+      type: 'evaluate',
+      fun: fun.toString(),
+      args: this._serialize(args),
+    });
+    return await this._deserialize(result);
+  }
+
+  async _dispose(remoteObject) {
+    await this._send({
+      type: 'dispose',
+      remoteObjectId: remoteObject._remoteObjectId,
+    });
+    this._remoteObjects.delete(remoteObject._remoteObjectId);
+  }
+
+  _serialize(obj) {
+    if (obj[localObjectSymbol]) {
+      const local = obj[localObjectSymbol];
+      if (!local.localObjectId) {
+        local.localObjectId = ++this._lastObjectId;
+        this._localObjects.set(local.localObjectId, obj);
+      }
+      return {
+        [SPECIAL_OBJECT_KEY]: true,
+        localObjectId: local.localObjectId,
+      };
+    }
+    if (obj instanceof RemoteObject) {
+      return {
+        [SPECIAL_OBJECT_KEY]: true,
+        remoteObjectId: obj._remoteObjectId,
+      };
+    }
+    if (typeof obj === 'function') {
+      if (typeof obj.importable !== 'function')
+        throw new Error('cannot serialize functions!');
+      return {
+        [SPECIAL_OBJECT_KEY]: true,
+        importable: obj.importable(),
+      };
+    }
+    if (Array.isArray(obj))
+      return obj.map(x => this._serialize(x));
+    if (typeof obj === 'object') {
+      const result = {};
+      for (const key of Object.keys(obj))
+        result[key] = this._serialize(obj[key]);
+      return result;
+    }
+    return obj;
+  }
+
+  async _deserialize(obj) {
+    if (obj[SPECIAL_OBJECT_KEY]) {
+      if (obj.importable)
+        return (await import(obj.importable.url))[obj.importable.name];
+      // Their remote is our local.
+      if (obj.remoteObjectId) {
+        if (!this._localObjects.has(obj.remoteObjectId))
+          throw new Error(`Failed to find object with id "${obj.objectId}"`);
+        return this._localObjects.get(obj.remoteObjectId);
+      }
+      // Their local is our remote.
+      if (obj.localObjectId) {
+        let remoteObject = this._remoteObjects.get(obj.localObjectId);
+        if (!remoteObject) {
+          remoteObject = new RemoteObject(this, obj.localObjectId);
+          this._remoteObjects.set(obj.localObjectId, remoteObject);
+        }
+        return remoteObject;
+      }
+      throw new Error('Unknown SPECIAL_OBJECT_KEY value received!');
+    }
+    if (Array.isArray(obj))
+      return Promise.all(obj.map(x => this._deserialize(x)));
+    if (typeof obj === 'object') {
+      const result = {};
+      const promises = [];
+      for (const key of Object.keys(obj))
+        promises.push(this._deserialize(obj[key]).then(x => result[key] = x));
+      await Promise.all(promises);
+      return result;
+    }
+    return obj;
+  }
+
+  /**
+   * @param {*} message
+   * @return {!Promise<*>}
+   */
+  _send(message) {
+    message.requestId = ++this._lastRequestId;
+    this._debug(`► SEND[${this._name}] ► ` + JSON.stringify(message));
+    this._port.postMessage(message);
+    return new Promise((fulfill, reject) => {
+      this._pendingMessages.set(message.requestId, {fulfill, reject});
+    });
+  }
+
+  /**
+   * @param {*} event
+   */
+  async _onMessage({data}) {
+    this._debug(`◀ RECV[${this._name}] ◀ ` + JSON.stringify(data));
+    if (data.responseId) {
+      const {fulfill, reject} = this._pendingMessages.get(data.responseId);
+      this._pendingMessages.delete(data.responseId);
+      if (data.error) {
+        const error = new Error();
+        error.message = data.error.message;
+        error.stack = data.error.stack;
+        reject.call(null, error);
+      } else {
+        fulfill.call(null, data.result);
+      }
+      return;
+    }
+    if (data.requestId) {
+      const response = {responseId: data.requestId};
+      try {
+        if (data.type === 'rpc') {
+          const localObject = this._localObjects.get(data.remoteObjectId);
+          if (!localObject)
+            throw new Error(`Cannot find object with id "${data.remoteObjectId}"`);
+          const result = await localObject[data.method](...data.args);
+          response.result = result;
+        } else if (data.type === 'evaluate') {
+          const fun = eval(data.fun);
+          const args = await this._deserialize(data.args);
+          const result = await fun.call(null, this, ...args);
+          response.result = this._serialize(result);
+        } else if (data.type === 'dispose') {
+          if (!this._localObjects.has(data.remoteObjectId))
+            throw new Error(`Cannot find object with id "${data.remoteObjectId}"`);
+          const localObject = this._localObjects.get(data.remoteObjectId);
+          this._localObjects.delete(data.remoteObjectId);
+          delete localObject[localObjectSymbol];
+        }
+      } catch (e) {
+        response.error = {
+          message: e.message,
+          stack: e.stack,
+        };
+      }
+      this._debug(`► SEND[${this._name}] ► ` + JSON.stringify(response));
+      this._port.postMessage(response);
+    }
+  }
+}
+
+export function workerFunction(port, platformSupport) {
+  const runtime = new Runtime('worker', port, platformSupport);
+  port.postMessage('workerready');
+}
+
+/**
+ * Thread is a runtime; could be created and terminated.
+ */
+export class Thread extends Runtime {
   /**
    * @param {!PlatformSupport} platformSupport
    */
@@ -43,36 +258,13 @@ export class Thread {
         fulfill();
       }
     });
-    return new Thread(worker);
+    return new Thread(worker, platformSupport);
   }
 
-  constructor(worker) {
+  constructor(worker, platformSupport) {
+    super('ui', worker, platformSupport);
     this._worker = worker;
-    this._worker.onmessage = this._onMessage.bind(this);
-    this._lastRequestId = 0;
     this._disposed = false;
-    this._handles = new Map();
-    this._pendingMessages = new Map();
-  }
-
-  async evaluate(fun, ...args) {
-    let result = await this._send({
-      type: 'evaluate',
-      fun: fun.toString(),
-      args: args.map(serializeArg),
-    });
-    if (!result.objectId)
-      return result.value;
-    let handle = new Handle(this, result.objectId);
-    this._handles.set(result.objectId, handle);
-    return handle;
-  }
-
-  async createRPC() {
-    let result = await this._send({ type: 'createrpc' });
-    let handle = new Handle(this, result.objectId);
-    this._handles.set(result.objectId, handle);
-    return handle;
   }
 
   dispose() {
@@ -81,177 +273,6 @@ export class Thread {
     this._disposed = true;
     this._worker.terminate();
     this._worker = null;
-  }
-
-  /**
-   * @param {*} message
-   * @return {!Promise<*>}
-   */
-  _send(message) {
-    message.requestId = ++this._lastRequestId;
-    this._worker.postMessage(message);
-    return new Promise((fulfill, reject) => {
-      this._pendingMessages.set(message.requestId, {fulfill, reject});
-    });
-  }
-
-  /**
-   * @param {*} event
-   */
-  async _onMessage({data}) {
-    if (data.responseId) {
-      const {fulfill, reject} = this._pendingMessages.get(data.responseId);
-      this._pendingMessages.delete(data.responseId);
-      if (data.error) {
-        const error = new Error();
-        error.message = data.error.message;
-        error.stack = data.error.stack;
-        reject.call(null, error);
-      } else {
-        fulfill.call(null, data.result);
-      }
-    } else if (data.requestId) {
-      const response = {responseId: data.requestId};
-      try {
-        if (data.type === 'proxymethodcall') {
-          const rpc = this._handles.get(data.objectId);
-          if (!rpc)
-            throw new Error('Cannot find remote proxy!');
-          if (!(rpc instanceof Handle))
-            throw new Error(`Object with id = "${data.objectId}" is not an RPCHandle!`);
-          const result = await rpc.expose[data.method].apply(null, data.args);
-          response.result = serializeArg(result);
-        }
-      } catch (e) {
-        response.error = {
-          message: e.message,
-          stack: e.stack,
-        };
-      }
-      this._worker.postMessage(response);
-    }
-  }
-}
-
-function serializeArg(arg) {
-  if (arg instanceof Handle)
-    return {objectId: arg._objectId};
-  if (arg && (typeof arg.importable === 'function'))
-    return {importable: arg.importable()};
-  return {value: arg};
-}
-
-export async function workerFunction(port, platformSupport) {
-  self.platformSupport = platformSupport;
-  let lastObjectId = 0;
-  let lastRequestId = 0;
-  const objects = new Map();
-
-  const pendingMessages = new Map();
-
-  port.onmessage = ({data}) => {
-    if (data.requestId)
-      handleRequest(data);
-    else if (data.responseId)
-      handleResponse(data);
-    else
-      console.warn('BAD MESSAGE RECEIVED', data);
-  };
-  port.postMessage('workerready');
-
-
-  async function handleRequest(data) {
-    const response = {responseId: data.requestId};
-    try {
-      if (data.type === 'createrpc') {
-        const objectId = ++lastObjectId;
-        const rpc = new RPCObject(objectId);
-        objects.set(objectId, rpc);
-        response.result = {objectId};
-      } else if (data.type === 'evaluate') {
-        const fun = eval(data.fun);
-        const args = await Promise.all(data.args.map(deserializeArg));
-        const result = await fun.apply(null, args);
-        if (result && typeof result === 'object') {
-          const objectId = ++lastObjectId;
-          objects.set(objectId, result);
-          response.result = {objectId};
-        } else {
-          response.result = {value: result};
-        }
-      } else if (data.type === 'proxymethodcall') {
-        const args = await Promise.all(data.args.map(deserializeArg));
-        const rpc = objects.get(data.objectId);
-        if (!rpc)
-          throw new Error(`Failed to find rpc for objectId "${data.objectId}"`);
-        if (!(rpc instanceof RPCObject))
-          throw new Error(`Object with id "${data.objectId}" is not an RPCObject!`);
-        const result = await rpc.expose[data.method](...args);
-        response.result = {value: result};
-      } else if (data.type === 'dispose') {
-        objects.delete(data.objectId);
-      }
-    } catch (e) {
-      response.error = {
-        message: e.message,
-        stack: e.stack
-      };
-    }
-    port.postMessage(response);
-  }
-
-  async function handleResponse(data) {
-    const {fulfill, reject} = pendingMessages.get(data.responseId);
-    pendingMessages.delete(data.id);
-    if (data.error) {
-      const error = new Error();
-      error.message = data.error.message;
-      error.stack = data.error.stack;
-      reject.call(null, error);
-    } else {
-      fulfill.call(null, data.result);
-    }
-  }
-
-  /**
-   * @param {*} message
-   * @return {!Promise<*>}
-   */
-  function send(message) {
-    message.requestId = ++lastRequestId;
-    port.postMessage(message);
-    return new Promise((fulfill, reject) => {
-      pendingMessages.set(message.requestId, {fulfill, reject});
-    });
-  }
-
-  async function deserializeArg(arg) {
-    if (arg.objectId) {
-      if (!objects.has(arg.objectId))
-        throw new Error(`Cannot find object with id "${arg.objectId}"`);
-      return objects.get(arg.objectId);
-    }
-    if (arg.importable) {
-      const module = await import(arg.importable.url);
-      return module[arg.importable.name];
-    }
-    return arg.value;
-  }
-
-  class RPCObject {
-    constructor(objectId) {
-      this.remote = new Proxy({}, {
-        get(target, propKey, receiver) {
-          return async (...args) => await send({
-            type: 'proxymethodcall',
-            objectId,
-            method: propKey,
-            args,
-          }).then(deserializeArg);
-        }
-      });
-      this.expose = {};
-    }
   }
 }
 
