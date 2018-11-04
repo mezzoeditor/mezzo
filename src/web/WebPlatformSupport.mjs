@@ -14,14 +14,18 @@ export class WebPlatformSupport {
     this._map = new Map();
   }
 
-  createWorker(workerFunction) {
+  createWorker(moduleURL, mainFunctionName) {
     const code = [
-      `(${workerFunction.toString()})(self, {
-        createWorker: () => null,
-        requestIdleCallback: callback => setTimeout(callback, 0),
-        cancelIdleCallback: id => clearTimeout(id),
-      });`,
-      '//# sourceURL=webworker.js'
+      `(async () => {
+        const platformSupport = {
+          createWorker: () => null,
+          requestIdleCallback: callback => setTimeout(callback, 0),
+          cancelIdleCallback: id => clearTimeout(id),
+        };
+        const module = await import('${moduleURL}');
+        module['${mainFunctionName}'](self, platformSupport);
+      })()`,
+      '//# sourceURL=webworker.js',
     ].join('\n');
     const url = URL.createObjectURL(new Blob([code], {
       type: 'text/javascript'

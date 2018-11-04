@@ -46,41 +46,24 @@ export class TestPlatformSupport {
     }
   }
 
-  createWorker(script) {
+  createWorker(moduleURL, mainFunctionName) {
     if (!this._supportWorkers)
       return null;
-    return new NodeWorker(script);
+    return new NodeWorker(moduleURL, mainFunctionName);
   }
 }
 
 class NodeWorker {
-  constructor(script) {
-    function runWorkerInitialization(workerFunction, platformSupport) {
-      global.self = global;
-      const port = {
-        onmessage: null,
-        postMessage: msg => process.send(msg),
-      };
-
-      process.on('message', data => {
-        if (port.onmessage)
-          port.onmessage.call(null, {data});
-      });
-      workerFunction.call(null, port, platformSupport);
-    }
-    const code = [
-      `(${runWorkerInitialization.toString()})(
-        (${script}),
-        new (${TestPlatformSupport.toString()})(false /* supportWorkers */)
-      );`,
-      '//# sourceURL=nodeworker.js'
-    ].join('\n');
+  constructor(moduleURL, mainFunctionName) {
     const url = new URL('node_worker.js', import.meta.url);
-    this._child = fork(url2path(url.href), [code], {
+    this._child = fork(url2path(url.href), [import.meta.url, moduleURL, mainFunctionName], {
       stdio: [ 'inherit', 'inherit', 'inherit', 'ipc' ]
     });
-    this._child.on('message', this._onMessage.bind(this));
     this.onmessage = null;
+    this._child.on('message', data => {
+      if (this.onmessage)
+        this.onmessage.call(null, {data});
+    });
   }
 
   postMessage(msg) {
@@ -90,18 +73,12 @@ class NodeWorker {
   terminate() {
     this._child.kill('SIGTERM');
   }
-
-  _onMessage(data) {
-    if (this.onmessage)
-      this.onmessage.call(null, {data});
-  }
 }
 
 export function url2path(url) {
   const {pathname} = new URL(url);
   return pathname.replace('/', path.sep);
 }
-
 
 export function parseTextWithCursors(textWithCursors) {
   const selection = [];

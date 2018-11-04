@@ -34,7 +34,7 @@ export class Thread {
    * @param {!PlatformSupport} platformSupport
    */
   static async create(platformSupport) {
-    const worker = platformSupport.createWorker(workerFunction);
+    const worker = platformSupport.createWorker(import.meta.url, 'workerFunction');
     await new Promise(fulfill => {
       worker.onmessage = (event) => {
         if (event.data !== 'workerready')
@@ -141,7 +141,7 @@ function serializeArg(arg) {
   return {value: arg};
 }
 
-async function workerFunction(port, platformSupport) {
+export async function workerFunction(port, platformSupport) {
   self.platformSupport = platformSupport;
   let lastObjectId = 0;
   let lastRequestId = 0;
@@ -158,6 +158,7 @@ async function workerFunction(port, platformSupport) {
       console.warn('BAD MESSAGE RECEIVED', data);
   };
   port.postMessage('workerready');
+
 
   async function handleRequest(data) {
     const response = {responseId: data.requestId};
@@ -253,3 +254,4 @@ async function workerFunction(port, platformSupport) {
     }
   }
 }
+
