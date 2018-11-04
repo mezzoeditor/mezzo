@@ -4,23 +4,6 @@ class Handle {
   constructor(thread, objectId) {
     this._thread = thread;
     this._objectId = objectId;
-  }
-
-  thread() {
-    return this._thread;
-  }
-
-  async dispose() {
-    await this._thread._send({
-      type: 'dispose',
-      objectId: this._objectId,
-    });
-  }
-}
-
-class RPCHandle extends Handle {
-  constructor(thread, objectId) {
-    super(thread, objectId);
     this.expose = {};
     this.remote = new Proxy({}, {
       get(target, propKey, receiver) {
@@ -31,6 +14,17 @@ class RPCHandle extends Handle {
           args: args.map(serializeArg),
         }).then(result => result.value);
       }
+    });
+  }
+
+  thread() {
+    return this._thread;
+  }
+
+  async dispose() {
+    await this._thread._send({
+      type: 'dispose',
+      objectId: this._objectId,
     });
   }
 }
@@ -76,7 +70,7 @@ export class Thread {
 
   async createRPC() {
     let result = await this._send({ type: 'createrpc' });
-    let handle = new RPCHandle(this, result.objectId);
+    let handle = new Handle(this, result.objectId);
     this._handles.set(result.objectId, handle);
     return handle;
   }
@@ -123,7 +117,7 @@ export class Thread {
           const rpc = this._handles.get(data.objectId);
           if (!rpc)
             throw new Error('Cannot find remote proxy!');
-          if (!(rpc instanceof RPCHandle))
+          if (!(rpc instanceof Handle))
             throw new Error(`Object with id = "${data.objectId}" is not an RPCHandle!`);
           const result = await rpc.expose[data.method].apply(null, data.args);
           response.result = serializeArg(result);
