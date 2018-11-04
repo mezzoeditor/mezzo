@@ -29,6 +29,36 @@ let random = Random(42);
  */
 
 /**
+ * @typedef {number} Anchor
+ * @typedef {number} Align
+ *
+ * Anchor represents a position between two code units which is aligned
+ * either to the left (stored as integer |offset|) or to the right (stored
+ * as a number |offset + 0.5|).
+ *
+ * Left-aligned anchor at |x| stays immediately before offset |x|
+ * and immediately after code unit at index |x - 1|.
+ * When inserting text at offset |x|, the anchor does not move.
+ *
+ * Right-aligned anchor at |x + 0.5| stays immediately after offset |x|
+ * and immediately before character at index |x|.
+ * When inserting text at offset |x|, the anchor moves to the right.
+ *
+ * Align is either 0 or 0.5, it represents the alignment part of an
+ * Anchor. It holds that |Anchor| === |Offset| + |Align|.
+ *
+ * See README.md for some examples.
+ */
+
+export function UnwrapAnchor(anchor) {
+  return { offset: Math.floor(anchor), align: anchor - Math.floor(anchor) };
+}
+
+export function WrapAnchor({offset, align}) {
+  return offset + align;
+}
+
+/**
  * Represents metrics of a text chunk. Note that it can be used
  * not only for text, but for any entities interleaving with text.
  *
@@ -38,8 +68,8 @@ let random = Random(42);
  *   firstWidth: number,
  *   lastWidth: number,
  *   longestWidth: number,
- *   startNotIncluded: boolean|undefined,
- *   endIncluded: boolean|undefined,
+ *   startAlign: Align|undefined,
+ *   endAlign: Align|undefined,
  * }} TextMetrics;
  */
 
@@ -183,7 +213,7 @@ export class Tree {
    * @return {!TextMetrics}
    */
   static combineMetrics(left, right) {
-    if (left.endIncluded && !right.startNotIncluded)
+    if (left.endAlign && !right.startAlign)
       throw new Error('Metrics have intersecting anchors');
     let result = {
       longestWidth: Math.max(Math.max(left.longestWidth, left.lastWidth + right.firstWidth), right.longestWidth),
@@ -193,10 +223,10 @@ export class Tree {
     }
     if (left.lineBreaks || right.lineBreaks)
       result.lineBreaks = (left.lineBreaks || 0) + (right.lineBreaks || 0);
-    if (left.startNotIncluded)
-      result.startNotIncluded = true;
-    if (right.endIncluded)
-      result.endIncluded = true;
+    if (left.startAlign)
+      result.startAlign = left.startAlign;
+    if (right.endAlign)
+      result.endAlign = right.endAlign;
     return result;
   }
 };
@@ -255,7 +285,7 @@ class TreeIterator {
    * @return {?number}
    */
   locateByOffset(anchor, strict) {
-    const min = this._root && this._root.startNotIncluded ? 0.5 : 0;
+    const min = this._root ? (this._root.startAlign || 0) : 0;
     if (anchor < min) {
       if (strict)
         return null;
@@ -263,7 +293,7 @@ class TreeIterator {
     }
     let max = 0;
     if (this._root)
-      max = this._root.metrics.length + (this._root.metrics.endIncluded ? 0.5 : 0);
+      max = this._root.metrics.length + (this._root.metrics.endAlign || 0);
     if (anchor > max) {
       if (strict)
         return null;
@@ -273,8 +303,8 @@ class TreeIterator {
     }
     this._locate({anchor: anchor - 0.5});
     if (this.metrics) {
-      const after = this.after.offset + (this.metrics.endIncluded ? 0.5 : 0);
-      const before = this.before.offset + (this.metrics.startNotIncluded ? 0.5 : 0);
+      const after = this.after.offset + (this.metrics.endAlign || 0);
+      const before = this.before.offset + (this.metrics.startAlign || 0);
       if (after <= anchor && before < anchor)
         this.next();
     }
@@ -509,7 +539,7 @@ function findLocationToLocation(location) {
  */
 function advanceFindLocation(location, metrics) {
   return {
-    anchor: Math.floor(location.anchor) + metrics.length + (metrics.endIncluded ? 0.5 : 0),
+    anchor: Math.floor(location.anchor) + metrics.length + (metrics.endAlign || 0),
     y: location.y + (metrics.lineBreaks || 0),
     x: metrics.lastWidth + (metrics.lineBreaks ? 0 : location.x)
   };
@@ -638,12 +668,10 @@ function split(root, anchor, intersectionToLeft, current) {
   if (!root)
     return {};
 
+  let selfMetrics = root.selfMetrics || root.metrics;
   let before = current + (root.left ? root.left.metrics.length : 0);
-  let after = before + (root.selfMetrics || root.metrics).length;
-  if ((root.selfMetrics || root.metrics).startNotIncluded)
-    before += 0.5;
-  if ((root.selfMetrics || root.metrics).endIncluded)
-    after += 0.5;
+  let after = before + selfMetrics.length + (selfMetrics.endAlign || 0);
+  before += (selfMetrics.startAlign || 0);
   let rootToLeft = before >= anchor ? false :
       (after <= anchor ? true : intersectionToLeft === kSplitIntersectionToLeft);
   if (rootToLeft) {

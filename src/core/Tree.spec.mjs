@@ -141,8 +141,8 @@ export function addTests(runner, expect) {
     });
 
     it('anchors 1', () => {
-      const metrics1 = {length: 1, firstWidth: 1, lastWidth: 1, longestWidth: 1, startNotIncluded: true, endIncluded: true};
-      const metrics2 = {length: 2, firstWidth: 2, lastWidth: 2, longestWidth: 2, startNotIncluded: true};
+      const metrics1 = {length: 1, firstWidth: 1, lastWidth: 1, longestWidth: 1, startAlign: 0.5, endAlign: 0.5};
+      const metrics2 = {length: 2, firstWidth: 2, lastWidth: 2, longestWidth: 2, startAlign: 0.5};
       const tree = Tree.build([{data: 1, metrics: metrics1}, {data: 2, metrics: metrics2}]);
       const iterator = tree.iterator();
 
@@ -237,8 +237,8 @@ export function addTests(runner, expect) {
 
     it('anchors 3', () => {
       const metrics1 = {length: 1, firstWidth: 1, lastWidth: 1, longestWidth: 1};
-      const metrics2 = {length: 0, firstWidth: 0, lastWidth: 0, longestWidth: 0, startNotIncluded: true, endIncluded: true};
-      const metrics3 = {length: 1, firstWidth: 1, lastWidth: 1, longestWidth: 1, startNotIncluded: true};
+      const metrics2 = {length: 0, firstWidth: 0, lastWidth: 0, longestWidth: 0, startAlign: 0.5, endAlign: 0.5};
+      const metrics3 = {length: 1, firstWidth: 1, lastWidth: 1, longestWidth: 1, startAlign: 0.5};
       const tree = Tree.build([{data: 1, metrics: metrics1}, {data: 2, metrics: metrics2}, {data: 3, metrics: metrics3}]);
       const iterator = tree.iterator();
       let tmp;
@@ -288,9 +288,9 @@ export function addTests(runner, expect) {
     });
 
     it('anchors 4', () => {
-      const metrics1 = {length: 1, firstWidth: 1, lastWidth: 1, longestWidth: 1, endIncluded: true};
-      const metrics2 = {length: 0, firstWidth: 0, lastWidth: 0, longestWidth: 0, startNotIncluded: true, endIncluded: true};
-      const metrics3 = {length: 1, firstWidth: 1, lastWidth: 1, longestWidth: 1, startNotIncluded: true};
+      const metrics1 = {length: 1, firstWidth: 1, lastWidth: 1, longestWidth: 1, endAlign: 0.5};
+      const metrics2 = {length: 0, firstWidth: 0, lastWidth: 0, longestWidth: 0, startAlign: 0.5, endAlign: 0.5};
+      const metrics3 = {length: 1, firstWidth: 1, lastWidth: 1, longestWidth: 1, startAlign: 0.5};
       const tree = Tree.build([{data: 1, metrics: metrics1}, {data: 2, metrics: metrics2}, {data: 3, metrics: metrics3}]);
       const iterator = tree.iterator();
       let tmp;

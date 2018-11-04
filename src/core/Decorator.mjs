@@ -2,24 +2,6 @@ import { Random } from './Random.mjs';
 let random = Random(25);
 
 /**
- * @typedef {number} Anchor
- *
- * Anchor represents a position between two code units which is aligned
- * either to the left (stored as integer |offset|) or to the right (stored
- * as a number |offset + 0.5|).
- *
- * Left-aligned anchor at |x| stays immediately before offset |x|
- * and immediately after code unit at index |x - 1|.
- * When inserting text at offset |x|, the anchor does not move.
- *
- * Right-aligned anchor at |x + 0.5| stays immediately after offset |x|
- * and immediately before character at index |x|.
- * When inserting text at offset |x|, the anchor moves to the right.
- *
- * See README.md for some examples.
- */
-
-/**
  * @template T
  * @typedef {{
  *   from: !Anchor,
