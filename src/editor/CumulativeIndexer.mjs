@@ -50,9 +50,9 @@ export class RemoteCumulativeIndexer extends EventEmitter {
 
       return t.expose({
         dispose: async () => {
-          await remoteIndexer.dispose();
           eventListeners.forEach(removeListener => removeListener());
           indexer.dispose();
+          await remoteIndexer.dispose();
         },
       });
     }, params);

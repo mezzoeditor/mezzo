@@ -209,7 +209,7 @@ class Runtime {
         if (data.type === 'rpc') {
           const localObject = this._localObjects.get(data.remoteObjectId);
           if (!localObject)
-            throw new Error(`Cannot find object with id "${data.remoteObjectId}"`);
+            throw new Error(`[thread: ${this._name}] Cannot find object with id "${data.remoteObjectId}" while calling "${data.method}"`);
           const result = await localObject[data.method](...data.args);
           response.result = result;
         } else if (data.type === 'evaluate') {
