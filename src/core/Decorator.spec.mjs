@@ -217,6 +217,16 @@ export function addTests(runner, expect) {
       checkList(dec.listAll(), []);
     });
 
+    it('Decorator.remove', () => {
+      let dec = new Decorator(true /* createHandles */);
+      const handle = dec.add(2, 2, 'foo');
+      dec.replace(2, 0, 1);
+      dec.replace(1, 0, 1);
+      dec.replace(0, 0, 1);
+      dec.remove(handle);
+      expect(dec.countAll()).toBe(0);
+    });
+
     it('Decorator.multiple removals', () => {
       let dec = new Decorator(true /* createHandles */);
       let a = {from: 1, to: 2, data: 'a'};

@@ -235,7 +235,11 @@ export class Decorator {
     if (!decoration)
       return;
     let tmp = split(this._root, decoration.from, kTo);
-    let tmp2 = split(tmp.right, decoration.to, kFrom);
+    let tmp2;
+    if (decoration.from === decoration.to)
+      tmp2 = split(tmp.right, decoration.to + 0.5, kTo);
+    else
+      tmp2 = split(tmp.right, decoration.to, kFrom);
     let removed = tmp2.left;
     if (!removed || removed.from !== decoration.from || removed.to !== decoration.to || removed.left || removed.right)
       throw new Error('Inconsistent');

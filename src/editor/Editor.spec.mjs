@@ -37,7 +37,7 @@ export function addTests(runner, expect, options) {
   });
 
   describe('Editor.addHandle', () => {
-    xit('should work', () => {
+    it('should work', () => {
       const editor = createTestEditor('|\n|\n|');
       const handle = editor.addHandle(2, 2);
       editor.input().type('a');
