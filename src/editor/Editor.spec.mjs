@@ -32,7 +32,7 @@ export function addTests(runner, expect, options) {
     it('should sync remote document', async ({platform, thread}) => {
       const editor = await Editor.createWithRemoteDocument(new TestMeasurer(), platform, thread);
       editor.reset('hello world!');
-      expect(await thread.evaluate(doc => doc.text().content(), editor.remoteDocument())).toBe('hello world!');
+      expect(await thread.evaluate((thread, doc) => doc.text().content(), editor.remoteDocument())).toBe('hello world!');
     });
   });
 
