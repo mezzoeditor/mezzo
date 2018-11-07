@@ -110,7 +110,7 @@ export class Document extends EventEmitter {
    * @return {!Array<!SelectionRange>}
    */
   sortedSelection() {
-    return this._selection.slice().sort(rangeComparator);
+    return this._selection.slice().sort(selectionRangeComparator);
   }
 
   /**
@@ -341,7 +341,7 @@ function checkSelectionsEqual(aRanges, bRanges) {
  * @param {!SelectionRange} b
  * @return {number}
  */
-function rangeComparator(a, b) {
+export function selectionRangeComparator(a, b) {
   let aFrom = Math.min(a.focus, a.anchor);
   let aTo = Math.max(a.focus, a.anchor);
   let bFrom = Math.min(b.focus, b.anchor);
@@ -376,7 +376,7 @@ function normalizeSelection(text, ranges) {
     ordering.set(ranges[i], i);
 
   // 3. Sort ranges in ascending order.
-  ranges.sort(rangeComparator);
+  ranges.sort(selectionRangeComparator);
 
   // 4. Join ranges.
   let length = 1;

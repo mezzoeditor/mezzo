@@ -1,7 +1,7 @@
 import { Tokenizer } from "./Tokenizer.mjs";
 import { RoundMode } from '../core/Metrics.mjs';
 import { EventEmitter } from '../core/EventEmitter.mjs';
-import { Document } from '../core/Document.mjs';
+import { Document, selectionRangeComparator } from '../core/Document.mjs';
 
 /**
  * @typedef {{
@@ -524,9 +524,13 @@ export class Input extends EventEmitter {
    * @return {boolean}
    */
   _replace(s, rangeCallback, origin) {
-    let ranges = this._document.sortedSelection();
+    let ranges = this._document.selection();
     if (!ranges.length)
       return false;
+    const ordering = new Map();
+    for (let i = 0; i < ranges.length; ++i)
+      ordering.set(ranges[i], i);
+    ranges.sort(selectionRangeComparator);
 
     // Figure intended changes first.
     let edits = [];
@@ -543,6 +547,7 @@ export class Input extends EventEmitter {
           break;
         }
       }
+      replaced.originalRange = range;
       edits.push(replaced);
     }
     // Compute history action.
@@ -556,9 +561,11 @@ export class Input extends EventEmitter {
       let newSelection = [];
       for (const edit of edits) {
         this._document.replace(edit.from + delta, edit.to + delta, edit.s);
-        newSelection.push({anchor: edit.cursorOffset + delta, focus: edit.cursorOffset + delta});
+        newSelection.push({anchor: edit.cursorOffset + delta, focus: edit.cursorOffset + delta, originalRange: edit.originalRange});
         delta += edit.s.length - (edit.to - edit.from);
       }
+      // Restore selection order based on the originalRange order.
+      newSelection.sort((a, b) => ordering.get(a.originalRange) - ordering.get(b.originalRange));
       this._document.setSelection(newSelection);
     }, historyAction);
     this._document.setMetadata(this._historyMetadata, newMetadata);

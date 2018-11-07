@@ -15,6 +15,22 @@ export function addTests(runner, expect) {
       editor.input().moveUp(editor.markup());
       expect(textWithCursors(editor)).toBe('hel|lo\nworld');
     });
+    it('should persist selection ordering', () => {
+      const editor = createTestEditor('abc');
+      editor.document().setSelection([
+        {anchor: 2, focus: 2},
+        {anchor: 0, focus: 0},
+        {anchor: 1, focus: 1},
+      ]);
+      expect(textWithCursors(editor)).toBe('|a|b|c');
+      editor.input().type('x');
+      expect(textWithCursors(editor)).toBe('x|ax|bx|c');
+      expect(editor.document().selection()).toBe([
+        {anchor: 5, focus: 5},
+        {anchor: 1, focus: 1},
+        {anchor: 3, focus: 3},
+      ]);
+    });
   });
 }
 
