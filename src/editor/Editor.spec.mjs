@@ -1,5 +1,6 @@
 import {GoldenMatchers} from '../../utils/GoldenMatchers';
 import {TestPlatformSupport, TestMeasurer} from '../../test/utils.mjs';
+import {createTestEditor, textWithCursors} from '../../test/utils.mjs';
 import {SVGRenderer} from '../../test/SVGRenderer.mjs';
 import {Search} from '../../plugins/Search.mjs';
 import {Editor} from './Editor.mjs';
@@ -32,6 +33,15 @@ export function addTests(runner, expect, options) {
       const editor = await Editor.createWithRemoteDocument(new TestMeasurer(), platform, thread);
       editor.reset('hello world!');
       expect(await thread.evaluate(doc => doc.text().content(), editor.remoteDocument())).toBe('hello world!');
+    });
+  });
+
+  describe('Editor.addHandle', () => {
+    xit('should work', () => {
+      const editor = createTestEditor('|\n|\n|');
+      const handle = editor.addHandle(2, 2);
+      editor.input().type('a');
+      handle.remove();
     });
   });
 
