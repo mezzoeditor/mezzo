@@ -96,6 +96,16 @@ export class Renderer {
     this._canvas.style.setProperty('left', '0');
     this._element.appendChild(this._canvas);
 
+    this._layers = {
+      editor: domDocument.createElement('div'),
+    };
+    this._layers.editor.style.cssText = `
+      position: absolute;
+      overflow: hidden;
+      pointer-events: none;
+    `;
+    this._element.appendChild(this._layers.editor);
+
     this._input = domDocument.createElement('input');
     this._input.style.cssText = `
       outline: none;
@@ -237,6 +247,10 @@ export class Renderer {
 
   scrollLeft() {
     return this._scrollLeft;
+  }
+
+  layers() {
+    return this._layers;
   }
 
   setEditor(editor) {
@@ -679,6 +693,16 @@ export class Renderer {
     };
   }
 
+  offsetToEditorPoint(offset) {
+    const point = this._editor.markup().offsetToPoint(offset);
+    if (!point)
+      return null;
+    return {
+      x: point.x - this._scrollLeft + this._padding.left,
+      y: point.y - this._scrollTop + this._padding.top
+    };
+  }
+
   _canvasToTextOffset({x, y}) {
     return this._editor.markup().pointToOffset({
       x: x - this._editorRect.x + this._scrollLeft - this._padding.left,
@@ -924,6 +948,11 @@ export class Renderer {
 
     trace.beginGroup('render');
     this._rendering = true;
+
+    this._layers.editor.style.setProperty('left', this._editorRect.x + 'px');
+    this._layers.editor.style.setProperty('top', this._editorRect.y + 'px');
+    this._layers.editor.style.setProperty('width', this._editorRect.width + 'px');
+    this._layers.editor.style.setProperty('height', this._editorRect.height + 'px');
 
     const ctx = this._canvas.getContext('2d');
     ctx.setTransform(this._ratio, 0, 0, this._ratio, 0, 0);
