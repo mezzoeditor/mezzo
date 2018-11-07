@@ -93,6 +93,8 @@ function eventToHash(event) {
   let key = event.key.toUpperCase();
   if (key.startsWith('ARROW'))
     hash.push(key.substring('ARROW'.length));
+  else if (key === ' ')
+    hash.push('SPACE');
   else if (key !== 'META' && key !== 'CONTROL' && key !== 'ALT' && key !== 'SHIFT')
     hash.push(key);
   return hash.join('-');
