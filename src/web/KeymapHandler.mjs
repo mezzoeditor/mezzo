@@ -11,9 +11,11 @@ export class KeymapHandler {
       let value = rawKeymap[key];
       keymap.set(stringToHash(key), value);
     }
-    this._keymaps.push({
-      keymap, handler
-    });
+    let obj = {keymap, handler};
+    this._keymaps.push(obj);
+    return () => {
+      this._keymaps = this._keymaps.filter(e => e !== obj);
+    };
   }
 
   handleKeyDown(event) {
