@@ -1,5 +1,6 @@
 import { Tokenizer } from "./Tokenizer.mjs";
 import { RoundMode } from '../core/Metrics.mjs';
+import { EventEmitter } from '../core/EventEmitter.mjs';
 import { Document } from '../core/Document.mjs';
 
 /**
@@ -17,11 +18,12 @@ import { Document } from '../core/Document.mjs';
  * }} InputOverride;
  */
 
-export class Input {
+export class Input extends EventEmitter {
   /**
    * @param {!Editor} editor
    */
   constructor(editor) {
+    super();
     this._editor = editor;
     this._document = editor.document();
     this._indent = ' '.repeat(2);
@@ -560,6 +562,7 @@ export class Input {
       this._document.setSelection(newSelection);
     }, historyAction);
     this._document.setMetadata(this._historyMetadata, newMetadata);
+    this.emit(Input.Events.UserInput);
     return true;
 
     function createMetadata(text, edits, origin) {
@@ -678,4 +681,8 @@ export class Input {
     offset = markup.pointToOffset({x: upDownX, y: point.y + markup.lineHeight()}, RoundMode.Round);
     return {offset, upDownX};
   }
+};
+
+Input.Events = {
+  UserInput: 'userinput',
 };
