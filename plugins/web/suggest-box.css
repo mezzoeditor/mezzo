@@ -2,31 +2,31 @@ suggest-box {
   --x: 0px;
   --y: 0px;
   --padding: 3px;
-  padding: var(--padding);
   cursor: default;
   position: absolute;
   top: var(--y);
   left: calc(var(--x) - var(--padding));
   background-color: white;
-  border: 1px solid #888;
+  border: 1px solid #E0E0E0;
   display: flex;
+  color: #212121;
   flex-direction: column;
   font-family: monospace;
   width: 150px;
   max-height: 100px;
   overflow-x: hidden;
   overflow-y: auto;
-  border-radius: 2px;
-  box-shadow: 2px 2px 4px 0px #00000066;
+  box-shadow: 1px 1px 3px 0px #00000066;
   pointer-events: auto;
   contain: content;
 }
 
-suggest-box suggest-entry + suggest-entry {
-  border-top: 1px solid gray;
+suggest-box suggest-entry {
+  padding: var(--padding);
 }
 
 suggest-box suggest-entry.selected {
-  background-color: lightblue;
+  background-color: #E1F5FE;
+
 }
 
