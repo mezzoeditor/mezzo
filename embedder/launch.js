@@ -21,15 +21,17 @@ const mimeTypes = {
   '.svg': 'image/svg+xml',
 };
 
+const ROOT_PATH = path.join(__dirname, '..');
+
 (async() => {
   const port = 4321;
-  const server = createServer(port, path.join(__dirname));
+  const server = createServer(port, ROOT_PATH);
   const workingFolder = process.argv.length < 3 ? path.resolve('.') : path.resolve(process.argv[2]);
   const browserPromise = pptr.launch({
     pipe: true,
     headless: false,
     defaultViewport: null,
-    userDataDir: path.join(__dirname, '.embedder_profile'),
+    userDataDir: path.join(ROOT_PATH, '.embedder_profile'),
     handleSIGINT: false,
     args: [
       '--enable-experimental-web-platform-features',
