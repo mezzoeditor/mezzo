@@ -1,84 +1,336 @@
-constructor:
-    this._marks = new Decorator(true /* createHandles */);
+commit 01a126af06344c7e5146cf7402183baac8cbe71e
+Author: Dmitry Gozman <dgozman@chromium.org>
+Date:   Sat Nov 3 18:20:43 2018 -0700
 
-onReplace:
-    for (let mark of this._marks.replace(from, to, inserted)) {
-      delete mark[kMarkSymbol];
-      this.emit(Markup.Events.MarkCleared, mark);
-    }
+    folding
 
+diff --git a/src/core/Markup.mjs b/src/core/Markup.mjs
+index 13c97aa..4c4f14d 100644
+--- a/src/core/Markup.mjs
++++ b/src/core/Markup.mjs
+@@ -46,6 +46,12 @@ export const WrappingMode = {
+   Word: 2,
+ }
+
++/**
++ * @typedef {{
++ *   metrics: !TextMetrics
++ * }} Widget
++ */
++
+ export class Markup extends EventEmitter {
+   /**
+    * @param {!Measurer} measurer
+@@ -152,15 +158,19 @@ export class Markup extends EventEmitter {
+   }
+
+   /**
++   * Returns a handle which can later be used to unhide range.
+    * @param {!Anchor} from
+    * @param {!Anchor} to
++   * @param {?Widget} widget
++   * @return {*}
+    */
+-  hideRange(from, to) {
++  hideRange(from, to, widget = null) {
+     if (this._hiddenRanges.countTouching(from, to))
+       throw new Error('Hidden ranges cannot intersect');
+-    this._hiddenRanges.add(from, to, null);
+-    this._allocator.undone(Offset(from), Offset(to));
++    const handle = this._hiddenRanges.add(from, to, widget);
++    this._allocator.undone(Math.max(0, Offset(from) - 1), Math.min(this._text.length(), Offset(to) + 1));
+     this._rechunkLastFrameRange();
++    return handle;
+   }
+
+   /**
+@@ -194,7 +204,7 @@ export class Markup extends EventEmitter {
+
+     const nodes = [];
+     if (newFrom !== newTo)
+-      nodes.push(this._unmeasuredNode(newTo - newFrom));
++      nodes.push(this._hiddenNode(newTo - newFrom));
+     this._tree = Tree.merge(split.left, Tree.merge(Tree.build(nodes), split.right));
+   }
+
+@@ -237,8 +247,11 @@ export class Markup extends EventEmitter {
+     let clamped = iterator.locateByPoint(point, strict);
+     if (clamped === null)
+       throw 'Point does not belong to the Markup';
+-    if (iterator.data === undefined || !iterator.data.metrics)
++    if (iterator.data === undefined || !iterator.data.metrics) {
++      if (roundMode === RoundMode.Ceil && iterator.after)
++        return iterator.after.offset;
+       return iterator.before ? iterator.before.offset : 0;
++    }
+     let from = iterator.before.offset;
+     let textChunk = this._text.content(from, from + iterator.metrics.length);
+     return iterator.data.metrics.locateByPoint(textChunk, iterator.data.stateBefore, iterator.before, clamped, roundMode, strict).offset;
+@@ -335,8 +348,8 @@ export class Markup extends EventEmitter {
+     hiddenRanges.push({from: newTo + 0.5, to: newTo + 0.5});
+     for (let hiddenIndex = 0; hiddenIndex < hiddenRanges.length - 1; hiddenIndex++) {
+       const rangeFrom = Offset(hiddenRanges[hiddenIndex].to);
+-      if (iterator.offset < rangeFrom) {
+-        nodes.push(this._unmeasuredNode(rangeFrom - iterator.offset));
++      if (iterator.offset < rangeFrom || hiddenRanges[hiddenIndex].data) {
++        nodes.push(this._hiddenNode(rangeFrom - iterator.offset, hiddenRanges[hiddenIndex].data));
+         iterator.reset(rangeFrom);
+       }
+       const rangeTo = Offset(hiddenRanges[hiddenIndex + 1].from);
+@@ -356,7 +369,7 @@ export class Markup extends EventEmitter {
+     }
+
+     if (correction !== null && correction > newTo) {
+-      nodes.push(this._unmeasuredNode(correction - newTo));
++      nodes.push(this._hiddenNode(correction - newTo));
+     } else {
+       // Mark next chunk as undone if metrics have to be recalculated
+       // because of the new state before produced by last chunk.
+@@ -372,13 +385,26 @@ export class Markup extends EventEmitter {
+
+   /**
+    * @param {number} length
++   * @param {?Widget} widget
+    * @return {{metrics: !TextMetrics, data: ChunkData}}
+    */
+-  _unmeasuredNode(length) {
+-    return {
+-      metrics: {length, firstWidth: 0, lastWidth: 0, longestWidth: 0},
++  _hiddenNode(length, widget = null) {
++    const result = {
+       data: {metrics: null, stateBefore: null, stateAfter: null}
+     };
++    if (widget) {
++      result.metrics = {
++        length,
++        firstWidth: widget.metrics.firstWidth / this._defaultWidth,
++        lastWidth: widget.metrics.lastWidth / this._defaultWidth,
++        longestWidth: widget.metrics.longestWidth / this._defaultWidth,
++        lineBreaks: widget.metrics.lineBreaks
++      };
++      result.data.widget = widget;
++    } else {
++      result.metrics = {length, firstWidth: 0, lastWidth: 0, longestWidth: 0};
++    }
++    return result;
+   }
+
+   /**
+@@ -406,17 +432,20 @@ export class Markup extends EventEmitter {
+         iterator.next();
+       if (iterator.before === undefined) {
+         // Tree is empty - bail out.
+-        lines.push({x: 0, y: 0, from: 0, to: 0, start: 0, end: 0, ranges: [{from: 0, to: 0, x: 0, metrics: this._metrics}]});
++        lines.push({x: 0, y: 0, from: 0, to: 0, start: 0, end: 0, ranges: [{from: 0, to: 0, x: 0, metrics: this._metrics}], widgets: []});
+         break;
+       }
+
+       let {offset, x} = iterator.before;
+-      let textChunk = null;
++      let chunkText = null;
++      let chunk = iterator.data;
+       if (iterator.metrics !== undefined) {
+-        textChunk = this._text.content(offset, offset + iterator.metrics.length);
+-        const location = iterator.data.metrics.locateByPoint(textChunk, iterator.data.stateBefore, iterator.before, clamped, RoundMode.Floor, false /* strict */);
+-        offset = location.offset;
+-        x = location.x;
++        if (chunk.metrics) {
++          chunkText = this._text.content(offset, offset + iterator.metrics.length);
++          const location = chunk.metrics.locateByPoint(chunkText, chunk.stateBefore, iterator.before, clamped, RoundMode.Floor, false /* strict */);
++          offset = location.offset;
++          x = location.x;
++        }
+       } else {
+         if (iterator.before.y < y / this._lineHeight)
+           break;
+@@ -430,7 +459,8 @@ export class Markup extends EventEmitter {
+         to: offset,
+         start: this.pointToOffset({x: 0, y: y}),
+         end: this.pointToOffset({x: this._contentWidth, y: y}),
+-        ranges: []
++        ranges: [],
++        widgets: []
+       };
+       lines.push(line);
+       if (iterator.after === undefined) {
+@@ -439,38 +469,54 @@ export class Markup extends EventEmitter {
+       }
+
+       while (x <= rect.left + rect.width) {
+-        if (!iterator.data.metrics) {
+-          if (iterator.before.x !== iterator.after.x)
+-            throw new Error('Inconsistent');
+-        } else {
+-          let after = iterator.after.offset;
+-          let overflow = false;
+-          const point = {x: (rect.left + rect.width) / this._defaultWidth, y: y / this._lineHeight};
+-          if (iterator.after.y > point.y || (iterator.after.y === point.y && iterator.after.x >= point.x)) {
+-            if (textChunk === null)
+-              textChunk = this._text.content(offset, offset + iterator.metrics.length);
+-            after = iterator.data.metrics.locateByPoint(textChunk, iterator.data.stateBefore, iterator.before, point, RoundMode.Ceil, false /* strict */).offset;
+-            overflow = true;
++        let overflow = false;
++
++        // First determine the end of the range fitting this line, which only makes
++        // sense for text nodes.
++        let after = iterator.after.offset;
++        const point = {x: (rect.left + rect.width) / this._defaultWidth, y: y / this._lineHeight};
++        if (iterator.after.y > point.y || (iterator.after.y === point.y && iterator.after.x >= point.x)) {
++          if (chunk.metrics) {
++            if (chunkText === null)
++              chunkText = this._text.content(offset, offset + iterator.metrics.length);
++            after = chunk.metrics.locateByPoint(chunkText, chunk.stateBefore, iterator.before, point, RoundMode.Ceil, false /* strict */).offset;
+           }
+-          textChunk = null;
++          overflow = true;
++        }
++        chunkText = null;
+
++        // Now push appropriate data to the line.
++        if (chunk.metrics) {
++          // Text node.
+           ranges.push({from: offset, to: after});
+           let canJoin = false;
+           if (line.ranges.length > 0) {
+             const prev = line.ranges[line.ranges.length - 1];
+-            if (prev.to === offset && prev.metrics === iterator.data.metrics)
++            if (prev.to === offset && prev.metrics === chunk.metrics)
+               canJoin = true;
+           }
+           if (canJoin)
+             line.ranges[line.ranges.length - 1].to = after;
+           else
+-            line.ranges.push({from: offset, to: after, x: x, metrics: iterator.data.metrics});
+-          if (overflow)
+-            break;
++            line.ranges.push({from: offset, to: after, x: x, metrics: chunk.metrics});
++        } else if (chunk.widget) {
++          // Widget node.
++          const widgetWidth = iterator.metrics.firstWidth * this._defaultWidth;
++          line.widgets.push({x: x, widget: chunk.widget, offset, width: widgetWidth});
++        } else {
++          // Hidden node.
++          if (iterator.before.x !== iterator.after.x)
++            throw new Error('Inconsistent');
+         }
++
++        if (overflow)
++          break;
++
++        // This line probably has more chunks - advance.
+         iterator.next();
+         x = iterator.before.x * this._defaultWidth;
+         offset = iterator.before.offset;
++        chunk = iterator.data;
+         if (iterator.after === undefined)
+           break;
+       }
+@@ -511,7 +557,6 @@ export class Markup extends EventEmitter {
+    */
+   _buildFrameContents(frame, lines, decorators) {
+     for (let line of lines) {
+-      let rangeIndex = 0;
+       for (let {from, to, x, metrics} of line.ranges) {
+         const offsetToX = new Float32Array(to - from + 1);
+         const needsRtlBreakAfter = new Int8Array(to - from + 1);
+@@ -537,27 +582,14 @@ export class Markup extends EventEmitter {
+           });
+         }
+
+-        const rangeLeft = rangeIndex === 0 ? frame.lineLeft : offsetToX[0];
+-        const rangeRight = rangeIndex === line.ranges.length - 1 ? frame.lineRight : offsetToX[to - from];
+-        for (let decorator of decorators.background) {
+-          // Expand by a single character which is not visible to account for borders
+-          // extending past viewport.
+-          decorator.visitTouching(from - 1, to + 1, decoration => {
+-            let dFrom = Offset(decoration.from);
+-            let left = dFrom < line.start ? rangeLeft : offsetToX[Math.max(dFrom, from) - from];
+-            let dTo = Offset(decoration.to);
+-            let right = dTo > line.end ? rangeRight : offsetToX[Math.min(dTo, to) - from];
+-            if (left <= right) {
+-              frame.background.push({
+-                x: left,
+-                y: line.y,
+-                width: right - left,
+-                style: decoration.data
+-              });
+-            }
+-          });
+-        }
+-        rangeIndex++;
++        this._pushBackground(frame, decorators, line, from, to, offsetToX, 0);
++      }
++
++      const dummyOffsetToX = new Float32Array(1);
++      for (const {x, widget, offset, width} of line.widgets) {
++        frame.widgets.push({x, widget, y: line.y});
++        dummyOffsetToX[0] = x;
++        this._pushBackground(frame, decorators, line, offset, offset, dummyOffsetToX, width);
+       }
+
+       const lineStyles = new Set();
+@@ -577,6 +609,43 @@ export class Markup extends EventEmitter {
+     }
+   }
+
++  /**
++   * @param {!Frame}
++   * @param {!DecorationResult} decorators
++   * @param {!Line} line
++   * @param {number} from
++   * @param {number} to
++   * @param {!Float32Array} offsetToX
++   * @param {number} extra
++   */
++  _pushBackground(frame, decorators, line, from, to, offsetToX, extra) {
++    const rangeLeft = from === line.from ? frame.lineLeft : offsetToX[0];
++    const rangeRight = to === line.to ? frame.lineRight : offsetToX[to - from];
++    for (const decorator of decorators.background) {
++      // Expand by a single character which is not visible to account for borders
++      // extending past viewport.
++      decorator.visitTouching(from - 1, to + 1, decoration => {
++        const dFrom = Offset(decoration.from);
++        const left = dFrom < line.start ? rangeLeft : offsetToX[Math.max(dFrom, from) - from];
++        const dTo = Offset(decoration.to);
++        let right = dTo > line.end ? rangeRight : offsetToX[Math.min(dTo, to) - from];
++        if (dTo >= to) {
++          // TODO: we need information about widget's range anchoring to
++          // properly apply |extra|.
++          right += extra;
++        }
++        if (left <= right) {
++          frame.background.push({
++            x: left,
++            y: line.y,
++            width: right - left,
++            style: decoration.data
++          });
++        }
++      });
++    }
++  }
++
+   /**
+    * @param {!Frame} frame
+    * @param {!DecorationResult} decorators
+@@ -649,8 +718,8 @@ function joinRanges(ranges, document) {
+ }
+
+ /**
+- * @typedef {{metrics: !Metrics, stateBefore: *, stateAfter: *}} ChunkData
+- * Null metrics means unmeasured chunk.
++ * @typedef {{metrics: ?Metrics, stateBefore: *, stateAfter: *, widget: !Widget|undefined}} ChunkData
++ * Null metrics means hidden chunk or widget.
+  */
 
   /**
-   * @param {!Anchor} from
-   * @param {!Anchor} to
-   * @param {!Mark} mark
-   */
-  markRange(from, to, mark) {
-    if (from !== to)
-      throw new Error('Only empty ranges are supported for now');
-    if (mark[kMarkSymbol])
-      throw new Error('This mark is already used');
-    mark[kMarkSymbol] = this._marks.add(from, to, mark);
-    this._rechunk(this._text, from, to, to - from);
-  }
-
-
-  /**
-   * @param {!Mark} mark
-   */
-  clearMark(mark) {
-    if (!mark[kMarkSymbol])
-      throw new Error('The mark is not set');
-
-    let {from, to} = this._marks.resolve(mark[kMarkSymbol]);
-    this._marks.remove(mark[kMarkSymbol]);
-    delete mark[kMarkSymbol];
-    if (from !== to)
-      throw new Error('Inconsistent');
-
-    let split = this._tree.split(from, from);
-    let nodes = split.middle.collect();
-    if (nodes.some(node => !node.data))
-      throw new Error('Inconsistent');
-    let index = nodes.findIndex(node => node.data === mark);
-    if (index === -1)
-      throw new Error('Inconsistent');
-    nodes.splice(index, 1);
-    this._setTree(Tree.merge(split.left, Tree.merge(Tree.build(nodes), split.right)));
-  }
-
-
-_rechunk:
-    let tmp = split.left.split(newFrom, newFrom);
-    if (!tmp.right.empty())
-      throw new Error('Inconsistent');
-    split.left = tmp.left;
-
-    tmp = split.right.split(0, 0);
-    if (!tmp.left.empty())
-      throw new Error('Inconsistent');
-    split.right = tmp.right;
-
-
-_createNodes:
-    this._marks.visitTouching(from - 0.5, to + 1, decoration => {
-      if (decoration.from < from || decoration.to > to + 0.5)
-        return;
-      addNodes(Math.floor(decoration.from));
-      let mark = decoration.data;
-      let width = mark.width / this._defaultWidth;
-      let metrics = {length: 0, firstWidth: width, lastWidth: width, longestWidth: width};
-      nodes.push({metrics, data: mark});
-    });
-    addNodes(to);
-
-
-_buildFrameContents:
-        if (iterator.data) {
-          const mark = iterator.data;
-          frame.marks.push({x: x, y: line.y, mark});
-          x += mark.width;
-          // if (!iterator.data.end)
-          //   offsetToX[offset - line.from] = x;
-        } else {
+@@ -669,7 +738,8 @@ function Offset(anchor) {
+  *   to: number,
+  *   start: number,
+  *   end: number,
+- *   ranges: !Array<{from: number, to: number, x: number, metrics: !Metrics}>
++ *   ranges: !Array<{from: number, to: number, x: number, metrics: !Metrics}>,
++ *   widgets: !Array<{x: number, widget: !Widget, offset: number, width: number}>
+  * }} Line
+  */
 
