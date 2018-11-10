@@ -35,8 +35,8 @@ export class Frame {
     this.text = [];
     /** @type {!Array<{x: number, y: number, width: number, style: string}>} */
     this.background = [];
-    /** @type {!Array<{x: number, y: number, mark: !Mark}>} */
-    this.marks = [];
+    /** @type {!Array<{x: number, y: number, widget: !Widget}>} */
+    this.widgets = [];
     /** @type {!Array<{y: number, height: number, style: string}>} */
     this.scrollbar = [];
     /** @type {!Array<{first: number, last: number, y: number, styles: !Array<string>}>} */

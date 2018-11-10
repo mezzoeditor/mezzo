@@ -255,25 +255,27 @@ export class Input extends EventEmitter {
   }
 
   /**
+   * @param {!Markup} markup
    * @return {boolean}
    */
-  moveLeft() {
+  moveLeft(markup) {
     return this._updateSelection(range => {
       let offset = Math.min(range.anchor, range.focus);
       if (range.anchor === range.focus)
-        offset = this._left(range.focus);
+        offset = this._left(markup, range.focus);
       return {anchor: offset, focus: offset};
     });
   }
 
   /**
+   * @param {!Markup} markup
    * @return {boolean}
    */
-  moveRight() {
+  moveRight(markup) {
     return this._updateSelection(range => {
       let offset = Math.max(range.anchor, range.focus);
       if (range.anchor === range.focus)
-        offset = this._right(range.focus);
+        offset = this._right(markup, range.focus);
       return {anchor: offset, focus: offset};
     });
   }
@@ -339,11 +341,12 @@ export class Input extends EventEmitter {
   }
 
   /**
+   * @param {!Markup} markup
    * @return {boolean}
    */
-  moveLineStart() {
+  moveLineStart(markup) {
     return this._updateSelection(range => {
-      let offset = this._lineStart(range.focus);
+      let offset = this._lineStart(markup, range.focus);
       let it = this._document.text().iterator(offset);
       while (it.current === ' ') it.next();
       if (offset === range.focus)
@@ -355,11 +358,12 @@ export class Input extends EventEmitter {
   }
 
   /**
+   * @param {!Markup} markup
    * @return {boolean}
    */
-  moveLineEnd() {
+  moveLineEnd(markup) {
     return this._updateSelection(range => {
-      let offset = this._lineEnd(range.focus);
+      let offset = this._lineEnd(markup, range.focus);
       return {anchor: offset, focus: offset};
     });
   }
@@ -387,20 +391,22 @@ export class Input extends EventEmitter {
   }
 
   /**
+   * @param {!Markup} markup
    * @return {boolean}
    */
-  selectLeft() {
+  selectLeft(markup) {
     return this._updateSelection(range => {
-      return {anchor: range.anchor, focus: this._left(range.focus)};
+      return {anchor: range.anchor, focus: this._left(markup, range.focus)};
     });
   }
 
   /**
+   * @param {!Markup} markup
    * @return {boolean}
    */
-  selectRight() {
+  selectRight(markup) {
     return this._updateSelection(range => {
-      return {anchor: range.anchor, focus: this._right(range.focus)};
+      return {anchor: range.anchor, focus: this._right(markup, range.focus)};
     });
   }
 
@@ -408,6 +414,7 @@ export class Input extends EventEmitter {
    * @return {boolean}
    */
   selectWordLeft() {
+    // TODO: this does not account for hidden ranges.
     return this._updateSelection(range => {
       return {anchor: range.anchor, focus: Tokenizer.leftBoundary(this._document, this._editor.tokenizer(), range.focus - 1)};
     });
@@ -417,17 +424,19 @@ export class Input extends EventEmitter {
    * @return {boolean}
    */
   selectWordRight() {
+    // TODO: this does not account for hidden ranges.
     return this._updateSelection(range => {
       return {anchor: range.anchor, focus: Tokenizer.rightBoundary(this._document, this._editor.tokenizer(), range.focus)};
     });
   }
 
   /**
+   * @param {!Markup} markup
    * @return {boolean}
    */
-  selectLineStart() {
+  selectLineStart(markup) {
     return this._updateSelection(range => {
-      let offset = this._lineStart(range.focus);
+      let offset = this._lineStart(markup, range.focus);
       let it = this._document.text().iterator(offset);
       while (it.current === ' ') it.next();
       if (offset === range.focus)
@@ -439,11 +448,12 @@ export class Input extends EventEmitter {
   }
 
   /**
+   * @param {!Markup} markup
    * @return {boolean}
    */
-  selectLineEnd() {
+  selectLineEnd(markup) {
     return this._updateSelection(range => {
-      return {anchor: range.anchor, focus: this._lineEnd(range.focus)};
+      return {anchor: range.anchor, focus: this._lineEnd(markup, range.focus)};
     });
   }
 
@@ -619,46 +629,48 @@ export class Input extends EventEmitter {
   }
 
   /**
+   * @param {!Markup} markup
    * @param {number} offset
    * @return {number}
    */
-  _left(offset) {
-    let position = this._document.text().offsetToPosition(offset);
-    if (position.column)
-      return this._document.text().positionToOffset({line: position.line, column: position.column - 1});
-    return Math.max(offset - 1, 0);
+  _left(markup, offset) {
+    const point = markup.offsetToPoint(offset);
+    if (!point.x)
+      return markup.pointToOffset({x: markup.contentWidth(), y: point.y - markup.lineHeight()});
+    return markup.pointToOffset({x: point.x - 0.1, y: point.y}, RoundMode.Floor);
   }
 
   /**
+   * @param {!Markup} markup
    * @param {number} offset
    * @return {number}
    */
-  _right(offset) {
-    let position = this._document.text().offsetToPosition(offset);
-    let right = this._document.text().positionToOffset({line: position.line, column: position.column + 1});
+  _right(markup, offset) {
+    const point = markup.offsetToPoint(offset);
+    const right = markup.pointToOffset({x: point.x + 0.1, y: point.y}, RoundMode.Ceil);
     if (right === offset)
-      return Math.min(offset + 1, this._document.text().length());
+      return markup.pointToOffset({x: 0, y: point.y + markup.lineHeight()});
     return right;
   }
 
   /**
+   * @param {!Markup} markup
    * @param {number} offset
    * @return {number}
    */
-  _lineStart(offset) {
-    let position = this._document.text().offsetToPosition(offset);
-    return this._document.text().positionToOffset({line: position.line, column: 0});
+  _lineStart(markup, offset) {
+    const point = markup.offsetToPoint(offset);
+    return markup.pointToOffset({x: 0, y: point.y});
   }
 
   /**
+   * @param {!Markup} markup
    * @param {number} offset
    * @return {number}
    */
-  _lineEnd(offset) {
-    let position = this._document.text().offsetToPosition(offset);
-    if (position.line == this._document.text().lineCount() - 1)
-      return this._document.text().length();
-    return this._document.text().positionToOffset({line: position.line + 1, column: 0}) - 1;
+  _lineEnd(markup, offset) {
+    const point = markup.offsetToPoint(offset);
+    return markup.pointToOffset({x: markup.contentWidth(), y: point.y});
   }
 
   /**

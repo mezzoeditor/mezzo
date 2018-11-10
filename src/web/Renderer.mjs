@@ -8,6 +8,7 @@ import { DefaultTheme } from '../default/DefaultTheme.mjs';
 import { Tokenizer } from '../editor/Tokenizer.mjs';
 import { EventEmitter } from '../core/EventEmitter.mjs';
 import { KeymapHandler } from './KeymapHandler.mjs';
+import { TextDecorator } from '../core/Decorator.mjs';
 
 /**
  * @implements Measurer
@@ -26,6 +27,7 @@ class ContextBasedMeasurer {
 
     this.width9 = ctx.measureText('9').width;
     this.widthM = ctx.measureText('M').width;
+    this.widthBox = this.width9 * 1.5;
 
     this._defaultWidth = monospace ? ctx.measureText('M').width : 1;
     this._defaultRegex = monospace ? Metrics.asciiRegexWithNewLines : null;
@@ -124,6 +126,7 @@ export class Renderer {
     this._theme = DefaultTheme;
     this._monospace = true;
     this._wrappingMode = WrappingMode.None;
+    this._hiddenRangesDecorator = new TextDecorator(false /* createHandles */);
     this._eventListeners = [];
 
     this._animationFrameId = 0;
@@ -258,15 +261,22 @@ export class Renderer {
     if (this._editor)
       EventEmitter.removeEventListeners(this._eventListeners);
     this._editor = editor;
+    this._hiddenRangesDecorator.clearAll();
     if (this._editor) {
       this._editor.markup().setMeasurer(this._measurer);
       this._eventListeners = [
         this._editor.on(Editor.Events.Raf, this.raf.bind(this)),
-        this._editor.document().on(Document.Events.Changed, ({selectionChanged}) => {
+        this._editor.document().on(Document.Events.Changed, ({replacements, selectionChanged}) => {
+          for (const replacement of replacements) {
+            this._hiddenRangesDecorator.replace(replacement.offset,
+                replacement.offset + replacement.removed.length(),
+                replacement.inserted.length());
+          }
           if (selectionChanged)
             this.raf();
         }),
         this._editor.on(Editor.Events.Reveal, this._reveal.bind(this)),
+        this._editor.addDecorationCallback(this._decorationCallback.bind(this)),
         this._editor.markup().on(Markup.Events.Changed, this._invalidate.bind(this)),
       ];
       this._invalidate();
@@ -359,17 +369,17 @@ export class Renderer {
     if (command === 'selection.move.documentend')
       return this._revealSelection(this._editor.input().moveDocumentEnd());
     if (command === 'selection.move.left')
-      return this._revealSelection(this._editor.input().moveLeft());
+      return this._revealSelection(this._editor.input().moveLeft(this._editor.markup()));
     if (command === 'selection.move.right')
-      return this._revealSelection(this._editor.input().moveRight());
+      return this._revealSelection(this._editor.input().moveRight(this._editor.markup()));
     if (command === 'selection.move.word.left')
       return this._revealSelection(this._editor.input().moveWordLeft());
     if (command === 'selection.move.word.right')
       return this._revealSelection(this._editor.input().moveWordRight());
     if (command === 'selection.move.linestart')
-      return this._revealSelection(this._editor.input().moveLineStart());
+      return this._revealSelection(this._editor.input().moveLineStart(this._editor.markup()));
     if (command === 'selection.move.lineend')
-      return this._revealSelection(this._editor.input().moveLineEnd());
+      return this._revealSelection(this._editor.input().moveLineEnd(this._editor.markup()));
     if (command === 'selection.select.up')
       return this._revealSelection(this._editor.input().selectUp(this._editor.markup()));
     if (command === 'selection.select.down')
@@ -379,30 +389,37 @@ export class Renderer {
     if (command === 'selection.select.documentend')
       return this._revealSelection(this._editor.input().selectDocumentEnd());
     if (command === 'selection.select.left')
-      return this._revealSelection(this._editor.input().selectLeft());
+      return this._revealSelection(this._editor.input().selectLeft(this._editor.markup()));
     if (command === 'selection.select.right')
-      return this._revealSelection(this._editor.input().selectRight());
+      return this._revealSelection(this._editor.input().selectRight(this._editor.markup()));
     if (command === 'selection.select.word.left')
       return this._revealSelection(this._editor.input().selectWordLeft());
     if (command === 'selection.select.word.right')
       return this._revealSelection(this._editor.input().selectWordRight());
     if (command === 'selection.select.linestart')
-      return this._revealSelection(this._editor.input().selectLineStart());
+      return this._revealSelection(this._editor.input().selectLineStart(this._editor.markup()));
     if (command === 'selection.select.lineend')
-      return this._revealSelection(this._editor.input().selectLineEnd());
+      return this._revealSelection(this._editor.input().selectLineEnd(this._editor.markup()));
     if (command === 'selection.select.all')
       return this._revealSelection(this._editor.input().selectAll());
     if (command === 'selection.collapse')
       return this._revealSelection(this._editor.input().collapseSelection());
     if (command === 'hideselection') {
       const lastCursor = this._editor.document().lastCursor();
-      if (!lastCursor)
+      if (!lastCursor || lastCursor.anchor === lastCursor.focus)
         return false;
       const min = Math.min(lastCursor.anchor, lastCursor.focus);
       const max = Math.max(lastCursor.anchor, lastCursor.focus);
-      this._editor.markup().hideRange(min, max + 0.5);
+      const width = this._measurer.widthBox;
+      const metrics = {length: 0, firstWidth: width, lastWidth: width, longestWidth: width};
+      this._editor.markup().hideRange(min + 0.5, max, {metrics});
+      this._hiddenRangesDecorator.add(min - 1, max + 1, 'hiddenrange');
       return true;
     }
+  }
+
+  _decorationCallback() {
+    return {background: [this._hiddenRangesDecorator]};
   }
 
   _setupEventListeners() {
@@ -1144,16 +1161,26 @@ export class Renderer {
       }
     }
 
-    ctx.restore();
-  }
+    for (let {x, y, widget} of frame.widgets) {
+      const x1 = tx + x + 1;
+      const w = this._measurer.widthBox - 2;
+      const y1 = ty + y + (lineHeight - w) / 2;
+      const h = w;
 
-  _drawMarks(ctx, frame) {
-    const lineHeight = this._measurer.lineHeight();
-    for (let {x, y, mark} of frame.marks) {
-      // TODO: need some rendering!
-      ctx.fillStyle = 'red';
-      ctx.fillRect(x, y + 2, mark.width, lineHeight - 4);
+      ctx.fillStyle = 'rgb(240, 240, 240)';
+      ctx.fillRect(x1, y1, w, h);
+
+      ctx.strokeStyle = 'rgb(128, 128, 128)';
+      ctx.lineWidth = 1 / this._ratio;
+      ctx.rect(x1, y1, w, h);
+      ctx.moveTo(x1 + w / 2, y1 + 2);
+      ctx.lineTo(x1 + w / 2, y1 + h - 2);
+      ctx.moveTo(x1 + 2, y1 + h / 2);
+      ctx.lineTo(x1 + w - 2, y1 + h / 2);
+      ctx.stroke();
     }
+
+    ctx.restore();
   }
 
   _drawScrollbar(ctx, scrollbar, isVertical) {

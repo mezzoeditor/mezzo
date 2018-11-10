@@ -106,7 +106,12 @@ export let DefaultTheme = {
   'the-range': {
     background: {
       color: 'rgba(0, 0, 0, 0.4)',
-    }
-  }
+    },
+  },
+  'hiddenrange': {
+    background: {
+      color: 'rgba(0, 128, 0, 0.2)',
+    },
+  },
 }
 
