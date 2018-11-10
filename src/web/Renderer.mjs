@@ -469,16 +469,9 @@ export class Renderer {
         return;
       }
       if (event.detail > 2) {
-        let position = this._editor.document().text().offsetToPosition(offset);
-        let from = this._editor.document().text().positionToOffset({
-          line: position.line,
-          column: 0
-        });
-        let to = this._editor.document().text().positionToOffset({
-          line: position.line + 1,
-          column: 0
-        });
-
+        let point = this._editor.markup().offsetToPoint(offset);
+        let from = this._editor.markup().pointToOffset({x: 0, y: point.y});
+        let to = this._editor.markup().pointToOffset({x: 0, y: point.y + this._editor.markup().lineHeight()});
         this._editor.input().setLastCursor({anchor: from, focus: to});
         mouseRangeStartOffset = from;
         mouseRangeEndOffset = to;

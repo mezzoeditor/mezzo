@@ -45,9 +45,8 @@ export class SelectedWordHighlighter {
     let selectionRange = this._document.selection()[0];
     if (selectionRange.focus === selectionRange.anchor)
       return;
-    let startPosition = this._document.text().offsetToPosition(selectionRange.anchor);
-    let endPosition = this._document.text().offsetToPosition(selectionRange.focus);
-    if (startPosition.line !== endPosition.line)
+    if (this._editor.markup().offsetToPoint(selectionRange.anchor).y !==
+        this._editor.markup().offsetToPoint(selectionRange.focus).y)
       return;
     const range = {
       from: Math.min(selectionRange.anchor, selectionRange.focus),
