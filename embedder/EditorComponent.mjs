@@ -11,7 +11,9 @@ import { SmartBraces } from '../plugins/SmartBraces.mjs';
 import { AddNextOccurence } from '../plugins/AddNextOccurence.mjs';
 import { BlockIndentation } from '../plugins/BlockIndentation.mjs';
 import { Search } from '../plugins/Search.mjs';
+import { WordDictionary } from '../plugins/WordDictionary.mjs';
 import { SearchToolbar } from '../plugins/web/SearchToolbar.mjs';
+import { SuggestBoxController } from '../plugins/web/SuggestBox.mjs';
 
 export class EditorComponent extends HTMLElement {
   constructor() {
@@ -35,6 +37,7 @@ export class EditorComponent extends HTMLElement {
       return false;
     });
     this._searchToolbar = new SearchToolbar(this._renderer);
+    this._suggestBox = new SuggestBoxController(this._renderer);
     this._editor = null;
     this._eventListeners = [];
     this._renderer.element().classList.add('editor');
@@ -89,6 +92,7 @@ export class EditorComponent extends HTMLElement {
     this._renderer.setEditor(editor);
     if (this._editor) {
       this._searchToolbar.setSearch(PluginManager.ensurePlugins(this._editor).search);
+      this._suggestBox.setDictionary(PluginManager.ensurePlugins(this._editor).wordDictionary);
       this._eventListeners = [
         this._editor.document().on(Document.Events.Changed, ({selectionChanged}) => {
           if (selectionChanged)
@@ -160,6 +164,9 @@ class PluginManager {
     this.blockIndentation = new BlockIndentation(editor);
     this.addNextOccurence = new AddNextOccurence(editor);
     this.search = new Search(editor);
+    this.wordDictionary = new WordDictionary(editor, {
+      ignore: [/^\d+$/],
+    });
     this.search.on(Search.Events.Changed, ({enabled}) => this.selectedWordHighlighter.setEnabled(!enabled));
   }
 }
