@@ -68,6 +68,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     embedder.setWrappingMode(map.get(event.target.value));
   }, false);
 
+  document.querySelector('.fontsize').addEventListener('input', event => {
+    const size = parseInt(event.target.value);
+    embedder.renderer().setFontConfig({
+      ...embedder.renderer().fontConfig(),
+      size
+    });
+  }, false);
+
   document.body.appendChild(embedder.element());
   embedder.element().classList.add('editor');
 
