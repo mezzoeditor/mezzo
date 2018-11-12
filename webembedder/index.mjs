@@ -12,6 +12,7 @@ import { BlockIndentation } from '../plugins/BlockIndentation.mjs';
 import { AddNextOccurence } from '../plugins/AddNextOccurence.mjs';
 import { SearchToolbar } from '../plugins/web/SearchToolbar.mjs';
 import { SuggestBoxController } from '../plugins/web/SuggestBox.mjs';
+import { DOMUtils } from '../src/web/DOMUtils.mjs';
 
 export class WebEmbedder {
   static async createWithWorker(document) {
@@ -35,6 +36,13 @@ export class WebEmbedder {
     this._renderer = renderer;
     this._editor = editor;
     this._renderer.setEditor(this._editor);
+    this._renderer.setFontConfig({
+      family: DOMUtils.isMac() ? 'Menlo' : 'monospace',
+      size: 12,
+      monospace: true,
+      topAscent: 2,
+      bottomDescent: 6
+    });
 
     this._plugins = {
       selectedWordHighlighter: new SelectedWordHighlighter(this._editor),
@@ -127,13 +135,6 @@ export class WebEmbedder {
    */
   element() {
     return this._renderer.element();
-  }
-
-  /**
-   * @param {boolean} enabled
-   */
-  setUseMonospaceFont(enabled) {
-    this._renderer.setUseMonospaceFont(enabled);
   }
 
   setWrappingMode(value) {

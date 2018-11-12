@@ -50,8 +50,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   embedder.document().on('changed', updateTotalSize.bind(null, embedder));
   window.editor = embedder;
 
+  const originalFont = embedder.renderer().fontConfig();
+  const nonmonospaceFont = {
+    family: 'system-ui',
+    size: 12,
+    monospace: false,
+    topAscent: 2,
+    bottomDescent: 6,
+  };
+
   document.querySelector('.ismonospace').addEventListener('change', event => {
-    embedder.setUseMonospaceFont(event.target.checked);
+    embedder.renderer().setFontConfig(event.target.checked ? originalFont : nonmonospaceFont);
   }, false);
 
   document.querySelector('.wrapping').addEventListener('input', event => {

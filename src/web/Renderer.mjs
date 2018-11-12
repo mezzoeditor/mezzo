@@ -14,25 +14,27 @@ import { TextDecorator } from '../core/Decorator.mjs';
  * @implements Measurer
  */
 class ContextBasedMeasurer {
-  constructor(ctx, monospace) {
-    // The following will be shipped soon.
-    // const fontHeight = metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent;
-    const fontHeight = 20;
-    const charHeight = fontHeight - 5;
+  constructor(ctx, fontConfig) {
+    this._fontConfig = fontConfig;
+    const {
+      family,
+      size,
+      monospace,
+      topAscent = 0,
+      bottomDescent = 0,
+    } = fontConfig;
+    this._ctx = ctx;
+    this._lineHeight = size + topAscent + bottomDescent;
+    this._topAscent = topAscent;
 
-    ctx.font = monospace ? '12px Menlo' : '12px BlinkMacSystemFont';
     ctx.textBaseline = 'top';
+    ctx.font = `${size}px ${family}`;
 
-    this.textOffset = fontHeight - (3 + charHeight);
-
-    this.width9 = ctx.measureText('9').width;
-    this.widthM = ctx.measureText('M').width;
-    this.widthBox = this.width9 * 1.5;
+    this._width9 = ctx.measureText('9').width;
+    this._widthBox = this._width9 * 1.5;
 
     this._defaultWidth = monospace ? ctx.measureText('M').width : 1;
     this._defaultRegex = monospace ? Metrics.asciiRegexWithNewLines : null;
-    this._lineHeight = fontHeight;
-    this._ctx = ctx;
   }
 
   defaultWidth() {
@@ -124,7 +126,6 @@ export class Renderer {
     this._element.appendChild(this._input);
 
     this._theme = DefaultTheme;
-    this._monospace = true;
     this._wrappingMode = WrappingMode.None;
     this._hiddenRangesDecorator = new TextDecorator(false /* createHandles */);
     this._eventListeners = [];
@@ -135,7 +136,13 @@ export class Renderer {
     this._cssWidth = 0;
     this._cssHeight = 0;
     this._ratio = this._getRatio();
-    this._measurer = new ContextBasedMeasurer(this._canvas.getContext('2d'), this._monospace);
+    this._measurer = new ContextBasedMeasurer(this._canvas.getContext('2d'), {
+      family: 'monospace',
+      size: 12,
+      monospace: true,
+      topAscent: 2,
+      bottomDescent: 2,
+    });
 
     this._render = this._render.bind(this);
 
@@ -410,7 +417,7 @@ export class Renderer {
         return false;
       const min = Math.min(lastCursor.anchor, lastCursor.focus);
       const max = Math.max(lastCursor.anchor, lastCursor.focus);
-      const width = this._measurer.widthBox;
+      const width = this._measurer._widthBox;
       const metrics = {length: 0, firstWidth: width, lastWidth: width, longestWidth: width};
       this._editor.markup().hideRange(min + 0.5, max, {metrics});
       this._hiddenRangesDecorator.add(min - 1, max + 1, 'hiddenrange');
@@ -632,7 +639,7 @@ export class Renderer {
     this._canvas.height = cssHeight * this._ratio;
     this._canvas.style.width = cssWidth + 'px';
     this._canvas.style.height = cssHeight + 'px';
-    this._measurer = new ContextBasedMeasurer(this._canvas.getContext('2d'), this._monospace);
+    this._measurer = new ContextBasedMeasurer(this._canvas.getContext('2d'), this._measurer._fontConfig);
     // TODO: Updating in markup every time is slow, but not doing it might be wrong on
     // scale change. We should detect that.
     // if (zoomHasChanged())
@@ -653,12 +660,12 @@ export class Renderer {
       this._editor.platformSupport().throttle(100);
   }
 
-  /**
-   * @param {boolean} monospace
-   */
-  setUseMonospaceFont(monospace) {
-    this._monospace = monospace;
-    this._measurer = new ContextBasedMeasurer(this._canvas.getContext('2d'), this._monospace);
+  fontConfig() {
+    return {...this._measurer._fontConfig};
+  }
+
+  setFontConfig(fontConfig) {
+    this._measurer = new ContextBasedMeasurer(this._canvas.getContext('2d'), fontConfig);
     if (this._editor)
       this._editor.markup().setMeasurer(this._measurer);
     this._invalidate();
@@ -840,7 +847,7 @@ export class Renderer {
     // To properly handle input events, we have to update rects synchronously.
 
     const gutterLength = (Math.max(this._editor.document().text().lineCount(), 100) + '').length;
-    const gutterWidth = this._measurer.width9 * gutterLength;
+    const gutterWidth = this._measurer._width9 * gutterLength;
     this._gutterRect.width = gutterWidth + GUTTER_PADDING_LEFT + GUTTER_PADDING_RIGHT;
     this._gutterRect.height = this._cssHeight;
 
@@ -1055,7 +1062,7 @@ export class Renderer {
 
     ctx.textAlign = 'right';
     ctx.fillStyle = 'rgb(128, 128, 128)';
-    const textOffset = this._measurer.textOffset;
+    const topAscent = this._measurer._topAscent;
     const textX = width - GUTTER_PADDING_RIGHT;
     let joinFirstTwo = false;
     if (frame.lines.length >= 2 &&
@@ -1068,11 +1075,11 @@ export class Renderer {
       if (i < 2 && joinFirstTwo) {
         if (i === 0) {
           const number = (line.first + 1) + '';
-          ctx.fillText(number, textX, textOffset);
+          ctx.fillText(number, textX, topAscent);
         }
       } else if (i === 0 || line.first !== frame.lines[i - 1].first) {
         const number = (line.first + 1) + '';
-        ctx.fillText(number, textX, line.y + ty + textOffset);
+        ctx.fillText(number, textX, line.y + ty + topAscent);
       }
     }
     ctx.restore();
@@ -1145,18 +1152,18 @@ export class Renderer {
       }
     }
 
-    const textOffset = this._measurer.textOffset;
+    const topAscent = this._measurer._topAscent;
     for (let {x, y, content, style} of frame.text) {
       const theme = this._theme[style];
       if (theme && theme.text) {
         ctx.fillStyle = theme.text.color || 'rgb(33, 33, 33)';
-        ctx.fillText(content, tx + x, ty + y + textOffset);
+        ctx.fillText(content, tx + x, ty + y + topAscent);
       }
     }
 
     for (let {x, y, widget} of frame.widgets) {
       const x1 = tx + x + 1;
-      const w = this._measurer.widthBox - 2;
+      const w = this._measurer._widthBox - 2;
       const y1 = ty + y + (lineHeight - w) / 2;
       const h = w;
 
