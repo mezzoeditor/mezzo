@@ -17,7 +17,9 @@ export class SplitComponent extends HTMLElement {
     this.setLeftWidth(300);
 
     this._mouseDownPosition = null;
+    this._mouseMovePosition = null;
     this._mouseDownWidth = 0;
+    this._pendingResize = 0;
   }
 
   setLeftWidth(width) {
@@ -37,13 +39,20 @@ export class SplitComponent extends HTMLElement {
   _onMouseMove(event) {
     if (!this._mouseDownPosition)
       return;
-    let coordinates = this._mouseCoordinates(event);
-    let delta = coordinates.x - this._mouseDownPosition.x;
+    this._mouseMovePosition = this._mouseCoordinates(event);
+    if (!this._pendingResize)
+      this._pendingResize = requestAnimationFrame(() => this._handleResize());
+  }
+
+  _handleResize() {
+    this._pendingResize = 0;
+    let delta = this._mouseMovePosition.x - this._mouseDownPosition.x;
     this.setLeftWidth(this._mouseDownWidth + delta);
   }
 
   _onMouseUp(event) {
     this._mouseDownPosition = null;
+    this._mouseMovePosition = null;
     this._divider.classList.remove('dragging');
   }
 
