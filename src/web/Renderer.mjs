@@ -17,24 +17,25 @@ class ContextBasedMeasurer {
   constructor(ctx, fontConfig) {
     this._fontConfig = fontConfig;
     const {
-      family,
-      size,
-      monospace,
       topAscent = 0,
       bottomDescent = 0,
     } = fontConfig;
-    this._ctx = ctx;
-    this._lineHeight = size + topAscent + bottomDescent;
+    this._lineHeight = fontConfig.size + topAscent + bottomDescent;
     this._topAscent = topAscent;
 
-    ctx.textBaseline = 'top';
-    ctx.font = `${size}px ${family}`;
+    this._resetContext(ctx);
 
     this._width9 = ctx.measureText('9').width;
     this._widthBox = this._width9 * 1.5;
 
-    this._defaultWidth = monospace ? ctx.measureText('M').width : 1;
-    this._defaultRegex = monospace ? Metrics.asciiRegexWithNewLines : null;
+    this._defaultWidth = fontConfig.monospace ? ctx.measureText('M').width : 1;
+    this._defaultRegex = fontConfig.monospace ? Metrics.asciiRegexWithNewLines : null;
+  }
+
+  _resetContext(context) {
+    this._ctx = context;
+    this._ctx.textBaseline = 'top';
+    this._ctx.font = `${this._fontConfig.size}px ${this._fontConfig.family}`;
   }
 
   defaultWidth() {
@@ -639,11 +640,14 @@ export class Renderer {
     this._canvas.height = cssHeight * this._ratio;
     this._canvas.style.width = cssWidth + 'px';
     this._canvas.style.height = cssHeight + 'px';
-    this._measurer = new ContextBasedMeasurer(this._canvas.getContext('2d'), this._measurer._fontConfig);
+    // Update measurer context since the old one is destroyed.
+    this._measurer._resetContext(this._canvas.getContext('2d'));
     // TODO: Updating in markup every time is slow, but not doing it might be wrong on
     // scale change. We should detect that.
-    // if (zoomHasChanged())
+    // if (zoomHasChanged()) {
+    //   this._measurer = new ContextBasedMeasurer(this._canvas.getContext('2d'), this._measurer._fontConfig);
     //   this._editor.markup().setMeasurer(this._measurer);
+    // }
 
     this._invalidate();
     if (this._editor && this._wrappingMode !== WrappingMode.None)
