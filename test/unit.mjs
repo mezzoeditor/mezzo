@@ -20,6 +20,12 @@ if (fs.existsSync(options.outputFolder))
 
 (async () => {
   // Core unit tests
+  (await import('../src/text/Text.spec.mjs')).addTests(runner, expect, options);
+  (await import('../src/text/TextIterator.spec.mjs')).addTests(runner, expect, options);
+  (await import('../src/text/TextMeasurer.spec.mjs')).addTests(runner, expect, options);
+  (await import('../src/text/TextUtils.spec.mjs')).addTests(runner, expect, options);
+  (await import('../src/utils/OrderedMonoidTree.spec.mjs')).addTests(runner, expect, options);
+
   (await import('../src/core/Document.spec.mjs')).addTests(runner, expect, options);
   (await import('../src/core/TextIterator.spec.mjs')).addTests(runner, expect, options);
   (await import('../src/core/Markup.spec.mjs')).addTests(runner, expect, options);

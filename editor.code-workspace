@@ -11,6 +11,12 @@
 		"editor.formatOnType": false,
 		"editor.formatOnPaste": false,
 		"files.trimTrailingWhitespace": true,
-		"editor.trimAutoWhitespace": true
+		"editor.trimAutoWhitespace": true,
+		"javascript.suggest.enabled": false,
+		"jsDocCompletion.enabled": false,
+		"typescript.suggest.enabled": false,
+		"javascript.format.insertSpaceAfterCommaDelimiter": false,
+		"typescript.format.insertSpaceAfterCommaDelimiter": false,
+		"editor.acceptSuggestionOnCommitCharacter": false
 	}
 }
