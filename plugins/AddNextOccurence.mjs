@@ -1,4 +1,4 @@
-import { Document } from '../src/core/Document.mjs';
+import { Document } from '../src/text/Document.mjs';
 import { Tokenizer } from '../src/editor/Tokenizer.mjs';
 
 export class AddNextOccurence {

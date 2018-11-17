@@ -1,6 +1,6 @@
 import {Random} from './Random.mjs';
 import {Metrics, RoundMode} from './Metrics.mjs';
-import {Document} from './Document.mjs';
+import {Document} from '../text/Document.mjs';
 import {Markup} from './Markup.mjs';
 import {TestPlatformSupport} from '../../test/utils.mjs';
 

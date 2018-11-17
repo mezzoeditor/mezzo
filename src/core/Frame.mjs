@@ -1,4 +1,4 @@
-import { Document } from './Document.mjs';
+import { Document } from '../text/Document.mjs';
 
 /**
  * @typedef {{

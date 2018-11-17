@@ -1,6 +1,5 @@
-import {Metrics} from './Metrics.mjs';
-import {Document} from './Document.mjs';
-import {Random} from './Random.mjs';
+import { Document } from './Document.mjs';
+import { Random } from '../utils/Random.mjs';
 
 export function addTests(runner, expect) {
   const {describe, xdescribe, fdescribe} = runner;
@@ -9,33 +8,33 @@ export function addTests(runner, expect) {
 
   describe('Document text API', () => {
     it('Document.replace all chunk sizes', () => {
-      let random = Random(142);
-      let lineCount = 10;
-      let chunks = [];
+      const random = Random(142);
+      const lineCount = 10;
+      const chunks = [];
       for (let i = 0; i < lineCount; i++) {
-        let s = 'abcdefg';
-        let length = 1 + (random() % (s.length - 1));
+        const s = 'abcdefg';
+        const length = 1 + (random() % (s.length - 1));
         chunks.push(s.substring(0, length) + '\n');
       }
       let content = chunks.join('');
 
-      let editQueries = [];
+      const editQueries = [];
       for (let i = 0; i < 20; i++) {
-        let from = random() % content.length;
-        let to = from + (random() % (content.length - from));
-        let s = 'abcdefg\n';
-        let length = 1 + (random() % (s.length - 1));
-        let insertion = s.substring(0, length);
+        const from = random() % content.length;
+        const to = from + (random() % (content.length - from));
+        const s = 'abcdefg\n';
+        const length = 1 + (random() % (s.length - 1));
+        const insertion = s.substring(0, length);
         editQueries.push({from, to, insertion});
         content = content.substring(0, from) + insertion + content.substring(to, content.length);
       }
 
       for (let chunkSize = 1; chunkSize <= 100; chunkSize++) {
         content = chunks.join('');
-        let document = new Document();
+        const document = new Document();
         Document.test.setContent(document, content, chunkSize);
-        for (let {from, to, insertion} of editQueries) {
-          let removed = document.replace(from, to, insertion);
+        for (const {from, to, insertion} of editQueries) {
+          const removed = document.replace(from, to, insertion);
           expect(removed.length()).toBe(to - from);
           expect(removed.content(0, to - from)).toBe(content.substring(from, to));
           content = content.substring(0, from) + insertion + content.substring(to, content.length);
@@ -48,6 +47,7 @@ export function addTests(runner, expect) {
       }
     });
   });
+
   describe('Document generations', () => {
     it('should increase on replace', () => {
       const document = new Document();
@@ -55,6 +55,7 @@ export function addTests(runner, expect) {
       document.replace(0, 0, 'hello');
       expect(document.generation()).not.toBe(initial);
     });
+
     it('should not increase on selection change', () => {
       const document = new Document();
       document.reset('hello');
@@ -64,6 +65,7 @@ export function addTests(runner, expect) {
       ]);
       expect(document.generation()).toBe(initial);
     });
+
     it('should work with undo/redo', () => {
       const document = new Document();
       const initial = document.generation();

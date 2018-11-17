@@ -3,7 +3,7 @@ import { WrappingMode, Markup, Measurer } from '../core/Markup.mjs';
 import { Frame } from '../core/Frame.mjs';
 import { Editor } from '../editor/Editor.mjs';
 import { trace } from '../core/Trace.mjs';
-import { Document } from '../core/Document.mjs';
+import { Document } from '../text/Document.mjs';
 import { DefaultTheme } from '../default/DefaultTheme.mjs';
 import { Tokenizer } from '../editor/Tokenizer.mjs';
 import { EventEmitter } from '../core/EventEmitter.mjs';

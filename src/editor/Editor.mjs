@@ -1,4 +1,4 @@
-import { Document } from '../core/Document.mjs';
+import { Document } from '../text/Document.mjs';
 import { Decorator } from '../core/Decorator.mjs';
 import { Input } from './Input.mjs';
 import { DefaultHighlighter } from '../default/DefaultHighlighter.mjs';

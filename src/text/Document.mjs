@@ -1,13 +1,13 @@
 import { Text } from './Text.mjs';
-import { EventEmitter } from './EventEmitter.mjs';
+import { EventEmitter } from '../utils/EventEmitter.mjs';
 
 /**
  * @typedef {{
- *   before: !Text,
+ *   before: Text,
  *   offset: number,
- *   inserted: !Text,
- *   removed: !Text,
- *   after: !Text,
+ *   inserted: Text,
+ *   removed: Text,
+ *   after: Text,
  * }} Replacement;
  */
 
@@ -21,7 +21,7 @@ import { EventEmitter } from './EventEmitter.mjs';
 
 /**
  * @typedef {{
- *  replacements: !Array<Replacement>,
+ *  replacements: Array<Replacement>,
  *  oldSelection: ?Array<SelectionRange>,
  *  selectionChanged: boolean,
  * }} DocumentChangedEvent
@@ -31,15 +31,19 @@ export class Document extends EventEmitter {
   constructor() {
     super();
     this._text = new Text();
+    /** @type {Array<SelectionRange>} */
     this._selection = [];
 
     this._operation = 0;
+    /** @type {Array<Replacement>} */
     this._operationReplacements = [];
+    /** @type {?Array<SelectionRange>} */
     this._oldSelection = null;
     this._dispatchingChangedEvent = false;
 
     this._muteHistory = false;
     this._historyGeneration = 0;
+    /** @type {Array<HistoryEntry>} */
     this._history = [new HistoryEntry([] /* replacements */, [] /* selection */, ++this._historyGeneration)];
     this._historyIndex = 0;
   }
@@ -98,7 +102,7 @@ export class Document extends EventEmitter {
   /**
    * Returns selection ranges sorted in an ascending order wrt order
    * of insertion.
-   * @return {!Array<!SelectionRange>}
+   * @return {Array<SelectionRange>}
    */
   selection() {
     return this._selection.slice();
@@ -107,14 +111,14 @@ export class Document extends EventEmitter {
   /**
    * Returns selection ranges sorted in an ascending order wrt offsets
    * in the document.
-   * @return {!Array<!SelectionRange>}
+   * @return {Array<SelectionRange>}
    */
   sortedSelection() {
     return this._selection.slice().sort(selectionRangeComparator);
   }
 
   /**
-   * @param {!Array<!SelectionRange>} ranges
+   * @param {Array<SelectionRange>} ranges
    * @return {boolean}
    */
   setSelection(ranges) {
@@ -137,7 +141,7 @@ export class Document extends EventEmitter {
   }
 
   /**
-   * @return {!Text}
+   * @return {Text}
    */
   text() {
     return this._text;
@@ -156,6 +160,9 @@ export class Document extends EventEmitter {
     this._maybeEmit(historyAction);
   }
 
+  /**
+   * @param {string} historyAction
+   */
   _maybeEmit(historyAction = Document.History.Push) {
     if (this._operation || (!this._operationReplacements.length && !this._oldSelection))
       return;
@@ -174,7 +181,6 @@ export class Document extends EventEmitter {
     this._operationReplacements = [];
     this._oldSelection = null;
 
-    // Update history.
     if (!this._muteHistory) {
       let generation = replacements.length ? ++this._historyGeneration : this._history[this._historyIndex].generation;
       const newEntry = new HistoryEntry(replacements, this._selection, generation);
@@ -193,7 +199,6 @@ export class Document extends EventEmitter {
       }
     }
 
-    // Dispatch event.
     if (this._dispatchingChangedEvent)
       throw new Error('Cannot modify document from-inside change event');
     this._dispatchingChangedEvent = true;
@@ -202,8 +207,8 @@ export class Document extends EventEmitter {
   }
 
   /**
-   * @param {!Text|string} text
-   * @param {!Array<!SelectionRange>} selection
+   * @param {Text|string} text
+   * @param {Array<SelectionRange>} selection
    */
   reset(text, selection = []) {
     if (this._dispatchingChangedEvent)
@@ -217,8 +222,8 @@ export class Document extends EventEmitter {
   /**
    * @param {number} from
    * @param {number} to
-   * @param {!Text|string} insertion
-   * @return {!Text}
+   * @param {Text|string} insertion
+   * @return {Text}
    */
   replace(from, to, insertion) {
     if (this._dispatchingChangedEvent)
@@ -287,7 +292,7 @@ export class Document extends EventEmitter {
   }
 
   /**
-   * @param {!HistoryEntry} entry
+   * @param {number} newHistoryIndex
    */
   _apply(newHistoryIndex) {
     this._muteHistory = true;
@@ -320,8 +325,8 @@ Document.History = {
 };
 
 /**
- * @param {!Array<!SelectionRange>} aRanges
- * @param {!Array<!SelectionRange>} bRanges
+ * @param {Array<SelectionRange>} aRanges
+ * @param {Array<SelectionRange>} bRanges
  * @return {boolean}
  */
 function checkSelectionsEqual(aRanges, bRanges) {
@@ -337,8 +342,8 @@ function checkSelectionsEqual(aRanges, bRanges) {
 }
 
 /**
- * @param {!SelectionRange} a
- * @param {!SelectionRange} b
+ * @param {SelectionRange} a
+ * @param {SelectionRange} b
  * @return {number}
  */
 export function selectionRangeComparator(a, b) {
@@ -350,9 +355,9 @@ export function selectionRangeComparator(a, b) {
 }
 
 /**
- * @return {!Text}
- * @param {!Array<!SelectionRange>} ranges
- * @return {!Array<!SelectionRange>}
+ * @param {Text} text
+ * @param {Array<SelectionRange>} ranges
+ * @return {Array<SelectionRange>}
  */
 function normalizeSelection(text, ranges) {
   if (!ranges.length)
@@ -409,42 +414,49 @@ Document.Events = {
   Changed: 'changed'
 };
 
-Document.test = {};
-
 class HistoryEntry {
   /**
-   * @param {!Array<!Replacement>} replacements
-   * @param {!Array<!SelectionRange>} selection
+   * @param {Array<Replacement>} replacements
+   * @param {Array<SelectionRange>} selection
    */
   constructor(replacements, selection, generation) {
     this.selection = selection;
     this.replacements = replacements;
+    // TODO: make this map optional.
     this.metadata = new Map();
     this.generation = generation;
   }
 
+  /**
+   * @return {boolean}
+   */
   hasTextChanges() {
     return !!this.replacements.length;
   }
 
+  /**
+   * @param {HistoryEntry} oldEntry
+   */
   merge(oldEntry) {
     this.replacements = [...oldEntry.replacements, ...this.replacements];
   }
 }
 
+Document.test = {};
+
 /**
- * @param {!Document} document
- * @param {!Array<string>} chunks
+ * @param {Document} document
+ * @param {Array<string>} chunks
  */
 Document.test.setChunks = function(document, chunks) {
-  document._text = Text.fromChunks(chunks);
+  document._text = Text.test.fromChunks(chunks);
 };
 
 /**
- * @param {!Document} document
+ * @param {Document} document
  * @param {string} content
  * @param {number} chunkSize
  */
 Document.test.setContent = function(document, content, chunkSize) {
-  document._text = Text.fromString(content, chunkSize);
+  document._text = Text.test.fromStringChunked(content, chunkSize);
 };

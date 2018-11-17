@@ -1,7 +1,7 @@
 import { Tokenizer } from "./Tokenizer.mjs";
 import { RoundMode } from '../core/Metrics.mjs';
 import { EventEmitter } from '../core/EventEmitter.mjs';
-import { Document, selectionRangeComparator } from '../core/Document.mjs';
+import { Document, selectionRangeComparator } from '../text/Document.mjs';
 
 /**
  * @typedef {{

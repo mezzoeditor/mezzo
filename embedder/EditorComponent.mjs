@@ -1,6 +1,6 @@
 import { EventEmitter } from '../src/core/EventEmitter.mjs';
 import { Editor } from '../src/editor/Editor.mjs';
-import { Document } from '../src/core/Document.mjs';
+import { Document } from '../src/text/Document.mjs';
 import { Renderer } from '../src/web/Renderer.mjs';
 import { WebPlatformSupport } from '../src/web/WebPlatformSupport.mjs';
 import { JSHighlighter } from '../src/javascript/JSHighlighter.mjs';

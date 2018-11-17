@@ -1,6 +1,6 @@
 import {TestPlatformSupport} from '../../test/utils.mjs';
 import {Thread} from './Thread.mjs';
-import {Document} from '../core/Document.mjs';
+import {Document} from '../text/Document.mjs';
 
 export function addTests(runner, expect, options) {
   const {describe, xdescribe, fdescribe} = runner;

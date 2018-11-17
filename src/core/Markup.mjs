@@ -1,5 +1,5 @@
 import { EventEmitter } from './EventEmitter.mjs';
-import { Document } from './Document.mjs';
+import { Document } from '../text/Document.mjs';
 import { RoundMode, Metrics } from './Metrics.mjs';
 import { Tree } from './Tree.mjs';
 import { VisibleRange } from './Frame.mjs';

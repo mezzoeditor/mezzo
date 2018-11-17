@@ -1,5 +1,5 @@
 import { Decorator} from '../core/Decorator.mjs';
-import { Document } from '../core/Document.mjs';
+import { Document } from '../text/Document.mjs';
 import { EventEmitter } from '../core/EventEmitter.mjs';
 
 export class RemoteCumulativeIndexer extends EventEmitter {

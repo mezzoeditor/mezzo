@@ -1,5 +1,5 @@
 import { EventEmitter } from '../../src/core/EventEmitter.mjs';
-import { Document } from '../../src/core/Document.mjs';
+import { Document } from '../../src/text/Document.mjs';
 import { Input } from '../../src/editor/Input.mjs';
 import { WordDictionary } from '../../plugins/WordDictionary.mjs';
 import { DOMUtils } from '../../src/web/DOMUtils.mjs';

@@ -1,5 +1,4 @@
 import {RoundMode, Metrics} from './Metrics.mjs';
-import {Document} from './Document.mjs';
 
 export function addTests(runner, expect) {
   const {describe, xdescribe, fdescribe} = runner;

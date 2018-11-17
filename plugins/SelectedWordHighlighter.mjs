@@ -1,7 +1,7 @@
 import { EventEmitter } from '../src/core/EventEmitter.mjs';
 import { TextDecorator } from '../src/core/Decorator.mjs';
 import { Tokenizer } from "../src/editor/Tokenizer.mjs";
-import { Document } from "../src/core/Document.mjs";
+import { Document } from "../src/text/Document.mjs";
 
 export class SelectedWordHighlighter {
   /**
