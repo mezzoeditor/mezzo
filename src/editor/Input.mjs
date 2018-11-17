@@ -1,6 +1,6 @@
 import { Tokenizer } from "./Tokenizer.mjs";
 import { RoundMode } from '../core/Metrics.mjs';
-import { EventEmitter } from '../core/EventEmitter.mjs';
+import { EventEmitter } from '../utils/EventEmitter.mjs';
 import { Document, selectionRangeComparator } from '../text/Document.mjs';
 
 /**

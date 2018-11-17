@@ -1,4 +1,4 @@
-import { EventEmitter } from '../src/core/EventEmitter.mjs';
+import { EventEmitter } from '../src/utils/EventEmitter.mjs';
 import { WorkAllocator } from '../src/core/WorkAllocator.mjs';
 import { Document } from '../src/text/Document.mjs';
 

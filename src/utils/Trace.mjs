@@ -1,13 +1,13 @@
-export let trace = {};
-trace.beginGroup = () => {};
-trace.begin = () => {};
-trace.end = () => {};
-trace.count = () => {};
-trace.print = () => {};
-trace.reset = () => {};
-trace.endGroup = () => {};
+export let Trace = {};
+Trace.beginGroup = () => {};
+Trace.begin = () => {};
+Trace.end = () => {};
+Trace.count = () => {};
+Trace.print = () => {};
+Trace.reset = () => {};
+Trace.endGroup = () => {};
 
-trace.setup = function(maxDepth) {
+Trace.setup = function(maxDepth) {
   let stack = [];
   let current;
   let depth = maxDepth === undefined ? Number.NEGATIVE_INFINITY : -maxDepth;
@@ -44,7 +44,7 @@ trace.setup = function(maxDepth) {
     }
   };
 
-  trace.beginGroup = name => {
+  Trace.beginGroup = name => {
     if (++depth > 0)
       return;
     if (current)
@@ -56,12 +56,12 @@ trace.setup = function(maxDepth) {
     };
   };
 
-  trace.begin = timing => {
+  Trace.begin = timing => {
     if (depth < 0 && current)
       startTimes[current.prefix + timing] = window.performance.now();
   };
 
-  trace.end = timing => {
+  Trace.end = timing => {
     if (!(depth < 0) || !current)
       return;
     timing = current.prefix + timing;
@@ -72,16 +72,16 @@ trace.setup = function(maxDepth) {
     timings[timing] = (timings[timing] || 0) + window.performance.now() - start;
   };
 
-  trace.count = counter => {
+  Trace.count = counter => {
     if (depth < 0 && current) {
       counter = current.prefix + counter;
       counters[counter] = (counters[counter] || 0) + 1;
     }
   };
 
-  trace.print = () => current && _print(current.prefix);
+  Trace.print = () => current && _print(current.prefix);
 
-  trace.reset = prefix => {
+  Trace.reset = prefix => {
     prefix = prefix || '';
     _reset(timings, prefix);
     _reset(counters, prefix);
@@ -89,7 +89,7 @@ trace.setup = function(maxDepth) {
     _reset(groupCounters, prefix);
   };
 
-  trace.endGroup = (name, reportCount) => {
+  Trace.endGroup = (name, reportCount) => {
     if (--depth >= 0)
       return;
 
@@ -114,6 +114,6 @@ trace.setup = function(maxDepth) {
 
     reports[name] = 0;
     _print(name);
-    trace.reset(name);
+    Trace.reset(name);
   };
 };

@@ -1,6 +1,6 @@
 import { Decorator} from '../core/Decorator.mjs';
 import { Document } from '../text/Document.mjs';
-import { EventEmitter } from '../core/EventEmitter.mjs';
+import { EventEmitter } from '../utils/EventEmitter.mjs';
 
 export class RemoteCumulativeIndexer extends EventEmitter {
   static async create(remoteDocument, Delegate, options) {

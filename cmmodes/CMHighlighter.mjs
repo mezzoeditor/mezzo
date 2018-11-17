@@ -1,6 +1,6 @@
 import { Decorator, TextDecorator } from '../src/core/Decorator.mjs';
-import { EventEmitter } from '../src/core/EventEmitter.mjs';
-import { trace } from '../src/core/Trace.mjs';
+import { EventEmitter } from '../src/utils/EventEmitter.mjs';
+import { Trace } from '../src/utils/Trace.mjs';
 import {} from './modes/runmode-standalone.js';
 
 export class CMHighlighter {
@@ -111,7 +111,7 @@ export class CMHighlighter {
    * @return {!DecorationResult}
    */
   _onDecorate(visibleContent) {
-    trace.beginGroup(this._mimeType);
+    Trace.beginGroup(this._mimeType);
     const decorator = new TextDecorator();
     const text = this._document.text();
     for (let range of visibleContent.ranges) {
@@ -140,7 +140,7 @@ export class CMHighlighter {
         stream.start = stream.pos;
       }
     }
-    trace.endGroup(this._mimeType);
+    Trace.endGroup(this._mimeType);
     return {text: [decorator]};
   }
 };

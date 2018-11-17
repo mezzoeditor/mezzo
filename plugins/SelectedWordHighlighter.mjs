@@ -1,4 +1,4 @@
-import { EventEmitter } from '../src/core/EventEmitter.mjs';
+import { EventEmitter } from '../src/utils/EventEmitter.mjs';
 import { TextDecorator } from '../src/core/Decorator.mjs';
 import { Tokenizer } from "../src/editor/Tokenizer.mjs";
 import { Document } from "../src/text/Document.mjs";

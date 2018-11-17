@@ -4,8 +4,8 @@ import { WrappingMode } from "../src/core/Markup.mjs";
 import { WebEmbedder } from "../webembedder/index.mjs";
 
 
-import { trace } from "../src/core/Trace.mjs";
-trace.setup();
+import { Trace } from "../src/utils/Trace.mjs";
+Trace.setup();
 
 const examples = [
   'index.html',

@@ -1,4 +1,4 @@
-import {EventEmitter} from '../src/core/EventEmitter.mjs';
+import {EventEmitter} from '../src/utils/EventEmitter.mjs';
 
 export class SmartBraces {
   /**

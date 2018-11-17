@@ -1,5 +1,5 @@
 import { TextDecorator } from '../core/Decorator.mjs';
-import { EventEmitter } from '../core/EventEmitter.mjs';
+import { EventEmitter } from '../utils/EventEmitter.mjs';
 
 export class DefaultHighlighter {
   constructor(editor) {

@@ -2,11 +2,11 @@ import { RoundMode, Metrics } from '../core/Metrics.mjs';
 import { WrappingMode, Markup, Measurer } from '../core/Markup.mjs';
 import { Frame } from '../core/Frame.mjs';
 import { Editor } from '../editor/Editor.mjs';
-import { trace } from '../core/Trace.mjs';
+import { Trace } from '../utils/Trace.mjs';
 import { Document } from '../text/Document.mjs';
 import { DefaultTheme } from '../default/DefaultTheme.mjs';
 import { Tokenizer } from '../editor/Tokenizer.mjs';
-import { EventEmitter } from '../core/EventEmitter.mjs';
+import { EventEmitter } from '../utils/EventEmitter.mjs';
 import { KeymapHandler } from './KeymapHandler.mjs';
 import { TextDecorator } from '../core/Decorator.mjs';
 
@@ -967,7 +967,7 @@ export class Renderer {
       return;
     }
 
-    trace.beginGroup('render');
+    Trace.beginGroup('render');
     this._rendering = true;
 
     this._layers.editor.style.setProperty('left', this._editorRect.x + 'px');
@@ -980,7 +980,7 @@ export class Renderer {
     ctx.clearRect(0, 0, this._cssWidth, this._cssHeight);
     ctx.lineWidth = 1 / this._ratio;
 
-    trace.begin('buildFrame');
+    Trace.begin('buildFrame');
     const frame = new Frame();
     frame.translateLeft = -this._scrollLeft + this._padding.left;
     const translateLeft = -this._scrollLeft + this._padding.left;
@@ -1002,26 +1002,26 @@ export class Renderer {
       minDecorationHeight: 5
     }
     this._editor.markup().buildFrame(frame, contentRect, scrollbar, this._editor.decorationCallbacks());
-    trace.end('buildFrame');
+    Trace.end('buildFrame');
 
-    trace.begin('drawGutter');
+    Trace.begin('drawGutter');
     this._drawGutter(ctx, frame, translateLeft, translateTop);
-    trace.end('drawGutter');
+    Trace.end('drawGutter');
 
-    trace.beginGroup('drawContent');
+    Trace.beginGroup('drawContent');
     this._drawTextAndBackground(ctx, frame, translateLeft, translateTop);
-    trace.endGroup('drawContent');
+    Trace.endGroup('drawContent');
 
-    trace.beginGroup('drawScrollbar');
+    Trace.beginGroup('drawScrollbar');
     ctx.save();
     this._drawScrollbarMarkers(ctx, frame, this._vScrollbar.rect);
     this._drawScrollbar(ctx, this._vScrollbar, true /* isVertical */);
     this._drawScrollbar(ctx, this._hScrollbar, false /* isVertical */);
     ctx.restore();
-    trace.endGroup('drawScrollbar');
+    Trace.endGroup('drawScrollbar');
 
     this._rendering = false;
-    trace.endGroup('render', 50);
+    Trace.endGroup('render', 50);
   }
 
   _drawGutter(ctx, frame, tx, ty) {

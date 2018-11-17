@@ -1,4 +1,4 @@
-import { EventEmitter } from './EventEmitter.mjs';
+import { EventEmitter } from '../utils/EventEmitter.mjs';
 import { Document } from '../text/Document.mjs';
 import { RoundMode, Metrics } from './Metrics.mjs';
 import { Tree } from './Tree.mjs';

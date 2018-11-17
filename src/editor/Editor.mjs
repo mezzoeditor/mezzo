@@ -4,7 +4,7 @@ import { Input } from './Input.mjs';
 import { DefaultHighlighter } from '../default/DefaultHighlighter.mjs';
 import { DefaultTokenizer } from '../default/DefaultTokenizer.mjs';
 import { Markup, Measurer } from '../core/Markup.mjs';
-import { EventEmitter } from '../core/EventEmitter.mjs';
+import { EventEmitter } from '../utils/EventEmitter.mjs';
 import { LineDecorator } from '../core/Decorator.mjs';
 
 export class PlatformSupport {

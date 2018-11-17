@@ -1,8 +1,8 @@
-import { EventEmitter } from '../core/EventEmitter.mjs';
+import { EventEmitter } from '../utils/EventEmitter.mjs';
 import { Parser, TokenTypes, isEqualState, serializeState, deserializeState } from './jslexer/index.mjs';
 import { TextDecorator } from '../core/Decorator.mjs';
 import { CumulativeIndexer, RemoteCumulativeIndexer } from '../editor/CumulativeIndexer.mjs';
-import { trace } from '../core/Trace.mjs';
+import { Trace } from '../utils/Trace.mjs';
 
 const HIGHLIGHT_CHUNK = 20000;
 const STATE_CHUNK = 2000;
@@ -40,7 +40,7 @@ export class JSHighlighter {
    * @return {!DecorationResult}
    */
   _onDecorate(visibleContent) {
-    trace.beginGroup('js');
+    Trace.beginGroup('js');
     let decorator = new TextDecorator();
     for (let range of visibleContent.ranges) {
       let decoration = this._indexer.states().lastStarting(range.from - STATE_CHUNK, range.from + 1);
@@ -66,7 +66,7 @@ export class JSHighlighter {
         }
       }
     }
-    trace.endGroup('js');
+    Trace.endGroup('js');
     return {text: [decorator]};
   }
 };
