@@ -1,5 +1,5 @@
 import { EventEmitter } from '../src/utils/EventEmitter.mjs';
-import { WorkAllocator } from '../src/core/WorkAllocator.mjs';
+import { WorkAllocator } from '../src/utils/WorkAllocator.mjs';
 import { Document } from '../src/text/Document.mjs';
 
 const DEFAULT_OPTIONS = {

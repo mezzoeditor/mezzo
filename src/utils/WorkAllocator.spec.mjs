@@ -1,4 +1,4 @@
-import {WorkAllocator} from './WorkAllocator.mjs';
+import { WorkAllocator } from './WorkAllocator.mjs';
 
 export function addTests(runner, expect) {
   const {describe, xdescribe, fdescribe} = runner;
@@ -20,6 +20,7 @@ export function addTests(runner, expect) {
       allocator.undone(3, 7);
       expect(allocator.workRange()).toBe({from: 0, to: 10});
     });
+
     it('edge inputs', () => {
       const allocator = new WorkAllocator(10);
       expect(allocator.workRange(3, 7)).toBe({from: 3, to: 7});
@@ -33,6 +34,7 @@ export function addTests(runner, expect) {
       allocator.undone(-100, 100);
       expect(allocator.workRange()).toBe({from: 0, to: 10});
     });
+
     it('WarkAllocator.done()', () => {
       // Work: ----------
       const allocator = new WorkAllocator(10);
@@ -63,6 +65,7 @@ export function addTests(runner, expect) {
       expect(allocator.workRange()).toBe({from: 3, to: 4});
       expect(allocator.workRange(5)).toBe({from: 9, to: 10});
     });
+
     it('WarkAllocator.undone()', () => {
       // Work: ----------
       const allocator = new WorkAllocator(10);
@@ -87,22 +90,7 @@ export function addTests(runner, expect) {
       allocator.undone(2, 8);
       expect(allocator.workRange()).toBe({from: 0, to: 8});
     });
-    it('WorkAllocator.resize', () => {
-      // Work: -----
-      const allocator = new WorkAllocator(5);
 
-      // Work: +++++
-      allocator.done();
-      expect(allocator.workRange()).toBe(null);
-
-      // Work: +++++-----
-      allocator.resize(10);
-      expect(allocator.workRange()).toBe({from: 5, to: 10});
-
-      // Work: +++++---
-      allocator.resize(8);
-      expect(allocator.workRange()).toBe({from: 5, to: 8});
-    });
     it('simple mixed', () => {
       // Work: ----------
       const allocator = new WorkAllocator(10);

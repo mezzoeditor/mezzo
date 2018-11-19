@@ -1,4 +1,4 @@
-import { Decorator } from './Decorator.mjs';
+import { RangeTree } from './RangeTree.mjs';
 
 export class WorkAllocator {
   /**
@@ -6,7 +6,7 @@ export class WorkAllocator {
    */
   constructor(size) {
     this._size = size;
-    this._work = new Decorator(false /* createHandles */);
+    this._work = new RangeTree(false /* createHandles */);
     this._addWork(0, size);
   }
 
@@ -105,21 +105,6 @@ export class WorkAllocator {
   replace(from, to, inserted) {
     this._work.replace(from, to, inserted);
     this._size += from - to + inserted;
-  }
-
-  /**
-   * @param {number} size
-   */
-  resize(size) {
-    if (size === this._size)
-      return;
-    if (size > this._size) {
-      this._addWork(this._size, size);
-      this._size = size;
-    } else {
-      this.undone(size);
-      this._size = size;
-    }
   }
 }
 

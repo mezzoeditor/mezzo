@@ -3,7 +3,7 @@ import { Document } from '../text/Document.mjs';
 import { RoundMode, Metrics } from './Metrics.mjs';
 import { Tree } from './Tree.mjs';
 import { VisibleRange } from './Frame.mjs';
-import { WorkAllocator } from './WorkAllocator.mjs';
+import { WorkAllocator } from '../utils/WorkAllocator.mjs';
 import { Decorator } from './Decorator.mjs';
 
 /**
