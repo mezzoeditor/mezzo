@@ -1,4 +1,4 @@
-import { LineDecorator } from '../src/core/Decorator.mjs';
+import { RangeTree } from '../src/utils/RangeTree.mjs';
 import { EventEmitter } from '../src/utils/EventEmitter.mjs';
 import { WorkAllocator } from '../src/utils/WorkAllocator.mjs';
 import { Document } from '../src/text/Document.mjs';
@@ -16,8 +16,7 @@ export class Search extends EventEmitter {
     this._document = editor.document();
 
     this._allocator = new WorkAllocator(0);
-    this._decorator = new LineDecorator('search.match');
-    this._currentMatchDecorator = new LineDecorator('search.match.current');
+    this._matches = new RangeTree();
     this._options = null;
     this._currentMatch = null;
     this._shouldUpdateSelection = false;
@@ -36,14 +35,14 @@ export class Search extends EventEmitter {
    * @return {number}
    */
   matchesCount() {
-    return this._decorator.countAll();
+    return this._matches.countAll();
   }
 
   /**
    * @return {!Array<!Range>}
    */
   matches() {
-    return this._decorator.listAll().map(d => ({from: d.from, to: d.to}));
+    return this._matches.listAll().map(d => ({from: d.from, to: d.to}));
   }
 
   /**
@@ -59,7 +58,7 @@ export class Search extends EventEmitter {
   currentMatchIndex() {
     if (!this._currentMatch)
       return -1;
-    return this._decorator.countStarting(0, this._currentMatch.from);
+    return this._matches.countStarting(0, this._currentMatch.from);
   }
 
   /**
@@ -100,9 +99,9 @@ export class Search extends EventEmitter {
       offset = this._currentMatch.to;
     if (offset === null)
       return false;
-    let match = this._decorator.firstStarting(offset, this._document.text().length());
+    let match = this._matches.firstStarting(offset, this._document.text().length());
     if (!match)
-      match = this._decorator.firstAll();
+      match = this._matches.firstAll();
     if (!match)
       return false;
     this._updateCurrentMatch(match, true, true);
@@ -122,9 +121,9 @@ export class Search extends EventEmitter {
       offset = this._currentMatch.from;
     if (offset === null)
       return false;
-    let match = this._decorator.lastEnding(0, offset);
+    let match = this._matches.lastEnding(0, offset);
     if (!match)
-      match = this._decorator.lastAll();
+      match = this._matches.lastAll();
     if (!match)
       return false;
     this._updateCurrentMatch(match, true, true);
@@ -147,12 +146,12 @@ export class Search extends EventEmitter {
       this._allocator.done(range.from, range.to);
       budget -= range.to - range.from;
     }
-    if (!this._currentMatch && this._decorator.countAll() > 0) {
+    if (!this._currentMatch && this._matches.countAll() > 0) {
       const lastCursor = this._document.lastCursor();
       let fromSelection = lastCursor ? Math.min(lastCursor.anchor, lastCursor.focus) : 0;
       // Prefer matches after cursor if possible.
-      let match = this._decorator.firstStarting(fromSelection, this._document.text().length()) ||
-          this._decorator.firstStarting(0, fromSelection);
+      let match = this._matches.firstStarting(fromSelection, this._document.text().length()) ||
+          this._matches.firstStarting(0, fromSelection);
       this._updateCurrentMatch(match, this._shouldUpdateSelection, this._shouldUpdateSelection);
     }
 
@@ -184,17 +183,23 @@ export class Search extends EventEmitter {
         this._allocator.done(searchRange.from, searchRange.to);
       }
     }
-    if (!this._currentMatch && this._decorator.countAll() > 0) {
+    if (!this._currentMatch && this._matches.countAll() > 0) {
       const lastCursor = this._document.lastCursor();
       let fromSelection = lastCursor ? Math.min(lastCursor.anchor, lastCursor.focus) : 0;
       // Prefer matches after cursor if possible.
-      let match = this._decorator.firstStarting(fromSelection, this._document.text().length()) ||
-          this._decorator.firstStarting(0, fromSelection);
+      let match = this._matches.firstStarting(fromSelection, this._document.text().length()) ||
+          this._matches.firstStarting(0, fromSelection);
       this._updateCurrentMatch(match, this._shouldUpdateSelection, false);
     }
 
     this._emitUpdatedIfNeeded();
-    return {background: [this._decorator, this._currentMatchDecorator], lines: [this._decorator]};
+    const background = [this._matches];
+    if (this._currentMatch) {
+      const currentMatchDecorations = new RangeTree();
+      currentMatchDecorations.add(this._currentMatch.from, this._currentMatch.to, 'search.match.current');
+      background.push(currentMatchDecorations);
+    }
+    return {background, lines: [{style: kMatchStyle, ranges: this._matches}]};
   }
 
   _emitUpdatedIfNeeded() {
@@ -221,7 +226,7 @@ export class Search extends EventEmitter {
       let from = replacement.offset;
       let to = from + replacement.removed.length();
       let inserted = replacement.inserted.length();
-      this._decorator.replace(from, to, inserted);
+      this._matches.replace(from, to, inserted);
       this._allocator.replace(from, to, inserted);
       if (this._currentMatch && this._currentMatch.from >= to) {
         let delta = inserted - (to - from);
@@ -238,8 +243,7 @@ export class Search extends EventEmitter {
   }
 
   _cancel() {
-    this._decorator.clearAll();
-    this._currentMatchDecorator.clearAll();
+    this._matches.clearAll();
     this._currentMatch = null;
     this._options = null;
     if (this._jobId) {
@@ -254,11 +258,8 @@ export class Search extends EventEmitter {
    * @param {boolean} reveal
    */
   _updateCurrentMatch(match, select, reveal) {
-    if (this._currentMatch)
-      this._currentMatchDecorator.clearAll();
     this._currentMatch = match;
     if (this._currentMatch) {
-      this._currentMatchDecorator.add(this._currentMatch.from, this._currentMatch.to);
       // TODO: this probably should not go into history, or it messes up with undo.
       if (select) {
         this._document.setSelection([{
@@ -290,11 +291,11 @@ export class Search extends EventEmitter {
     let {from, to} = range;
     let query = this._options.query;
     const findOptions = { caseInsensetive: !!this._options.caseInsensetive };
-    this._decorator.clearStarting(from, to);
+    this._matches.clearStarting(from, to);
     // NB: iterator constraints are inclusive.
     let iterator = this._document.text().iterator(from, from, to + query.length - 1);
     while (iterator.find(query, findOptions)) {
-      this._decorator.add(iterator.offset, iterator.offset + query.length);
+      this._matches.add(iterator.offset, iterator.offset + query.length, kMatchStyle);
       to = Math.max(to, iterator.offset + query.length);
       iterator.advance(query.length);
     }
@@ -309,4 +310,6 @@ Search.Events = {
 Search.test = {};
 Search.test.setChunkSize = function(search, chunkSize) {
   search._chunkSize = chunkSize;
-}
+};
+
+const kMatchStyle = 'search.match';

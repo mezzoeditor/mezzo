@@ -1,6 +1,6 @@
 import { EventEmitter } from '../utils/EventEmitter.mjs';
 import { Parser, TokenTypes, isEqualState, serializeState, deserializeState } from './jslexer/index.mjs';
-import { TextDecorator } from '../core/Decorator.mjs';
+import { RangeTree } from '../utils/RangeTree.mjs';
 import { CumulativeIndexer, RemoteCumulativeIndexer } from '../editor/CumulativeIndexer.mjs';
 import { Trace } from '../utils/Trace.mjs';
 
@@ -41,11 +41,11 @@ export class JSHighlighter {
    */
   _onDecorate(visibleContent) {
     Trace.beginGroup('js');
-    let decorator = new TextDecorator();
+    let textDecorations = new RangeTree();
     for (let range of visibleContent.ranges) {
       let decoration = this._indexer.states().lastStarting(range.from - STATE_CHUNK, range.from + 1);
       if (!decoration) {
-        decorator.add(range.from, range.to, 'syntax.default');
+        textDecorations.add(range.from, range.to, 'syntax.default');
         continue;
       }
       let parser = new Parser(visibleContent.document.text().iterator(decoration.to, 0, range.to), decoration.data);
@@ -54,20 +54,20 @@ export class JSHighlighter {
           continue;
         let start = Math.max(range.from, token.start);
         if (token.type.keyword || (token.type === TokenTypes.name && token.value === 'let')) {
-          decorator.add(start, token.end, 'syntax.keyword');
+          textDecorations.add(start, token.end, 'syntax.keyword');
         } else if (token.type === TokenTypes.string || token.type === TokenTypes.regexp || token.type === TokenTypes.template) {
-          decorator.add(start, token.end, 'syntax.string');
+          textDecorations.add(start, token.end, 'syntax.string');
         } else if (token.type === TokenTypes.num) {
-          decorator.add(start, token.end, 'syntax.number');
+          textDecorations.add(start, token.end, 'syntax.number');
         } else if (token.type === TokenTypes.blockComment || token.type === TokenTypes.lineComment) {
-          decorator.add(start, token.end, 'syntax.comment');
+          textDecorations.add(start, token.end, 'syntax.comment');
         } else {
-          decorator.add(start, token.end, 'syntax.default');
+          textDecorations.add(start, token.end, 'syntax.default');
         }
       }
     }
     Trace.endGroup('js');
-    return {text: [decorator]};
+    return {text: [textDecorations]};
   }
 };
 

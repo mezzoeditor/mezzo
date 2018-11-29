@@ -1,23 +1,25 @@
 import { Document } from '../text/Document.mjs';
 
 /**
+ * @typedef {RangeTree<string>} TextDecorations
+ * @typedef {RangeTree<string>} BackgroundDecorations
+ * @typedef {{style: string, ranges: RangeTree<undefined>}} LineDecorations
+ *
  * @typedef {{
- *   text: !Array<!TextDecorator>|undefined,
- *   background: !Array<!TextDecorator>|undefined,
- *   lines: !Array<!LineDecorator>|undefined
+ *   text: Array<TextDecorations>|undefined,
+ *   background: Array<BackgroundDecorations>|undefined,
+ *   lines: Array<LineDecorations>|undefined
  * }} DecorationResult
- */
-
-/**
+ *
  * @typedef {{
- *   document: !Document,
- *   range: !Range,
- *   ranges: !Array<!VisibleRange>
+ *   document: Document,
+ *   range: Range,
+ *   ranges: Array<VisibleRange>
  * }} VisibleContent
  */
 
- /**
- * @typedef {function(!VisibleContent):?DecorationResult} DecorationCallback
+/**
+ * @typedef {function(VisibleContent):?DecorationResult} DecorationCallback
  */
 
 export class Frame {

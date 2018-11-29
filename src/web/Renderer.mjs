@@ -8,7 +8,7 @@ import { DefaultTheme } from '../default/DefaultTheme.mjs';
 import { Tokenizer } from '../editor/Tokenizer.mjs';
 import { EventEmitter } from '../utils/EventEmitter.mjs';
 import { KeymapHandler } from './KeymapHandler.mjs';
-import { TextDecorator } from '../core/Decorator.mjs';
+import { RangeTree } from '../utils/RangeTree.mjs';
 
 /**
  * @implements Measurer
@@ -128,7 +128,7 @@ export class Renderer {
 
     this._theme = DefaultTheme;
     this._wrappingMode = WrappingMode.None;
-    this._hiddenRangesDecorator = new TextDecorator(false /* createHandles */);
+    this._hiddenRangesTextDecorations = new RangeTree(false /* createHandles */);
     this._eventListeners = [];
 
     this._animationFrameId = 0;
@@ -269,14 +269,14 @@ export class Renderer {
     if (this._editor)
       EventEmitter.removeEventListeners(this._eventListeners);
     this._editor = editor;
-    this._hiddenRangesDecorator.clearAll();
+    this._hiddenRangesTextDecorations.clearAll();
     if (this._editor) {
       this._editor.markup().setMeasurer(this._measurer);
       this._eventListeners = [
         this._editor.on(Editor.Events.Raf, this.raf.bind(this)),
         this._editor.document().on(Document.Events.Changed, ({replacements, selectionChanged}) => {
           for (const replacement of replacements) {
-            this._hiddenRangesDecorator.replace(replacement.offset,
+            this._hiddenRangesTextDecorations.replace(replacement.offset,
                 replacement.offset + replacement.removed.length(),
                 replacement.inserted.length());
           }
@@ -421,13 +421,13 @@ export class Renderer {
       const width = this._measurer._widthBox;
       const metrics = {length: 0, firstWidth: width, lastWidth: width, longestWidth: width};
       this._editor.markup().hideRange(min + 0.5, max, {metrics});
-      this._hiddenRangesDecorator.add(min - 1, max + 1, 'hiddenrange');
+      this._hiddenRangesTextDecorations.add(min - 1, max + 1, 'hiddenrange');
       return true;
     }
   }
 
   _decorationCallback() {
-    return {background: [this._hiddenRangesDecorator]};
+    return {background: [this._hiddenRangesTextDecorations]};
   }
 
   _setupEventListeners() {

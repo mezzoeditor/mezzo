@@ -1,5 +1,5 @@
 import { EventEmitter } from '../src/utils/EventEmitter.mjs';
-import { TextDecorator } from '../src/core/Decorator.mjs';
+import { RangeTree } from '../src/utils/RangeTree.mjs';
 import { Tokenizer } from "../src/editor/Tokenizer.mjs";
 import { Document } from "../src/text/Document.mjs";
 
@@ -66,7 +66,7 @@ export class SelectedWordHighlighter {
     let tokenizer = this._editor.tokenizer();
     if (!this._selectedWord || !tokenizer)
       return null;
-    const decorator = new TextDecorator();
+    const textDecorations = new RangeTree();
     let word = this._selectedWord;
     for (let range of visibleContent.ranges) {
       let iterator = this._document.text().iterator(range.from - word.length, range.from - word.length, range.to + word.length);
@@ -82,9 +82,9 @@ export class SelectedWordHighlighter {
         iterator.advance(word.length);
         if (tokenizer.isWordChar(iterator.current))
           continue;
-        decorator.add(iterator.offset - word.length, iterator.offset, 'search.match');
+        textDecorations.add(iterator.offset - word.length, iterator.offset, 'search.match');
       }
     }
-    return {background: [decorator]};
+    return {background: [textDecorations]};
   }
 };

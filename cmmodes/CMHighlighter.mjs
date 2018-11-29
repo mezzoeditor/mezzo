@@ -1,4 +1,3 @@
-import { TextDecorator } from '../src/core/Decorator.mjs';
 import { EventEmitter } from '../src/utils/EventEmitter.mjs';
 import { Trace } from '../src/utils/Trace.mjs';
 import { RangeTree } from '../src/utils/RangeTree.mjs';
@@ -113,14 +112,14 @@ export class CMHighlighter {
    */
   _onDecorate(visibleContent) {
     Trace.beginGroup(this._mimeType);
-    const decorator = new TextDecorator();
+    const textDecorations = new RangeTree();
     const text = this._document.text();
     for (let range of visibleContent.ranges) {
       const fromPosition = text.offsetToPosition(range.from);
       const lineOffset = text.positionToOffset({line: fromPosition.line, column: 0});
       const initial = lineOffset === 0 ? this._states.lastStarting(0, 0.5) : this._states.lastStarting(0, lineOffset);
       if (!initial) {
-        decorator.add(range.from, range.to, 'syntax.default');
+        textDecorations.add(range.from, range.to, 'syntax.default');
         continue;
       }
       const state = CodeMirror.copyState(this._mode, initial.data);
@@ -137,12 +136,12 @@ export class CMHighlighter {
           if (type)
             dType = this._cmtokensToTheme.get(type);
         }
-        decorator.add(initial.to + stream.start, initial.to + stream.start + value.length, dType);
+        textDecorations.add(initial.to + stream.start, initial.to + stream.start + value.length, dType);
         stream.start = stream.pos;
       }
     }
     Trace.endGroup(this._mimeType);
-    return {text: [decorator]};
+    return {text: [textDecorations]};
   }
 };
 

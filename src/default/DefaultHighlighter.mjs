@@ -1,4 +1,4 @@
-import { TextDecorator } from '../core/Decorator.mjs';
+import { RangeTree } from '../utils/RangeTree.mjs';
 import { EventEmitter } from '../utils/EventEmitter.mjs';
 
 export class DefaultHighlighter {
@@ -18,8 +18,8 @@ export class DefaultHighlighter {
    */
   _onDecorate(visibleContent) {
     let {from, to} = visibleContent.range;
-    let decorator = new TextDecorator();
-    decorator.add(from, to, 'syntax.default');
-    return {text: [decorator]};
+    let textDecorations = new RangeTree();
+    textDecorations.add(from, to, 'syntax.default');
+    return {text: [textDecorations]};
   }
 };

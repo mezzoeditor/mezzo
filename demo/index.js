@@ -1,4 +1,4 @@
-import { TextDecorator } from "../src/core/Decorator.mjs";
+import { RangeTree } from "../src/utils/RangeTree.mjs";
 import { WrappingMode } from "../src/core/Markup.mjs";
 
 import { WebEmbedder } from "../webembedder/index.mjs";
@@ -163,13 +163,13 @@ class TokenHighlighter {
   _onDecorate(visibleContent) {
     if (!this._token)
       return [];
-    let decorator = new TextDecorator();
+    let textDecorations = new RangeTree();
     for (let range of visibleContent.ranges) {
       let text = range.content(this._token.length, this._token.length);
       let offset = Math.max(0, range.from - this._token.length);
       let index = text.indexOf(this._token);
       while (index !== -1) {
-        decorator.add(
+        textDecorations.add(
           offset + index,
           offset + index + this._token.length,
           ['red', 'green', 'blue'][(offset + index) % 3]
@@ -177,7 +177,7 @@ class TokenHighlighter {
         index = text.indexOf(this._token, index + this._token.length);
       }
     }
-    return {background: [decorator]};
+    return {background: [textDecorations]};
   }
 }
 

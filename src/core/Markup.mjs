@@ -561,12 +561,12 @@ export class Markup extends EventEmitter {
       }
 
       const lineStyles = new Set();
-      for (let decorator of decorators.lines) {
+      for (const {style, ranges} of decorators.lines) {
         // We deliberately do not include |line.start| here
         // to allow line decorations to span the whole line without
         // affecting the next one.
-        if (decorator.countTouching(line.start + 0.5, line.end + 0.5) > 0)
-          lineStyles.add(decorator.style());
+        if (ranges.countTouching(line.start + 0.5, line.end + 0.5) > 0)
+          lineStyles.add(style);
       }
       frame.lines.push({
         first: this._text.offsetToPosition(line.start).line,
@@ -583,10 +583,10 @@ export class Markup extends EventEmitter {
    * @param {!{ratio: number, minDecorationHeight: number}} scrollbarParams
    */
   _buildFrameScrollbar(frame, decorators, {ratio, minDecorationHeight}) {
-    for (let decorator of decorators.lines) {
+    for (const {style, ranges} of decorators.lines) {
       let lastTop = -1;
       let lastBottom = -1;
-      decorator.sparseVisitAll(decoration => {
+      ranges.sparseVisitAll(decoration => {
         const from = this.offsetToPoint(Offset(decoration.from)).y;
         const to = this.offsetToPoint(Offset(decoration.to)).y;
 
@@ -598,7 +598,7 @@ export class Markup extends EventEmitter {
           lastBottom = bottom;
         } else {
           if (lastTop >= 0)
-            frame.scrollbar.push({y: lastTop, height: lastBottom - lastTop, style: decorator.style()});
+            frame.scrollbar.push({y: lastTop, height: lastBottom - lastTop, style});
           lastTop = top;
           lastBottom = bottom;
         }
@@ -607,7 +607,7 @@ export class Markup extends EventEmitter {
         return Math.max(Offset(decoration.to), nextOffset);
       });
       if (lastTop >= 0)
-        frame.scrollbar.push({y: lastTop, height: lastBottom - lastTop, style: decorator.style()});
+        frame.scrollbar.push({y: lastTop, height: lastBottom - lastTop, style});
     }
   }
 };
