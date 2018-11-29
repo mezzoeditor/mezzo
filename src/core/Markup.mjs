@@ -2,7 +2,7 @@ import { EventEmitter } from '../utils/EventEmitter.mjs';
 import { Document } from '../text/Document.mjs';
 import { RoundMode, Metrics } from './Metrics.mjs';
 import { Tree } from './Tree.mjs';
-import { VisibleRange } from './Frame.mjs';
+import { FrameContent, VisibleRange } from './Frame.mjs';
 import { WorkAllocator } from '../utils/WorkAllocator.mjs';
 import { RangeTree } from '../utils/RangeTree.mjs';
 
@@ -382,10 +382,10 @@ export class Markup extends EventEmitter {
   }
 
   /**
-   * @param {!Frame} frame
-   * @param {!{left: number, top: number, width: number, height: number}} rect
-   * @param {!{ratio: number, minDecorationHeight: number}} scrollbarParams
-   * @param {!Array<!DecorationCallback>} decorationCallbacks
+   * @param {Frame} frame
+   * @param {{left: number, top: number, width: number, height: number}} rect
+   * @param {{ratio: number, minDecorationHeight: number}} scrollbarParams
+   * @param {Array<FrameDecorationCallback>} decorationCallbacks
    */
   buildFrame(frame, rect, scrollbarParams, decorationCallbacks) {
     this._frozen = true;
@@ -481,35 +481,26 @@ export class Markup extends EventEmitter {
 
     const joined = joinRanges(ranges, this._document);
     const totalRange = joined.length ? {from: joined[0].from, to: joined[joined.length - 1].to} : {from: 0, to: 0};
-    const visibleContent = {
-      document: this._document,
-      range: totalRange,
-      ranges: joined,
-    };
 
-    const decorators = {text: [], background: [], lines: []};
-    for (let decorationCallback of decorationCallbacks) {
-      const partial = decorationCallback(visibleContent);
-      if (!partial)
-        continue;
-      decorators.text.push(...(partial.text || []));
-      decorators.background.push(...(partial.background || []));
-      decorators.lines.push(...(partial.lines || []));
-    }
+    const frameContent = new FrameContent(this._document);
+    frameContent.range = totalRange;
+    frameContent.ranges = joined;
+    for (const decorationCallback of decorationCallbacks)
+      decorationCallback(frameContent);
 
-    this._buildFrameContents(frame, lines, decorators);
-    this._buildFrameScrollbar(frame, decorators, scrollbarParams);
+    this._buildFrameContents(frame, lines, frameContent);
+    this._buildFrameScrollbar(frame, frameContent, scrollbarParams);
 
     this._frozen = false;
     this._lastFrameRange = totalRange;
   }
 
   /**
-   * @param {!Frame} frame
-   * @param {!Array<!Line>} lines
-   * @param {!DecorationResult} decorators
+   * @param {Frame} frame
+   * @param {Array<Line>} lines
+   * @param {FrameContent} frameContent
    */
-  _buildFrameContents(frame, lines, decorators) {
+  _buildFrameContents(frame, lines, frameContent) {
     for (let line of lines) {
       let rangeIndex = 0;
       for (let {from, to, x, metrics} of line.ranges) {
@@ -518,8 +509,8 @@ export class Markup extends EventEmitter {
         const rangeContent = this._text.content(from, to);
         metrics.fillXMap(offsetToX, needsRtlBreakAfter, rangeContent, x, this._defaultWidth);
 
-        for (let decorator of decorators.text) {
-          decorator.visitTouching(from, to + 0.5, decoration => {
+        for (const ranges of frameContent.textDecorations) {
+          ranges.visitTouching(from, to + 0.5, decoration => {
             let dFrom = Math.max(from, Offset(decoration.from));
             const dTo = Math.min(to, Offset(decoration.to));
             while (dFrom < dTo) {
@@ -539,10 +530,10 @@ export class Markup extends EventEmitter {
 
         const rangeLeft = rangeIndex === 0 ? frame.lineLeft : offsetToX[0];
         const rangeRight = rangeIndex === line.ranges.length - 1 ? frame.lineRight : offsetToX[to - from];
-        for (let decorator of decorators.background) {
+        for (const ranges of frameContent.backgroundDecorations) {
           // Expand by a single character which is not visible to account for borders
           // extending past viewport.
-          decorator.visitTouching(from - 1, to + 1, decoration => {
+          ranges.visitTouching(from - 1, to + 1, decoration => {
             let dFrom = Offset(decoration.from);
             let left = dFrom < line.start ? rangeLeft : offsetToX[Math.max(dFrom, from) - from];
             let dTo = Offset(decoration.to);
@@ -561,7 +552,7 @@ export class Markup extends EventEmitter {
       }
 
       const lineStyles = new Set();
-      for (const {style, ranges} of decorators.lines) {
+      for (const {style, ranges} of frameContent.lineDecorations) {
         // We deliberately do not include |line.start| here
         // to allow line decorations to span the whole line without
         // affecting the next one.
@@ -578,12 +569,12 @@ export class Markup extends EventEmitter {
   }
 
   /**
-   * @param {!Frame} frame
-   * @param {!DecorationResult} decorators
-   * @param {!{ratio: number, minDecorationHeight: number}} scrollbarParams
+   * @param {Frame} frame
+   * @param {FrameContent} frameContent
+   * @param {{ratio: number, minDecorationHeight: number}} scrollbarParams
    */
-  _buildFrameScrollbar(frame, decorators, {ratio, minDecorationHeight}) {
-    for (const {style, ranges} of decorators.lines) {
+  _buildFrameScrollbar(frame, frameContent, {ratio, minDecorationHeight}) {
+    for (const {style, ranges} of frameContent.lineDecorations) {
       let lastTop = -1;
       let lastBottom = -1;
       ranges.sparseVisitAll(decoration => {

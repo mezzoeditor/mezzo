@@ -208,7 +208,10 @@ class SuggestBox {
     this._editor.raf();
   }
 
-  _render() {
+  /**
+   * @param {FrameContent} frameContent
+   */
+  _render(frameContent) {
     if (this._anchorHandle.removed()) {
       this._controller._hideSuggestBox();
       return;

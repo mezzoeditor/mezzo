@@ -59,17 +59,16 @@ export class SelectedWordHighlighter {
   }
 
   /**
-   * @param {!VisibleContent} visibleContent
-   * @return {?DecorationResult}
+   * @param {FrameContent} frameContent
    */
-  _onDecorate(visibleContent) {
-    let tokenizer = this._editor.tokenizer();
+  _onDecorate(frameContent) {
+    const tokenizer = this._editor.tokenizer();
     if (!this._selectedWord || !tokenizer)
       return null;
-    const textDecorations = new RangeTree();
-    let word = this._selectedWord;
-    for (let range of visibleContent.ranges) {
-      let iterator = this._document.text().iterator(range.from - word.length, range.from - word.length, range.to + word.length);
+    const decorations = new RangeTree();
+    const word = this._selectedWord;
+    for (const range of frameContent.ranges) {
+      const iterator = this._document.text().iterator(range.from - word.length, range.from - word.length, range.to + word.length);
       while (iterator.find(word)) {
         if (iterator.offset === this._selectedWordRange.from) {
           iterator.next();
@@ -82,9 +81,9 @@ export class SelectedWordHighlighter {
         iterator.advance(word.length);
         if (tokenizer.isWordChar(iterator.current))
           continue;
-        textDecorations.add(iterator.offset - word.length, iterator.offset, 'search.match');
+        decorations.add(iterator.offset - word.length, iterator.offset, 'search.match');
       }
     }
-    return {background: [textDecorations]};
+    frameContent.backgroundDecorations.push(decorations);
   }
 };

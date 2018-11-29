@@ -36,38 +36,37 @@ export class JSHighlighter {
   }
 
   /**
-   * @param {!VisibleContent} visibleContent
-   * @return {!DecorationResult}
+   * @param {FrameContent} frameContent
    */
-  _onDecorate(visibleContent) {
+  _onDecorate(frameContent) {
     Trace.beginGroup('js');
-    let textDecorations = new RangeTree();
-    for (let range of visibleContent.ranges) {
-      let decoration = this._indexer.states().lastStarting(range.from - STATE_CHUNK, range.from + 1);
-      if (!decoration) {
-        textDecorations.add(range.from, range.to, 'syntax.default');
+    const decorations = new RangeTree();
+    for (const range of frameContent.ranges) {
+      const state = this._indexer.states().lastStarting(range.from - STATE_CHUNK, range.from + 1);
+      if (!state) {
+        decorations.add(range.from, range.to, 'syntax.default');
         continue;
       }
-      let parser = new Parser(visibleContent.document.text().iterator(decoration.to, 0, range.to), decoration.data);
-      for (let token of parser) {
+      const parser = new Parser(frameContent.document.text().iterator(state.to, 0, range.to), state.data);
+      for (const token of parser) {
         if (token.end <= range.from)
           continue;
-        let start = Math.max(range.from, token.start);
+        const start = Math.max(range.from, token.start);
         if (token.type.keyword || (token.type === TokenTypes.name && token.value === 'let')) {
-          textDecorations.add(start, token.end, 'syntax.keyword');
+          decorations.add(start, token.end, 'syntax.keyword');
         } else if (token.type === TokenTypes.string || token.type === TokenTypes.regexp || token.type === TokenTypes.template) {
-          textDecorations.add(start, token.end, 'syntax.string');
+          decorations.add(start, token.end, 'syntax.string');
         } else if (token.type === TokenTypes.num) {
-          textDecorations.add(start, token.end, 'syntax.number');
+          decorations.add(start, token.end, 'syntax.number');
         } else if (token.type === TokenTypes.blockComment || token.type === TokenTypes.lineComment) {
-          textDecorations.add(start, token.end, 'syntax.comment');
+          decorations.add(start, token.end, 'syntax.comment');
         } else {
-          textDecorations.add(start, token.end, 'syntax.default');
+          decorations.add(start, token.end, 'syntax.default');
         }
       }
     }
+    frameContent.textDecorations.push(decorations);
     Trace.endGroup('js');
-    return {text: [textDecorations]};
   }
 };
 

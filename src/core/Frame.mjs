@@ -1,25 +1,49 @@
 import { Document } from '../text/Document.mjs';
 
-/**
- * @typedef {RangeTree<string>} TextDecorations
- * @typedef {RangeTree<string>} BackgroundDecorations
- * @typedef {{style: string, ranges: RangeTree<undefined>}} LineDecorations
- *
- * @typedef {{
- *   text: Array<TextDecorations>|undefined,
- *   background: Array<BackgroundDecorations>|undefined,
- *   lines: Array<LineDecorations>|undefined
- * }} DecorationResult
- *
- * @typedef {{
- *   document: Document,
- *   range: Range,
- *   ranges: Array<VisibleRange>
- * }} VisibleContent
- */
+export class FrameContent {
+  /**
+   * @param {Document} document
+   */
+  constructor(document) {
+    /** @type {Document} */
+    this.document = document;
+
+    /**
+     * The total range of frame contents.
+     * @type {Range}
+     */
+    this.range = {from: 0, to: 0};
+
+    /**
+     * Continuous ranges of visible text in the frame.
+     * @type {Array<VisibleRange>}
+     */
+    this.ranges = [];
+
+    /**
+     * Ranges with styles used to decorate the text.
+     * @type {Array<RangeTree<string>>}
+     */
+    this.textDecorations = [];
+
+    /**
+     * Ranges with styles used to decorate the text background.
+     * @type {Array<RangeTree<string>>}
+     */
+    this.backgroundDecorations = [];
+
+    /**
+     * Ranges with styles used to decorate the lines.
+     * Note that ranges should be grouped by style for
+     * efficient processing, as opposite to text/background.
+     * @type {Array<{style: string, ranges: RangeTree<>}>}
+     */
+    this.lineDecorations = [];
+  }
+};
 
 /**
- * @typedef {function(VisibleContent):?DecorationResult} DecorationCallback
+ * @typedef {function(FrameContent)} FrameDecorationCallback
  */
 
 export class Frame {
@@ -48,7 +72,7 @@ export class Frame {
 
 export class VisibleRange {
   /**
-   * @param {!Document} document
+   * @param {Document} document
    * @param {number} from
    * @param {number} to
    */

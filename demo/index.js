@@ -160,16 +160,16 @@ class TokenHighlighter {
     this._editor.raf();
   }
 
-  _onDecorate(visibleContent) {
+  _onDecorate(frameContent) {
     if (!this._token)
       return [];
-    let textDecorations = new RangeTree();
-    for (let range of visibleContent.ranges) {
-      let text = range.content(this._token.length, this._token.length);
-      let offset = Math.max(0, range.from - this._token.length);
+    const decorations = new RangeTree();
+    for (const range of frameContent.ranges) {
+      const text = range.content(this._token.length, this._token.length);
+      const offset = Math.max(0, range.from - this._token.length);
       let index = text.indexOf(this._token);
       while (index !== -1) {
-        textDecorations.add(
+        decorations.add(
           offset + index,
           offset + index + this._token.length,
           ['red', 'green', 'blue'][(offset + index) % 3]
@@ -177,7 +177,7 @@ class TokenHighlighter {
         index = text.indexOf(this._token, index + this._token.length);
       }
     }
-    return {background: [textDecorations]};
+    frameContent.backgroundDecorations.push(decorations);
   }
 }
 

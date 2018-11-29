@@ -170,13 +170,12 @@ export class Search extends EventEmitter {
   // ------ Internals -------
 
   /**
-   * @param {!VisibleContent} visibleContent
-   * @return {?DecorationResult}
+   * @param {FrameContent} frameContent
    */
-  _onDecorate(visibleContent) {
+  _onDecorate(frameContent) {
     if (!this._options)
       return null;
-    for (let range of visibleContent.ranges) {
+    for (const range of frameContent.ranges) {
       let searchRange = null;
       while (searchRange = this._allocator.workRange(range.from, range.to)) {
         searchRange = this._searchRange(searchRange);
@@ -193,13 +192,13 @@ export class Search extends EventEmitter {
     }
 
     this._emitUpdatedIfNeeded();
-    const background = [this._matches];
+    frameContent.backgroundDecorations.push(this._matches);
+    frameContent.lineDecorations.push({style: kMatchStyle, ranges: this._matches});
     if (this._currentMatch) {
       const currentMatchDecorations = new RangeTree();
       currentMatchDecorations.add(this._currentMatch.from, this._currentMatch.to, 'search.match.current');
-      background.push(currentMatchDecorations);
+      frameContent.backgroundDecorations.push(currentMatchDecorations);
     }
-    return {background, lines: [{style: kMatchStyle, ranges: this._matches}]};
   }
 
   _emitUpdatedIfNeeded() {

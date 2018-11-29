@@ -107,19 +107,18 @@ export class CMHighlighter {
   }
 
   /**
-   * @param {!VisibleContent} visibleContent
-   * @return {!DecorationResult}
+   * @param {FrameContent} frameContent
    */
-  _onDecorate(visibleContent) {
+  _onDecorate(frameContent) {
     Trace.beginGroup(this._mimeType);
-    const textDecorations = new RangeTree();
+    const decorations = new RangeTree();
     const text = this._document.text();
-    for (let range of visibleContent.ranges) {
+    for (const range of frameContent.ranges) {
       const fromPosition = text.offsetToPosition(range.from);
       const lineOffset = text.positionToOffset({line: fromPosition.line, column: 0});
       const initial = lineOffset === 0 ? this._states.lastStarting(0, 0.5) : this._states.lastStarting(0, lineOffset);
       if (!initial) {
-        textDecorations.add(range.from, range.to, 'syntax.default');
+        decorations.add(range.from, range.to, 'syntax.default');
         continue;
       }
       const state = CodeMirror.copyState(this._mode, initial.data);
@@ -136,12 +135,12 @@ export class CMHighlighter {
           if (type)
             dType = this._cmtokensToTheme.get(type);
         }
-        textDecorations.add(initial.to + stream.start, initial.to + stream.start + value.length, dType);
+        decorations.add(initial.to + stream.start, initial.to + stream.start + value.length, dType);
         stream.start = stream.pos;
       }
     }
     Trace.endGroup(this._mimeType);
-    return {text: [textDecorations]};
+    frameContent.textDecorations.push(decorations);
   }
 };
 

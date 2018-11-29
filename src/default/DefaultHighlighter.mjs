@@ -13,13 +13,12 @@ export class DefaultHighlighter {
   }
 
   /**
-   * @param {!VisibleContent} visibleContent
-   * @return {!DecorationResult}
+   * @param {FrameContent} frameContent
    */
-  _onDecorate(visibleContent) {
-    let {from, to} = visibleContent.range;
-    let textDecorations = new RangeTree();
-    textDecorations.add(from, to, 'syntax.default');
-    return {text: [textDecorations]};
+  _onDecorate(frameContent) {
+    const {from, to} = frameContent.range;
+    const decorations = new RangeTree();
+    decorations.add(from, to, 'syntax.default');
+    frameContent.textDecorations.push(decorations);
   }
 };

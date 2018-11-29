@@ -269,10 +269,9 @@ class SelectionDecorator {
   }
 
   /**
-   * @param {!VisibleContent} visibleContent
-   * @return {!DecorationResult}
+   * @param {FrameContent} frameContent
    */
-  _onDecorate(visibleContent) {
+  _onDecorate(frameContent) {
     if (this._staleDecorations) {
       this._staleDecorations = false;
       this._ranges.clearAll();
@@ -293,7 +292,8 @@ class SelectionDecorator {
         }
       }
     }
-    return {background: [this._ranges, this._focus], lines: [{style: kSelectionRangeStyle, ranges: this._ranges}]};
+    frameContent.backgroundDecorations.push(this._ranges, this._focus);
+    frameContent.lineDecorations.push({style: kSelectionRangeStyle, ranges: this._ranges});
   }
 }
 

@@ -426,8 +426,11 @@ export class Renderer {
     }
   }
 
-  _decorationCallback() {
-    return {background: [this._hiddenRangesTextDecorations]};
+  /**
+   * @param {FrameContent} frameContent
+   */
+  _decorationCallback(frameContent) {
+    frameContent.backgroundDecorations.push(this._hiddenRangesTextDecorations);
   }
 
   _setupEventListeners() {
