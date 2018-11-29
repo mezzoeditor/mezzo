@@ -1,5 +1,5 @@
 import { Document } from '../text/Document.mjs';
-import { Decorator } from '../core/Decorator.mjs';
+import { RangeTree } from '../utils/RangeTree.mjs';
 import { Input } from './Input.mjs';
 import { DefaultHighlighter } from '../default/DefaultHighlighter.mjs';
 import { DefaultTokenizer } from '../default/DefaultTokenizer.mjs';
@@ -64,7 +64,7 @@ export class Editor extends EventEmitter {
    */
   constructor(document, measurer, platformSupport, remoteDocument) {
     super();
-    this._handles = new Decorator(true /* createHandles */);
+    this._handles = new RangeTree(true /* createHandles */);
     this._document = document;
     this._document.on(Document.Events.Changed, this._onDocumentChanged.bind(this));
     this._platformSupport = platformSupport;
@@ -217,18 +217,18 @@ Editor.Events = {
 };
 
 class RangeHandle {
-  constructor(document, decorator, from, to, onRemoved) {
+  constructor(document, tree, from, to, onRemoved) {
     this._document = document;
-    this._decorator = decorator;
+    this._tree = tree;
     this._onRemoved = onRemoved || function() {};
-    this._handle = decorator.add(from, to, this);
+    this._handle = tree.add(from, to, this);
     this._handle[RangeHandle._symbol] = this;
   }
 
   remove() {
     if (this.removed())
       return;
-    this._decorator.remove(this._handle);
+    this._tree.remove(this._handle);
     delete this._handle[RangeHandle._symbol];
     this._onRemoved = undefined;
   }
@@ -236,7 +236,7 @@ class RangeHandle {
   resolve() {
     if (this.removed())
       throw new Error('Handle was removed');
-    let {from, to, data} = this._decorator.resolve(this._handle);
+    let {from, to, data} = this._tree.resolve(this._handle);
     return {from, to};
   }
 

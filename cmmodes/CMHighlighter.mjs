@@ -1,6 +1,7 @@
-import { Decorator, TextDecorator } from '../src/core/Decorator.mjs';
+import { TextDecorator } from '../src/core/Decorator.mjs';
 import { EventEmitter } from '../src/utils/EventEmitter.mjs';
 import { Trace } from '../src/utils/Trace.mjs';
+import { RangeTree } from '../src/utils/RangeTree.mjs';
 import {} from './modes/runmode-standalone.js';
 
 export class CMHighlighter {
@@ -40,7 +41,7 @@ export class CMHighlighter {
     this._mode = CodeMirror.getMode({indentUnit: 2}, mimeType);
     this._cmtokensToTheme = cmtokensToTheme;
 
-    this._states = new Decorator();
+    this._states = new RangeTree();
     this._states.add(0, 0, CodeMirror.startState(this._mode));
     this._cursor = 0;
 

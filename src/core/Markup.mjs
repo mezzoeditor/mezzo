@@ -4,7 +4,7 @@ import { RoundMode, Metrics } from './Metrics.mjs';
 import { Tree } from './Tree.mjs';
 import { VisibleRange } from './Frame.mjs';
 import { WorkAllocator } from '../utils/WorkAllocator.mjs';
-import { Decorator } from './Decorator.mjs';
+import { RangeTree } from '../utils/RangeTree.mjs';
 
 /**
  * Measurer converts strings to widths and provides line height.
@@ -75,7 +75,7 @@ export class Markup extends EventEmitter {
     // All the undone ranges in allocator have character-adjusted boundaries,
     // meaning they do not split surrogate pairs.
     this._allocator = new WorkAllocator(0);
-    this._hiddenRanges = new Decorator(false /* createHandles */);
+    this._hiddenRanges = new RangeTree(false /* createHandles */);
     this._jobId = 0;
     this._lastFrameRange = {from: 0, to: 0};
     this._tree = new Tree();

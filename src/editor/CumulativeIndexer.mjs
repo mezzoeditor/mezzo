@@ -1,4 +1,4 @@
-import { Decorator} from '../core/Decorator.mjs';
+import { RangeTree } from '../utils/RangeTree.mjs';
 import { Document } from '../text/Document.mjs';
 import { EventEmitter } from '../utils/EventEmitter.mjs';
 
@@ -62,7 +62,7 @@ export class RemoteCumulativeIndexer extends EventEmitter {
     super();
     this._delegate = delegate;
     this._backend = null;
-    this._states = new Decorator();
+    this._states = new RangeTree();
     //TODO: this initialization should be dispatched by CumulativeIndexer
     this._states.add(0, 0, delegate.initialState());
   }
@@ -106,9 +106,9 @@ export class CumulativeIndexer extends EventEmitter {
     this._platformSupport = platformSupport;
     this._delegate = delegate;
 
-    this._states = new Decorator();
+    this._states = new RangeTree();
     this._states.add(0, 0, delegate.initialState());
-    this._cursors = new Decorator();
+    this._cursors = new RangeTree();
     this._cursors.add(0, 0);
 
     this._eventListeners = [
