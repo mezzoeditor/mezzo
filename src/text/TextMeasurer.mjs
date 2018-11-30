@@ -9,8 +9,6 @@ import { TextUtils } from './TextUtils.mjs';
  *
  * @typedef {{x: number, y: number, offset: Offset}} Location
  * This is a combination of point and offset.
- *
- *
  */
 
 const monoid = new TextMetricsMonoid();

@@ -162,7 +162,6 @@ export class Text {
       position = {line: position.line, column: 0};
     const metrics = this._build().value();
     const max = {line: metrics.lineBreaks || 0, column: metrics.lastWidth};
-    //  || (position.line >= max.line && position.column > max.column)
     if (position.line > max.line)
       position = max;
     const point = {x: position.column, y: position.line};

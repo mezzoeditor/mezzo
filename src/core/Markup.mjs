@@ -1,7 +1,10 @@
+import { CreateOrderedMonoidTree } from '../utils/OrderedMonoidTree.mjs';
+import { TextUtils } from '../text/TextUtils.mjs';
+import { TextMetricsMonoid } from '../text/TextMetrics.mjs';
 import { EventEmitter } from '../utils/EventEmitter.mjs';
 import { Document } from '../text/Document.mjs';
-import { RoundMode, Metrics } from './Metrics.mjs';
-import { Tree } from './Tree.mjs';
+import { RoundMode } from '../utils/RoundMode.mjs';
+import { TextMeasurer, WordWrappingTextMeasurer, LineWrappingTextMeasurer } from '../text/TextMeasurer.mjs';
 import { FrameContent, VisibleRange } from './Frame.mjs';
 import { WorkAllocator } from '../utils/WorkAllocator.mjs';
 import { RangeTree } from '../utils/RangeTree.mjs';
@@ -46,11 +49,16 @@ export const WrappingMode = {
   Word: 2,
 }
 
+/**
+ * @type {OrderedMonoidTree<string, TextMetrics, TextLookupKey>}
+ */
+const Tree = CreateOrderedMonoidTree(new TextMetricsMonoid());
+
 export class Markup extends EventEmitter {
   /**
-   * @param {!Measurer} measurer
-   * @param {!Document} document
-   * @param {!PlatformSupport} platformSupport
+   * @param {Measurer} measurer
+   * @param {Document} document
+   * @param {PlatformSupport} platformSupport
    */
   constructor(measurer, document, platformSupport) {
     super();
@@ -78,46 +86,46 @@ export class Markup extends EventEmitter {
     this._hiddenRanges = new RangeTree(false /* createHandles */);
     this._jobId = 0;
     this._lastFrameRange = {from: 0, to: 0};
-    this._tree = new Tree();
+    this._tree = Tree.build([], []);
 
-    this._measurer = null;
+    this._externalMeasurer = null;
     this.setMeasurer(measurer);
   }
 
   /**
-   * @param {!Measurer} measurer
+   * @param {Measurer} measurer
    */
   setMeasurer(measurer) {
-    if (this._measurer === measurer)
+    if (this._externalMeasurer === measurer)
       return;
-    this._measurer = measurer;
+    this._externalMeasurer = measurer;
     this._lineHeight = measurer.lineHeight();
     this._defaultWidth = measurer.defaultWidth();
-    this._recreateMetrics();
+    this._recreateTextMeasurer();
   }
 
-  _recreateMetrics() {
-    const measure = s => this._measurer.measureString(s) / this._defaultWidth;
+  _recreateTextMeasurer() {
+    const measure = s => this._externalMeasurer.measureString(s) / this._defaultWidth;
     if (this._wrappingMode === WrappingMode.None) {
-      this._metrics = Metrics.createRegular(this._measurer.defaultWidthRegex(), measure, measure);
+      this._textMeasurer = new TextMeasurer(this._externalMeasurer.defaultWidthRegex(), measure, measure);
     } else if (this._wrappingMode === WrappingMode.Line) {
-      this._metrics = Metrics.createLineWrapping(
-        this._measurer.defaultWidthRegex(), measure, measure, this._wrappingLimit);
+      this._textMeasurer = new LineWrappingTextMeasurer(
+          this._externalMeasurer.defaultWidthRegex(), measure, measure, this._wrappingLimit);
     } else {
-      this._metrics = Metrics.createWordWrapping(
-        this._measurer.defaultWidthRegex(), measure, measure, this._wrappingLimit);
+      this._textMeasurer = new WordWrappingTextMeasurer(
+          this._externalMeasurer.defaultWidthRegex(), measure, measure, this._wrappingLimit);
     }
     this._allocator = new WorkAllocator(this._text.length());
     this._rechunkLastFrameRange();
   }
 
   /**
-   * @param {!WrappingMode} wrappingMode
-   * @param {number?} wrappingLimit
+   * @param {WrappingMode} wrappingMode
+   * @param {?number} wrappingLimit
    */
   setWrappingMode(wrappingMode, wrappingLimit) {
     if (wrappingLimit !== null)
-    wrappingLimit /= this._defaultWidth;
+      wrappingLimit /= this._defaultWidth;
     if (this._wrappingMode === wrappingMode && this._wrappingLimit === wrappingLimit)
       return;
 
@@ -127,7 +135,7 @@ export class Markup extends EventEmitter {
 
     this._wrappingMode = wrappingMode;
     this._wrappingLimit = wrappingLimit;
-    this._recreateMetrics();
+    this._recreateTextMeasurer();
   }
 
   /**
@@ -152,8 +160,8 @@ export class Markup extends EventEmitter {
   }
 
   /**
-   * @param {!Anchor} from
-   * @param {!Anchor} to
+   * @param {Anchor} from
+   * @param {Anchor} to
    */
   hideRange(from, to) {
     if (this._hiddenRanges.countTouching(from, to))
@@ -164,7 +172,7 @@ export class Markup extends EventEmitter {
   }
 
   /**
-   * @param {!Replacement} replacement
+   * @param {Replacement} replacement
    */
   _replace(replacement) {
     const from = replacement.offset;
@@ -175,35 +183,38 @@ export class Markup extends EventEmitter {
     this._allocator.replace(from, to, inserted);
     this._hiddenRanges.replace(from, to, inserted);
 
-    const split = this._tree.split(from, to);
-    const newFrom = split.left.metrics().length;
-    const newTo = this._text.length() - split.right.metrics().length;
+    const split = this._tree.split({offset: from}, {offset: to});
+    const newFrom = split.left.value().length;
+    const newTo = this._text.length() - split.right.value().length;
 
     // This is a heuristic to most likely cover the word at the editing boundary
     // which ensures proper wrapping. Otherwise the chunk may split the word
     // in the middle and calculate the wrapping incorrectly.
     let undoneFrom = newFrom;
     let undoneTo = newTo;
-    let tmp = split.right.splitFirst();
-    if (tmp.first !== null)
-      undoneTo = newTo + tmp.metrics.length;
-    tmp = split.left.splitLast();
-    if (tmp.last !== null)
-      undoneFrom = newFrom - tmp.metrics.length;
+    let tmp = split.right.first();
+    if (tmp.value !== null)
+      undoneTo = newTo + tmp.value.length;
+    tmp = split.left.last();
+    if (tmp.value !== null)
+      undoneFrom = newFrom - tmp.value.length;
     this._allocator.undone(undoneFrom, undoneTo);
 
-    const nodes = [];
-    if (newFrom !== newTo)
-      nodes.push(this._unmeasuredNode(newTo - newFrom));
-    this._tree = Tree.merge(split.left, Tree.merge(Tree.build(nodes), split.right));
+    let middle;
+    if (newFrom !== newTo) {
+      middle = Tree.build([kUnmeasuredData], [this._unmeasuredMetrics(newTo - newFrom)]);
+    } else {
+      middle = Tree.build([], []);
+    }
+    this._tree = Tree.merge(split.left, Tree.merge(middle, split.right));
   }
 
   /**
-   * @param {!Range} r
+   * @param {Range} r
    * @param {number} from
    * @param {number} to
    * @param {number} inserted
-   * @return {!Range}
+   * @return {Range}
    */
   _rebaseLastFrameRange(r, from, to, inserted) {
     if (r.from >= to) {
@@ -214,58 +225,58 @@ export class Markup extends EventEmitter {
   }
 
   /**
-   * @param {!Point} point
+   * @param {Point} point
    * @param {RoundMode} roundMode
-   * @param {boolean} strict
    * @return {number}
    */
-  pointToOffset(point, roundMode = RoundMode.Floor, strict = false) {
+  pointToOffset(point, roundMode = RoundMode.Floor) {
     return this._virtualPointToOffset({
       x: point.x / this._defaultWidth,
       y: point.y / this._lineHeight
-    }, roundMode, strict);
+    }, roundMode);
   }
 
   /**
-   * @param {!Point} point
+   * @param {Point} point
    * @param {RoundMode} roundMode
-   * @param {boolean} strict
    * @return {number}
    */
-  _virtualPointToOffset(point, roundMode, strict) {
-    let iterator = this._tree.iterator();
-    let clamped = iterator.locateByPoint(point, strict);
-    if (clamped === null)
-      throw 'Point does not belong to the Markup';
-    if (iterator.data === undefined || !iterator.data.metrics)
-      return iterator.before ? iterator.before.offset : 0;
-    let from = iterator.before.offset;
-    let textChunk = this._text.content(from, from + iterator.metrics.length);
-    return iterator.data.metrics.locateByPoint(textChunk, iterator.data.stateBefore, iterator.before, clamped, roundMode, strict).offset;
+  _virtualPointToOffset(point, roundMode) {
+    point = this._clampVirtualPoint(point);
+    const iterator = this._tree.iterator();
+    iterator.locate(point);
+    if (iterator.data === undefined || !iterator.data.measurer)
+      return iterator.before ? iterator.before.length : 0;
+    const from = iterator.before.length;
+    const textChunk = this._text.content(from, from + iterator.value.length);
+    return iterator.data.measurer.locateByPoint(textChunk, iterator.data.stateBefore, iterator.before, point, roundMode).offset;
   }
 
   /**
    * @param {number} offset
-   * @return {?Point}
+   * @return {Point}
    */
   offsetToPoint(offset) {
-    let point = this._offsetToVirtualPoint(offset);
-    return point === null ? null : {x: point.x * this._defaultWidth, y: point.y * this._lineHeight};
+    const point = this._offsetToVirtualPoint(offset);
+    return {x: point.x * this._defaultWidth, y: point.y * this._lineHeight};
   }
 
   /**
    * @param {number} offset
-   * @return {?Point}
+   * @return {Point}
    */
   _offsetToVirtualPoint(offset) {
-    let iterator = this._tree.iterator();
-    if (iterator.locateByOffset(offset, true /* strict */) === null)
-      return null;
-    if (iterator.data === undefined || !iterator.data.metrics)
-      return iterator.before || {x: 0, y: 0};
-    let from = iterator.before.offset;
-    let textChunk = this._text.content(from, from + iterator.metrics.length);
-    return iterator.data.metrics.locateByOffset(textChunk, iterator.data.stateBefore, iterator.before, offset);
+    offset = Math.max(0, Math.min(offset, this._text.length()));
+    const iterator = this._tree.iterator();
+    iterator.locate({offset});
+    if (iterator.data === undefined || !iterator.data.measurer) {
+      if (iterator.before)
+        return {y: iterator.before.lineBreaks || 0, x: iterator.before.lastWidth};
+      return {x: 0, y: 0};
+    }
+    const from = iterator.before.length;
+    const textChunk = this._text.content(from, from + iterator.value.length);
+    return iterator.data.measurer.locateByOffset(textChunk, iterator.data.stateBefore, iterator.before, offset);
   }
 
   _rechunkLastFrameRange() {
@@ -291,7 +302,7 @@ export class Markup extends EventEmitter {
       budget -= range.to - range.from;
     }
 
-    const metrics = this._tree.metrics();
+    const metrics = this._tree.value();
     this._contentWidth = metrics.longestWidth * this._defaultWidth;
     this._contentHeight = (1 + (metrics.lineBreaks || 0)) * this._lineHeight;
     this.emit(Markup.Events.Changed);
@@ -308,12 +319,12 @@ export class Markup extends EventEmitter {
    * @param {number} from
    * @param {number} to
    * @param {number} budget
-   * @return {!Range}
+   * @return {Range}
    */
   _rechunkRange(from, to, budget) {
-    const split = this._tree.split(from, to);
-    let newFrom = split.left.metrics().length;
-    let newTo = this._text.length() - split.right.metrics().length;
+    const split = this._tree.split({offset: from}, {offset: to});
+    let newFrom = split.left.value().length;
+    let newTo = this._text.length() - split.right.value().length;
 
     // Do not rechunk too much.
     let correction = null;
@@ -321,14 +332,23 @@ export class Markup extends EventEmitter {
       correction = newTo;
       newTo = newFrom + budget;
     }
-    if (newTo > newFrom && Metrics.isSurrogate(this._text.iterator(newTo - 1).charCodeAt(0)))
+    if (newTo > newFrom && TextUtils.isSurrogate(this._text.iterator(newTo - 1).charCodeAt(0)))
       newTo++;
 
-    /** @type {!Array<!{metrics: !TextMetrics, data: !ChunkData}>} */
-    const nodes = [];
+    /** @type {Array<TextMetrics>} */
+    const values = [];
+    /** @type {Array<ChunkData>} */
+    const data = [];
+
+    const stateSpace = this._textMeasurer.stateSpace();
     const iterator = this._text.iterator(newFrom, newFrom, newTo);
-    let tmp = split.left.splitLast();
-    let state = tmp.last !== null ? tmp.last.stateAfter : undefined;
+    let tmp = split.left.last();
+    let state = undefined;
+    if (tmp.data !== null) {
+      state = tmp.data.stateAfter;
+    } else if (stateSpace) {
+      state = stateSpace.emptyState();
+    }
 
     const hiddenRanges = [{from: newFrom, to: newFrom}];
     hiddenRanges.push(...this._hiddenRanges.listTouching(newFrom, newTo));
@@ -336,49 +356,72 @@ export class Markup extends EventEmitter {
     for (let hiddenIndex = 0; hiddenIndex < hiddenRanges.length - 1; hiddenIndex++) {
       const rangeFrom = Offset(hiddenRanges[hiddenIndex].to);
       if (iterator.offset < rangeFrom) {
-        nodes.push(this._unmeasuredNode(rangeFrom - iterator.offset));
+        data.push(kUnmeasuredData);
+        values.push(this._unmeasuredMetrics(rangeFrom - iterator.offset));
         iterator.reset(rangeFrom);
       }
       const rangeTo = Offset(hiddenRanges[hiddenIndex + 1].from);
       while (iterator.offset < rangeTo) {
         const size = Math.min(rangeTo - iterator.offset, kChunkSize);
         let chunk = iterator.read(size);
-        if (Metrics.isSurrogate(chunk.charCodeAt(chunk.length - 1))) {
+        if (TextUtils.isSurrogate(chunk.charCodeAt(chunk.length - 1))) {
           if (iterator.offset === newTo)
             throw new Error('Inconsistent');
           chunk += iterator.current;
           iterator.next();
         }
-        const measured = this._metrics.forString(chunk, state);
-        nodes.push({metrics: measured.metrics, data: {metrics: this._metrics, stateBefore: state, stateAfter: measured.state}});
-        state = measured.state;
+        const mapped = this._textMeasurer.mapString(chunk, state);
+        data.push({measurer: this._textMeasurer, stateBefore: state, stateAfter: mapped.state});
+        values.push(mapped.value);
+        state = mapped.state;
       }
     }
 
     if (correction !== null && correction > newTo) {
-      nodes.push(this._unmeasuredNode(correction - newTo));
+      data.push(kUnmeasuredData);
+      values.push(this._unmeasuredMetrics(correction - newTo));
     } else {
       // Mark next chunk as undone if metrics have to be recalculated
       // because of the new state before produced by last chunk.
-      tmp = split.right.splitFirst();
-      if (tmp.first !== null && (tmp.first.metrics !== this._metrics || !Metrics.stateMatches(tmp.first.stateBefore, state)))
-        this._allocator.undone(newTo, newTo + tmp.metrics.length);
+      tmp = split.right.first();
+      let stateChanged = false;
+      if (tmp.data !== null) {
+        if (tmp.data.measurer !== this._textMeasurer)
+          stateChanged = true;
+        else if (stateSpace && !stateSpace.statesAreEqual(tmp.data.stateBefore, state))
+          stateChanged = true;
+      }
+      if (stateChanged)
+        this._allocator.undone(newTo, newTo + tmp.value.length);
     }
 
-    this._tree = Tree.merge(split.left, Tree.merge(Tree.build(nodes), split.right));
+    this._tree = Tree.merge(split.left, Tree.merge(Tree.build(data, values), split.right));
     this._allocator.done(newFrom, newTo);
     return { from: newFrom, to: newTo };
   }
 
   /**
    * @param {number} length
-   * @return {{metrics: !TextMetrics, data: ChunkData}}
+   * @return {TextMetrics}
    */
-  _unmeasuredNode(length) {
-    return {
-      metrics: {length, firstWidth: 0, lastWidth: 0, longestWidth: 0},
-      data: {metrics: null, stateBefore: null, stateAfter: null}
-    };
+  _unmeasuredMetrics(length) {
+    return {length, firstWidth: 0, lastWidth: 0, longestWidth: 0};
+  }
+
+  /**
+   * @param {Point} point
+   * @return {Point}
+   */
+  _clampVirtualPoint(point) {
+    if (point.y < 0)
+      return {x: 0, y: 0};
+    if (point.x < 0)
+      return {x: 0, y: point.y};
+    const metrics = this._tree.value();
+    const max = {y: metrics.lineBreaks || 0, x: metrics.lastWidth};
+    if (point.y > max.y)
+      return max;
+    return point;
   }
 
   /**
@@ -392,33 +435,37 @@ export class Markup extends EventEmitter {
 
     frame.lineHeight = this._lineHeight;
 
-    /** @type {!Array<!Line>} */
+    /** @type {Array<Line>} */
     const lines = [];
-    /** @type {!Array<!Range>} */
+    /** @type {Array<Range>} */
     const ranges = [];
 
     let y = this.offsetToPoint(this.pointToOffset({x: rect.left, y: rect.top})).y;
     for (; y <= rect.top + rect.height; y += this._lineHeight) {
       const iterator = this._tree.iterator();
-      const clamped = iterator.locateByPoint({x: rect.left / this._defaultWidth, y: y / this._lineHeight}, false /* strict */);
+      const point = this._clampVirtualPoint({x: rect.left / this._defaultWidth, y: y / this._lineHeight});
+      iterator.locate(point);
 
       if (iterator.before === undefined)
         iterator.next();
       if (iterator.before === undefined) {
         // Tree is empty - bail out.
-        lines.push({x: 0, y: 0, from: 0, to: 0, start: 0, end: 0, ranges: [{from: 0, to: 0, x: 0, metrics: this._metrics}]});
+        lines.push({x: 0, y: 0, from: 0, to: 0, start: 0, end: 0, ranges: [{from: 0, to: 0, x: 0, measurer: this._textMeasurer}]});
         break;
       }
 
-      let {offset, x} = iterator.before;
+      let offset = iterator.before.length;
+      let x = iterator.before.lastWidth;
       let textChunk = null;
-      if (iterator.metrics !== undefined) {
-        textChunk = this._text.content(offset, offset + iterator.metrics.length);
-        const location = iterator.data.metrics.locateByPoint(textChunk, iterator.data.stateBefore, iterator.before, clamped, RoundMode.Floor, false /* strict */);
-        offset = location.offset;
-        x = location.x;
+      if (iterator.value !== undefined) {
+        textChunk = this._text.content(offset, offset + iterator.value.length);
+        if (iterator.data.measurer) {
+          const location = iterator.data.measurer.locateByPoint(textChunk, iterator.data.stateBefore, iterator.before, point, RoundMode.Floor);
+          offset = location.offset;
+          x = location.x;
+        }
       } else {
-        if (iterator.before.y < y / this._lineHeight)
+        if ((iterator.before.lineBreaks || 0) < y / this._lineHeight)
           break;
       }
       x *= this._defaultWidth;
@@ -434,22 +481,23 @@ export class Markup extends EventEmitter {
       };
       lines.push(line);
       if (iterator.after === undefined) {
-        line.ranges.push({from: offset, to: offset, x: x, metrics: this._metrics});
+        line.ranges.push({from: offset, to: offset, x: x, measurer: this._textMeasurer});
         break;
       }
 
       while (x <= rect.left + rect.width) {
-        if (!iterator.data.metrics) {
-          if (iterator.before.x !== iterator.after.x)
+        if (!iterator.data.measurer) {
+          if (iterator.before.lastWidth !== iterator.after.lastWidth)
             throw new Error('Inconsistent');
         } else {
-          let after = iterator.after.offset;
+          let after = iterator.after.length;
           let overflow = false;
           const point = {x: (rect.left + rect.width) / this._defaultWidth, y: y / this._lineHeight};
-          if (iterator.after.y > point.y || (iterator.after.y === point.y && iterator.after.x >= point.x)) {
+          const afterY = iterator.after.lineBreaks || 0;
+          if (afterY > point.y || (afterY === point.y && iterator.after.lastWidth >= point.x)) {
             if (textChunk === null)
-              textChunk = this._text.content(offset, offset + iterator.metrics.length);
-            after = iterator.data.metrics.locateByPoint(textChunk, iterator.data.stateBefore, iterator.before, point, RoundMode.Ceil, false /* strict */).offset;
+              textChunk = this._text.content(offset, offset + iterator.value.length);
+            after = iterator.data.measurer.locateByPoint(textChunk, iterator.data.stateBefore, iterator.before, point, RoundMode.Ceil).offset;
             overflow = true;
           }
           textChunk = null;
@@ -458,19 +506,19 @@ export class Markup extends EventEmitter {
           let canJoin = false;
           if (line.ranges.length > 0) {
             const prev = line.ranges[line.ranges.length - 1];
-            if (prev.to === offset && prev.metrics === iterator.data.metrics)
+            if (prev.to === offset && prev.measurer === iterator.data.measurer)
               canJoin = true;
           }
           if (canJoin)
             line.ranges[line.ranges.length - 1].to = after;
           else
-            line.ranges.push({from: offset, to: after, x: x, metrics: iterator.data.metrics});
+            line.ranges.push({from: offset, to: after, x: x, measurer: iterator.data.measurer});
           if (overflow)
             break;
         }
         iterator.next();
-        x = iterator.before.x * this._defaultWidth;
-        offset = iterator.before.offset;
+        x = iterator.before.lastWidth * this._defaultWidth;
+        offset = iterator.before.length;
         if (iterator.after === undefined)
           break;
       }
@@ -503,11 +551,11 @@ export class Markup extends EventEmitter {
   _buildFrameContents(frame, lines, frameContent) {
     for (let line of lines) {
       let rangeIndex = 0;
-      for (let {from, to, x, metrics} of line.ranges) {
+      for (let {from, to, x, measurer} of line.ranges) {
         const offsetToX = new Float32Array(to - from + 1);
         const needsRtlBreakAfter = new Int8Array(to - from + 1);
         const rangeContent = this._text.content(from, to);
-        metrics.fillXMap(offsetToX, needsRtlBreakAfter, rangeContent, x, this._defaultWidth);
+        measurer.fillXMap(offsetToX, needsRtlBreakAfter, rangeContent, x, this._defaultWidth);
 
         for (const ranges of frameContent.textDecorations) {
           ranges.visitTouching(from, to + 0.5, decoration => {
@@ -608,9 +656,9 @@ Markup.Events = {
 };
 
 /**
- * @param {!Array<!Range>} ranges
- * @param {!Document} document
- * @return {!Array<!VisibleRange>}
+ * @param {Array<Range>} ranges
+ * @param {Document} document
+ * @return {Array<VisibleRange>}
  */
 function joinRanges(ranges, document) {
   let totalRange = 0;
@@ -640,12 +688,12 @@ function joinRanges(ranges, document) {
 }
 
 /**
- * @typedef {{metrics: !Metrics, stateBefore: *, stateAfter: *}} ChunkData
- * Null metrics means unmeasured chunk.
+ * @typedef {{measurer: TextMeasurer, stateBefore: *, stateAfter: *}} ChunkData
+ * Null measurer means unmeasured chunk.
  */
 
- /**
- * @param {!Anchor} anchor
+/**
+ * @param {Anchor} anchor
  * @return {number}
  */
 function Offset(anchor) {
@@ -660,7 +708,7 @@ function Offset(anchor) {
  *   to: number,
  *   start: number,
  *   end: number,
- *   ranges: !Array<{from: number, to: number, x: number, metrics: !Metrics}>
+ *   ranges: Array<{from: number, to: number, x: number, measurer: TextMetrics}>
  * }} Line
  */
 
@@ -668,10 +716,13 @@ let kChunkSize = 1000;
 let kRechunkSize = 10000000;
 let kWrappingRechunkSize = 5000000;
 
+/** @type {ChunkData} */
+const kUnmeasuredData = {measurer: null, stateBefore: null, stateAfter: null};
+
 Markup.test = {};
 
 /**
- * @param {!Markup} markup
+ * @param {Markup} markup
  * @param {number} chunkSize
  * @param {number=} rechunkSize
  */

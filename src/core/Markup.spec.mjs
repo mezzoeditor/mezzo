@@ -94,22 +94,22 @@ export function addTests(runner, expect) {
         expect(markup.contentHeight()).toBe((lineCount + 1) * 3);
         expect(markup.offsetToPoint(0)).toBe({x: 0, y: 0});
         expect(markup.offsetToPoint(content.length)).toBe({x: 0, y: lineCount * 3});
-        expect(markup.offsetToPoint(content.length + 1)).toBe(null);
+        expect(markup.offsetToPoint(content.length + 1)).toBe({x: 0, y: lineCount * 3});
         for (let {offset, x, y, nonStrict, rounded} of locationQueries) {
           if (nonStrict) {
             expect(markup.pointToOffset({x: nonStrict.x, y}, RoundMode.Floor)).toBe(offset);
           } else {
             expect(markup.offsetToPoint(offset)).toBe({x, y});
             expect(markup.pointToOffset({x, y}, RoundMode.Floor)).toBe(offset);
-            expect(markup.pointToOffset({x: x + 0.5, y: y + 0.5}, RoundMode.Floor, false /* strict */)).toBe(offset);
-            expect(markup.pointToOffset({x, y}, RoundMode.Floor, true /* strict */)).toBe(offset);
+            expect(markup.pointToOffset({x: x + 0.5, y: y + 0.5}, RoundMode.Floor)).toBe(offset);
+            expect(markup.pointToOffset({x, y}, RoundMode.Floor)).toBe(offset);
             if (rounded) {
-              expect(markup.pointToOffset({x: x + 0.4, y}, RoundMode.Round, true /* strict */)).toBe(offset);
-              expect(markup.pointToOffset({x: x + 0.5, y}, RoundMode.Round, true /* strict */)).toBe(offset);
-              expect(markup.pointToOffset({x: x + 0.6, y}, RoundMode.Round, true /* strict */)).toBe(offset + 1);
-              expect(markup.pointToOffset({x, y}, RoundMode.Ceil, true /* strict */)).toBe(offset);
-              expect(markup.pointToOffset({x: x + 0.5, y}, RoundMode.Ceil, true /* strict */)).toBe(offset + 1);
-              expect(markup.pointToOffset({x: x + 1, y}, RoundMode.Ceil, true /* strict */)).toBe(offset + 1);
+              expect(markup.pointToOffset({x: x + 0.4, y}, RoundMode.Round)).toBe(offset);
+              expect(markup.pointToOffset({x: x + 0.5, y}, RoundMode.Round)).toBe(offset);
+              expect(markup.pointToOffset({x: x + 0.6, y}, RoundMode.Round)).toBe(offset + 1);
+              expect(markup.pointToOffset({x, y}, RoundMode.Ceil)).toBe(offset);
+              expect(markup.pointToOffset({x: x + 0.5, y}, RoundMode.Ceil)).toBe(offset + 1);
+              expect(markup.pointToOffset({x: x + 1, y}, RoundMode.Ceil)).toBe(offset + 1);
             }
           }
         }
