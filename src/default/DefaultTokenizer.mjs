@@ -1,4 +1,4 @@
-import { Metrics } from '../core/Metrics.mjs';
+import { TextUtils } from '../text/TextUtils.mjs';
 
 export class DefaultTokenizer {
   /**
@@ -16,7 +16,7 @@ export class DefaultTokenizer {
    * Return weather the char belongs to the word
    */
   isSpaceChar(char) {
-    return Metrics.whitespaceRegex.test(char);
+    return TextUtils.whitespaceRegex.test(char);
   }
 
   /**

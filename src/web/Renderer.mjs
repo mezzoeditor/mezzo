@@ -1,6 +1,6 @@
-import { RoundMode, Metrics } from '../core/Metrics.mjs';
-import { WrappingMode, Markup, Measurer } from '../core/Markup.mjs';
-import { Frame } from '../core/Frame.mjs';
+import { RoundMode } from '../utils/RoundMode.mjs';
+import { WrappingMode, Markup } from '../markup/Markup.mjs';
+import { Frame } from '../markup/Frame.mjs';
 import { Editor } from '../editor/Editor.mjs';
 import { Trace } from '../utils/Trace.mjs';
 import { Document } from '../text/Document.mjs';
@@ -9,6 +9,7 @@ import { Tokenizer } from '../editor/Tokenizer.mjs';
 import { EventEmitter } from '../utils/EventEmitter.mjs';
 import { KeymapHandler } from './KeymapHandler.mjs';
 import { RangeTree } from '../utils/RangeTree.mjs';
+import { TextUtils } from '../text/TextUtils.mjs';
 
 /**
  * @implements Measurer
@@ -29,7 +30,7 @@ class ContextBasedMeasurer {
     this._widthBox = this._width9 * 1.5;
 
     this._defaultWidth = fontConfig.monospace ? ctx.measureText('M').width : 1;
-    this._defaultRegex = fontConfig.monospace ? Metrics.asciiRegexWithNewLines : null;
+    this._defaultRegex = fontConfig.monospace ? TextUtils.asciiRegexWithNewLines : null;
   }
 
   _resetContext(context) {

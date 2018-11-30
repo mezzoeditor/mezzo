@@ -1,5 +1,5 @@
 import { RangeTree } from "../src/utils/RangeTree.mjs";
-import { WrappingMode } from "../src/core/Markup.mjs";
+import { WrappingMode } from "../src/markup/Markup.mjs";
 
 import { WebEmbedder } from "../webembedder/index.mjs";
 

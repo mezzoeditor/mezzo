@@ -1,17 +1,14 @@
-import {Random} from '../utils/Random.mjs';
-import {Metrics, RoundMode} from './Metrics.mjs';
-import {Document} from '../text/Document.mjs';
-import {Markup} from './Markup.mjs';
-import {TestPlatformSupport} from '../../test/utils.mjs';
+import { Random } from '../utils/Random.mjs';
+import { RoundMode } from '../utils/RoundMode.mjs';
+import { Document } from '../text/Document.mjs';
+import { Markup } from './Markup.mjs';
+import { TestPlatformSupport } from '../../test/utils.mjs';
+import { TextMeasurer } from '../text/TextMeasurer.mjs';
 
 export function addTests(runner, expect) {
   const {describe, xdescribe, fdescribe} = runner;
   const {it, fit, xit} = runner;
   const {beforeAll, beforeEach, afterAll, afterEach} = runner;
-
-  function createTestMetrics() {
-    return Metrics.createRegular(null, s => s.charCodeAt(0) - 'a'.charCodeAt(0) + 1, s => 100);
-  }
 
   function createTestMeasurer() {
     return {
@@ -48,18 +45,18 @@ export function addTests(runner, expect) {
     });
 
     it('markup points API all chunk sizes', () => {
-      let testMetrics = createTestMetrics();
-      let random = Random(143);
-      let lineCount = 200;
-      let chunks = [];
+      const textMeasurer = new TextMeasurer(null, s => s.charCodeAt(0) - 'a'.charCodeAt(0) + 1, s => 100);
+      const random = Random(143);
+      const lineCount = 200;
+      const chunks = [];
       let longest = 0;
-      let locationQueries = [];
+      const locationQueries = [];
       let offset = 0;
       for (let i = 0; i < lineCount; i++) {
-        let s = 'abcdefghijklmnopqrstuvwxyz';
-        let length = 1 + (random() % (s.length - 1));
-        let chunk = s.substring(0, length);
-        let width = testMetrics._measureString(chunk, 0, length);
+        const s = 'abcdefghijklmnopqrstuvwxyz';
+        const length = 1 + (random() % (s.length - 1));
+        const chunk = s.substring(0, length);
+        const width = textMeasurer._measureString(chunk, 0, length);
         longest = Math.max(longest, width);
         chunks.push(chunk + '\n');
         locationQueries.push({offset: offset, x: 0, y: i * 3, rounded: true});
@@ -67,26 +64,26 @@ export function addTests(runner, expect) {
         locationQueries.push({offset: offset + length, x: width, y: i * 3});
         locationQueries.push({offset: offset + length, x: width, y: i * 3, nonStrict: {x: width + 3}});
         locationQueries.push({offset: offset + length, x: width, y: i * 3, nonStrict: {x: width + 100}});
-        let column = random() % length;
-        locationQueries.push({offset: offset + column, x: testMetrics._measureString(chunk, 0, column), y: i * 3});
+        const column = random() % length;
+        locationQueries.push({offset: offset + column, x: textMeasurer._measureString(chunk, 0, column), y: i * 3});
         offset += length + 1;
       }
-      let content = chunks.join('');
+      const content = chunks.join('');
       locationQueries.push({offset: content.length, x: 0, y: lineCount * 3});
       locationQueries.push({offset: content.length, x: 0, y: lineCount * 3, nonStrict: {x: 15}});
 
-      let contentQueries = [];
+      const contentQueries = [];
       for (let i = 0; i < 1000; i++) {
-        let from = random() % content.length;
-        let to = from + (random() % (content.length - from));
+        const from = random() % content.length;
+        const to = from + (random() % (content.length - from));
         contentQueries.push({from, to});
       }
 
       for (let chunkSize = 1; chunkSize <= 100; chunkSize++) {
-        let document = new Document();
+        const document = new Document();
         document.reset(content);
         const platformSupport = new TestPlatformSupport();
-        let markup = new Markup(createTestMeasurer(), document, platformSupport);
+        const markup = new Markup(createTestMeasurer(), document, platformSupport);
         platformSupport.runUntilIdle();
         Markup.test.rechunk(markup, chunkSize);
         platformSupport.runUntilIdle();
@@ -95,7 +92,7 @@ export function addTests(runner, expect) {
         expect(markup.offsetToPoint(0)).toBe({x: 0, y: 0});
         expect(markup.offsetToPoint(content.length)).toBe({x: 0, y: lineCount * 3});
         expect(markup.offsetToPoint(content.length + 1)).toBe({x: 0, y: lineCount * 3});
-        for (let {offset, x, y, nonStrict, rounded} of locationQueries) {
+        for (const {offset, x, y, nonStrict, rounded} of locationQueries) {
           if (nonStrict) {
             expect(markup.pointToOffset({x: nonStrict.x, y}, RoundMode.Floor)).toBe(offset);
           } else {

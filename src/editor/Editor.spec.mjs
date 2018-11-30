@@ -5,7 +5,7 @@ import {SVGRenderer} from '../../test/SVGRenderer.mjs';
 import {Search} from '../../plugins/Search.mjs';
 import {Editor} from './Editor.mjs';
 import {Thread} from './Thread.mjs';
-import {WrappingMode} from '../core/Markup.mjs';
+import {WrappingMode} from '../markup/Markup.mjs';
 import url from 'url';
 import path from 'path';
 

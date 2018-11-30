@@ -3,7 +3,7 @@ import { RangeTree } from '../utils/RangeTree.mjs';
 import { Input } from './Input.mjs';
 import { DefaultHighlighter } from '../default/DefaultHighlighter.mjs';
 import { DefaultTokenizer } from '../default/DefaultTokenizer.mjs';
-import { Markup, Measurer } from '../core/Markup.mjs';
+import { Markup, Measurer } from '../markup/Markup.mjs';
 import { EventEmitter } from '../utils/EventEmitter.mjs';
 
 export class PlatformSupport {

@@ -28,10 +28,7 @@ if (fs.existsSync(options.outputFolder))
   (await import('../src/utils/OrderedMonoidTree.spec.mjs')).addTests(runner, expect, options);
   (await import('../src/utils/RangeTree.spec.mjs')).addTests(runner, expect, options);
   (await import('../src/utils/WorkAllocator.spec.mjs')).addTests(runner, expect, options);
-
-  (await import('../src/core/Markup.spec.mjs')).addTests(runner, expect, options);
-  (await import('../src/core/Metrics.spec.mjs')).addTests(runner, expect, options);
-  (await import('../src/core/Tree.spec.mjs')).addTests(runner, expect, options);
+  (await import('../src/markup/Markup.spec.mjs')).addTests(runner, expect, options);
 
   // Plugin tests.
   (await import('../plugins/Search.spec.mjs')).addTests(runner, expect, options);
