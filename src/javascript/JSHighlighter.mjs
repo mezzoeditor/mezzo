@@ -91,17 +91,9 @@ export class JSHighlighterIndexer extends CumulativeIndexer.Delegate {
     return deserializeState(state);
   }
 
-  /**
-   * Return a function that can be called with consequent offsets
-   * and returns tokenization state at these offsets.
-   * @return {function(number):*}
-   */
-  createIndexer(document, offset, state) {
-    const parser = new Parser(document.text().iterator(offset), state);
-    return offset => {
-      parser.it.setConstraints(0, offset);
-      for (let token of parser);
-      return parser.state();
-    }
+  indexIterator(iterator, state) {
+    const parser = new Parser(iterator, state);
+    for (let token of parser);
+    return parser.state();
   }
 }

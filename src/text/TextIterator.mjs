@@ -34,22 +34,6 @@ export class TextIterator {
   }
 
   /**
-   * Changes the constraints. The new [from, to) range must contain
-   * current |offset|.
-   * @param {number} from
-   * @param {number} to
-   */
-  setConstraints(from, to) {
-    from = Math.max(from, 0);
-    to = Math.min(to, this._length);
-    if (from - 1 > this.offset || this.offset > to)
-     throw new Error('Current offset does not belong to new constraints');
-    this._from = from;
-    this._to = to;
-    this.current = this.outOfBounds() ? undefined : this._chunk[this._pos];
-  }
-
-  /**
    * Returns a substring starting at current position. Does not advance.
    * @param {number} length
    * @return {string}

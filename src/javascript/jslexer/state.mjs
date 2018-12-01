@@ -116,11 +116,6 @@ export class Parser {
     this.recoveryOffset += offsetDelta;
   }
 
-  setIterator(it) {
-    this._rebaselineOffsets(this.it.offset, it.offset);
-    this.it = it;
-  }
-
   state() {
     return {
       options: this.options,

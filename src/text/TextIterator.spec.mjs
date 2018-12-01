@@ -116,13 +116,13 @@ export function addTests(runner, expect) {
 
     it('TextIteratof.find unsuccessful across chunks', () => {
       const text = Text.test.fromStringChunked('/*abcdefghijklmonpqrsuvwxyz0123456789@!*/', 5);
-      const iterator = text.iterator(0, 0, 8);
+      let iterator = text.iterator(0, 0, 8);
       expect(iterator.find('*/')).toBe(false);
       expect(iterator.offset).toBe(8);
       expect(iterator.outOfBounds()).toBe(true);
       expect(iterator.current).toBe(undefined);
 
-      iterator.setConstraints(0, 100);
+      iterator = text.iterator(8, 0, 100);
       expect(iterator.outOfBounds()).toBe(false);
       expect(iterator.current).toBe('g');
     });
@@ -170,39 +170,6 @@ export function addTests(runner, expect) {
       expect(iterator.charCodeAt(0)).toBe(NaN);
       expect(iterator.charAt(0)).toBe(undefined);
       expect(iterator.substr(2)).toBe('');
-    });
-
-    it('TextIterator.setConstraints', () => {
-      const text = Text.fromString('012');
-      const iterator = text.iterator(0, 0, 1);
-      expect(iterator.outOfBounds()).toBe(false);
-      expect(iterator.offset).toBe(0);
-      expect(iterator.current).toBe('0');
-
-      expect(iterator.advance(8)).toBe(1);
-      expect(iterator.outOfBounds()).toBe(true);
-      expect(iterator.offset).toBe(1);
-      expect(iterator.current).toBe(undefined);
-
-      iterator.setConstraints(0, 1);
-      expect(iterator.outOfBounds()).toBe(true);
-      expect(iterator.offset).toBe(1);
-      expect(iterator.current).toBe(undefined);
-
-      iterator.setConstraints(1, 3);
-      expect(iterator.outOfBounds()).toBe(false);
-      expect(iterator.offset).toBe(1);
-      expect(iterator.current).toBe('1');
-
-      expect(iterator.advance(-1)).toBe(-1);
-      expect(iterator.outOfBounds()).toBe(true);
-      expect(iterator.offset).toBe(0);
-      expect(iterator.current).toBe(undefined);
-
-      expect(iterator.advance(2)).toBe(2);
-      expect(iterator.outOfBounds()).toBe(false);
-      expect(iterator.offset).toBe(2);
-      expect(iterator.current).toBe('2');
     });
 
     it('TextIterator all sizes', () => {

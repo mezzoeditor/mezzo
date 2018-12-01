@@ -147,10 +147,19 @@ export class CumulativeIndexer extends EventEmitter {
       const cursorState = this._states.firstStarting(cursor.from, cursor.from + 0.5);
       const firstConvergence = this._states.firstStarting(cursor.from + 0.5, to);
       const secondConvergence = firstConvergence ? this._states.lastStarting(firstConvergence.from + 0.5, to) : null;
-      const indexer = this._delegate.createIndexer(this._document, cursor.from, cursorState.data);
       let lastTrustedStateOffset = cursor.from;
       let successfulConvergence = false;
       let offset = cursor.from + STATE_CHUNK;
+
+      let currentState = cursorState.data;
+      let currentOffset = cursor.from;
+      const indexer = x => {
+        const iterator = this._document.text().iterator(currentOffset, currentOffset, x);
+        currentState = this._delegate.indexIterator(iterator, currentState);
+        currentOffset = x;
+        return currentState;
+      };
+
       // Try to converge on the first state.
       if (firstConvergence) {
         this._states.clearStarting(lastTrustedStateOffset + 0.5, firstConvergence.from + 0.5);
@@ -248,10 +257,11 @@ CumulativeIndexer.Delegate = class {
   isEqualStates(state1, state2) { }
 
   /**
-   * Return a function that can be called with sequential offsets
-   * and returns tokenization state at these offsets.
-   * @return {function(number):*}
+   * @param {TextIterator} iterator
+   * @param {*} state
+   * @return {*}
+   * Returns a state after processing a chunk defined by iterator.
    */
-  createIndexer(document, offset, state) {
+  indexIterator(iterator, state) {
   }
 }
