@@ -196,7 +196,7 @@ export class Text {
       this._tree = chunkedTree(this._string);
       this._string = undefined;
     } else if (this._chunks) {
-      const values = this._chunks.map(chunk => measurer.mapString(chunk).value);
+      const values = this._chunks.map(chunk => measurer.mapValue(chunk).value);
       this._tree = Tree.build(this._chunks, values);
       this._chunks = undefined;
     } else if (this._middle) {
@@ -253,7 +253,7 @@ export class Text {
       const values = [];
       chunkContent(left, data, values);
       data.push(...this._chunks);
-      values.push(...this._chunks.map(chunk => measurer.mapString(chunk).value));
+      values.push(...this._chunks.map(chunk => measurer.mapValue(chunk).value));
       chunkContent(right, data, values);
       return new Tree(data, values);
     }
@@ -315,7 +315,7 @@ function chunkContent(content, data, values, chunkSize = kDefaultChunkSize) {
       length++;
     const chunk = content.substring(index, index + length);
     data.push(chunk);
-    values.push(measurer.mapString(chunk).value);
+    values.push(measurer.mapValue(chunk).value);
     index += length;
   }
 };

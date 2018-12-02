@@ -60,24 +60,24 @@ export function addTests(runner, expect) {
       expect(defaultMeasurer._locateByWidth('abc', 0, 3, 0.5, RoundMode.Ceil)).toBe({offset: 1, width: 1});
     });
 
-    it('mapString', () => {
+    it('mapValue', () => {
       const defaultMeasurer = createDefaultMeasurer();
-      expect(defaultMeasurer.mapString('one line').value).toBe({length: 8, firstWidth: 8, lastWidth: 8, longestWidth: 8});
-      expect(defaultMeasurer.mapString('\none line').value).toBe({length: 9, firstWidth: 0, lastWidth: 8, longestWidth: 8, lineBreaks: 1});
-      expect(defaultMeasurer.mapString('one line\n').value).toBe({length: 9, firstWidth: 8, lastWidth: 0, longestWidth: 8, lineBreaks: 1});
-      expect(defaultMeasurer.mapString('\none line\n').value).toBe({length: 10, firstWidth: 0, lastWidth: 0, longestWidth: 8, lineBreaks: 2});
-      expect(defaultMeasurer.mapString('short\nlongest\nlonger\ntiny').value).toBe({length: 25, firstWidth: 5, lastWidth: 4, longestWidth: 7, lineBreaks: 3});
+      expect(defaultMeasurer.mapValue('one line').value).toBe({length: 8, firstWidth: 8, lastWidth: 8, longestWidth: 8});
+      expect(defaultMeasurer.mapValue('\none line').value).toBe({length: 9, firstWidth: 0, lastWidth: 8, longestWidth: 8, lineBreaks: 1});
+      expect(defaultMeasurer.mapValue('one line\n').value).toBe({length: 9, firstWidth: 8, lastWidth: 0, longestWidth: 8, lineBreaks: 1});
+      expect(defaultMeasurer.mapValue('\none line\n').value).toBe({length: 10, firstWidth: 0, lastWidth: 0, longestWidth: 8, lineBreaks: 2});
+      expect(defaultMeasurer.mapValue('short\nlongest\nlonger\ntiny').value).toBe({length: 25, firstWidth: 5, lastWidth: 4, longestWidth: 7, lineBreaks: 3});
 
       const testMeasurer = createTestMeasurer();
-      expect(testMeasurer.mapString('a').value).toBe({length: 1, firstWidth: 1, lastWidth: 1, longestWidth: 1});
-      expect(testMeasurer.mapString('a\nb').value).toBe({length: 3, lineBreaks: 1, firstWidth: 1, lastWidth: 2, longestWidth: 2});
-      expect(testMeasurer.mapString('b\na').value).toBe({length: 3, lineBreaks: 1, firstWidth: 2, lastWidth: 1, longestWidth: 2});
-      expect(testMeasurer.mapString('bac').value).toBe({length: 3, firstWidth: 6, lastWidth: 6, longestWidth: 6});
-      expect(testMeasurer.mapString('b\na\nc').value).toBe({length: 5, lineBreaks: 2, firstWidth: 2, lastWidth: 3, longestWidth: 3});
-      expect(testMeasurer.mapString('b\naaaa\nc').value).toBe({length: 8, lineBreaks: 2, firstWidth: 2, lastWidth: 3, longestWidth: 4});
-      expect(testMeasurer.mapString('b😀😀').value).toBe({length: 5, firstWidth: 202, lastWidth: 202, longestWidth: 202});
-      expect(testMeasurer.mapString('😀\n𐀀😀\n𐀀a').value).toBe({length: 11, lineBreaks: 2, firstWidth: 100, lastWidth: 101, longestWidth: 200});
-      expect(testMeasurer.mapString('\n𐀀').value).toBe({length: 3, lineBreaks: 1, firstWidth: 0, lastWidth: 100, longestWidth: 100});
+      expect(testMeasurer.mapValue('a').value).toBe({length: 1, firstWidth: 1, lastWidth: 1, longestWidth: 1});
+      expect(testMeasurer.mapValue('a\nb').value).toBe({length: 3, lineBreaks: 1, firstWidth: 1, lastWidth: 2, longestWidth: 2});
+      expect(testMeasurer.mapValue('b\na').value).toBe({length: 3, lineBreaks: 1, firstWidth: 2, lastWidth: 1, longestWidth: 2});
+      expect(testMeasurer.mapValue('bac').value).toBe({length: 3, firstWidth: 6, lastWidth: 6, longestWidth: 6});
+      expect(testMeasurer.mapValue('b\na\nc').value).toBe({length: 5, lineBreaks: 2, firstWidth: 2, lastWidth: 3, longestWidth: 3});
+      expect(testMeasurer.mapValue('b\naaaa\nc').value).toBe({length: 8, lineBreaks: 2, firstWidth: 2, lastWidth: 3, longestWidth: 4});
+      expect(testMeasurer.mapValue('b😀😀').value).toBe({length: 5, firstWidth: 202, lastWidth: 202, longestWidth: 202});
+      expect(testMeasurer.mapValue('😀\n𐀀😀\n𐀀a').value).toBe({length: 11, lineBreaks: 2, firstWidth: 100, lastWidth: 101, longestWidth: 200});
+      expect(testMeasurer.mapValue('\n𐀀').value).toBe({length: 3, lineBreaks: 1, firstWidth: 0, lastWidth: 100, longestWidth: 100});
     });
 
     it('locateBy*', () => {

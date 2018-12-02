@@ -44,7 +44,7 @@ class TextMeasurerBase {
    * @param {S} state
    * @return {{value: TextMetrics, state: S}}
    */
-  mapString(s, state) {
+  mapValue(s, state) {
   }
 
   /**
@@ -364,7 +364,7 @@ export class TextMeasurer extends TextMeasurerBase {
    * @param {string} s
    * @return {{value: TextMetrics}}
    */
-  mapString(s) {
+  mapValue(s) {
     const metrics = {
       length: s.length,
       firstWidth: 0,
@@ -448,8 +448,7 @@ export class TextMeasurer extends TextMeasurerBase {
 
 /**
  * @typedef {number} WrappingState
- * This is a "start width" value, from which we started
- * the chunk before wrapping.
+ * This is a "start width" value, from which we started the chunk before wrapping.
  */
 
 
@@ -535,7 +534,7 @@ class WrappingTextMeasurer extends TextMeasurerBase {
    * @param {WrappingState} state
    * @return {{value: TextMetrics, state: WrappingState}}
    */
-  mapString(s, state) {
+  mapValue(s, state) {
     const metrics = {length: s.length, firstWidth: 0, lastWidth: 0, longestWidth: 0, lineBreaks: -1};
     for (const {offset, width} of this._wrap(s, state)) {
       if (metrics.lineBreaks === -1)

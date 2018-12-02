@@ -370,7 +370,7 @@ export class Markup extends EventEmitter {
           chunk += iterator.current;
           iterator.next();
         }
-        const mapped = this._textMeasurer.mapString(chunk, state);
+        const mapped = this._textMeasurer.mapValue(chunk, state);
         data.push({measurer: this._textMeasurer, stateBefore: state, stateAfter: mapped.state});
         values.push(mapped.value);
         state = mapped.state;

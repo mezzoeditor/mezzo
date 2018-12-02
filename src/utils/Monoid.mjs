@@ -30,13 +30,6 @@ class Monoid {
 
 
 /**
- * @typedef {Monoid<string>} StringMonoid
- * StringMonoid has string elements, the empty string as an identity element
- * and string concatenation as a composition operator.
- */
-
-
-/**
  * Ordered monoid must define an operator |<=|, such that:
  *   - a <= b implies (x * a) <= (x * b) for any |x|.
  *   - a <= b implies (a * x) <= (b * x) for any |x|.
@@ -67,79 +60,5 @@ class OrderedMonoid {
    * @return {boolean}
    */
   valueGreaterOrEqualThanKey(e, k) {
-  }
-};
-
-
-/**
- * State space defines some opaque "state" type which support equality check.
- * It also have to be serializable to a passable JavaScript value and reconstructed
- * from it.
- *
- * @template S - type of the state values.
- */
-class StateSpace {
-  /**
-   * @return {S}
-   */
-  emptyState() {
-  }
-
-  /**
-   * @param {S} s1
-   * @param {S} s2
-   * @return {boolean}
-   */
-  statesAreEqual(s1, s2) {
-  }
-
-  /**
-   * @param {S} s
-   * @return {*}
-   */
-  serializeState(s) {
-  }
-
-  /**
-   * @param {*} data
-   * @return {S}
-   */
-  deserializeState(data) {
-  }
-};
-
-
-/**
- * String morphism |M| maps StringMonoid to an ordered monoid |V|, preserving the structure.
- *   - Maps identity element to an identity element: M('') = V.identityValue().
- *   - Preserves the operator: M(s1 + s2) = V.combineValues(M(s1), M(s2)).
- *
- * We also allow to use an optional running state space to relax the locality requirement
- * and support linear processing morphisms.
- *
- * @template V - type of monoid values.
- * @template K - type of monoid lookup key.
- * @template S - type of the running state.
- * @interface
- */
-class StringMorphism {
-  /**
-   * @return {OrderedMonoid<V, K>}
-   */
-  monoid() {
-  }
-
-  /**
-   * @return {?StateSpace<S>}
-   */
-  stateSpace() {
-  }
-
-  /**
-   * @param {string} s
-   * @param {?S} state
-   * @return {{value: V, state: ?S}}
-   */
-  mapString(s, state) {
   }
 };
