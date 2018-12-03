@@ -14,7 +14,7 @@ const Tree = CreateOrderedMonoidTree(new TextMetricsMonoid());
 const kDefaultChunkSize = 1000;
 
 const measurer = new TextMeasurer(TextUtils.bmpRegex, char => 1, char => 1);
-if (measurer.stateSpace() !== null)
+if (measurer.stateTraits() !== null)
   throw new Error('TextMeasurer should not have state');
 
 export class Text {

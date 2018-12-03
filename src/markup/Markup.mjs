@@ -340,14 +340,14 @@ export class Markup extends EventEmitter {
     /** @type {Array<ChunkData>} */
     const data = [];
 
-    const stateSpace = this._textMeasurer.stateSpace();
+    const stateTraits = this._textMeasurer.stateTraits();
     const iterator = this._text.iterator(newFrom, newFrom, newTo);
     let tmp = split.left.last();
     let state = undefined;
     if (tmp.data !== null) {
       state = tmp.data.stateAfter;
-    } else if (stateSpace) {
-      state = stateSpace.emptyState();
+    } else if (stateTraits) {
+      state = stateTraits.emptyState();
     }
 
     const hiddenRanges = [{from: newFrom, to: newFrom}];
@@ -388,7 +388,7 @@ export class Markup extends EventEmitter {
       if (tmp.data !== null) {
         if (tmp.data.measurer !== this._textMeasurer)
           stateChanged = true;
-        else if (stateSpace && !stateSpace.statesAreEqual(tmp.data.stateBefore, state))
+        else if (stateTraits && !stateTraits.statesAreEqual(tmp.data.stateBefore, state))
           stateChanged = true;
       }
       if (stateChanged)

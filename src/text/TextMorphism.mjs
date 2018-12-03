@@ -3,7 +3,7 @@
  *   - Maps identity element to an identity element: M(X.identityValue()) = V.identityValue().
  *   - Preserves the operator: M(X.combineValues(x1, x2)) = V.combineValues(M(x1), M(x2)).
  *
- * We also allow to use an optional running state space to relax the locality requirement
+ * We also allow to use an optional running state to relax the locality requirement
  * and support linear processing morphisms.
  *
  * @template X - type of input monoid values.
@@ -20,9 +20,9 @@ class Morphism {
   }
 
   /**
-   * @return {?StateSpace<S>}
+   * @return {?StateTraits<S>}
    */
-  stateSpace() {
+  stateTraits() {
   }
 
   /**
@@ -55,14 +55,14 @@ class Morphism {
 
 
 /**
- * State space defines some opaque "state" type which support equality check.
+ * State traits defines some opaque "state" type which supports equality check.
  * It also have to be serializable to a passable JavaScript value and reconstructed
  * from it.
  *
  * @template S - type of the state values.
  * @interface
  */
-class StateSpace {
+class StateTraits {
   /**
    * @return {S}
    */
@@ -116,10 +116,10 @@ export class StringToTextMorphismAdaptor {
 
   /**
    * @override
-   * @return {?StateSpace<S>}
+   * @return {?StateTraits<S>}
    */
-  stateSpace() {
-    return this._stringMorphism.stateSpace();
+  stateTraits() {
+    return this._stringMorphism.stateTraits();
   }
 
   /**

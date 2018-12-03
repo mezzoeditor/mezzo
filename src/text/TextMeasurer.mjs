@@ -30,9 +30,9 @@ class TextMeasurerBase {
 
   /**
    * @override
-   * @return {?StateSpace<S>}
+   * @return {?StateTraits<S>}
    */
-  stateSpace() {
+  stateTraits() {
     return null;
   }
 
@@ -453,11 +453,11 @@ export class TextMeasurer extends TextMeasurerBase {
 
 
 /**
- * State space for wrapping measurer.
+ * State traits for wrapping measurer.
  *
- * @implements StateSpace<WrappingState>
+ * @implements StateTraits<WrappingState>
  */
-class WrappingStateSpace {
+class WrappingStateTraits {
   /**
    * @override
    * @return {WrappingState}
@@ -495,7 +495,7 @@ class WrappingStateSpace {
   }
 };
 
-const wrappingStateSpace = new WrappingStateSpace();
+const wrappingStateTraits = new WrappingStateTraits();
 
 /**
  * @implements StringMorphism<TextMetrics, TextLookupKey, WrappingState>
@@ -514,10 +514,10 @@ class WrappingTextMeasurer extends TextMeasurerBase {
 
   /**
    * @override
-   * @return {StateSpace<WrappingState>}
+   * @return {StateTraits<WrappingState>}
    */
-  stateSpace() {
-    return wrappingStateSpace;
+  stateTraits() {
+    return wrappingStateTraits;
   }
 
   /**
