@@ -48,6 +48,16 @@ class TextMeasurerBase {
   }
 
   /**
+   * Provides a placeholder for a string of particular length,
+   * which can be used as a placeholder until the real value is calculated.
+   * @param {number} length
+   * @return {TextMetrics}
+   */
+  unmappedValue(length) {
+    return {length, firstWidth: 0, lastWidth: 0, longestWidth: 0};
+  }
+
+  /**
    * Returns location of a specific point in a string.
    *
    * |before| should be equal to combined metrics at the start of a string,
