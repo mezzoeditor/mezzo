@@ -50,6 +50,7 @@ class TextMeasurerBase {
   /**
    * Provides a placeholder for a string of particular length,
    * which can be used as a placeholder until the real value is calculated.
+   * @override
    * @param {number} length
    * @return {TextMetrics}
    */

@@ -202,7 +202,7 @@ export class Markup extends EventEmitter {
 
     let middle;
     if (newFrom !== newTo) {
-      middle = Tree.build([kUnmeasuredData], [this._unmeasuredMetrics(newTo - newFrom)]);
+      middle = Tree.build([kUnmeasuredData], [this._textMeasurer.unmappedValue(newTo - newFrom)]);
     } else {
       middle = Tree.build([], []);
     }
@@ -344,7 +344,7 @@ export class Markup extends EventEmitter {
     const iterator = this._text.iterator(newFrom, newFrom, newTo);
     let tmp = split.left.last();
     let state = undefined;
-    if (tmp.data !== null) {
+    if (tmp.data !== null && tmp.data.measurer === this._textMeasurer) {
       state = tmp.data.stateAfter;
     } else if (stateTraits) {
       state = stateTraits.emptyState();
@@ -357,7 +357,7 @@ export class Markup extends EventEmitter {
       const rangeFrom = Offset(hiddenRanges[hiddenIndex].to);
       if (iterator.offset < rangeFrom) {
         data.push(kUnmeasuredData);
-        values.push(this._unmeasuredMetrics(rangeFrom - iterator.offset));
+        values.push(this._textMeasurer.unmappedValue(rangeFrom - iterator.offset));
         iterator.reset(rangeFrom);
       }
       const rangeTo = Offset(hiddenRanges[hiddenIndex + 1].from);
@@ -379,7 +379,7 @@ export class Markup extends EventEmitter {
 
     if (correction !== null && correction > newTo) {
       data.push(kUnmeasuredData);
-      values.push(this._unmeasuredMetrics(correction - newTo));
+      values.push(this._textMeasurer.unmappedValue(correction - newTo));
     } else {
       // Mark next chunk as undone if metrics have to be recalculated
       // because of the new state before produced by last chunk.
@@ -398,14 +398,6 @@ export class Markup extends EventEmitter {
     this._tree = Tree.merge(split.left, Tree.merge(Tree.build(data, values), split.right));
     this._allocator.done(newFrom, newTo);
     return { from: newFrom, to: newTo };
-  }
-
-  /**
-   * @param {number} length
-   * @return {TextMetrics}
-   */
-  _unmeasuredMetrics(length) {
-    return {length, firstWidth: 0, lastWidth: 0, longestWidth: 0};
   }
 
   /**
