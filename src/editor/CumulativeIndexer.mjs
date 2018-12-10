@@ -154,7 +154,7 @@ export class CumulativeIndexer extends EventEmitter {
       let currentState = cursorState.data;
       let currentOffset = cursor.from;
       const indexer = x => {
-        const iterator = this._document.text().iterator(currentOffset, currentOffset, x);
+        const iterator = this._document.text().iterator(currentOffset, 0, x);
         currentState = this._delegate.indexIterator(iterator, currentState);
         currentOffset = x;
         return currentState;
