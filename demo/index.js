@@ -8,9 +8,9 @@ import { Trace } from "../src/utils/Trace.mjs";
 Trace.setup();
 
 const examples = [
+  'index.js',
   'index.html',
   'css.css',
-  'index.js',
   'nocomments.js',
   'jquery.min.js',
   'shakespeare.txt',

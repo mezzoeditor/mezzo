@@ -450,8 +450,8 @@ export class Markup extends EventEmitter {
       let x = iterator.before.lastWidth;
       let textChunk = null;
       if (iterator.value !== undefined) {
-        textChunk = this._text.content(offset, offset + iterator.value.length);
         if (iterator.data.measurer) {
+          textChunk = this._text.content(offset, offset + iterator.value.length);
           const location = iterator.data.measurer.locateByPoint(textChunk, iterator.data.stateBefore, iterator.before, point, RoundMode.Floor);
           offset = location.offset;
           x = location.x;
