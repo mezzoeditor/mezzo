@@ -67,27 +67,27 @@ export class TextMetricsMonoid {
 
   /**
    * @override
-   * @param {TextMetrics} e
-   * @param {TextLookupKey} k
+   * @param {TextMetrics} metrics
+   * @param {TextLookupKey} key
    * @return {boolean}
    */
-  valueGreaterThanKey(e, k) {
-    if (k.offset !== undefined)
-      return e.length > k.offset;
-    const line = e.lineBreaks || 0;
-    return line > k.y || (line + 1 > k.y && e.lastWidth > k.x);
+  valueGreaterThanKey(metrics, key) {
+    if (key.offset !== undefined)
+      return metrics.length > key.offset;
+    const line = metrics.lineBreaks || 0;
+    return line > key.y || (line + 1 > key.y && metrics.lastWidth > key.x);
   }
 
   /**
    * @override
-   * @param {TextMetrics} e
-   * @param {TextLookupKey} k
+   * @param {TextMetrics} metrics
+   * @param {TextLookupKey} key
    * @return {boolean}
    */
-  valueGreaterOrEqualThanKey(e, k) {
-    if (k.offset !== undefined)
-      return e.length >= k.offset;
-    const line = e.lineBreaks || 0;
-    return line > k.y || (line + 1 > k.y && e.lastWidth >= k.x);
+  valueGreaterOrEqualThanKey(metrics, key) {
+    if (key.offset !== undefined)
+      return metrics.length >= key.offset;
+    const line = metrics.lineBreaks || 0;
+    return line > key.y || (line + 1 > key.y && metrics.lastWidth >= key.x);
   }
 };
