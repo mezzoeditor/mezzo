@@ -26,7 +26,6 @@ export class JSHighlighter {
 
     this._eventListeners = [
       indexer.on(CumulativeIndexer.Events.Changed, () => editor.raf()),
-      editor.addDecorationCallback(this._onDecorate.bind(this)),
     ];
   }
 
@@ -38,7 +37,7 @@ export class JSHighlighter {
   /**
    * @param {FrameContent} frameContent
    */
-  _onDecorate(frameContent) {
+  decorate(frameContent) {
     Trace.beginGroup('js');
     const decorations = new RangeTree();
     for (const range of frameContent.ranges) {

@@ -1,7 +1,6 @@
 import { Renderer } from "../src/web/Renderer.mjs";
 import { WebPlatformSupport } from "../src/web/WebPlatformSupport.mjs";
 import { Editor } from "../src/editor/Editor.mjs";
-import { DefaultHighlighter } from "../src/default/DefaultHighlighter.mjs";
 import { Thread } from '../src/editor/Thread.mjs';
 
 import { SelectedWordHighlighter } from '../plugins/SelectedWordHighlighter.mjs';
@@ -106,7 +105,7 @@ export class WebEmbedder {
       this._editor.setHighlighter(highlighter);
       return;
     }
-    this._editor.setHighlighter(new DefaultHighlighter(this._editor));
+    this._editor.setHighlighter(null);
   }
 
   /**

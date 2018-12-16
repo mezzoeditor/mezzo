@@ -4,7 +4,6 @@ import { Document } from '../src/text/Document.mjs';
 import { Renderer } from '../src/web/Renderer.mjs';
 import { WebPlatformSupport } from '../src/web/WebPlatformSupport.mjs';
 import { JSHighlighter } from '../src/javascript/JSHighlighter.mjs';
-import { DefaultHighlighter } from '../src/default/DefaultHighlighter.mjs';
 
 import { SelectedWordHighlighter } from '../plugins/SelectedWordHighlighter.mjs';
 import { SmartBraces } from '../plugins/SmartBraces.mjs';
@@ -139,8 +138,7 @@ export class EditorComponent extends HTMLElement {
       const highlighter = await JSHighlighter.create(editor);
       editor.setHighlighter(highlighter);
     } else {
-      const highlighter = new DefaultHighlighter(editor);
-      editor.setHighlighter(highlighter);
+      editor.setHighlighter(null);
     }
     return editor;
   }

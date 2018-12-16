@@ -1,7 +1,6 @@
 import { Document } from '../text/Document.mjs';
 import { RangeTree } from '../utils/RangeTree.mjs';
 import { Input } from './Input.mjs';
-import { DefaultHighlighter } from '../default/DefaultHighlighter.mjs';
 import { DefaultTokenizer } from '../default/DefaultTokenizer.mjs';
 import { Markup, Measurer } from '../markup/Markup.mjs';
 import { EventEmitter } from '../utils/EventEmitter.mjs';
@@ -68,7 +67,7 @@ export class Editor extends EventEmitter {
     this._document.on(Document.Events.Changed, this._onDocumentChanged.bind(this));
     this._platformSupport = platformSupport;
     /** @type {!Array<DecorationCallback>} */
-    this._decorationCallbacks = [];
+    this._decorationCallbacks = [this._onDecorate.bind(this)];
 
     this._markup = new Markup(measurer, this._document, platformSupport);
 
@@ -81,11 +80,24 @@ export class Editor extends EventEmitter {
     this._selectionDecorator = new SelectionDecorator(this._document);
     this._selectionDecorator.decorate(this);
 
-    this.setHighlighter(new DefaultHighlighter(this));
-
     this._remoteDocument = remoteDocument;
 
     this.reset('');
+  }
+
+  /**
+   * @param {FrameContent} frameContent
+   */
+  _onDecorate(frameContent) {
+    // If there's no highlighter - just draw a black text.
+    if (!this._highlighter) {
+      const {from, to} = frameContent.range;
+      const decorations = new RangeTree();
+      decorations.add(from, to, 'syntax.default');
+      frameContent.textDecorations.push(decorations);
+      return;
+    }
+    this._highlighter.decorate(frameContent);
   }
 
   remoteDocument() {

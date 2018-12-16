@@ -46,7 +46,6 @@ export class CMHighlighter {
 
     this._eventListeners = [
       editor.document().on('changed', this._onDocumentChanged.bind(this)),
-      editor.addDecorationCallback(this._onDecorate.bind(this)),
     ];
 
     this._jobId = 0;
@@ -109,7 +108,7 @@ export class CMHighlighter {
   /**
    * @param {FrameContent} frameContent
    */
-  _onDecorate(frameContent) {
+  decorate(frameContent) {
     Trace.beginGroup(this._mimeType);
     const decorations = new RangeTree();
     const text = this._document.text();
