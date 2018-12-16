@@ -4,34 +4,6 @@ import { RangeTree } from '../src/utils/RangeTree.mjs';
 import {} from './modes/runmode-standalone.js';
 
 export class CMHighlighter {
-  static async createCSS(editor) {
-    await import('./modes/css.js');
-    return new CMHighlighter(editor, 'text/css', new Map(Object.entries({
-      'property': 'syntax.string',
-      'atom': 'syntax.keyword',
-      'number': 'syntax.number',
-      'comment': 'syntax.comment',
-      'variable-2': 'syntax.variable',
-    })));
-  }
-
-  static async createHTML(editor) {
-    await Promise.all([
-      import('./modes/css.js'),
-      import('./modes/xml.js'),
-      import('./modes/javascript.js'),
-      import('./modes/htmlmixed.js'),
-    ]);
-
-    return new CMHighlighter(editor, 'text/html', new Map(Object.entries({
-      'property': 'syntax.string',
-      'atom': 'syntax.keyword',
-      'number': 'syntax.number',
-      'comment': 'syntax.comment',
-      'variable-2': 'syntax.variable',
-    })));
-  }
-
   constructor(editor, mimeType, cmtokensToTheme) {
     this._mimeType = mimeType;
     this._editor = editor;

@@ -7,20 +7,20 @@ import { Trace } from '../utils/Trace.mjs';
 const HIGHLIGHT_CHUNK = 20000;
 const STATE_CHUNK = 2000;
 
-export class JSHighlighter {
-  static async create(editor) {
-    const options = {
-      budget: HIGHLIGHT_CHUNK * 10,
-      density: STATE_CHUNK
-    };
-    if (editor.remoteDocument()) {
-      const indexer = await RemoteCumulativeIndexer.create(editor.remoteDocument(), JSHighlighterIndexer, options);
-      return new JSHighlighter(editor, indexer);
-    }
-    const indexer = new CumulativeIndexer(editor.document(), editor.platformSupport(), new JSHighlighterIndexer(), options);
+export async function createHighlighter(editor) {
+  const options = {
+    budget: HIGHLIGHT_CHUNK * 10,
+    density: STATE_CHUNK
+  };
+  if (editor.remoteDocument()) {
+    const indexer = await RemoteCumulativeIndexer.create(editor.remoteDocument(), JSHighlighterIndexer, options);
     return new JSHighlighter(editor, indexer);
   }
+  const indexer = new CumulativeIndexer(editor.document(), editor.platformSupport(), new JSHighlighterIndexer(), options);
+  return new JSHighlighter(editor, indexer);
+}
 
+class JSHighlighter {
   constructor(editor, indexer) {
     this._indexer = indexer;
 

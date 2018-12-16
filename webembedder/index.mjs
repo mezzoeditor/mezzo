@@ -89,20 +89,18 @@ export class WebEmbedder {
       return;
     this._mimeType = mimeType;
     if (mimeType === 'text/javascript') {
-      const {JSHighlighter} = await import('../src/javascript/JSHighlighter.mjs');
-      this._editor.setHighlighter(await JSHighlighter.create(this._editor));
+      const {createHighlighter} = await import('../src/javascript/JSHighlighter.mjs');
+      this._editor.setHighlighter(await createHighlighter(this._editor));
       return;
     }
     if (mimeType === 'text/css') {
-      const {CMHighlighter} = await import('../cmmodes/CMHighlighter.mjs');
-      const highlighter = await CMHighlighter.createCSS(this._editor);
-      this._editor.setHighlighter(highlighter);
+      const {createHighlighter} = await import('../cmmodes/CSSHighlighter.mjs');
+      this._editor.setHighlighter(await createHighlighter(this._editor));
       return;
     }
     if (mimeType === 'text/html') {
-      const {CMHighlighter} = await import('../cmmodes/CMHighlighter.mjs');
-      const highlighter = await CMHighlighter.createHTML(this._editor);
-      this._editor.setHighlighter(highlighter);
+      const {createHighlighter} = await import('../cmmodes/HTMLHighlighter.mjs');
+      this._editor.setHighlighter(await createHighlighter(this._editor));
       return;
     }
     this._editor.setHighlighter(null);
