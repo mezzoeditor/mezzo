@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 import {GoldenMatchers} from '../../../utils/GoldenMatchers';
-import {Document} from '../../text/Document.mjs';
+import {Document} from '../../../src/text/Document.mjs';
 import fs from 'fs';
 import path from 'path';
 import {Parser, TokenTypes} from './index.mjs';

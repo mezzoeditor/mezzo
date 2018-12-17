@@ -41,8 +41,8 @@ if (fs.existsSync(options.outputFolder))
   (await import('../src/editor/Thread.spec.mjs')).addTests(runner, expect, options);
 
   // JSLexer unit tests
-  (await import('../src/javascript/jslexer/tokenizer.spec.mjs')).addTests(runner, expect, options);
-  (await import('../src/javascript/jslexer/recovery.spec.mjs')).addTests(runner, expect, options);
+  (await import('../lang/javascript/jslexer/tokenizer.spec.mjs')).addTests(runner, expect, options);
+  (await import('../lang/javascript/jslexer/recovery.spec.mjs')).addTests(runner, expect, options);
 
   new Reporter(runner);
   runner.run();

@@ -1,8 +1,8 @@
-import { EventEmitter } from '../utils/EventEmitter.mjs';
+import { EventEmitter } from '../../src/utils/EventEmitter.mjs';
 import { Parser, TokenTypes, isEqualState, serializeState, deserializeState } from './jslexer/index.mjs';
-import { RangeTree } from '../utils/RangeTree.mjs';
-import { CumulativeIndexer, RemoteCumulativeIndexer } from '../editor/CumulativeIndexer.mjs';
-import { Trace } from '../utils/Trace.mjs';
+import { RangeTree } from '../../src/utils/RangeTree.mjs';
+import { CumulativeIndexer, RemoteCumulativeIndexer } from '../../src/editor/CumulativeIndexer.mjs';
+import { Trace } from '../../src/utils/Trace.mjs';
 
 const HIGHLIGHT_CHUNK = 20000;
 const STATE_CHUNK = 2000;

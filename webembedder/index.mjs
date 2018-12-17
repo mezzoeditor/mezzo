@@ -89,17 +89,17 @@ export class WebEmbedder {
       return;
     this._mimeType = mimeType;
     if (mimeType === 'text/javascript') {
-      const {createHighlighter} = await import('../src/javascript/JSHighlighter.mjs');
+      const {createHighlighter} = await import('../lang/javascript/JSHighlighter.mjs');
       this._editor.setHighlighter(await createHighlighter(this._editor));
       return;
     }
     if (mimeType === 'text/css') {
-      const {createHighlighter} = await import('../cmmodes/CSSHighlighter.mjs');
+      const {createHighlighter} = await import('../lang/codemirror/CSSHighlighter.mjs');
       this._editor.setHighlighter(await createHighlighter(this._editor));
       return;
     }
     if (mimeType === 'text/html') {
-      const {createHighlighter} = await import('../cmmodes/HTMLHighlighter.mjs');
+      const {createHighlighter} = await import('../lang/codemirror/HTMLHighlighter.mjs');
       this._editor.setHighlighter(await createHighlighter(this._editor));
       return;
     }

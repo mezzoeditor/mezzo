@@ -3,7 +3,7 @@ import { Editor } from '../src/editor/Editor.mjs';
 import { Document } from '../src/text/Document.mjs';
 import { Renderer } from '../src/web/Renderer.mjs';
 import { WebPlatformSupport } from '../src/web/WebPlatformSupport.mjs';
-import { createHighlighter as createJSHighlighter } from '../src/javascript/JSHighlighter.mjs';
+import { createHighlighter as createJSHighlighter } from '../lang/javascript/JSHighlighter.mjs';
 
 import { SelectedWordHighlighter } from '../plugins/SelectedWordHighlighter.mjs';
 import { SmartBraces } from '../plugins/SmartBraces.mjs';

@@ -1,6 +1,6 @@
-import { EventEmitter } from '../src/utils/EventEmitter.mjs';
-import { Trace } from '../src/utils/Trace.mjs';
-import { RangeTree } from '../src/utils/RangeTree.mjs';
+import { EventEmitter } from '../../src/utils/EventEmitter.mjs';
+import { Trace } from '../../src/utils/Trace.mjs';
+import { RangeTree } from '../../src/utils/RangeTree.mjs';
 import {} from './modes/runmode-standalone.js';
 
 export class CMHighlighter {

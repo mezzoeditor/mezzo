@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 import {TestRunner, Reporter, Matchers} from '../../../utils/testrunner/index.mjs';
-import {Document} from '../../text/Document.mjs';
+import {Document} from '../../../src/text/Document.mjs';
 import {Parser, TokenTypes} from './index.mjs';
 
 export function addTests(runner, expect) {
