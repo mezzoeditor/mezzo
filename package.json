@@ -11,7 +11,7 @@
     "webtest": "node --experimental-modules test/webtest.mjs",
     "serve": "node --experimental-modules utils/serve.mjs 9123",
     "test": "npm run unit && npm run webtest",
-    "desktop": "node embedder/launch.js"
+    "desktop": "node desktop/launch.js"
   },
   "repository": {
     "type": "git",

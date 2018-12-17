@@ -36,7 +36,7 @@ const ROOT_PATH = path.join(__dirname, '..');
     args: [
       '--enable-experimental-web-platform-features',
       '--allow-file-access-from-files',
-      `--app=http://localhost:${port}/embedder/main.html`
+      `--app=http://localhost:${port}/desktop/main.html`
     ]
   });
   let browser = null;
