@@ -12,6 +12,7 @@ import { AddNextOccurence } from '../plugins/AddNextOccurence.mjs';
 import { SearchToolbar } from '../plugins/web/SearchToolbar.mjs';
 import { SuggestBoxController } from '../plugins/web/SuggestBox.mjs';
 import { DOMUtils } from '../src/web/DOMUtils.mjs';
+import { createHighlighterForMimeType } from '../lang/mimetypes.mjs';
 
 export class WebEmbedder {
   static async createWithWorker(document) {
@@ -88,22 +89,7 @@ export class WebEmbedder {
     if (this._mimeType === mimeType)
       return;
     this._mimeType = mimeType;
-    if (mimeType === 'text/javascript') {
-      const {createHighlighter} = await import('../lang/javascript/JSHighlighter.mjs');
-      this._editor.setHighlighter(await createHighlighter(this._editor));
-      return;
-    }
-    if (mimeType === 'text/css') {
-      const {createHighlighter} = await import('../lang/codemirror/CSSHighlighter.mjs');
-      this._editor.setHighlighter(await createHighlighter(this._editor));
-      return;
-    }
-    if (mimeType === 'text/html') {
-      const {createHighlighter} = await import('../lang/codemirror/HTMLHighlighter.mjs');
-      this._editor.setHighlighter(await createHighlighter(this._editor));
-      return;
-    }
-    this._editor.setHighlighter(null);
+    this._editor.setHighlighter(await createHighlighterForMimeType(this._editor, this._mimeType));
   }
 
   /**
