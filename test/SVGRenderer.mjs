@@ -1,7 +1,7 @@
-import {Editor} from '../src/editor/Editor.mjs';
+import {Editor} from '../core/editor/Editor.mjs';
+import {Frame} from '../core/markup/Frame.mjs';
 import ClassicTheme from '../themes/Classic.mjs';
 import {SelectionDecorator} from '../plugins/SelectionDecorator.mjs';
-import {Frame} from '../src/markup/Frame.mjs';
 
 // All sizes are in CH (if horizontal) and EM (if vertical).
 const GUTTER_PADDING_LEFT = 0.5;

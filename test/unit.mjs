@@ -20,15 +20,15 @@ if (fs.existsSync(options.outputFolder))
 
 (async () => {
   // Core unit tests
-  (await import('../src/text/Document.spec.mjs')).addTests(runner, expect, options);
-  (await import('../src/text/Text.spec.mjs')).addTests(runner, expect, options);
-  (await import('../src/text/TextIterator.spec.mjs')).addTests(runner, expect, options);
-  (await import('../src/text/TextMeasurer.spec.mjs')).addTests(runner, expect, options);
-  (await import('../src/text/TextUtils.spec.mjs')).addTests(runner, expect, options);
-  (await import('../src/utils/OrderedMonoidTree.spec.mjs')).addTests(runner, expect, options);
-  (await import('../src/utils/RangeTree.spec.mjs')).addTests(runner, expect, options);
-  (await import('../src/utils/WorkAllocator.spec.mjs')).addTests(runner, expect, options);
-  (await import('../src/markup/Markup.spec.mjs')).addTests(runner, expect, options);
+  (await import('../core/text/Document.spec.mjs')).addTests(runner, expect, options);
+  (await import('../core/text/Text.spec.mjs')).addTests(runner, expect, options);
+  (await import('../core/text/TextIterator.spec.mjs')).addTests(runner, expect, options);
+  (await import('../core/text/TextMeasurer.spec.mjs')).addTests(runner, expect, options);
+  (await import('../core/text/TextUtils.spec.mjs')).addTests(runner, expect, options);
+  (await import('../core/utils/OrderedMonoidTree.spec.mjs')).addTests(runner, expect, options);
+  (await import('../core/utils/RangeTree.spec.mjs')).addTests(runner, expect, options);
+  (await import('../core/utils/WorkAllocator.spec.mjs')).addTests(runner, expect, options);
+  (await import('../core/markup/Markup.spec.mjs')).addTests(runner, expect, options);
 
   // Plugin tests.
   (await import('../plugins/Search.spec.mjs')).addTests(runner, expect, options);
@@ -36,9 +36,9 @@ if (fs.existsSync(options.outputFolder))
   (await import('../plugins/AddNextOccurence.spec.mjs')).addTests(runner, expect, options);
 
   // Editor tests.
-  (await import('../src/editor/Editor.spec.mjs')).addTests(runner, expect, options);
-  (await import('../src/editor/Input.spec.mjs')).addTests(runner, expect, options);
-  (await import('../src/editor/Thread.spec.mjs')).addTests(runner, expect, options);
+  (await import('../core/editor/Editor.spec.mjs')).addTests(runner, expect, options);
+  (await import('../core/editor/Input.spec.mjs')).addTests(runner, expect, options);
+  (await import('../core/editor/Thread.spec.mjs')).addTests(runner, expect, options);
 
   // JSLexer unit tests
   (await import('../lang/javascript/jslexer/tokenizer.spec.mjs')).addTests(runner, expect, options);

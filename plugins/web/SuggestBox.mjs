@@ -1,8 +1,8 @@
-import { EventEmitter } from '../../src/utils/EventEmitter.mjs';
-import { Document } from '../../src/text/Document.mjs';
-import { Input } from '../../src/editor/Input.mjs';
+import { EventEmitter } from '../../core/utils/EventEmitter.mjs';
+import { Document } from '../../core/text/Document.mjs';
+import { Input } from '../../core/editor/Input.mjs';
 import { WordDictionary } from '../../plugins/WordDictionary.mjs';
-import { DOMUtils } from '../../src/web/DOMUtils.mjs';
+import { DOMUtils } from '../../core/web/DOMUtils.mjs';
 
 const keymap = {
   'Ctrl-Space': 'suggestbox.show',

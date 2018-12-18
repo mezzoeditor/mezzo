@@ -39,7 +39,7 @@ const browserOptions = { dumpio, headless};
     state.page = null;
   });
 
-  (await import('../src/web/Renderer.spec.mjs')).addTests(runner, expect);
+  (await import('../core/web/Renderer.spec.mjs')).addTests(runner, expect);
   (await import('../mezzo/index.spec.mjs')).addTests(runner, expect);
 
   new Reporter(runner);

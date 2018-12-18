@@ -1,6 +1,6 @@
-import { EventEmitter } from '../src/utils/EventEmitter.mjs';
-import { WorkAllocator } from '../src/utils/WorkAllocator.mjs';
-import { Document } from '../src/text/Document.mjs';
+import { EventEmitter } from '../core/utils/EventEmitter.mjs';
+import { WorkAllocator } from '../core/utils/WorkAllocator.mjs';
+import { Document } from '../core/text/Document.mjs';
 
 const DEFAULT_OPTIONS = {
   /**

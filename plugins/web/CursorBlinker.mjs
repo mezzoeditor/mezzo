@@ -1,6 +1,6 @@
-import { EventEmitter } from '../../src/utils/EventEmitter.mjs';
-import { Document } from '../../src/text/Document.mjs';
-import { DOMUtils } from '../../src/web/DOMUtils.mjs';
+import { EventEmitter } from '../../core/utils/EventEmitter.mjs';
+import { Document } from '../../core/text/Document.mjs';
+import { DOMUtils } from '../../core/web/DOMUtils.mjs';
 
 export class CursorBlinker {
   constructor(renderer, blinkingInterval = 500) {

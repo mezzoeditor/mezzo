@@ -1,7 +1,8 @@
-import { Renderer } from "../src/web/Renderer.mjs";
-import { WebPlatformSupport } from "../src/web/WebPlatformSupport.mjs";
-import { Editor } from "../src/editor/Editor.mjs";
-import { Thread } from '../src/editor/Thread.mjs';
+import { DOMUtils } from '../core/web/DOMUtils.mjs';
+import { Renderer } from "../core/web/Renderer.mjs";
+import { WebPlatformSupport } from "../core/web/WebPlatformSupport.mjs";
+import { Editor } from "../core/editor/Editor.mjs";
+import { Thread } from '../core/editor/Thread.mjs';
 
 import { SelectedWordHighlighter } from '../plugins/SelectedWordHighlighter.mjs';
 import { SmartBraces } from '../plugins/SmartBraces.mjs';
@@ -13,7 +14,6 @@ import { SearchToolbar } from '../plugins/web/SearchToolbar.mjs';
 import { SuggestBoxController } from '../plugins/web/SuggestBox.mjs';
 import { SelectionDecorator } from '../plugins/SelectionDecorator.mjs';
 import { CursorBlinker } from '../plugins/web/CursorBlinker.mjs';
-import { DOMUtils } from '../src/web/DOMUtils.mjs';
 import { createHighlighterForMimeType } from '../lang/mimetypes.mjs';
 
 import ClassicTheme from '../themes/Classic.mjs';

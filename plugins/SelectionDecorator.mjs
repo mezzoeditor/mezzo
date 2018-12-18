@@ -1,6 +1,6 @@
-import { Document } from '../src/text/Document.mjs';
-import { RangeTree } from '../src/utils/RangeTree.mjs';
-import { EventEmitter } from '../src/utils/EventEmitter.mjs';
+import { Document } from '../core/text/Document.mjs';
+import { RangeTree } from '../core/utils/RangeTree.mjs';
+import { EventEmitter } from '../core/utils/EventEmitter.mjs';
 
 export class SelectionDecorator {
   constructor(editor) {

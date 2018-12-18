@@ -1,4 +1,4 @@
-import {Editor} from '../src/editor/Editor.mjs';
+import {Editor} from '../core/editor/Editor.mjs';
 import {fork} from 'child_process';
 import path from 'path';
 import debug from 'debug';

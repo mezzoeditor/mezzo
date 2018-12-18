@@ -1,6 +1,6 @@
-import { KeymapHandler } from '../src/web/KeymapHandler.mjs';
-import { Thread } from '../src/editor/Thread.mjs';
-import { WebPlatformSupport } from '../src/web/WebPlatformSupport.mjs';
+import { KeymapHandler } from '../core/web/KeymapHandler.mjs';
+import { Thread } from '../core/editor/Thread.mjs';
+import { WebPlatformSupport } from '../core/web/WebPlatformSupport.mjs';
 
 import { FileSystem } from './FileSystem.mjs';
 import { SplitComponent } from './SplitComponent.mjs';

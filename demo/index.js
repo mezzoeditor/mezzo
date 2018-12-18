@@ -1,10 +1,10 @@
-import { RangeTree } from "../src/utils/RangeTree.mjs";
-import { WrappingMode } from "../src/markup/Markup.mjs";
+import { RangeTree } from "../core/utils/RangeTree.mjs";
+import { WrappingMode } from "../core/markup/Markup.mjs";
+import { Trace } from "../core/utils/Trace.mjs";
 
 import { Mezzo } from "../mezzo/index.mjs";
 
 
-import { Trace } from "../src/utils/Trace.mjs";
 
 import ClassicTheme from "../themes/Classic.mjs";
 import DarkTheme from "../themes/Dark.mjs";

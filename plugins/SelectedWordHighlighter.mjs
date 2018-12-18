@@ -1,7 +1,7 @@
-import { EventEmitter } from '../src/utils/EventEmitter.mjs';
-import { RangeTree } from '../src/utils/RangeTree.mjs';
-import { Tokenizer } from "../src/editor/Tokenizer.mjs";
-import { Document } from "../src/text/Document.mjs";
+import { EventEmitter } from '../core/utils/EventEmitter.mjs';
+import { RangeTree } from '../core/utils/RangeTree.mjs';
+import { Tokenizer } from "../core/editor/Tokenizer.mjs";
+import { Document } from "../core/text/Document.mjs";
 
 export class SelectedWordHighlighter {
   /**

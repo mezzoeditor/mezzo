@@ -7,7 +7,7 @@ export function addTests(runner, expect) {
 
   describe('Renderer', () => {
     beforeEach(async state => {
-      const url = state.server.PREFIX + '/src/web/test/renderer.html';
+      const url = state.server.PREFIX + '/core/web/test/renderer.html';
       state.gg = await GG.create(state.server, state.page, url);
     });
     afterEach(async state => {

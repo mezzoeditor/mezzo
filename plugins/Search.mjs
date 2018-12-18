@@ -1,7 +1,7 @@
-import { RangeTree } from '../src/utils/RangeTree.mjs';
-import { EventEmitter } from '../src/utils/EventEmitter.mjs';
-import { WorkAllocator } from '../src/utils/WorkAllocator.mjs';
-import { Document } from '../src/text/Document.mjs';
+import { RangeTree } from '../core/utils/RangeTree.mjs';
+import { EventEmitter } from '../core/utils/EventEmitter.mjs';
+import { WorkAllocator } from '../core/utils/WorkAllocator.mjs';
+import { Document } from '../core/text/Document.mjs';
 
 const CHUNK_SIZE = 200000;
 

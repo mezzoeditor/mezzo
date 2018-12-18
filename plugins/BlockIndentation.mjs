@@ -1,4 +1,4 @@
-import { EventEmitter } from '../src/utils/EventEmitter.mjs';
+import { EventEmitter } from '../core/utils/EventEmitter.mjs';
 
 export class BlockIndentation {
   /**

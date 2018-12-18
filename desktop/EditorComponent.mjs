@@ -1,8 +1,8 @@
-import { EventEmitter } from '../src/utils/EventEmitter.mjs';
-import { Editor } from '../src/editor/Editor.mjs';
-import { Document } from '../src/text/Document.mjs';
-import { Renderer } from '../src/web/Renderer.mjs';
-import { WebPlatformSupport } from '../src/web/WebPlatformSupport.mjs';
+import { EventEmitter } from '../core/utils/EventEmitter.mjs';
+import { Editor } from '../core/editor/Editor.mjs';
+import { Document } from '../core/text/Document.mjs';
+import { Renderer } from '../core/web/Renderer.mjs';
+import { WebPlatformSupport } from '../core/web/WebPlatformSupport.mjs';
 import { createHighlighterForMimeType } from '../lang/mimetypes.mjs';
 
 import { SelectedWordHighlighter } from '../plugins/SelectedWordHighlighter.mjs';
