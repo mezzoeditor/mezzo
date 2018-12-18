@@ -198,7 +198,6 @@ export class Renderer {
     this._maxScrollLeft = 0;
     this._padding = { left: 0, right: 0, top: 0, bottom: 0 };
 
-    this._setupSelection();
     this._setupEventListeners();
 
     this._keymapHandler = new KeymapHandler();
@@ -306,15 +305,13 @@ export class Renderer {
 
     this._editor.input().type(this._input.value);
     this._revealSelection(true);
-    this._revealCursors();
     this._input.value = '';
   }
 
   _onInputKeydown(event) {
     if (!this._editor)
       return;
-    if (this._keymapHandler.handleKeyDown(event))
-      this._revealCursors();
+    this._keymapHandler.handleKeyDown(event);
   }
 
   keymapHandler() {
@@ -443,7 +440,6 @@ export class Renderer {
         return;
       this._editor.input().paste(data.getData('text/plain'));
       this._revealSelection(true);
-      this._revealCursors();
       event.preventDefault();
       event.stopPropagation();
     });
@@ -456,7 +452,6 @@ export class Renderer {
       event.clipboardData.setData('text/plain', text);
       this._editor.input().cut();
       this._revealSelection(true);
-      this._revealCursors();
       event.preventDefault();
       event.stopPropagation();
     });
@@ -525,7 +520,6 @@ export class Renderer {
         else
           this._editor.input().setLastCursor({anchor: mouseRangeStartOffset, focus: mouseRangeEndOffset});
       }, Document.History.Merge);
-      this._revealCursors();
     });
     this._element.addEventListener('wheel', event => {
       if (!this._editor)
@@ -541,7 +535,6 @@ export class Renderer {
         else
           this._editor.input().setLastCursor({anchor: mouseRangeStartOffset, focus: mouseRangeEndOffset});
       }, Document.History.Merge);
-      this._revealCursors();
     });
     this._element.addEventListener('mouseup', event => {
       mouseRangeStartOffset = null;
@@ -557,42 +550,6 @@ export class Renderer {
         event.stopPropagation();
       }
     }, false);
-  }
-
-  _setupSelection() {
-    let theme = this._theme;
-    let selectionFocusTheme = theme['selection.focus'];
-    let cursorsVisible = false;
-    let cursorsTimeout;
-    let toggleCursors = () => {
-      cursorsVisible = !cursorsVisible;
-      if (cursorsVisible)
-        theme['selection.focus'] = selectionFocusTheme;
-      else
-        delete theme['selection.focus'];
-      this._invalidate();
-    };
-    this._input.addEventListener('focusin', event => {
-      toggleCursors();
-      cursorsTimeout = window.setInterval(toggleCursors, 500);
-    });
-    this._input.addEventListener('focusout', event => {
-      if (cursorsVisible)
-        toggleCursors();
-      if (cursorsTimeout) {
-        window.clearInterval(cursorsTimeout);
-        cursorsTimeout = null;
-      }
-    });
-    this._revealCursors = () => {
-      if (!cursorsTimeout)
-        return;
-      window.clearInterval(cursorsTimeout);
-      if (!cursorsVisible)
-        toggleCursors();
-      cursorsTimeout = window.setInterval(toggleCursors, 500);
-    };
-    this._revealCursors();
   }
 
   _revealSelection(success, center = false) {

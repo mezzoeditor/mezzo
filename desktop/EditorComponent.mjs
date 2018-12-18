@@ -8,10 +8,12 @@ import { createHighlighterForMimeType } from '../lang/mimetypes.mjs';
 import { SelectedWordHighlighter } from '../plugins/SelectedWordHighlighter.mjs';
 import { SmartBraces } from '../plugins/SmartBraces.mjs';
 import { AddNextOccurence } from '../plugins/AddNextOccurence.mjs';
+import { SelectionDecorator } from '../plugins/SelectionDecorator.mjs';
 import { BlockIndentation } from '../plugins/BlockIndentation.mjs';
 import { Search } from '../plugins/Search.mjs';
 import { WordDictionary } from '../plugins/WordDictionary.mjs';
 import { SearchToolbar } from '../plugins/web/SearchToolbar.mjs';
+import { CursorBlinker } from '../plugins/web/CursorBlinker.mjs';
 import { SuggestBoxController } from '../plugins/web/SuggestBox.mjs';
 
 export class EditorComponent extends HTMLElement {
@@ -37,6 +39,7 @@ export class EditorComponent extends HTMLElement {
     });
     this._searchToolbar = new SearchToolbar(this._renderer);
     this._suggestBox = new SuggestBoxController(this._renderer);
+    this._cursorBlinker = new CursorBlinker(this._renderer);
     this._editor = null;
     this._eventListeners = [];
     this._renderer.element().classList.add('editor');
@@ -92,6 +95,7 @@ export class EditorComponent extends HTMLElement {
     if (this._editor) {
       this._searchToolbar.setSearch(PluginManager.ensurePlugins(this._editor).search);
       this._suggestBox.setDictionary(PluginManager.ensurePlugins(this._editor).wordDictionary);
+      this._cursorBlinker.setSelectionDecorator(PluginManager.ensurePlugins(this._editor).selectionDecorator);
       this._eventListeners = [
         this._editor.document().on(Document.Events.Changed, ({selectionChanged}) => {
           if (selectionChanged)
@@ -155,6 +159,7 @@ class PluginManager {
     this.smartBraces = new SmartBraces(editor);
     this.blockIndentation = new BlockIndentation(editor);
     this.addNextOccurence = new AddNextOccurence(editor);
+    this.selectionDecorator = new SelectionDecorator(editor);
     this.search = new Search(editor);
     this.wordDictionary = new WordDictionary(editor, {
       ignore: [/^\d+$/],

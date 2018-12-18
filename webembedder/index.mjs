@@ -11,6 +11,8 @@ import { BlockIndentation } from '../plugins/BlockIndentation.mjs';
 import { AddNextOccurence } from '../plugins/AddNextOccurence.mjs';
 import { SearchToolbar } from '../plugins/web/SearchToolbar.mjs';
 import { SuggestBoxController } from '../plugins/web/SuggestBox.mjs';
+import { SelectionDecorator } from '../plugins/SelectionDecorator.mjs';
+import { CursorBlinker } from '../plugins/web/CursorBlinker.mjs';
 import { DOMUtils } from '../src/web/DOMUtils.mjs';
 import { createHighlighterForMimeType } from '../lang/mimetypes.mjs';
 
@@ -50,6 +52,7 @@ export class WebEmbedder {
       blockIndentation: new BlockIndentation(this._editor),
       addNextOccurence: new AddNextOccurence(this._editor),
       search: new Search(this._editor),
+      selectionDecorator: new SelectionDecorator(this._editor),
       wordDictionary: new WordDictionary(this._editor, {
         // Ignore numbers by default.
         ignore: [/^\d+$/],
@@ -72,6 +75,9 @@ export class WebEmbedder {
     });
     this._searchToolbar = new SearchToolbar(this._renderer);
     this._searchToolbar.setSearch(this._plugins.search);
+
+    this._cursorBlinker = new CursorBlinker(this._renderer);
+    this._cursorBlinker.setSelectionDecorator(this._plugins.selectionDecorator);
 
     this._suggestBoxController = new SuggestBoxController(this._renderer);
     this._suggestBoxController.setDictionary(this._plugins.wordDictionary);

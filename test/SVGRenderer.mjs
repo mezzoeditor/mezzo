@@ -1,5 +1,6 @@
 import {Editor} from '../src/editor/Editor.mjs';
 import {DefaultTheme} from '../src/default/DefaultTheme.mjs';
+import {SelectionDecorator} from '../plugins/SelectionDecorator.mjs';
 import {Frame} from '../src/markup/Frame.mjs';
 
 // All sizes are in CH (if horizontal) and EM (if vertical).
@@ -22,6 +23,7 @@ export class SVGRenderer {
   constructor(platformSupport, width = 50, height = 20) {
     // TODO: implement reveal when needed.
     this._editor = Editor.create(SVGRenderer.measurer(), platformSupport);
+    this._selectionDecorator = new SelectionDecorator(this._editor);
     this._width = width;
     this._height = height;
     this._theme = DefaultTheme;

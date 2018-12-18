@@ -77,9 +77,6 @@ export class Editor extends EventEmitter {
 
     this._input = new Input(this);
 
-    this._selectionDecorator = new SelectionDecorator(this._document);
-    this._selectionDecorator.decorate(this);
-
     this._remoteDocument = remoteDocument;
 
     this.reset('');
@@ -263,53 +260,4 @@ class RangeHandle {
   }
 }
 
-class SelectionDecorator {
-  constructor(document) {
-    this._document = document;
-    this._ranges = new RangeTree();
-    this._focus = new RangeTree();
-    this._staleDecorations = true;
-
-    document.on(Document.Events.Changed, () => this._staleDecorations = true);
-  }
-
-  /**
-   * @param {!Editor} editor
-   */
-  decorate(editor) {
-    editor.addDecorationCallback(this._onDecorate.bind(this));
-  }
-
-  /**
-   * @param {FrameContent} frameContent
-   */
-  _onDecorate(frameContent) {
-    if (this._staleDecorations) {
-      this._staleDecorations = false;
-      this._ranges.clearAll();
-      this._focus.clearAll();
-      for (let range of this._document.selection()) {
-        this._focus.add(range.focus, range.focus, kSelectionFocusStyle);
-        let from = Math.min(range.focus, range.anchor);
-        let to = Math.max(range.focus, range.anchor);
-        if (range.focus !== range.anchor) {
-          // This achieves a nice effect of line decorations spanning all the lines
-          // of selection range, but not touching the next line when the focus is at
-          // just at the start of it.
-          this._ranges.add(from, to, kSelectionRangeStyle);
-        } else {
-          // On the contrary, collapsed selection at the start of the line
-          // wants a full line highlight.
-          this._ranges.add(from, to + 0.5, kSelectionRangeStyle);
-        }
-      }
-    }
-    frameContent.backgroundDecorations.push(this._ranges, this._focus);
-    frameContent.lineDecorations.push({style: kSelectionRangeStyle, ranges: this._ranges});
-  }
-}
-
 RangeHandle._symbol = Symbol('RangeHandle');
-
-const kSelectionRangeStyle = 'selection.range';
-const kSelectionFocusStyle = 'selection.focus';
