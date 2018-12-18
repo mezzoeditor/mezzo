@@ -272,6 +272,11 @@ export class Renderer {
     this._invalidate();
   }
 
+  setTheme(theme) {
+    this._theme = theme;
+    this.raf();
+  }
+
   measurer() {
     return this._measurer;
   }

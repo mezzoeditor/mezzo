@@ -5,6 +5,10 @@ import { WebEmbedder } from "../webembedder/index.mjs";
 
 
 import { Trace } from "../src/utils/Trace.mjs";
+
+import ClassicTheme from "../themes/Classic.mjs";
+import DarkTheme from "../themes/Dark.mjs";
+
 Trace.setup();
 
 const examples = [
@@ -72,6 +76,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       ...embedder.renderer().fontConfig(),
       size
     });
+  }, false);
+
+  document.querySelector('.themes').addEventListener('input', event => {
+    if (event.target.value === 'dark')
+      embedder.renderer().setTheme(DarkTheme);
+    else
+      embedder.renderer().setTheme(ClassicTheme);
   }, false);
 
   document.body.appendChild(embedder.element());
