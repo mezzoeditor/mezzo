@@ -1,7 +1,7 @@
 import { RangeTree } from "../src/utils/RangeTree.mjs";
 import { WrappingMode } from "../src/markup/Markup.mjs";
 
-import { WebEmbedder } from "../webembedder/index.mjs";
+import { Mezzo } from "../mezzo/index.mjs";
 
 
 import { Trace } from "../src/utils/Trace.mjs";
@@ -26,12 +26,12 @@ const examples = [
 ];
 
 let rafid = 0;
-function updateTotalSize(embedder) {
+function updateTotalSize(mezzo) {
   if (rafid)
     return;
   rafid = requestAnimationFrame(() => {
     rafid = 0;
-    let size = embedder.document().text().length();
+    let size = mezzo.document().text().length();
     const suffixes = ['B', 'KB', 'MB'];
     let suffixIndex = 0;
     for (suffixIndex = 0; suffixIndex < suffixes.length && size > 1024; ++suffixIndex)
@@ -43,107 +43,107 @@ function updateTotalSize(embedder) {
 
 document.addEventListener('DOMContentLoaded', async () => {
   let workerThreadStatus = document.querySelector('#thread-status');
-  let embedder = null;
+  let mezzo = null;
   try {
-    embedder = await WebEmbedder.createWithWorker(document);
+    mezzo = await Mezzo.createWithWorker(document);
     workerThreadStatus.classList.add('thread-good');
   } catch (e) {
-    embedder = WebEmbedder.create(document);
+    mezzo = Mezzo.create(document);
     workerThreadStatus.classList.add('thread-bad');
   }
-  embedder.document().on('changed', updateTotalSize.bind(null, embedder));
-  window.editor = embedder;
+  mezzo.document().on('changed', updateTotalSize.bind(null, mezzo));
+  window.editor = mezzo;
 
-  const monospaceFontFamily = embedder.renderer().fontConfig().family;
+  const monospaceFontFamily = mezzo.renderer().fontConfig().family;
   document.querySelector('.ismonospace').addEventListener('change', event => {
-    const config = embedder.renderer().fontConfig();
+    const config = mezzo.renderer().fontConfig();
     const monospace = event.target.checked;
     const update = {
       monospace,
       family: monospace ? monospaceFontFamily : 'system-ui',
     };
-    embedder.renderer().setFontConfig({...config, ...update});
+    mezzo.renderer().setFontConfig({...config, ...update});
   }, false);
 
   document.querySelector('.wrapping').addEventListener('input', event => {
     let map = new Map([['none', WrappingMode.None], ['line', WrappingMode.Line], ['word', WrappingMode.Word]]);
-    embedder.setWrappingMode(map.get(event.target.value));
+    mezzo.setWrappingMode(map.get(event.target.value));
   }, false);
 
   document.querySelector('.fontsize').addEventListener('input', event => {
     const size = parseInt(event.target.value);
-    embedder.renderer().setFontConfig({
-      ...embedder.renderer().fontConfig(),
+    mezzo.renderer().setFontConfig({
+      ...mezzo.renderer().fontConfig(),
       size
     });
   }, false);
 
   document.querySelector('.themes').addEventListener('input', event => {
     if (event.target.value === 'dark')
-      embedder.renderer().setTheme(DarkTheme);
+      mezzo.renderer().setTheme(DarkTheme);
     else
-      embedder.renderer().setTheme(ClassicTheme);
+      mezzo.renderer().setTheme(ClassicTheme);
   }, false);
 
-  document.body.appendChild(embedder.element());
-  embedder.element().classList.add('editor');
+  document.body.appendChild(mezzo.element());
+  mezzo.element().classList.add('editor');
 
-  window.onresize = () => embedder.resize();
-  embedder.resize();
+  window.onresize = () => mezzo.resize();
+  mezzo.resize();
 
-  addExamples(embedder);
-  addHighlights(embedder);
+  addExamples(mezzo);
+  addHighlights(mezzo);
 });
 
 
-function addExamples(embedder) {
+function addExamples(mezzo) {
   const select = document.querySelector('.examples');
   for (const example of examples) {
     const option = document.createElement('option');
     option.textContent = example;
     select.appendChild(option);
   }
-  select.addEventListener('input', () => setupExample(embedder, select.value), false);
-  setupExample(embedder, examples[0]);
+  select.addEventListener('input', () => setupExample(mezzo, select.value), false);
+  setupExample(mezzo, examples[0]);
 
-  async function setupExample(embedder, exampleName) {
+  async function setupExample(mezzo, exampleName) {
     const text = await fetch(exampleName).then(response => response.text());
 
     if (exampleName.endsWith('.js'))
-      await embedder.setMimeType('text/javascript');
+      await mezzo.setMimeType('text/javascript');
     else if (exampleName.endsWith('.css'))
-      await embedder.setMimeType('text/css');
+      await mezzo.setMimeType('text/css');
     else if (exampleName.endsWith('.html'))
-      await embedder.setMimeType('text/html');
+      await mezzo.setMimeType('text/html');
     else
-      await embedder.setMimeType('text/plain');
+      await mezzo.setMimeType('text/plain');
 
     if (exampleName.indexOf('jquery') !== -1)
-      embedder.setText(new Array(1000).fill(text).join(''));
+      mezzo.setText(new Array(1000).fill(text).join(''));
     else if (exampleName.indexOf('nocomments') !== -1)
-      embedder.setText(new Array(10000).fill(text).join(''));
+      mezzo.setText(new Array(10000).fill(text).join(''));
     else if (exampleName.indexOf('megacolumn') !== -1)
-      embedder.setText(new Array(10000).fill(text).join(''));
+      mezzo.setText(new Array(10000).fill(text).join(''));
     else if (exampleName.indexOf('unicodeperf') !== -1)
-      embedder.setText(new Array(100).fill(text).join(''));
+      mezzo.setText(new Array(100).fill(text).join(''));
     else
-      embedder.setText(text);
-    // embedder.setText('abcdefg abcdefg abcdefg abcdefg abcdefg \nabcdefg\n abcdefg abcdefg abcdefg abcdefg\n abcdefg abcdefg abcdefg abcdefg abcdefg abcdefg\n abcdefg');
-    embedder.focus();
+      mezzo.setText(text);
+    // mezzo.setText('abcdefg abcdefg abcdefg abcdefg abcdefg \nabcdefg\n abcdefg abcdefg abcdefg abcdefg\n abcdefg abcdefg abcdefg abcdefg abcdefg abcdefg\n abcdefg');
+    mezzo.focus();
 
 
     const selection = [];
     for (let i = 0; i < 20; i++) {
-      const offset = embedder.document().text().positionToOffset({line: 4 * i, column: 3});
+      const offset = mezzo.document().text().positionToOffset({line: 4 * i, column: 3});
       selection.push({anchor: offset, focus: offset});
     }
     //let ranges = [{from: 0, to: 0}, {from: 9, to: 9}];
-    embedder.document().setSelection(selection);
+    mezzo.document().setSelection(selection);
   }
 }
 
-function addHighlights(embedder) {
-  const tokenHighlighter = new TokenHighlighter(embedder);
+function addHighlights(mezzo) {
+  const tokenHighlighter = new TokenHighlighter(mezzo);
 
   const select = document.querySelector('.highlights');
   const highlights = ['', 'e', 'the', 'The', '('];
@@ -158,8 +158,8 @@ function addHighlights(embedder) {
 
 //TODO(lushnikov): make this a proper plugin
 class TokenHighlighter {
-  constructor(embedder) {
-    this._editor = embedder.editor();
+  constructor(mezzo) {
+    this._editor = mezzo.editor();
     this._token = '';
     this._editor.addDecorationCallback(this._onDecorate.bind(this));
   }

@@ -7,7 +7,7 @@ export function addTests(runner, expect) {
 
   describe('Standalone', () => {
     beforeEach(async state => {
-      const url = state.server.PREFIX + '/webembedder/test/index.html';
+      const url = state.server.PREFIX + '/mezzo/test/index.html';
       state.gg = await GG.create(state.server, state.page, url);
     });
     afterEach(async state => {

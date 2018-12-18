@@ -10,16 +10,16 @@ html, body, .renderer {
 </style>
 <script type='module'>
 
-import { WebEmbedder } from '../index.mjs';
+import { Mezzo } from '../index.mjs';
 
-const embedder = WebEmbedder.create(document);
-embedder.element().classList.add('renderer');
+const mezzo = Mezzo.create(document);
+mezzo.element().classList.add('renderer');
 
-document.body.appendChild(embedder.element());
-embedder.renderer().resize();
+document.body.appendChild(mezzo.element());
+mezzo.renderer().resize();
 window.onresize = () => embedder.renderer().resize();
 
 // Expose renderer and editor on window.
-window.editor = embedder.editor();
-window.renderer = embedder.renderer();
+window.editor = mezzo.editor();
+window.renderer = mezzo.renderer();
 </script>

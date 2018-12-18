@@ -40,7 +40,7 @@ const browserOptions = { dumpio, headless};
   });
 
   (await import('../src/web/Renderer.spec.mjs')).addTests(runner, expect);
-  (await import('../webembedder/index.spec.mjs')).addTests(runner, expect);
+  (await import('../mezzo/index.spec.mjs')).addTests(runner, expect);
 
   new Reporter(runner);
   await runner.run();
