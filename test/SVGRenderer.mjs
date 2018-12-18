@@ -1,5 +1,5 @@
 import {Editor} from '../src/editor/Editor.mjs';
-import {DefaultTheme} from '../src/default/DefaultTheme.mjs';
+import ClassicTheme from '../themes/Classic.mjs';
 import {SelectionDecorator} from '../plugins/SelectionDecorator.mjs';
 import {Frame} from '../src/markup/Frame.mjs';
 
@@ -26,7 +26,7 @@ export class SVGRenderer {
     this._selectionDecorator = new SelectionDecorator(this._editor);
     this._width = width;
     this._height = height;
-    this._theme = DefaultTheme;
+    this._theme = ClassicTheme;
   }
 
   /**
@@ -115,25 +115,9 @@ export class SVGRenderer {
   _drawGutter(svg, gutterLength, frame) {
     for (let {y, styles} of frame.lines) {
       for (let style of styles) {
-        const theme = this._theme[style];
-        if (!theme || !theme.gutter)
-          continue;
-        if (theme.gutter.color) {
-          svg.add('rect', {
-            x: 0, y, width: gutterLength,
-            height: frame.lineHeight, fill: theme.gutter.color
-          });
-        }
-        if (theme.gutter.border) {
-          svg.add('line', {
-            x1: 0, y1: y, x2: gutterLength, y2: y,
-            stroke: theme.gutter.border
-          });
-          svg.add('line', {
-            x1: 0, y1: y + frame.lineHeight, x2: gutterLength, y2: y + frame.lineHeight,
-            stroke: theme.gutter.border
-          });
-        }
+        const theme = this._theme.textDecorations[style];
+        if (theme)
+          drawRect(svg, 0, y, gutterLength, frame.lineHeight, theme.gutter);
       }
     }
     for (let {first, y} of frame.lines) {
@@ -149,65 +133,28 @@ export class SVGRenderer {
     const lines = svg.add('g', {id: 'lines'});
     for (const {y, styles} of frame.lines) {
       for (const style of styles) {
-        const theme = this._theme[style];
-        if (!theme || !theme.line)
-          continue;
-        if (theme.line.background && theme.line.background.color) {
-          lines.add('rect', {
-            x: frame.lineLeft, y, width: frame.lineRight - frame.lineLeft, height: frame.lineHeight,
-            fill: theme.line.background.color,
-          });
-        }
-        if (theme.line.border && theme.line.border.color) {
-          lines.add('rect', {
-            x: frame.lineleft, y, width: frame.lineRight - frame.lineLeft, height: frame.lineHeight,
-            fill: transparent,
-            stroke: theme.line.border.color,
-          });
-        }
+        const theme = this._theme.textDecorations[style];
+        if (theme)
+          drawRect(lines, frame.lineLeft, y, frame.lineRight - frame.lineLeft, frame.lineHeight, theme.tokenLine);
       }
     }
 
     const background = svg.add('g', {id: 'background'});
     for (let {x, y, width, style} of frame.background) {
-      const theme = this._theme[style];
-      if (!theme)
-        continue;
-      if (theme.background && theme.background.color && width) {
-        background.add('rect', {
-          x, y, width, height: LINE_HEIGHT,
-          fill: theme.background.color,
-        });
-      }
-
-      if (theme.border) {
-        if (!width && theme.border.color) {
-          background.add('line', {
-            x1: x, y1: y, x2: x, y2: y + LINE_HEIGHT,
-            stroke: theme.border.color,
-          });
-        } else if (width) {
-          const radius = theme.border.radius || 0;
-          background.add('rect', {
-            x, y, width, height: LINE_HEIGHT,
-            rx: radius,
-            ry: radius,
-            stroke: theme.border.color,
-            fill: 'transparent',
-          });
-        }
-      }
+      const theme = this._theme.textDecorations[style];
+      if (theme)
+        drawRect(background, x, y, width, LINE_HEIGHT, theme.token);
     }
 
     const text = svg.add('g', {id: 'text'});
     for (let {x, y, content, style} of frame.text) {
-      const theme = this._theme[style];
-      if (theme && theme.text) {
+      const theme = this._theme.textDecorations[style];
+      if (theme && theme.token) {
         text.add('text', {
           x, y,
           'alignment-baseline': 'hanging',
           'style': 'white-space: pre;',
-          fill: theme.text.color || 'rgb(33, 33, 33)',
+          fill: theme.token.color || 'rgb(33, 33, 33)',
         }, content);
       }
     }
@@ -255,18 +202,12 @@ export class SVGRenderer {
 
   _drawScrollbarMarkers(svg, frame) {
     for (let {y, height, style} of frame.scrollbar) {
-      const theme = this._theme[style];
-      if (!theme || !theme.line.scrollbar || !theme.line.scrollbar || !theme.line.scrollbar.color)
+      const theme = this._theme.textDecorations[style];
+      if (!theme)
         continue;
-      const left = ((theme.line.scrollbar.left || 0) / 100);
-      const right = ((theme.line.scrollbar.right || 100) / 100);
-      svg.add('rect', {
-        x: this._width - 1 + left,
-        y: y,
-        width: right - left,
-        height: height,
-        fill: theme.line.scrollbar.color,
-      });
+      const left = ((theme.scrollbarMarker.left || 0) / 100);
+      const right = ((theme.scrollbarMarker.right || 100) / 100);
+      drawRect(svg, this._width - 1 + left, y, right - left, height, theme.scrollbarMarker);
     }
   }
 
@@ -277,6 +218,27 @@ export class SVGRenderer {
       defaultWidthRegex: () => null,
       measureString: s => s.length
     };
+  }
+}
+
+function drawRect(svg, x, y, width, height, theme) {
+  if (!theme)
+    return;
+  if (!theme['background-color'] && !theme['border-color']) {
+    return;
+  }
+  if (width && height) {
+    svg.add('rect', {
+      x, y, width, height,
+      fill: theme['background-color'] || 'transparent',
+      stroke: theme['border-color'],
+    });
+  } else if (theme['border-color']) {
+    svg.add('line', {
+      x1: x, y1: y, x2: x + width, y2: y + height,
+      fill: theme['background-color'],
+      stroke: theme['border-color'],
+    });
   }
 }
 
@@ -327,7 +289,7 @@ class SVGNode {
       }
       const tag = [];
       tag.push(u.name);
-      tag.push(...Object.entries(u.attrs).map(([key, value]) => {
+      tag.push(...Object.entries(u.attrs).filter(([key, value]) => value !== undefined).map(([key, value]) => {
         if (typeof value === 'number') {
           if (key === 'x' || key === 'x1' || key === 'x2')
             value = round(value + translateX) + 'ch';

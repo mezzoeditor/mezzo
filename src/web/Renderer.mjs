@@ -4,7 +4,6 @@ import { Frame } from '../markup/Frame.mjs';
 import { Editor } from '../editor/Editor.mjs';
 import { Trace } from '../utils/Trace.mjs';
 import { Document } from '../text/Document.mjs';
-import { DefaultTheme } from '../default/DefaultTheme.mjs';
 import { Tokenizer } from '../editor/Tokenizer.mjs';
 import { EventEmitter } from '../utils/EventEmitter.mjs';
 import { KeymapHandler } from './KeymapHandler.mjs';
@@ -71,23 +70,48 @@ function rectHasPoint(rect, x, y) {
   return rect.x <= x && x <= rect.x + rect.width && rect.y <= y && y <= rect.y + rect.height;
 }
 
-function roundRect(ctx, x, y, width, height, radius) {
-  ctx.moveTo(x + radius, y);
-  ctx.lineTo(x + width - radius, y);
-  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-  ctx.lineTo(x + width, y + height - radius);
-  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-  ctx.lineTo(x + radius, y + height);
-  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-  ctx.lineTo(x, y + radius);
-  ctx.quadraticCurveTo(x, y, x + radius, y);
+function drawRect(ctx, x, y, width, height, ratio, theme) {
+  if (!theme)
+    return;
+  if (!theme['background-color'] && (!theme['border-color'] || !theme['border-width']))
+    return;
+  const path = new Path2D();
+  if (!width) {
+    path.moveTo(x, y);
+    path.lineTo(x, y + height);
+  } else if (!height) {
+    path.moveTo(x, y);
+    path.lineTo(x + width, y);
+  } else if (!theme['border-radius']) {
+    path.rect(x, y, width, height);
+  } else {
+    const radius = theme['border-radius'];
+    path.moveTo(x + radius, y);
+    path.lineTo(x + width - radius, y);
+    path.quadraticCurveTo(x + width, y, x + width, y + radius);
+    path.lineTo(x + width, y + height - radius);
+    path.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    path.lineTo(x + radius, y + height);
+    path.quadraticCurveTo(x, y + height, x, y + height - radius);
+    path.lineTo(x, y + radius);
+    path.quadraticCurveTo(x, y, x + radius, y);
+  }
+  if (theme['background-color']) {
+    ctx.fillStyle = theme['background-color'];
+    ctx.fill(path);
+  }
+  if (theme['border-color'] && theme['border-width']) {
+    ctx.strokeStyle = theme['border-color'];
+    ctx.lineWidth = theme['border-width'] / ratio;
+    ctx.stroke(path);
+  }
 }
 
 export class Renderer {
   /**
    * @param {!Document} domDocument
    */
-  constructor(domDocument) {
+  constructor(domDocument, theme) {
     this._domDocument = domDocument;
     this._element = domDocument.createElement('div');
     this._element.style.cssText = `
@@ -127,7 +151,7 @@ export class Renderer {
 
     this._element.appendChild(this._input);
 
-    this._theme = DefaultTheme;
+    this._theme = theme;
     this._wrappingMode = WrappingMode.None;
     this._hiddenRangesTextDecorations = new RangeTree(false /* createHandles */);
     this._eventListeners = [];
@@ -924,7 +948,7 @@ export class Renderer {
     if (!this._editor) {
       const ctx = this._canvas.getContext('2d');
       ctx.setTransform(this._ratio, 0, 0, this._ratio, 0, 0);
-      ctx.clearRect(0, 0, this._cssWidth, this._cssHeight);
+      drawRect(ctx,  0, 0, this._cssWidth, this._cssHeight, this._ratio, this._theme.editor);
       return;
     }
 
@@ -938,7 +962,7 @@ export class Renderer {
 
     const ctx = this._canvas.getContext('2d');
     ctx.setTransform(this._ratio, 0, 0, this._ratio, 0, 0);
-    ctx.clearRect(0, 0, this._cssWidth, this._cssHeight);
+    drawRect(ctx,  0, 0, this._cssWidth, this._cssHeight, this._ratio, this._theme.editor);
     ctx.lineWidth = 1 / this._ratio;
 
     Trace.begin('buildFrame');
@@ -992,41 +1016,21 @@ export class Renderer {
     ctx.save();
     ctx.translate(this._gutterRect.x, this._gutterRect.y);
 
-    ctx.fillStyle = 'white';
-    ctx.fillRect(0, 0, width, height);
-    ctx.strokeStyle = 'rgb(187, 187, 187)';
-    ctx.lineWidth = 1 / this._ratio;
-    ctx.beginPath();
-    ctx.moveTo(width, 0);
-    ctx.lineTo(width, 0 + height);
-    ctx.stroke();
+    drawRect(ctx, 0, 0, width, height, this._ratio, this._theme.gutter);
 
     ctx.beginPath();
     ctx.rect(0, 0, width, height);
     ctx.clip();
     for (let {y, styles} of frame.lines) {
       for (let style of styles) {
-        const theme = this._theme[style];
-        if (!theme || !theme.gutter)
-          continue;
-        if (theme.gutter.color) {
-          ctx.fillStyle = theme.gutter.color;
-          ctx.fillRect(0, y + ty, width, frame.lineHeight);
-        }
-        if (theme.gutter.border) {
-          ctx.strokeStyle = theme.gutter.border;
-          ctx.beginPath();
-          ctx.moveTo(0, y + ty);
-          ctx.lineTo(width, y + ty);
-          ctx.moveTo(0, y + frame.lineHeight + ty);
-          ctx.lineTo(width, y + frame.lineHeight + ty);
-          ctx.stroke();
-        }
+        const theme = this._theme.textDecorations[style];
+        if (theme)
+          drawRect(ctx, 0, y + ty, width, frame.lineHeight, this._ratio, theme.gutter);
       }
     }
 
     ctx.textAlign = 'right';
-    ctx.fillStyle = 'rgb(128, 128, 128)';
+    ctx.fillStyle = this._theme.gutter['color'] || 'black';
     const topAscent = this._measurer._topAscent;
     const textX = width - GUTTER_PADDING_RIGHT;
     let joinFirstTwo = false;
@@ -1064,64 +1068,26 @@ export class Renderer {
 
     for (let {y, styles} of frame.lines) {
       for (let style of styles) {
-        const theme = this._theme[style];
-        if (!theme || !theme.line)
-          continue;
-        if (theme.line.background && theme.line.background.color) {
-          ctx.fillStyle = theme.line.background.color;
-          ctx.fillRect(tx + lineLeft, ty + y, lineRight - lineLeft, lineHeight);
-        }
-        if (theme.line.border && theme.line.border.color) {
-          ctx.strokeStyle = theme.line.border.color;
-          ctx.lineWidth = (theme.line.border.width || 1) / this._ratio;
-          ctx.beginPath();
-          ctx.moveTo(tx + lineLeft, ty + y);
-          ctx.lineTo(tx + lineRight, ty + y);
-          ctx.moveTo(tx + lineLeft, ty + y + lineHeight);
-          ctx.lineTo(tx + lineRight, ty + y + lineHeight);
-          ctx.stroke();
-        }
+        const theme = this._theme.textDecorations[style];
+        if (theme)
+          drawRect(ctx, tx + lineLeft, ty + y, lineRight - lineLeft, lineHeight, this._ratio, theme.tokenLine);
       }
     }
 
     for (let {x, y, width, style} of frame.background) {
-      const theme = this._theme[style];
-      if (!theme)
-        continue;
-
-      if (theme.background && theme.background.color) {
-        ctx.fillStyle = theme.background.color;
-        ctx.fillRect(tx + x, ty + y, width, lineHeight);
-      }
-
-      if (theme.border) {
-        // TODO: lines of width not divisble by ratio should be snapped by 1 / ratio.
-        // Note: border decorations spanning multiple lines are not supported,
-        // and we silently crop them per line.
-        ctx.strokeStyle = theme.border.color || 'transparent';
-        ctx.lineWidth = (theme.border.width || 1) / this._ratio;
-
-        ctx.beginPath();
-        if (!width) {
-          ctx.moveTo(tx + x, ty + y);
-          ctx.lineTo(tx + x, ty + y + lineHeight);
-        } else {
-          // TODO: border.radius should actually clip background.
-          const radius = Math.min(theme.border.radius || 0, Math.min(lineHeight, width) / 2) / this._ratio;
-          if (radius)
-            roundRect(ctx, tx + x, ty + y, width, lineHeight, radius);
-          else
-            ctx.rect(tx + x, ty + y, width, lineHeight);
-        }
-        ctx.stroke();
-      }
+      // TODO: lines of width not divisble by ratio should be snapped by 1 / ratio.
+      // Note: border decorations spanning multiple lines are not supported,
+      // and we silently crop them per line.
+      const theme = this._theme.textDecorations[style];
+      if (theme)
+        drawRect(ctx, tx + x, ty + y, width, lineHeight, this._ratio, theme.token);
     }
 
     const topAscent = this._measurer._topAscent;
     for (let {x, y, content, style} of frame.text) {
-      const theme = this._theme[style];
-      if (theme && theme.text) {
-        ctx.fillStyle = theme.text.color || 'rgb(33, 33, 33)';
+      const theme = this._theme.textDecorations[style];
+      if (theme && theme.token) {
+        ctx.fillStyle = theme.token.color || 'rgb(33, 33, 33)';
         ctx.fillText(content, tx + x, ty + y + topAscent);
       }
     }
@@ -1151,28 +1117,25 @@ export class Renderer {
   _drawScrollbar(ctx, scrollbar, isVertical) {
     if (!scrollbar.rect.width || !scrollbar.rect.height)
       return;
-    if (isVertical) {
-      ctx.strokeStyle = 'rgba(100, 100, 100, 0.2)';
-      ctx.strokeRect(scrollbar.rect.x, scrollbar.rect.y, scrollbar.rect.width, scrollbar.rect.height);
-    }
-
+    const theme = isVertical ? this._theme.vScrollbar : this._theme.hScrollbar;
+    let thumbTheme = theme['thumb'];
     if (scrollbar.dragged)
-      ctx.fillStyle = 'rgba(100, 100, 100, 0.8)';
+      thumbTheme = theme['thumb.drag'];
     else if (scrollbar.hovered)
-      ctx.fillStyle = 'rgba(100, 100, 100, 0.6)';
-    else
-      ctx.fillStyle = 'rgba(100, 100, 100, 0.4)'
-    ctx.fillRect(scrollbar.thumbRect.x, scrollbar.thumbRect.y, scrollbar.thumbRect.width, scrollbar.thumbRect.height);
+      thumbTheme = theme['thumb.hover'];
+
+    drawRect(ctx, scrollbar.rect.x, scrollbar.rect.y, scrollbar.rect.width, scrollbar.rect.height, this._ratio, theme.track);
+    drawRect(ctx, scrollbar.thumbRect.x, scrollbar.thumbRect.y, scrollbar.thumbRect.width, scrollbar.thumbRect.height, this._ratio, thumbTheme);
   }
 
   _drawScrollbarMarkers(ctx, frame, rect) {
     for (let {y, height, style} of frame.scrollbar) {
-      const theme = this._theme[style];
-      if (!theme || !theme.line || !theme.line.scrollbar || !theme.line.scrollbar || !theme.line.scrollbar.color)
+      const theme = this._theme.textDecorations[style];
+      if (!theme || !theme.scrollbarMarker || !theme.scrollbarMarker['background-color'])
         continue;
-      ctx.fillStyle = theme.line.scrollbar.color;
-      let left = Math.round(rect.width * (theme.line.scrollbar.left || 0) / 100);
-      let right = Math.round(rect.width * (theme.line.scrollbar.right || 100) / 100);
+      ctx.fillStyle = theme.scrollbarMarker['background-color'];
+      let left = Math.round(rect.width * (theme.scrollbarMarker.left || 0) / 100);
+      let right = Math.round(rect.width * (theme.scrollbarMarker.right || 100) / 100);
       ctx.fillRect(rect.x + left, rect.y + y, right - left, height);
     }
   }

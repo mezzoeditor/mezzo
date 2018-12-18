@@ -9,10 +9,11 @@ html, body, .renderer {
 </style>
 <script type='module'>
 import { Renderer } from '../Renderer.mjs';
+import ClassicTheme from '../../../../themes/Classic.mjs';
 import { WebPlatformSupport } from '../WebPlatformSupport.mjs';
 import { Editor } from '../../editor/Editor.mjs';
 
-const renderer = new Renderer(document);
+const renderer = new Renderer(document, ClassicTheme);
 const editor = Editor.create(renderer.measurer(), WebPlatformSupport.instance());
 renderer.setEditor(editor);
 

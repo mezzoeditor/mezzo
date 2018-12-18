@@ -16,16 +16,18 @@ import { CursorBlinker } from '../plugins/web/CursorBlinker.mjs';
 import { DOMUtils } from '../src/web/DOMUtils.mjs';
 import { createHighlighterForMimeType } from '../lang/mimetypes.mjs';
 
+import ClassicTheme from '../themes/Classic.mjs';
+
 export class WebEmbedder {
   static async createWithWorker(document) {
     const thread = await Thread.create(WebPlatformSupport.instance());
-    const renderer = new Renderer(document);
+    const renderer = new Renderer(document, ClassicTheme);
     const editor = await Editor.createWithRemoteDocument(renderer.measurer(), WebPlatformSupport.instance(), thread);
     return new WebEmbedder(renderer, editor);
   }
 
   static create(document) {
-    const renderer = new Renderer(document);
+    const renderer = new Renderer(document, ClassicTheme);
     const editor = Editor.create(renderer.measurer(), WebPlatformSupport.instance());
     return new WebEmbedder(renderer, editor);
   }

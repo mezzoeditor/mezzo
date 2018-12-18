@@ -15,11 +15,12 @@ import { WordDictionary } from '../plugins/WordDictionary.mjs';
 import { SearchToolbar } from '../plugins/web/SearchToolbar.mjs';
 import { CursorBlinker } from '../plugins/web/CursorBlinker.mjs';
 import { SuggestBoxController } from '../plugins/web/SuggestBox.mjs';
+import ClassicTheme from '../themes/Classic.mjs';
 
 export class EditorComponent extends HTMLElement {
   constructor() {
     super();
-    this._renderer = new Renderer(document);
+    this._renderer = new Renderer(document, ClassicTheme);
     this._renderer.keymapHandler().addKeymap({
       'Cmd/Ctrl-d': 'selection.addnext',
     }, command => {

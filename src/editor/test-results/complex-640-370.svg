@@ -1,20 +1,13 @@
 <svg version="1.1" xmlns="http://www.w3.org/2000/svg" baseProfile="full" width="50ch" height="20em" style="font-family: monospace; font-size: 14px;">
   <line x1="4ch" y1="0em" x2="4ch" y2="20em" stroke="rgb(187, 187, 187)" id="gutter-border"></line>
   <g id="gutter">
-    <line x1="0ch" y1="13.5em" x2="4ch" y2="13.5em" stroke="hsla(36, 96%, 56%, 0.7)"></line>
-    <line x1="0ch" y1="14.5em" x2="4ch" y2="14.5em" stroke="hsla(36, 96%, 56%, 0.7)"></line>
-    <line x1="0ch" y1="14.5em" x2="4ch" y2="14.5em" stroke="hsla(36, 96%, 56%, 0.7)"></line>
-    <line x1="0ch" y1="15.5em" x2="4ch" y2="15.5em" stroke="hsla(36, 96%, 56%, 0.7)"></line>
-    <line x1="0ch" y1="15.5em" x2="4ch" y2="15.5em" stroke="hsla(36, 96%, 56%, 0.7)"></line>
-    <line x1="0ch" y1="16.5em" x2="4ch" y2="16.5em" stroke="hsla(36, 96%, 56%, 0.7)"></line>
-    <line x1="0ch" y1="16.5em" x2="4ch" y2="16.5em" stroke="hsla(36, 96%, 56%, 0.7)"></line>
-    <line x1="0ch" y1="17.5em" x2="4ch" y2="17.5em" stroke="hsla(36, 96%, 56%, 0.7)"></line>
-    <line x1="0ch" y1="17.5em" x2="4ch" y2="17.5em" stroke="hsla(36, 96%, 56%, 0.7)"></line>
-    <line x1="0ch" y1="18.5em" x2="4ch" y2="18.5em" stroke="hsla(36, 96%, 56%, 0.7)"></line>
-    <line x1="0ch" y1="18.5em" x2="4ch" y2="18.5em" stroke="hsla(36, 96%, 56%, 0.7)"></line>
-    <line x1="0ch" y1="19.5em" x2="4ch" y2="19.5em" stroke="hsla(36, 96%, 56%, 0.7)"></line>
-    <line x1="0ch" y1="19.5em" x2="4ch" y2="19.5em" stroke="hsla(36, 96%, 56%, 0.7)"></line>
-    <line x1="0ch" y1="20.5em" x2="4ch" y2="20.5em" stroke="hsla(36, 96%, 56%, 0.7)"></line>
+    <rect x="0ch" y="13.5em" width="4ch" height="1em" fill="transparent" stroke="hsla(36, 96%, 56%, 0.7)"></rect>
+    <rect x="0ch" y="14.5em" width="4ch" height="1em" fill="transparent" stroke="hsla(36, 96%, 56%, 0.7)"></rect>
+    <rect x="0ch" y="15.5em" width="4ch" height="1em" fill="transparent" stroke="hsla(36, 96%, 56%, 0.7)"></rect>
+    <rect x="0ch" y="16.5em" width="4ch" height="1em" fill="transparent" stroke="hsla(36, 96%, 56%, 0.7)"></rect>
+    <rect x="0ch" y="17.5em" width="4ch" height="1em" fill="transparent" stroke="hsla(36, 96%, 56%, 0.7)"></rect>
+    <rect x="0ch" y="18.5em" width="4ch" height="1em" fill="transparent" stroke="hsla(36, 96%, 56%, 0.7)"></rect>
+    <rect x="0ch" y="19.5em" width="4ch" height="1em" fill="transparent" stroke="hsla(36, 96%, 56%, 0.7)"></rect>
     <text x="3.5ch" y="-0.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">37</text>
     <text x="3.5ch" y="0.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">38</text>
     <text x="3.5ch" y="1.5em" text-anchor="end" alignment-baseline="hanging" fill="rgb(128, 128, 128)">39</text>
