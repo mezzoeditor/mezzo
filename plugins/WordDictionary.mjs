@@ -40,17 +40,15 @@ export class WordDictionary extends EventEmitter {
       this._document.on(Document.Events.Changed, this._onDocumentChanged.bind(this)),
     ];
 
+    /** @type {!Map<string, number>} */
+    const delta = new Map();
     this._maybeAddTask({
       type: 'add',
       text: this._document.text(),
       from: 0,
       to: this._document.text().length(),
-    });
-  }
-
-  setIgnores(ignores) {
-    this._options.ignores = ignores;
-    this.emit(WordDictionary.Events.Changed);
+    }, delta);
+    this._updateWords(delta);
   }
 
   editor() {
@@ -107,7 +105,8 @@ export class WordDictionary extends EventEmitter {
   _onDocumentChanged({replacements}) {
     if (!replacements.length)
       return;
-    let changed = false;
+    /** @type {!Map<string, number>} */
+    const delta = new Map();
     for (const replacement of replacements) {
       // If the remove size is more than half of the
       // text itself, than clear everything and re-add text.
@@ -121,38 +120,39 @@ export class WordDictionary extends EventEmitter {
         this._words.clear();
       } else {
         // Otherwise, index removed text.
-        changed = this._maybeAddTask({
+        this._maybeAddTask({
           type: 'remove',
           text: replacement.before,
           from: replacement.offset,
           to: replacement.offset + replacement.removed.length(),
-        }) || changed;
+        }, delta);
       }
       // Index added text.
-      changed = this._maybeAddTask({
+      this._maybeAddTask({
         type: 'add',
         text: replacement.after,
         from: replacement.offset,
         to: replacement.offset + replacement.inserted.length(),
-      }) || changed;
+      }, delta);
     }
-    if (changed)
-      this.emit(WordDictionary.Events.Changed);
+    this._updateWords(delta);
   }
 
-  _maybeAddTask(task) {
-    if (task.to - task.from < this._options.maxSyncChunkSize)
-      return this._runTask(task);
+  _maybeAddTask(task, delta) {
+    if (task.to - task.from < this._options.maxSyncChunkSize) {
+      this._runTask(task, delta);
+      return;
+    }
     this._tasks.push(task);
     if (!this._jobId)
       this._jobId = this._editor.platformSupport().requestIdleCallback(this._doWork.bind(this));
-    return false;
   }
 
   _doWork() {
     this._jobId = 0;
     let budget = this._options.chunkSize;;
-    let changed = false;
+    /** @type {!Map<string, number>} */
+    const delta = new Map();
     while (this._tasks.length && budget > 0) {
       let task = this._tasks.pop();
       if (task.to - task.from > budget) {
@@ -179,33 +179,46 @@ export class WordDictionary extends EventEmitter {
         task = task1;
       }
       budget -= task.to - task.from;
-      changed = this._runTask(task) || changed;
+      this._runTask(task, delta);
     }
     if (this._tasks.length)
       this._jobId = this._editor.platformSupport().requestIdleCallback(this._doWork.bind(this));
+    this._updateWords(delta);
+  }
+
+  _updateWords(delta) {
+    if (!delta.size)
+      return;
+    let changed = false;
+    for (const [word, change] of delta) {
+      if (!change)
+        continue;
+      const newValue = (this._words.get(word) || 0) + change;
+      changed = changed || !newValue || newValue === change;
+      if (!newValue)
+        this._words.delete(word);
+      else
+        this._words.set(word, newValue);
+    }
     if (changed)
       this.emit(WordDictionary.Events.Changed);
   }
 
-  _runTask(task) {
+  _runTask(task, delta) {
     const words = this._computeWords(task.text, this._editor.tokenizer(), task.from, task.to);
     if (!words.length)
-      return false;
+      return;
     if (task.type === 'add') {
       for (const word of words) {
-        let count = this._words.get(word) || 0;
-        this._words.set(word, count + 1);
+        let count = delta.get(word) || 0;
+        delta.set(word, count + 1);
       }
     } else {
       for (const word of words) {
-        let count = this._words.get(word) - 1;
-        if (!count)
-          this._words.delete(word);
-        else
-          this._words.set(word, count);
+        let count = delta.get(word) || 0;
+        delta.set(word, count - 1);
       }
     }
-    return true;
   }
 
   _computeWords(text, tokenizer, from, to) {

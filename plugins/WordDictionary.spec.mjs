@@ -174,7 +174,25 @@ export function addTests(runner, expect) {
       expect(dict.wordsWithPrefix('', 100).length).toBe(16);
       dict.dispose();
     });
-    it('should emit "changed" event when dictionoary changes', () => {
+    it('should emit "changed" event only when dictionary changes', () => {
+      const editor = createTestEditor('1 1 1');
+      const dict = new WordDictionary(editor, {
+        maxWordLength: 100,
+        maxSyncChunkSize: Infinity,
+      });
+      let fired = false;
+      dict.on(WordDictionary.Events.Changed, () => fired = true);
+
+      editor.document().replace(0, 0, '1 ');
+      expect(fired).toBe(false);
+
+      editor.document().replace(0, 0, '2 ');
+      expect(fired).toBe(true);
+      fired = false;
+
+      editor.document().replace(0, 0, '2 ');
+      expect(fired).toBe(false);
+      dict.dispose();
     });
   });
 }
