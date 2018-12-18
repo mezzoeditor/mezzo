@@ -1,7 +1,7 @@
 import { Document } from '../text/Document.mjs';
 import { RangeTree } from '../utils/RangeTree.mjs';
 import { Input } from './Input.mjs';
-import { DefaultTokenizer } from '../default/DefaultTokenizer.mjs';
+import { DefaultTokenizer } from './Tokenizer.mjs';
 import { Markup, Measurer } from '../markup/Markup.mjs';
 import { EventEmitter } from '../utils/EventEmitter.mjs';
 
