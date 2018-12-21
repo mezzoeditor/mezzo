@@ -1,4 +1,5 @@
 const isMac = navigator.platform.toUpperCase().indexOf('MAC') !== -1;
+const isLinux = navigator.platform.toUpperCase().indexOf('LINUX') !== -1;
 
 export class DOMUtils {
   static on(element, event, handler, capture) {
@@ -12,6 +13,10 @@ export class DOMUtils {
 
   static isMac() {
     return isMac;
+  }
+
+  static isLinux() {
+    return isLinux;
   }
 }
 

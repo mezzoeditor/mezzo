@@ -9,6 +9,87 @@ import { EventEmitter } from '../utils/EventEmitter.mjs';
 import { KeymapHandler } from './KeymapHandler.mjs';
 import { RangeTree } from '../utils/RangeTree.mjs';
 import { TextUtils } from '../text/TextUtils.mjs';
+import { DOMUtils } from './DOMUtils.mjs';
+
+const osxKeymap = {
+  'Up': 'selection.move.up',
+  'Down': 'selection.move.down',
+  'Left': 'selection.move.left',
+  'Right': 'selection.move.right',
+  'Alt-Left': 'selection.move.word.left',
+  'Alt-Right': 'selection.move.word.right',
+  'Shift-Up': 'selection.select.up',
+  'Shift-Down': 'selection.select.down',
+  'Shift-Left': 'selection.select.left',
+  'Shift-Right': 'selection.select.right',
+  'Alt-Shift-Left': 'selection.select.word.left',
+  'Alt-Shift-Right': 'selection.select.word.right',
+  'Home': 'selection.move.linestart',
+  'Home-Shift': 'selection.select.linestart',
+  'End': 'selection.move.lineend',
+  'End-Shift': 'selection.select.lineend',
+  'Cmd-a': 'selection.select.all',
+  'Cmd-Left': 'selection.move.linestart',
+  'Cmd-Right': 'selection.move.lineend',
+  'Cmd-Up': 'selection.move.documentstart',
+  'Cmd-Down': 'selection.move.documentend',
+  'Cmd-Shift-Up': 'selection.select.documentstart',
+  'Cmd-Shift-Down': 'selection.select.documentend',
+  'Shift-Cmd-Left': 'selection.select.linestart',
+  'Shift-Cmd-Right': 'selection.select.lineend',
+  'Escape': 'selection.collapse',
+  'Cmd-h': 'hideselection',
+  'Enter': 'input.newline',
+  'Backspace': 'input.backspace',
+  'Delete': 'input.delete',
+  'Alt-Backspace': 'input.backspace.word',
+  'Cmd-Backspace': 'input.backspace.line',
+  'Tab': 'input.indent',
+  'Shift-Tab': 'input.unindent',
+
+  'Cmd-z': 'history.undo',
+  'Cmd-Shift-z': 'history.redo',
+  'Cmd-u': 'history.softundo',
+  'Cmd-Shift-u': 'history.softredo',
+};
+
+const linuxKeymap = {
+  'Up': 'selection.move.up',
+  'Down': 'selection.move.down',
+  'Left': 'selection.move.left',
+  'Right': 'selection.move.right',
+  'Ctrl-Left': 'selection.move.word.left',
+  'Ctrl-Right': 'selection.move.word.right',
+  'Shift-Up': 'selection.select.up',
+  'Shift-Down': 'selection.select.down',
+  'Shift-Left': 'selection.select.left',
+  'Shift-Right': 'selection.select.right',
+  'Ctrl-Shift-Left': 'selection.select.word.left',
+  'Ctrl-Shift-Right': 'selection.select.word.right',
+  'Home': 'selection.move.linestart',
+  'Home-Shift': 'selection.select.linestart',
+  'End': 'selection.move.lineend',
+  'End-Shift': 'selection.select.lineend',
+  'Ctrl-a': 'selection.select.all',
+  'Ctrl-Home': 'selection.move.documentstart',
+  'Ctrl-End': 'selection.move.documentend',
+  'Ctrl-Shift-Home': 'selection.select.documentstart',
+  'Ctrl-Shift-End': 'selection.select.documentend',
+  'Escape': 'selection.collapse',
+  'Ctrl-h': 'hideselection',
+  'Enter': 'input.newline',
+  'Backspace': 'input.backspace',
+  'Delete': 'input.delete',
+  'Ctrl-Backspace': 'input.backspace.word',
+  'Ctrl-Shift-Backspace': 'input.backspace.line',
+  'Tab': 'input.indent',
+  'Shift-Tab': 'input.unindent',
+
+  'Ctrl-z': 'history.undo',
+  'Ctrl-Shift-z': 'history.redo',
+  'Ctrl-u': 'history.softundo',
+  'Ctrl-Shift-u': 'history.softredo',
+};
 
 /**
  * @implements Measurer
@@ -59,7 +140,6 @@ const MIN_THUMB_SIZE = 30;
 const GUTTER_PADDING_LEFT = 4;
 const GUTTER_PADDING_RIGHT = 12;
 const SCROLLBAR_WIDTH = 15;
-const isMac = navigator.platform.toUpperCase().indexOf('MAC') !== -1;
 
 const MouseDownStates = {
   VSCROLL_DRAG: 'VSCROLL_DRAG',
@@ -225,49 +305,7 @@ export class Renderer {
     this._setupEventListeners();
 
     this._keymapHandler = new KeymapHandler();
-    this._keymapHandler.addKeymap({
-      'Up': 'selection.move.up',
-      'Down': 'selection.move.down',
-      'Left': 'selection.move.left',
-      'Right': 'selection.move.right',
-      'Alt-Left': 'selection.move.word.left',
-      'Alt-Right': 'selection.move.word.right',
-      'Shift-Up': 'selection.select.up',
-      'Shift-Down': 'selection.select.down',
-      'Shift-Left': 'selection.select.left',
-      'Shift-Right': 'selection.select.right',
-      'Alt-Shift-Left': 'selection.select.word.left',
-      'Alt-Shift-Right': 'selection.select.word.right',
-      'Home': 'selection.move.linestart',
-      'Home-Shift': 'selection.select.linestart',
-      'End': 'selection.move.lineend',
-      'End-Shift': 'selection.select.lineend',
-      'Cmd/Ctrl-a': 'selection.select.all',
-      'Cmd-Left': 'selection.move.linestart',
-      'Cmd-Right': 'selection.move.lineend',
-      'Cmd-Up': 'selection.move.documentstart',
-      'Cmd-Down': 'selection.move.documentend',
-      'Cmd-Shift-Up': 'selection.select.documentstart',
-      'Cmd-Shift-Down': 'selection.select.documentend',
-      'Shift-Cmd-Left': 'selection.select.linestart',
-      'Shift-Cmd-Right': 'selection.select.lineend',
-      'Escape': 'selection.collapse',
-
-      'Cmd/Ctrl-h': 'hideselection',
-
-      'Enter': 'input.newline',
-      'Backspace': 'input.backspace',
-      'Delete': 'input.delete',
-      'Alt-Backspace': 'input.backspace.word',
-      'Cmd-Backspace': 'input.backspace.line',
-      'Tab': 'input.indent',
-      'Shift-Tab': 'input.unindent',
-
-      'Cmd/Ctrl-z': 'history.undo',
-      'Cmd/Ctrl-Shift-z': 'history.redo',
-      'Cmd/Ctrl-u': 'history.softundo',
-      'Cmd/Ctrl-Shift-u': 'history.softredo',
-    }, this._performCommand.bind(this));
+    this._keymapHandler.addKeymap(DOMUtils.isMac() ? osxKeymap : linuxKeymap, this._performCommand.bind(this));
 
     this._invalidate();
   }
@@ -520,7 +558,7 @@ export class Renderer {
         mouseRangeStartOffset = lastCursor ? lastCursor.anchor : 0;
         mouseRangeEndOffset = offset;
         this._editor.document().setSelection([{anchor: mouseRangeStartOffset, focus: mouseRangeEndOffset}]);
-      } else if ((isMac && event.metaKey) || (!isMac && event.ctrlKey)) {
+      } else if ((DOMUtils.isMac() && event.metaKey) || (!DOMUtils.isMac() && event.ctrlKey)) {
         const selection = this._editor.document().selection();
         selection.push({anchor: offset, focus: offset});
         this._editor.document().setSelection(selection);
