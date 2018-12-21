@@ -10,6 +10,7 @@ import { SmartBraces } from '../plugins/SmartBraces.mjs';
 import { AddNextOccurence } from '../plugins/AddNextOccurence.mjs';
 import { SelectionDecorator } from '../plugins/SelectionDecorator.mjs';
 import { BlockIndentation } from '../plugins/BlockIndentation.mjs';
+import { TrailingWhitespaces } from '../plugins/TrailingWhitespaces.mjs';
 import { Search } from '../plugins/Search.mjs';
 import { WordDictionary } from '../plugins/WordDictionary.mjs';
 import { SearchToolbar } from '../plugins/web/SearchToolbar.mjs';
@@ -162,6 +163,7 @@ class PluginManager {
     this.addNextOccurence = new AddNextOccurence(editor);
     this.selectionDecorator = new SelectionDecorator(editor);
     this.search = new Search(editor);
+    this.trailingWhitespaces = new TrailingWhitespaces(editor);
     this.wordDictionary = new WordDictionary(editor, {
       ignore: [/^\d+$/],
     });

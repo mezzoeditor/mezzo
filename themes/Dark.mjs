@@ -68,6 +68,11 @@ export default {
         "border-width": 2,
       }
     },
+    "whitespace.trailing": {
+      "token": {
+        "background-color": "rgba(255, 0, 0, 0.2)",
+      }
+    },
     "search.match.current": {
       "token": {
         "border-color": "hsl(39, 96%, 28%)",

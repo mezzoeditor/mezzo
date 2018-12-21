@@ -10,6 +10,7 @@ import { Search } from '../plugins/Search.mjs';
 import { WordDictionary } from '../plugins/WordDictionary.mjs';
 import { BlockIndentation } from '../plugins/BlockIndentation.mjs';
 import { AddNextOccurence } from '../plugins/AddNextOccurence.mjs';
+import { TrailingWhitespaces } from '../plugins/TrailingWhitespaces.mjs';
 import { SearchToolbar } from '../plugins/web/SearchToolbar.mjs';
 import { SuggestBoxController } from '../plugins/web/SuggestBox.mjs';
 import { SelectionDecorator } from '../plugins/SelectionDecorator.mjs';
@@ -53,6 +54,7 @@ export class Mezzo {
       smartBraces: new SmartBraces(this._editor),
       blockIndentation: new BlockIndentation(this._editor),
       addNextOccurence: new AddNextOccurence(this._editor),
+      trailingWhitespaces: new TrailingWhitespaces(this._editor),
       search: new Search(this._editor),
       selectionDecorator: new SelectionDecorator(this._editor),
       wordDictionary: new WordDictionary(this._editor, {
