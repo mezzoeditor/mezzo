@@ -24,7 +24,41 @@ window.addEventListener('DOMContentLoaded', async () => {
   const sidebar = new SidebarComponent(window.fs);
   split.leftElement().appendChild(sidebar);
 
-  const tabstrip = new TabStripComponent();
+  const tabstrip = new TabStripComponent({
+    async requestTabClose(path) {
+      let editor = editors.get(path);
+      if (isClean(editor))
+        return true;
+      return confirm('File has unsaved changes. Close anyway?');
+    },
+
+    async onTabSelected(path) {
+      // No tab is selected (all tabs got closed).
+      if (!path) {
+        renderer.setEditor(null);
+        split.rightElement().appendChild(stubMessage);
+        statusbar.rightElement().textContent = '';
+        return;
+      }
+      stubMessage.remove();
+      let mimeType = window.fs.mimeType(path);
+      let editor = editors.get(path);
+      if (!editor) {
+        editor = await renderer.createEditor(mimeType, thread);
+        editors.set(path, editor);
+        const content = await window.fs.readFile(path);
+        editor.reset(content, [{focus: 0, anchor: 0}]);
+        markClean(editor);
+        editor.document().on('changed', () => tabstrip.setTabDirtyIcon(path, !isClean(editor)));
+      }
+      renderer.setEditor(editor);
+      const lastCursor = editor.document().lastCursor();
+      editor.revealOffset(lastCursor ? lastCursor.focus : 0);
+      renderer.focus();
+      statusbar.rightElement().textContent = mimeType;
+      tabstrip.setTabDirtyIcon(path, !isClean(editor));
+    }
+  });
   split.rightElement().appendChild(tabstrip);
 
   const renderer = new EditorComponent();
@@ -47,32 +81,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (!tabstrip.hasTab(path))
       tabstrip.addTab(path);
     tabstrip.selectTab(path);
-  });
-  tabstrip.setSelectedCallback(async path => {
-    // No tab is selected (all tabs got closed).
-    if (!path) {
-      renderer.setEditor(null);
-      split.rightElement().appendChild(stubMessage);
-      statusbar.rightElement().textContent = '';
-      return;
-    }
-    stubMessage.remove();
-    let mimeType = window.fs.mimeType(path);
-    let editor = editors.get(path);
-    if (!editor) {
-      editor = await renderer.createEditor(mimeType, thread);
-      editors.set(path, editor);
-      const content = await window.fs.readFile(path);
-      editor.reset(content, [{focus: 0, anchor: 0}]);
-      markClean(editor);
-      editor.document().on('changed', () => tabstrip.setTabDirtyIcon(path, !isClean(editor)));
-    }
-    renderer.setEditor(editor);
-    const lastCursor = editor.document().lastCursor();
-    editor.revealOffset(lastCursor ? lastCursor.focus : 0);
-    renderer.focus();
-    statusbar.rightElement().textContent = mimeType;
-    tabstrip.setTabDirtyIcon(path, !isClean(editor));
   });
   tabstrip.restoreTabs();
 

@@ -1,10 +1,11 @@
 const TabIdSymbol = Symbol('TabIdSymbol');
 export class TabStripComponent extends HTMLElement {
-  constructor() {
+  constructor(delegate) {
     super();
     this.classList.add('hbox');
     this._tabs = new Map();
     this._selectedTabId = null;
+    this._delegate = delegate;
     this.addEventListener('click', this._onClick.bind(this), false);
   }
 
@@ -13,10 +14,6 @@ export class TabStripComponent extends HTMLElement {
     if (!tabElement)
       return;
     this.selectTab(tabElement[TabIdSymbol]);
-  }
-
-  setSelectedCallback(callback) {
-    this._selectedCallback = callback;
   }
 
   setTabDirtyIcon(id, enabled) {
@@ -47,9 +44,12 @@ export class TabStripComponent extends HTMLElement {
     this._persistTabs();
   }
 
-  closeTab(id) {
+  async closeTab(id) {
     const tab = this._tabs.get(id);
     if (!tab)
+      return;
+    // Delegate canceled close
+    if (!(await this._delegate.requestTabClose(id)))
       return;
     let nextId = null;
     if (this._tabs.size !== 1) {
@@ -99,8 +99,8 @@ export class TabStripComponent extends HTMLElement {
     this._selectedTabId = id;
     if (this._selectedTabId)
       this._tabs.get(this._selectedTabId).element.classList.add('selected');
-    if (this._selectedCallback)
-      this._selectedCallback.call(null, id);
+    if (this._delegate.onTabSelected)
+      this._delegate.onTabSelected.call(null, id);
     this._persistTabs();
   }
 }
