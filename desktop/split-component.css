@@ -1,6 +1,7 @@
 split-component {
   display: flex;
   flex: auto;
+  overflow: hidden;
 }
 
 split-component
