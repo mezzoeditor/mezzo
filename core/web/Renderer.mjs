@@ -70,6 +70,8 @@ const linuxKeymap = {
   'Home-Shift': 'selection.select.linestart',
   'End': 'selection.move.lineend',
   'End-Shift': 'selection.select.lineend',
+  'PageUp': 'selection.move.pageup',
+  'PageDown': 'selection.move.pagedown',
   'Ctrl-a': 'selection.select.all',
   'Ctrl-Home': 'selection.move.documentstart',
   'Ctrl-End': 'selection.move.documentend',
@@ -439,6 +441,10 @@ export class Renderer {
       return this._revealSelection(this._editor.input().moveDown(this._editor.markup()));
     if (command === 'selection.move.documentstart')
       return this._revealSelection(this._editor.input().moveDocumentStart());
+    if (command === 'selection.move.pageup')
+      return this._revealSelection(this._editor.input().movePageUp(this._editor.markup()));
+    if (command === 'selection.move.pagedown')
+      return this._revealSelection(this._editor.input().movePageDown(this._editor.markup()));
     if (command === 'selection.move.documentend')
       return this._revealSelection(this._editor.input().moveDocumentEnd());
     if (command === 'selection.move.left')

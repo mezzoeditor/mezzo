@@ -243,6 +243,44 @@ export class Input extends EventEmitter {
    * @param {!Markup} markup
    * @return {boolean}
    */
+  movePageDown(markup) {
+    const lastFrameRange = markup.lastFrameRange();
+    const fromPosition = this._document.text().offsetToPosition(lastFrameRange.from);
+    const toPosition = this._document.text().offsetToPosition(lastFrameRange.to);
+    const screenLines = toPosition.line - fromPosition.line;
+    return this._updateSelection(range => {
+      let offset = Math.max(range.anchor, range.focus);
+      let upDownX = range.upDownX;
+      let upResult = this._lineDown(markup, range.focus, range.upDownX, screenLines);
+      offset = upResult.offset;
+      upDownX = upResult.upDownX;
+      return {upDownX, anchor: offset, focus: offset};
+    });
+  }
+
+  /**
+   * @param {!Markup} markup
+   * @return {boolean}
+   */
+  movePageUp(markup) {
+    const lastFrameRange = markup.lastFrameRange();
+    const fromPosition = this._document.text().offsetToPosition(lastFrameRange.from);
+    const toPosition = this._document.text().offsetToPosition(lastFrameRange.to);
+    const screenLines = toPosition.line - fromPosition.line;
+    return this._updateSelection(range => {
+      let offset = Math.min(range.anchor, range.focus);
+      let upDownX = range.upDownX;
+      let upResult = this._lineUp(markup, range.focus, range.upDownX, screenLines);
+      offset = upResult.offset;
+      upDownX = upResult.upDownX;
+      return {upDownX, anchor: offset, focus: offset};
+    });
+  }
+
+  /**
+   * @param {!Markup} markup
+   * @return {boolean}
+   */
   moveDown(markup) {
     return this._updateSelection(range => {
       let offset = Math.max(range.anchor, range.focus);
@@ -677,13 +715,14 @@ export class Input extends EventEmitter {
    * @param {!Markup} markup
    * @param {number} offset
    * @param {number} upDownX
+   * @param {number} lineCount
    * @return {!{offset: number, upDownX: number}}
    */
-  _lineUp(markup, offset, upDownX) {
+  _lineUp(markup, offset, upDownX, lineCount = 1) {
     let point = markup.offsetToPoint(offset);
     if (upDownX === undefined)
       upDownX = point.x;
-    offset = markup.pointToOffset({x: upDownX, y: point.y - markup.lineHeight()}, RoundMode.Round);
+    offset = markup.pointToOffset({x: upDownX, y: point.y - markup.lineHeight() * lineCount}, RoundMode.Round);
     return {offset, upDownX};
   }
 
@@ -691,13 +730,14 @@ export class Input extends EventEmitter {
    * @param {!Markup} markup
    * @param {number} offset
    * @param {number} upDownX
+   * @param {number} lineCount
    * @return {!{offset: number, upDownX: number}}
    */
-  _lineDown(markup, offset, upDownX) {
+  _lineDown(markup, offset, upDownX, lineCount = 1) {
     let point = markup.offsetToPoint(offset);
     if (upDownX === undefined)
       upDownX = point.x;
-    offset = markup.pointToOffset({x: upDownX, y: point.y + markup.lineHeight()}, RoundMode.Round);
+    offset = markup.pointToOffset({x: upDownX, y: point.y + markup.lineHeight() * lineCount}, RoundMode.Round);
     return {offset, upDownX};
   }
 };

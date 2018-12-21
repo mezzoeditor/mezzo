@@ -535,6 +535,13 @@ export class Markup extends EventEmitter {
     this._lastFrameRange = totalRange;
   }
 
+  /*
+   * @return {Range}
+   */
+  lastFrameRange() {
+    return this._lastFrameRange;
+  }
+
   /**
    * @param {Frame} frame
    * @param {Array<Line>} lines
