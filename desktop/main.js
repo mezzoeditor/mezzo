@@ -84,6 +84,23 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
   tabstrip.restoreTabs();
 
+  window.addEventListener('beforeunload', event => {
+    debugger;
+    let hasDirtyEditors = false;
+    for (const [path, editor] of editors) {
+      if (!isClean(editor)) {
+        hasDirtyEditors = true;
+        if (!tabstrip.hasTab(path))
+          tabstrip.addTab(path);
+        tabstrip.selectTab(path);
+      }
+    }
+    if (hasDirtyEditors) {
+      event.preventDefault();
+      event.returnValue = 'There are dirty editors; close anyway?';
+    }
+  });
+
   const keymapHandler = new KeymapHandler();
   keymapHandler.addKeymap({
     'Cmd/Ctrl-s': 'save',
