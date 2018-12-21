@@ -24,6 +24,9 @@ export class TrailingWhitespaces {
   _onDecorate(frameContent) {
     const trailingWhitespaces = new RangeTree();
     const processedLines = new Set();
+    // Do not highlight lines with cursors.
+    for (const range of this._document.selection())
+      processedLines.add(this._document.text().offsetToPosition(range.focus).line);
     for (const range of frameContent.ranges) {
       const fromPosition = this._document.text().offsetToPosition(range.from);
       const toPosition = this._document.text().offsetToPosition(range.to);
