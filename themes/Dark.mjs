@@ -37,7 +37,7 @@ export default {
   "textDecorations": {
     "selection.focus": {
       "token": {
-        "border-color": "rgb(33, 33, 33)",
+        "border-color": "rgb(223, 223, 223)",
         "border-width": 2
       }
     },
@@ -96,7 +96,7 @@ export default {
     },
     "syntax.number": {
       "token": {
-        "color": "hsl(240, 73%, 38%)"
+        "color": "hsl(240, 73%, 72%)"
       }
     },
     "syntax.variable": {
