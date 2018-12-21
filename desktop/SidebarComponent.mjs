@@ -6,12 +6,12 @@ export class SidebarComponent extends HTMLElement {
   /**
    * @apram {!FileSystem} fs
    */
-  constructor(fs) {
+  constructor(fs, delegate) {
     super();
     this._fs = fs;
+    this._delegate = delegate;
     this._fs.addFilesChangedCallback(this._onFilesChanged.bind(this));
     this._fs.addRootsChangedCallback(this._onRootsChanged.bind(this));
-    this._selectedCallback = null;
     this._selectedItem = null;
     this._header = document.createElement('header');
     this.appendChild(this._header);
@@ -33,7 +33,7 @@ export class SidebarComponent extends HTMLElement {
 
   _onClick(event) {
     const fileEntry = event.path.find(node => node.tagName && node.tagName.toLowerCase() === 'file-entry');
-    if (fileEntry && this._selectedCallback) {
+    if (fileEntry && this._delegate.onFileSelected) {
       this._select(fileEntry);
       event.preventDefault();
       event.stopPropagation();
@@ -50,12 +50,8 @@ export class SidebarComponent extends HTMLElement {
     } else {
       this._selectedItem = item;
       this._selectedItem.classList.add('selected');
-      this._selectedCallback.call(null, item[NavigatorTreeNodeSymbol].fullName);
+      this._delegate.onFileSelected.call(null, item[NavigatorTreeNodeSymbol].fullName);
     }
-  }
-
-  setSelectedCallback(callback) {
-    this._selectedCallback = callback;
   }
 
   _render() {

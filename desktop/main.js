@@ -16,13 +16,13 @@ if (window._bindingInitialDirectory)
   window.fs.initialize(window._bindingInitialDirectory);
 
 window.addEventListener('DOMContentLoaded', async () => {
+  /** @type {!Map<string, !Editor>} */
+  let editors = new Map();
+
   document.body.classList.add('vbox');
 
   const split = new SplitComponent();
   document.body.appendChild(split);
-
-  const sidebar = new SidebarComponent(window.fs);
-  split.leftElement().appendChild(sidebar);
 
   const tabstrip = new TabStripComponent({
     async requestTabClose(path) {
@@ -59,6 +59,15 @@ window.addEventListener('DOMContentLoaded', async () => {
       tabstrip.setTabDirtyIcon(path, !isClean(editor));
     }
   });
+  const sidebar = new SidebarComponent(window.fs, {
+    onFileSelected(path) {
+      if (!tabstrip.hasTab(path))
+        tabstrip.addTab(path);
+      tabstrip.selectTab(path);
+    }
+  });
+  split.leftElement().appendChild(sidebar);
+
   split.rightElement().appendChild(tabstrip);
 
   const renderer = new EditorComponent();
@@ -74,14 +83,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.body.appendChild(statusbar);
 
   const filterDialog = new FilterDialogComponent();
-
-  /** @type {!Map<string, !Editor>} */
-  let editors = new Map();
-  sidebar.setSelectedCallback(async path => {
-    if (!tabstrip.hasTab(path))
-      tabstrip.addTab(path);
-    tabstrip.selectTab(path);
-  });
   tabstrip.restoreTabs();
 
   window.addEventListener('beforeunload', event => {
