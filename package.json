@@ -1,6 +1,6 @@
 {
-  "name": "editor",
-  "version": "1.0.0",
+  "name": "mezzoeditor",
+  "version": "0.5.0",
   "description": "Editor",
   "main": "index.js",
   "engines": {
@@ -15,14 +15,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dgozman/editor.git"
+    "url": "git+https://github.com/mezzoeditor/mezzo.git"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/dgozman/editor/issues"
+    "url": "https://github.com/mezzoeditor/mezzo/issues"
   },
-  "homepage": "https://github.com/dgozman/editor#readme",
+  "homepage": "https://github.com/mezzoeditor/mezzo#readme",
   "devDependencies": {
     "text-diff": "^1.0.1",
     "rimraf": "^2.6.2",
