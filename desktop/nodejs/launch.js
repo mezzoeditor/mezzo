@@ -1,33 +1,28 @@
 #!/usr/bin/env node
-const pptr = require('puppeteer');
+const pptr = require('puppeteer-core');
+const findChrome = require('./find_chrome.js');
+const {createServer} = require('./server.js');
 const path = require('path');
 const util = require('util');
-const http = require('http');
-const url = require('url');
 const fs = require('fs');
 const readFileAsync = util.promisify(fs.readFile);
 const writeFileAsync = util.promisify(fs.writeFile);
 
 const chokidar = require('chokidar');
 
-const mimeTypes = {
-  '.html': 'text/html',
-  '.js': 'text/javascript',
-  '.mjs': 'text/javascript',
-  '.json': 'application/json',
-  '.css': 'text/css',
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.svg': 'image/svg+xml',
-};
-
-const ROOT_PATH = path.join(__dirname, '..');
+const ROOT_PATH = path.join(__dirname, '..', '..');
 
 (async() => {
+  let foundChrome = await findChrome({channel: ['canary', 'stable']});
+  if (!foundChrome) {
+    console.log('ERROR: please install chrome!');
+    return;
+  }
   const port = 4321;
   const server = createServer(port, ROOT_PATH);
   const workingFolder = process.argv.length < 3 ? path.resolve('.') : path.resolve(process.argv[2]);
   const browserPromise = pptr.launch({
+    executablePath: foundChrome.executablePath,
     pipe: true,
     headless: false,
     defaultViewport: null,
@@ -36,7 +31,7 @@ const ROOT_PATH = path.join(__dirname, '..');
     args: [
       '--enable-experimental-web-platform-features',
       '--allow-file-access-from-files',
-      `--app=http://localhost:${port}/desktop/main.html`
+      `--app=http://localhost:${port}/desktop/splash.html`
     ]
   });
   let browser = null;
@@ -109,61 +104,8 @@ const ROOT_PATH = path.join(__dirname, '..');
       }, 100);
     }
   });
-  // On initial run, there's a race between app being loaded by chrome
-  // and embedder bindings initialization.
-  // Instead of serializing the race (and slowing down initial load),
-  // we handle both race outcomes here.
   await page.evaluateOnNewDocument(dir => window._bindingInitialDirectory = dir, workingFolder);
-  await page.evaluate(dir => {
-    // Initialize filesystem right away if it is already defined.
-    if (window.fs)
-      window.fs.initialize(dir);
-    else
-      window._bindingInitialDirectory = dir;
-  }, workingFolder);
-  page.bringToFront();
+  await page.goto(`http://localhost:${port}/desktop/main.html`);
+  await page.bringToFront();
 })();
 
-/**
- * @param {number} port
- * @param {string} folderPath
- */
-function createServer(port, folderPath) {
-  folderPath = path.resolve(folderPath);
-  return http.createServer(function (req, res) {
-    // parse URL
-    const parsedUrl = url.parse(req.url);
-    let pathname = path.resolve(folderPath, '.' + parsedUrl.pathname);
-    if (!pathname.startsWith(folderPath)) {
-      // if the file is not found, return 404
-      res.statusCode = 404;
-      res.end(`File ${pathname} not found!`);
-      return;
-    }
-    const ext = path.parse(pathname).ext;
-
-    fs.exists(path.join(pathname), function (exist) {
-      if(!exist) {
-        // if the file is not found, return 404
-        res.statusCode = 404;
-        res.end(`File ${pathname} not found!`);
-        return;
-      }
-
-      // if is a directory search for index file matching the extention
-      if (fs.statSync(pathname).isDirectory()) pathname += '/index' + ext;
-
-      // read file from file system
-      fs.readFile(pathname, function(err, data){
-        if(err){
-          res.statusCode = 500;
-          res.end(`Error getting the file: ${err}.`);
-        } else {
-          // if the file is found, set Content-type and send data
-          res.setHeader('Content-type', mimeTypes[ext] || 'text/plain' );
-          res.end(data);
-        }
-      });
-    });
-  }).listen(port);
-}
