@@ -32,5 +32,8 @@
     "puppeteer-core": "1.9.0",
     "chokidar": "^2.0.4",
     "debug": "^4.1.0"
+  },
+  "bin": {
+    "mezzo": "desktop/nodejs/launch.js"
   }
 }
