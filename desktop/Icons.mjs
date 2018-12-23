@@ -7,10 +7,9 @@ const filetypeClasses = {
 
 export class Icons {
   static mimeTypeIcon(mimeType) {
-    if (!filetypeClasses[mimeType])
-      return null;
+    const iconType = filetypeClasses[mimeType] || 'mime-plain';
     const icon = document.createElement('filetype-icon');
-    icon.classList.add(filetypeClasses[mimeType]);
+    icon.classList.add(iconType);
     return icon;
   }
 

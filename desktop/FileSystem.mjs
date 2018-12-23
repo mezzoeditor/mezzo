@@ -65,6 +65,8 @@ export class FileSystem {
       return 'text/javascript';
     if (path.endsWith('.css'))
       return 'text/css';
+    if (path.endsWith('.md'))
+      return 'text/markdown';
     if (path.endsWith('.html') || path.endsWith('.htm'))
       return 'text/html';
     return 'text/plain';
