@@ -62,6 +62,7 @@ const examples = [
   'unicode.txt',
   'unicode.js',
   'unicodeperf.txt',
+  '../README.md',
 ];
 
 let rafid = 0;
@@ -171,6 +172,8 @@ function addExamples(mezzo) {
       await mezzo.setMimeType('text/css');
     else if (exampleName.endsWith('.html'))
       await mezzo.setMimeType('text/html');
+    else if (exampleName.endsWith('.md'))
+      await mezzo.setMimeType('text/markdown');
     else
       await mezzo.setMimeType('text/plain');
 
