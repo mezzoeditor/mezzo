@@ -115,9 +115,8 @@ export class SVGRenderer {
   _drawGutter(svg, gutterLength, frame) {
     for (let {y, styles} of frame.lines) {
       for (let style of styles) {
-        const theme = this._theme.textDecorations[style];
-        if (theme)
-          drawRect(svg, 0, y, gutterLength, frame.lineHeight, theme.gutter);
+        const gutterStyle = this._theme.get('textDecorations', style, 'gutter');
+        drawRect(svg, 0, y, gutterLength, frame.lineHeight, gutterStyle);
       }
     }
     for (let {first, y} of frame.lines) {
@@ -133,28 +132,26 @@ export class SVGRenderer {
     const lines = svg.add('g', {id: 'lines'});
     for (const {y, styles} of frame.lines) {
       for (const style of styles) {
-        const theme = this._theme.textDecorations[style];
-        if (theme)
-          drawRect(lines, frame.lineLeft, y, frame.lineRight - frame.lineLeft, frame.lineHeight, theme.tokenLine);
+        const tokenLineStyle = this._theme.get('textDecorations', style, 'tokenLine');
+        drawRect(lines, frame.lineLeft, y, frame.lineRight - frame.lineLeft, frame.lineHeight, tokenLineStyle);
       }
     }
 
     const background = svg.add('g', {id: 'background'});
     for (let {x, y, width, style} of frame.background) {
-      const theme = this._theme.textDecorations[style];
-      if (theme)
-        drawRect(background, x, y, width, LINE_HEIGHT, theme.token);
+      const tokenStyle = this._theme.get('textDecorations', style, 'token');
+      drawRect(background, x, y, width, LINE_HEIGHT, tokenStyle);
     }
 
     const text = svg.add('g', {id: 'text'});
     for (let {x, y, content, style} of frame.text) {
-      const theme = this._theme.textDecorations[style];
-      if (theme && theme.token) {
+      const tokenStyle = this._theme.get('textDecorations', style, 'token');
+      if (tokenStyle) {
         text.add('text', {
           x, y,
           'alignment-baseline': 'hanging',
           'style': 'white-space: pre;',
-          fill: theme.token.color || 'rgb(33, 33, 33)',
+          fill: tokenStyle.color || 'rgb(33, 33, 33)',
         }, content);
       }
     }
@@ -202,12 +199,12 @@ export class SVGRenderer {
 
   _drawScrollbarMarkers(svg, frame) {
     for (let {y, height, style} of frame.scrollbar) {
-      const theme = this._theme.textDecorations[style];
-      if (!theme)
+      const scrollbarMarkerStyle = this._theme.get('textDecorations', style, 'scrollbarMarker');
+      if (!scrollbarMarkerStyle)
         continue;
-      const left = ((theme.scrollbarMarker.left || 0) / 100);
-      const right = ((theme.scrollbarMarker.right || 100) / 100);
-      drawRect(svg, this._width - 1 + left, y, right - left, height, theme.scrollbarMarker);
+      const left = ((scrollbarMarkerStyle.left || 0) / 100);
+      const right = ((scrollbarMarkerStyle.right || 100) / 100);
+      drawRect(svg, this._width - 1 + left, y, right - left, height, scrollbarMarkerStyle);
     }
   }
 
@@ -221,23 +218,23 @@ export class SVGRenderer {
   }
 }
 
-function drawRect(svg, x, y, width, height, theme) {
-  if (!theme)
+function drawRect(svg, x, y, width, height, style) {
+  if (!style)
     return;
-  if (!theme['background-color'] && !theme['border-color']) {
+  if (!style['background-color'] && !style['border-color']) {
     return;
   }
   if (width && height) {
     svg.add('rect', {
       x, y, width, height,
-      fill: theme['background-color'] || 'transparent',
-      stroke: theme['border-color'],
+      fill: style['background-color'] || 'transparent',
+      stroke: style['border-color'],
     });
-  } else if (theme['border-color']) {
+  } else if (style['border-color']) {
     svg.add('line', {
       x1: x, y1: y, x2: x + width, y2: y + height,
-      fill: theme['background-color'],
-      stroke: theme['border-color'],
+      fill: style['background-color'],
+      stroke: style['border-color'],
     });
   }
 }

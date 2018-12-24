@@ -1,4 +1,6 @@
-export default {
+import { Theme } from './Theme.mjs';
+
+export default new Theme({
   "gutter": {
     "background-color": "white",
     "border-color": "rgb(187, 187, 187)",
@@ -144,4 +146,4 @@ export default {
       }
     }
   }
-}
+});

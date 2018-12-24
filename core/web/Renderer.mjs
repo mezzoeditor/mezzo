@@ -152,10 +152,10 @@ function rectHasPoint(rect, x, y) {
   return rect.x <= x && x <= rect.x + rect.width && rect.y <= y && y <= rect.y + rect.height;
 }
 
-function drawRect(ctx, x, y, width, height, ratio, theme) {
-  if (!theme)
+function drawRect(ctx, x, y, width, height, ratio, style) {
+  if (!style)
     return;
-  if (!theme['background-color'] && (!theme['border-color'] || !theme['border-width']))
+  if (!style['background-color'] && (!style['border-color'] || !style['border-width']))
     return;
   const path = new Path2D();
   if (!width) {
@@ -164,10 +164,10 @@ function drawRect(ctx, x, y, width, height, ratio, theme) {
   } else if (!height) {
     path.moveTo(x, y);
     path.lineTo(x + width, y);
-  } else if (!theme['border-radius']) {
+  } else if (!style['border-radius']) {
     path.rect(x, y, width, height);
   } else {
-    const radius = theme['border-radius'];
+    const radius = style['border-radius'];
     path.moveTo(x + radius, y);
     path.lineTo(x + width - radius, y);
     path.quadraticCurveTo(x + width, y, x + width, y + radius);
@@ -178,13 +178,13 @@ function drawRect(ctx, x, y, width, height, ratio, theme) {
     path.lineTo(x, y + radius);
     path.quadraticCurveTo(x, y, x + radius, y);
   }
-  if (theme['background-color']) {
-    ctx.fillStyle = theme['background-color'];
+  if (style['background-color']) {
+    ctx.fillStyle = style['background-color'];
     ctx.fill(path);
   }
-  if (theme['border-color'] && theme['border-width']) {
-    ctx.strokeStyle = theme['border-color'];
-    ctx.lineWidth = theme['border-width'] / ratio;
+  if (style['border-color'] && style['border-width']) {
+    ctx.strokeStyle = style['border-color'];
+    ctx.lineWidth = style['border-width'] / ratio;
     ctx.stroke(path);
   }
 }
@@ -997,7 +997,7 @@ export class Renderer {
     if (!this._editor) {
       const ctx = this._canvas.getContext('2d');
       ctx.setTransform(this._ratio, 0, 0, this._ratio, 0, 0);
-      drawRect(ctx,  0, 0, this._cssWidth, this._cssHeight, this._ratio, this._theme.editor);
+      drawRect(ctx,  0, 0, this._cssWidth, this._cssHeight, this._ratio, this._theme.get('editor'));
       return;
     }
 
@@ -1011,7 +1011,7 @@ export class Renderer {
 
     const ctx = this._canvas.getContext('2d');
     ctx.setTransform(this._ratio, 0, 0, this._ratio, 0, 0);
-    drawRect(ctx,  0, 0, this._cssWidth, this._cssHeight, this._ratio, this._theme.editor);
+    drawRect(ctx,  0, 0, this._cssWidth, this._cssHeight, this._ratio, this._theme.get('editor'));
     ctx.lineWidth = 1 / this._ratio;
 
     Trace.begin('buildFrame');
@@ -1065,21 +1065,20 @@ export class Renderer {
     ctx.save();
     ctx.translate(this._gutterRect.x, this._gutterRect.y);
 
-    drawRect(ctx, 0, 0, width, height, this._ratio, this._theme.gutter);
+    drawRect(ctx, 0, 0, width, height, this._ratio, this._theme.get('gutter'));
 
     ctx.beginPath();
     ctx.rect(0, 0, width, height);
     ctx.clip();
     for (let {y, styles} of frame.lines) {
       for (let style of styles) {
-        const theme = this._theme.textDecorations[style];
-        if (theme)
-          drawRect(ctx, 0, y + ty, width, frame.lineHeight, this._ratio, theme.gutter);
+        const gutterStyle = this._theme.get('textDecorations', style, 'gutter');
+        drawRect(ctx, 0, y + ty, width, frame.lineHeight, this._ratio, gutterStyle);
       }
     }
 
     ctx.textAlign = 'right';
-    ctx.fillStyle = this._theme.gutter['color'] || 'black';
+    ctx.fillStyle = this._theme.get('gutter', 'color') || 'black';
     const topAscent = this._measurer._topAscent;
     const textX = width - GUTTER_PADDING_RIGHT;
     let joinFirstTwo = false;
@@ -1117,9 +1116,8 @@ export class Renderer {
 
     for (let {y, styles} of frame.lines) {
       for (let style of styles) {
-        const theme = this._theme.textDecorations[style];
-        if (theme)
-          drawRect(ctx, tx + lineLeft, ty + y, lineRight - lineLeft, lineHeight, this._ratio, theme.tokenLine);
+        const lineStyle = this._theme.get('textDecorations', style, 'tokenLine');
+        drawRect(ctx, tx + lineLeft, ty + y, lineRight - lineLeft, lineHeight, this._ratio, lineStyle);
       }
     }
 
@@ -1127,16 +1125,15 @@ export class Renderer {
       // TODO: lines of width not divisble by ratio should be snapped by 1 / ratio.
       // Note: border decorations spanning multiple lines are not supported,
       // and we silently crop them per line.
-      const theme = this._theme.textDecorations[style];
-      if (theme)
-        drawRect(ctx, tx + x, ty + y, width, lineHeight, this._ratio, theme.token);
+      const tokenStyle = this._theme.get('textDecorations', style, 'token');
+      drawRect(ctx, tx + x, ty + y, width, lineHeight, this._ratio, tokenStyle);
     }
 
     const topAscent = this._measurer._topAscent;
     for (let {x, y, content, style} of frame.text) {
-      const theme = this._theme.textDecorations[style];
-      if (theme && theme.token) {
-        ctx.fillStyle = theme.token.color || 'rgb(33, 33, 33)';
+      const tokenStyle = this._theme.get('textDecorations', style, 'token');
+      if (tokenStyle) {
+        ctx.fillStyle = tokenStyle.color || 'rgb(33, 33, 33)';
         ctx.fillText(content, tx + x, ty + y + topAscent);
       }
     }
@@ -1166,25 +1163,25 @@ export class Renderer {
   _drawScrollbar(ctx, scrollbar, isVertical) {
     if (!scrollbar.rect.width || !scrollbar.rect.height)
       return;
-    const theme = isVertical ? this._theme.vScrollbar : this._theme.hScrollbar;
-    let thumbTheme = theme['thumb'];
+    let thumbSelector = 'thumb';
     if (scrollbar.dragged)
-      thumbTheme = theme['thumb.drag'];
+      thumbSelector = 'thumb.drag';
     else if (scrollbar.hovered)
-      thumbTheme = theme['thumb.hover'];
+      thumbSelector = 'thumb.hover';
+    const scrollbarSelector = isVertical ? 'vScrollbar' : 'hScrollbar';
 
-    drawRect(ctx, scrollbar.rect.x, scrollbar.rect.y, scrollbar.rect.width, scrollbar.rect.height, this._ratio, theme.track);
-    drawRect(ctx, scrollbar.thumbRect.x, scrollbar.thumbRect.y, scrollbar.thumbRect.width, scrollbar.thumbRect.height, this._ratio, thumbTheme);
+    drawRect(ctx, scrollbar.rect.x, scrollbar.rect.y, scrollbar.rect.width, scrollbar.rect.height, this._ratio, this._theme.get(scrollbarSelector, 'track'));
+    drawRect(ctx, scrollbar.thumbRect.x, scrollbar.thumbRect.y, scrollbar.thumbRect.width, scrollbar.thumbRect.height, this._ratio, this._theme.get(scrollbarSelector, thumbSelector));
   }
 
   _drawScrollbarMarkers(ctx, frame, rect) {
     for (let {y, height, style} of frame.scrollbar) {
-      const theme = this._theme.textDecorations[style];
-      if (!theme || !theme.scrollbarMarker || !theme.scrollbarMarker['background-color'])
+      const scrollbarMarkerStyle = this._theme.get('textDecorations', style, 'scrollbarMarker');
+      if (!scrollbarMarkerStyle || !scrollbarMarkerStyle['background-color'])
         continue;
-      ctx.fillStyle = theme.scrollbarMarker['background-color'];
-      let left = Math.round(rect.width * (theme.scrollbarMarker.left || 0) / 100);
-      let right = Math.round(rect.width * (theme.scrollbarMarker.right || 100) / 100);
+      ctx.fillStyle = scrollbarMarkerStyle['background-color'];
+      let left = Math.round(rect.width * (scrollbarMarkerStyle.left || 0) / 100);
+      let right = Math.round(rect.width * (scrollbarMarkerStyle.right || 100) / 100);
       ctx.fillRect(rect.x + left, rect.y + y, right - left, height);
     }
   }
