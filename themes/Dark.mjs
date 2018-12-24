@@ -1,13 +1,13 @@
 import { Theme } from './Theme.mjs';
 
-export default new Theme({
+export default new Theme(import.meta.url, {
   "gutter": {
     "background-color": "black",
     "border-color": "rgb(187, 187, 187)",
     "border-width": 1,
     "color": "rgb(128, 128, 128)",
   },
-  "vScrollbar": {
+  "vertical-scrollbar": {
     "track": {
       "border-color": "rgba(100, 100, 100, 0.2)",
       "border-width": 1,
@@ -22,7 +22,7 @@ export default new Theme({
       "background-color": 'rgba(100, 100, 100, 0.8)',
     },
   },
-  "hScrollbar": {
+  "horizontal-scrollbar": {
     "thumb": {
       "background-color": 'rgba(100, 100, 100, 0.4)',
     },
@@ -36,7 +36,7 @@ export default new Theme({
   "editor": {
     "background-color": "black",
   },
-  "textDecorations": {
+  "text": {
     "selection.focus": {
       "token": {
         "border-color": "rgb(223, 223, 223)",
@@ -47,10 +47,10 @@ export default new Theme({
       "token": {
         "background-color": "rgba(126, 188, 254, 0.5)"
       },
-      "tokenLine": {
+      "token-line": {
         "background-color": "rgba(126, 188, 254, 0.1)"
       },
-      "scrollbarMarker": {
+      "scrollbar-marker": {
         "background-color": "rgba(126, 188, 254, 0.6)",
         "left": 40,
         "right": 60
@@ -60,7 +60,7 @@ export default new Theme({
       "token": {
         "background-color": "hsla(36, 96%, 56%, 0.4)"
       },
-      "scrollbarMarker": {
+      "scrollbar-marker": {
         "background-color": "hsla(36, 96%, 56%, 0.4)",
         "left": 0,
         "right": 100

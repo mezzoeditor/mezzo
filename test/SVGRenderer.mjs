@@ -115,7 +115,7 @@ export class SVGRenderer {
   _drawGutter(svg, gutterLength, frame) {
     for (let {y, styles} of frame.lines) {
       for (let style of styles) {
-        const gutterStyle = this._theme.get('textDecorations', style, 'gutter');
+        const gutterStyle = this._theme.get('text', style, 'gutter');
         drawRect(svg, 0, y, gutterLength, frame.lineHeight, gutterStyle);
       }
     }
@@ -132,20 +132,20 @@ export class SVGRenderer {
     const lines = svg.add('g', {id: 'lines'});
     for (const {y, styles} of frame.lines) {
       for (const style of styles) {
-        const tokenLineStyle = this._theme.get('textDecorations', style, 'tokenLine');
+        const tokenLineStyle = this._theme.get('text', style, 'token-line');
         drawRect(lines, frame.lineLeft, y, frame.lineRight - frame.lineLeft, frame.lineHeight, tokenLineStyle);
       }
     }
 
     const background = svg.add('g', {id: 'background'});
     for (let {x, y, width, style} of frame.background) {
-      const tokenStyle = this._theme.get('textDecorations', style, 'token');
+      const tokenStyle = this._theme.get('text', style, 'token');
       drawRect(background, x, y, width, LINE_HEIGHT, tokenStyle);
     }
 
     const text = svg.add('g', {id: 'text'});
     for (let {x, y, content, style} of frame.text) {
-      const tokenStyle = this._theme.get('textDecorations', style, 'token');
+      const tokenStyle = this._theme.get('text', style, 'token');
       if (tokenStyle) {
         text.add('text', {
           x, y,
@@ -199,7 +199,7 @@ export class SVGRenderer {
 
   _drawScrollbarMarkers(svg, frame) {
     for (let {y, height, style} of frame.scrollbar) {
-      const scrollbarMarkerStyle = this._theme.get('textDecorations', style, 'scrollbarMarker');
+      const scrollbarMarkerStyle = this._theme.get('text', style, 'scrollbar-marker');
       if (!scrollbarMarkerStyle)
         continue;
       const left = ((scrollbarMarkerStyle.left || 0) / 100);

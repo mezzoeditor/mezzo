@@ -1072,7 +1072,7 @@ export class Renderer {
     ctx.clip();
     for (let {y, styles} of frame.lines) {
       for (let style of styles) {
-        const gutterStyle = this._theme.get('textDecorations', style, 'gutter');
+        const gutterStyle = this._theme.get('text', style, 'gutter');
         drawRect(ctx, 0, y + ty, width, frame.lineHeight, this._ratio, gutterStyle);
       }
     }
@@ -1116,7 +1116,7 @@ export class Renderer {
 
     for (let {y, styles} of frame.lines) {
       for (let style of styles) {
-        const lineStyle = this._theme.get('textDecorations', style, 'tokenLine');
+        const lineStyle = this._theme.get('text', style, 'token-line');
         drawRect(ctx, tx + lineLeft, ty + y, lineRight - lineLeft, lineHeight, this._ratio, lineStyle);
       }
     }
@@ -1125,13 +1125,13 @@ export class Renderer {
       // TODO: lines of width not divisble by ratio should be snapped by 1 / ratio.
       // Note: border decorations spanning multiple lines are not supported,
       // and we silently crop them per line.
-      const tokenStyle = this._theme.get('textDecorations', style, 'token');
+      const tokenStyle = this._theme.get('text', style, 'token');
       drawRect(ctx, tx + x, ty + y, width, lineHeight, this._ratio, tokenStyle);
     }
 
     const topAscent = this._measurer._topAscent;
     for (let {x, y, content, style} of frame.text) {
-      const tokenStyle = this._theme.get('textDecorations', style, 'token');
+      const tokenStyle = this._theme.get('text', style, 'token');
       if (tokenStyle) {
         ctx.fillStyle = tokenStyle.color || 'rgb(33, 33, 33)';
         ctx.fillText(content, tx + x, ty + y + topAscent);
@@ -1168,7 +1168,7 @@ export class Renderer {
       thumbSelector = 'thumb.drag';
     else if (scrollbar.hovered)
       thumbSelector = 'thumb.hover';
-    const scrollbarSelector = isVertical ? 'vScrollbar' : 'hScrollbar';
+    const scrollbarSelector = isVertical ? 'vertical-scrollbar' : 'horizontal-scrollbar';
 
     drawRect(ctx, scrollbar.rect.x, scrollbar.rect.y, scrollbar.rect.width, scrollbar.rect.height, this._ratio, this._theme.get(scrollbarSelector, 'track'));
     drawRect(ctx, scrollbar.thumbRect.x, scrollbar.thumbRect.y, scrollbar.thumbRect.width, scrollbar.thumbRect.height, this._ratio, this._theme.get(scrollbarSelector, thumbSelector));
@@ -1176,7 +1176,7 @@ export class Renderer {
 
   _drawScrollbarMarkers(ctx, frame, rect) {
     for (let {y, height, style} of frame.scrollbar) {
-      const scrollbarMarkerStyle = this._theme.get('textDecorations', style, 'scrollbarMarker');
+      const scrollbarMarkerStyle = this._theme.get('text', style, 'scrollbar-marker');
       if (!scrollbarMarkerStyle || !scrollbarMarkerStyle['background-color'])
         continue;
       ctx.fillStyle = scrollbarMarkerStyle['background-color'];

@@ -1,7 +1,12 @@
 export class Theme {
-  constructor(theme) {
+  constructor(url, theme) {
+    this._url = url;
     this._config = theme;
     this._cache = new Map();
+  }
+
+  url() {
+    return this._url;
   }
 
   get(...path) {
