@@ -23,6 +23,7 @@ export async function createHighlighter(editor) {
 class JSHighlighter {
   constructor(editor, indexer) {
     this._indexer = indexer;
+    this._document = editor.document();
 
     this._eventListeners = [
       indexer.on(CumulativeIndexer.Events.Changed, () => editor.raf()),
@@ -35,37 +36,37 @@ class JSHighlighter {
   }
 
   /**
-   * @param {FrameContent} frameContent
+   * @param {!Range} range
+   * @return {!RangeTree}
    */
-  decorate(frameContent) {
+  highlight(range) {
     Trace.beginGroup('js');
     const decorations = new RangeTree();
-    for (const range of frameContent.ranges) {
-      const state = this._indexer.states().lastStarting(range.from - STATE_CHUNK, range.from + 1);
-      if (!state) {
-        decorations.add(range.from, range.to, 'syntax.default');
+    const state = this._indexer.states().lastStarting(range.from - STATE_CHUNK, range.from + 1);
+    if (!state) {
+      decorations.add(range.from, range.to, 'syntax.default');
+      Trace.endGroup('js');
+      return decorations;
+    }
+    const parser = new Parser(this._document.text().iterator(state.to, 0, range.to), state.data);
+    for (const token of parser) {
+      if (token.end <= range.from)
         continue;
-      }
-      const parser = new Parser(frameContent.document.text().iterator(state.to, 0, range.to), state.data);
-      for (const token of parser) {
-        if (token.end <= range.from)
-          continue;
-        const start = Math.max(range.from, token.start);
-        if (token.type.keyword || (token.type === TokenTypes.name && token.value === 'let')) {
-          decorations.add(start, token.end, 'syntax.keyword');
-        } else if (token.type === TokenTypes.string || token.type === TokenTypes.regexp || token.type === TokenTypes.template) {
-          decorations.add(start, token.end, 'syntax.string');
-        } else if (token.type === TokenTypes.num) {
-          decorations.add(start, token.end, 'syntax.number');
-        } else if (token.type === TokenTypes.blockComment || token.type === TokenTypes.lineComment) {
-          decorations.add(start, token.end, 'syntax.comment');
-        } else {
-          decorations.add(start, token.end, 'syntax.default');
-        }
+      const start = Math.max(range.from, token.start);
+      if (token.type.keyword || (token.type === TokenTypes.name && token.value === 'let')) {
+        decorations.add(start, token.end, 'syntax.keyword');
+      } else if (token.type === TokenTypes.string || token.type === TokenTypes.regexp || token.type === TokenTypes.template) {
+        decorations.add(start, token.end, 'syntax.string');
+      } else if (token.type === TokenTypes.num) {
+        decorations.add(start, token.end, 'syntax.number');
+      } else if (token.type === TokenTypes.blockComment || token.type === TokenTypes.lineComment) {
+        decorations.add(start, token.end, 'syntax.comment');
+      } else {
+        decorations.add(start, token.end, 'syntax.default');
       }
     }
-    frameContent.textDecorations.push(decorations);
     Trace.endGroup('js');
+    return decorations;
   }
 };
 

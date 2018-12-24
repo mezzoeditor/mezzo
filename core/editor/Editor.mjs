@@ -92,9 +92,10 @@ export class Editor extends EventEmitter {
       const decorations = new RangeTree();
       decorations.add(from, to, 'syntax.default');
       frameContent.textDecorations.push(decorations);
-      return;
+    } else {
+      for (const range of frameContent.ranges)
+        frameContent.textDecorations.push(this._highlighter.highlight(range));
     }
-    this._highlighter.decorate(frameContent);
   }
 
   remoteDocument() {
@@ -204,6 +205,10 @@ export class Editor extends EventEmitter {
     if (this._highlighter)
       this._highlighter.dispose();
     this._highlighter = highlighter;
+  }
+
+  highlighter() {
+    return this._highlighter;
   }
 
   /**

@@ -76,8 +76,26 @@ function updateTotalSize(mezzo) {
     for (suffixIndex = 0; suffixIndex < suffixes.length && size > 1024; ++suffixIndex)
       size /= 1024;
     document.querySelector('.text-size').textContent = Math.round(size) + suffixes[suffixIndex];
+    const element = document.querySelector('.hldebugger');
+    const selection = mezzo.document().selection();
+    if (selection.length > 1) {
+      element.textContent = '<multiple selections>';
+    } else {
+      const from = Math.min(selection[0].anchor, selection[0].focus);
+      const to = Math.max(selection[0].anchor, selection[0].focus);
+      const highlight = mezzo.editor().highlighter().highlight({
+        from: from,
+        to: to + 100,
+      }).listTouching(from, to === from ? to + 0.5 : to);
+      if (highlight.length > 1) {
+        element.textContent = '<multiple tokens>';
+      } else if (!highlight.length) {
+        element.textContent = '<none>';
+      } else {
+        element.textContent = highlight[0].data;
+      }
+    }
   });
-
 }
 
 document.addEventListener('DOMContentLoaded', async () => {

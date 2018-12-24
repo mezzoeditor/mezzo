@@ -1034,7 +1034,7 @@ export class Renderer {
     const scrollbar = {
       ratio: this._editorRect.height / (this._maxScrollTop + this._editorRect.height),
       minDecorationHeight: 5
-    }
+    };
     this._editor.markup().buildFrame(frame, contentRect, scrollbar, this._editor.decorationCallbacks());
     Trace.end('buildFrame');
 

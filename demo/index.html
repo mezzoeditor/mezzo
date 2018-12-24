@@ -42,6 +42,11 @@ body {
   cursor: help;
 }
 
+.hldebugger-info {
+  border-bottom: 1px dashed black;
+  cursor: help;
+}
+
 </style>
 <div class=top>
   <select class=examples></select>
@@ -67,4 +72,8 @@ body {
     <option value=classic>Classic</option>
     <option value=dark>Dark</option>
   </select>
+  <div>
+    <span class=hldebugger-info title='Shows highlight token under cursor'>Highlight:</span>
+    <span class=hldebugger></span>
+  </div>
 </div>
