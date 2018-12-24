@@ -83,16 +83,14 @@ function updateTotalSize(mezzo) {
     } else {
       const from = Math.min(selection[0].anchor, selection[0].focus);
       const to = Math.max(selection[0].anchor, selection[0].focus);
-      const highlight = mezzo.editor().highlighter().highlight({
+      const decoration = mezzo.editor().highlighter().highlight({
         from: from,
         to: to + 100,
-      }).listTouching(from, to === from ? to + 0.5 : to);
-      if (highlight.length > 1) {
-        element.textContent = '<multiple tokens>';
-      } else if (!highlight.length) {
+      }).lastTouching(selection[0].focus, selection[0].focus + 0.5);
+      if (!decoration) {
         element.textContent = '<none>';
       } else {
-        element.textContent = highlight[0].data;
+        element.textContent = decoration.data;
       }
     }
   });
