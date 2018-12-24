@@ -111,39 +111,5 @@ export default new Theme(import.meta.url, {
         "color": "hsl(120, 100%, 23%)"
       }
     },
-    "red": {
-      "token": {
-        "color": "red",
-        "background-color": "rgba(255, 0, 0, 0.2)",
-        "border-color": "black",
-        "border-width": 1,
-        "border-radius": 4
-      }
-    },
-    "green": {
-      "token": {
-        "color": "green",
-        "background-color": "rgba(0, 255, 0, 0.2)"
-      }
-    },
-    "blue": {
-      "token": {
-        "color": "blue",
-        "background-color": "rgba(0, 0, 255, 0.2)",
-        "border-color": "rgb(0, 0, 50)",
-        "border-width": 1,
-        "border-radius": 2
-      }
-    },
-    "the-range": {
-      "token": {
-        "background-color": "rgba(0, 0, 0, 0.4)"
-      }
-    },
-    "hiddenrange": {
-      "token": {
-        "background-color": "rgba(0, 128, 0, 0.2)"
-      }
-    }
   }
 });

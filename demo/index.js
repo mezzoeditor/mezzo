@@ -9,6 +9,45 @@ import { Mezzo } from "../mezzo/index.mjs";
 import ClassicTheme from "../themes/Classic.mjs";
 import DarkTheme from "../themes/Dark.mjs";
 
+const mixinTheme = {
+  "text": {
+    "red": {
+      "token": {
+        "color": "red",
+        "background-color": "rgba(255, 0, 0, 0.2)",
+        "border-color": "black",
+        "border-width": 1,
+        "border-radius": 4
+      }
+    },
+    "green": {
+      "token": {
+        "color": "green",
+        "background-color": "rgba(0, 255, 0, 0.2)"
+      }
+    },
+    "blue": {
+      "token": {
+        "color": "blue",
+        "background-color": "rgba(0, 0, 255, 0.2)",
+        "border-color": "rgb(0, 0, 50)",
+        "border-width": 1,
+        "border-radius": 2
+      }
+    },
+    "the-range": {
+      "token": {
+        "background-color": "rgba(0, 0, 0, 0.4)"
+      }
+    },
+    "hiddenrange": {
+      "token": {
+        "background-color": "rgba(0, 128, 0, 0.2)"
+      }
+    }
+  }
+};
+
 Trace.setup();
 
 const examples = [
@@ -51,6 +90,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     mezzo = Mezzo.create(document);
     workerThreadStatus.classList.add('thread-bad');
   }
+  mezzo.renderer().setTheme(ClassicTheme.compose(mixinTheme));
   mezzo.document().on('changed', updateTotalSize.bind(null, mezzo));
   window.editor = mezzo;
 
@@ -80,9 +120,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.querySelector('.themes').addEventListener('input', event => {
     if (event.target.value === 'dark')
-      mezzo.renderer().setTheme(DarkTheme);
+      mezzo.renderer().setTheme(DarkTheme.compose(mixinTheme));
     else
-      mezzo.renderer().setTheme(ClassicTheme);
+      mezzo.renderer().setTheme(ClassicTheme.compose(mixinTheme));
   }, false);
 
   document.body.appendChild(mezzo.element());

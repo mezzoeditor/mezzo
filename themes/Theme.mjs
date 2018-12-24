@@ -29,6 +29,28 @@ export class Theme {
     return node;
   }
 
+  compose(theme) {
+    return new Theme('#composed', merge(this._config, theme));
+
+    function merge(obj1, obj2) {
+      const result = {};
+      const keys = new Set([...Object.keys(obj1), ...Object.keys(obj2)]);
+      for (const key of keys) {
+        const has1 = key in obj1;
+        const has2 = key in obj2;
+        const value1 = obj1[key];
+        const value2 = obj2[key];
+        if (typeof value1 === 'object' && typeof value2 === 'object')
+          result[key] = merge(obj1[key], obj2[key]);
+        else if (has2)
+          result[key] = value2;
+        else if (has1)
+          result[key] = value1;
+      }
+      return result;
+    }
+  }
+
   _computeSelector(node, selector) {
     while (selector) {
       let result = node[selector];
