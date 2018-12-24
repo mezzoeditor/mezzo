@@ -94,20 +94,25 @@ export class CMHighlighter {
       }
       const state = CodeMirror.copyState(this._mode, initial.data);
       const lineText = text.content(initial.to, range.to);
-      const stream = new CodeMirror.StringStream(lineText);
-      while (!stream.eol()) {
-        const token = this._mode.token(stream, state);
-        const value = stream.current();
-        let dType = 'syntax.default';
-        if (token) {
-          // Codemirror modes return a list of "styles". Pick
-          // the first we have a mapping for.
-          const type = token.split(' ').find(type => this._cmtokensToTheme.has(type));
-          if (type)
-            dType = this._cmtokensToTheme.get(type);
+      const lines = lineText.split('\n');
+      let textOffset = 0;
+      for (const line of lines) {
+        const stream = new CodeMirror.StringStream(line);
+        while (!stream.eol()) {
+          const token = this._mode.token(stream, state);
+          const value = stream.current();
+          let dType = 'syntax.default';
+          if (token) {
+            // Codemirror modes return a list of "styles". Pick
+            // the first we have a mapping for.
+            const type = token.split(' ').find(type => this._cmtokensToTheme.has(type));
+            if (type)
+              dType = this._cmtokensToTheme.get(type);
+          }
+          decorations.add(initial.to + stream.start + textOffset, initial.to + stream.start + value.length + textOffset, dType);
+          stream.start = stream.pos;
         }
-        decorations.add(initial.to + stream.start, initial.to + stream.start + value.length, dType);
-        stream.start = stream.pos;
+        textOffset += line.length + 1;
       }
     }
     Trace.endGroup(this._mimeType);
@@ -129,3 +134,15 @@ CodeMirror.copyState = function(mode, state) {
   }
   return nstate;
 }
+
+// Override CodeMirror's getMode to fallback to "text/plain"
+// if there's no defined mode.
+//
+// This is how original CodeMirror works and markdown mode
+// relies on this.
+CodeMirror.getMode = function(options, spec) {
+  spec = CodeMirror.resolveMode(spec);
+  var mfactory = CodeMirror.modes[spec.name];
+  if (!mfactory) return CodeMirror.getMode(options, 'text/plain');
+  return mfactory(options, spec);
+};
