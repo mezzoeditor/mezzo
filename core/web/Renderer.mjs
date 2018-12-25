@@ -690,7 +690,7 @@ export class Renderer {
     // Changing cavas width/height clears the canvas synchronously.
     // We need to re-render so that it doesn't blink on continious resizing.
     // But re-rendering synchronously is very slow. This needs investigation.
-    // this._render();
+    this._render();
 
     // Throttle while resizing to allow time for new frames
     // instead of background processing.
