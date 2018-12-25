@@ -23,8 +23,7 @@ export class TabStripComponent extends HTMLElement {
     tab.element.classList.toggle('dirty-icon', enabled);
   }
 
-  addTab(id) {
-    const title = window.fs.fileName(id);
+  addTab(id, tabName, tabTooltip = '') {
     const element = document.createElement('tabstrip-tab');
     const closeIcon = document.createElement('div');
     closeIcon.classList.add('close-icon');
@@ -34,14 +33,16 @@ export class TabStripComponent extends HTMLElement {
     });
     element[TabIdSymbol] = id;
     const titleElement = document.createElement('span');
-    titleElement.textContent = title;
+    titleElement.textContent = tabName;
+    element.title = tabTooltip;
     element.appendChild(titleElement);
     element.appendChild(closeIcon);
     this.appendChild(element);
 
-    const tab = {title, element};
+    const tab = {tabName, element};
     this._tabs.set(id, tab);
-    this._persistTabs();
+    if (this._delegate.didAddTab)
+      this._delegate.didAddTab.call(null, id);
   }
 
   async closeTab(id) {
@@ -61,23 +62,12 @@ export class TabStripComponent extends HTMLElement {
     this.selectTab(nextId);
     this._tabs.delete(id);
     tab.element.remove();
-    this._persistTabs();
+    if (this._delegate.didCloseTab)
+      this._delegate.didCloseTab.call(null, id);
   }
 
-  _persistTabs() {
-    const entries = Array.from(this._tabs.keys()).map(id => ({id, selected: id === this._selectedTabId}));
-    window.localStorage['tabs'] = JSON.stringify(entries);
-  }
-
-  restoreTabs() {
-    try {
-      for (const entry of JSON.parse(window.localStorage['tabs'])) {
-        this.addTab(entry.id);
-        if (entry.selected)
-          this.selectTab(entry.id);
-      }
-    } catch (e) {
-    }
+  tabs() {
+    return Array.from(this._tabs.keys());
   }
 
   hasTab(id) {
@@ -101,7 +91,6 @@ export class TabStripComponent extends HTMLElement {
       this._tabs.get(this._selectedTabId).element.classList.add('selected');
     if (this._delegate.onTabSelected)
       this._delegate.onTabSelected.call(null, id);
-    this._persistTabs();
   }
 }
 

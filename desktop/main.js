@@ -57,12 +57,28 @@ window.addEventListener('DOMContentLoaded', async () => {
       renderer.focus();
       statusbar.rightElement().textContent = mimeType;
       tabstrip.setTabDirtyIcon(path, !isClean(editor));
-    }
+      persistTabs();
+    },
+
+    didCloseTab(path) {
+      persistTabs();
+    },
+
+    didAddTab(path) {
+      persistTabs();
+    },
   });
+
+  function persistTabs() {
+    const selectedTab = tabstrip.selectedTab();
+    const entries = tabstrip.tabs().map(id => ({id, selected: id === selectedTab}));
+    window.localStorage['tabs'] = JSON.stringify(entries);
+  }
+
   const sidebar = new SidebarComponent(window.fs, {
     onFileSelected(path) {
       if (!tabstrip.hasTab(path))
-        tabstrip.addTab(path);
+        tabstrip.addTab(path, fs.fileName(path), path);
       tabstrip.selectTab(path);
     }
   });
@@ -83,7 +99,16 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.body.appendChild(statusbar);
 
   const filterDialog = new FilterDialogComponent();
-  tabstrip.restoreTabs();
+  // Restore tabs
+  try {
+    for (const entry of JSON.parse(window.localStorage['tabs'])) {
+      tabstrip.addTab(entry.id, fs.fileName(entry.id), entry.id);
+      if (entry.selected)
+        tabstrip.selectTab(entry.id);
+    }
+  } catch (e) {
+  }
+
 
   window.addEventListener('beforeunload', event => {
     debugger;
@@ -92,7 +117,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (!isClean(editor)) {
         hasDirtyEditors = true;
         if (!tabstrip.hasTab(path))
-          tabstrip.addTab(path);
+          tabstrip.addTab(path, fs.fileName(path), path);
         tabstrip.selectTab(path);
       }
     }
@@ -121,7 +146,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       } else {
         const callback = path => {
           if (!tabstrip.hasTab(path))
-            tabstrip.addTab(path);
+            tabstrip.addTab(path, fs.fileName(path), path);
           tabstrip.selectTab(path);
         };
         const items = [];
