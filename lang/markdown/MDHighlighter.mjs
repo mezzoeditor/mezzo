@@ -1,10 +1,11 @@
 import {CMHighlighter} from '../codemirror/CMHighlighter.mjs';
+import {} from '../codemirror/modes/overlay.js';
 import {} from '../codemirror/modes/xml.js';
 import {} from '../codemirror/modes/markdown.js';
 import {} from '../codemirror/modes/gfm.js';
 
 export async function createHighlighter(editor) {
-  return new CMHighlighter(editor, 'text/markdown', new Map(Object.entries({
+  return new CMHighlighter(editor, 'text/x-gfm', new Map(Object.entries({
     'property': 'syntax.string',
     'atom': 'syntax.keyword',
     'number': 'syntax.number',
