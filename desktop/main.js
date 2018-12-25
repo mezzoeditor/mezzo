@@ -9,6 +9,7 @@ import { EditorComponent } from './EditorComponent.mjs';
 import { StatusbarComponent } from './StatusbarComponent.mjs';
 import { TabStripComponent } from './TabStripComponent.mjs';
 import { FileFilterItem, GoToLineItem, FilterDialogComponent } from './FilterDialogComponent.mjs';
+import { Preferences } from './Preferences.mjs';
 
 window.fs = new FileSystem();
 
@@ -18,6 +19,12 @@ if (window._bindingInitialDirectory)
 window.addEventListener('DOMContentLoaded', async () => {
   /** @type {!Map<string, !Editor>} */
   let editors = new Map();
+  const prefs = new Preferences('application', {
+    'app.tabs.opened': {
+      version: 1,
+      defaultValue: [],
+    },
+  });
 
   document.body.classList.add('vbox');
 
@@ -72,7 +79,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   function persistTabs() {
     const selectedTab = tabstrip.selectedTab();
     const entries = tabstrip.tabs().map(id => ({id, selected: id === selectedTab}));
-    window.localStorage['tabs'] = JSON.stringify(entries);
+    prefs.set('app.tabs.opened', entries);
   }
 
   const sidebar = new SidebarComponent(window.fs, {
@@ -101,10 +108,13 @@ window.addEventListener('DOMContentLoaded', async () => {
   const filterDialog = new FilterDialogComponent();
   // Restore tabs
   try {
-    for (const entry of JSON.parse(window.localStorage['tabs'])) {
-      tabstrip.addTab(entry.id, fs.fileName(entry.id), entry.id);
-      if (entry.selected)
-        tabstrip.selectTab(entry.id);
+    const entries = await prefs.get('app.tabs.opened');
+    if (entries) {
+      for (const entry of entries) {
+        tabstrip.addTab(entry.id, fs.fileName(entry.id), entry.id);
+        if (entry.selected)
+          tabstrip.selectTab(entry.id);
+      }
     }
   } catch (e) {
   }
