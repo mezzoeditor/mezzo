@@ -1,8 +1,10 @@
 tabstrip-component {
-  flex: 0 0 30px;
+  --tab-height: 30px;
+  flex: 0 0 var(--tab-height);
   contain: content;
   user-select: none;
   --icon-size: 12px;
+  flex-wrap: wrap;
 }
 
 tabstrip-tab {
@@ -11,11 +13,9 @@ tabstrip-tab {
   flex: none;
   align-items: center;
   cursor: pointer;
-}
-
-tabstrip-tab {
   border-right: 1px solid white;
   display: flex;
+  height: var(--tab-height);
 }
 
 tabstrip-tab span {
