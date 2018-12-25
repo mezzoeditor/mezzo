@@ -23,10 +23,13 @@ export class SplitComponent extends HTMLElement {
   toggleLeftVisibility(visible) {
     if (visible === this._left.isConnected)
       return;
-    if (visible)
+    if (visible) {
+      this.insertBefore(this._divider, this._right);
       this.insertBefore(this._left, this._divider);
-    else
+    } else {
       this._left.remove();
+      this._divider.remove();
+    }
   }
 
   isLeftVisible() {
