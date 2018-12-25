@@ -31,14 +31,12 @@ body {
 }
 
 stub-message {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: 60%;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-grow: 1;
+  background-color: white;
+  font-size: 14px;
 }
 
 filetype-icon {

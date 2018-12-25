@@ -47,11 +47,15 @@ window.addEventListener('DOMContentLoaded', async () => {
       // No tab is selected (all tabs got closed).
       if (!path) {
         renderer.setEditor(null);
+        renderer.remove();
         split.rightElement().appendChild(stubMessage);
         statusbar.rightElement().textContent = '';
         return;
       }
-      stubMessage.remove();
+      if (stubMessage.isConnected) {
+        stubMessage.remove();
+        split.rightElement().appendChild(renderer);
+      }
       let mimeType = window.fs.mimeType(path);
       let editor = editors.get(path);
       if (!editor) {
@@ -106,7 +110,6 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   const renderer = new EditorComponent();
   const thread = await Thread.create(WebPlatformSupport.instance());
-  split.rightElement().appendChild(renderer);
 
   const stubMessage = createStubMessage();
   split.rightElement().appendChild(stubMessage);
