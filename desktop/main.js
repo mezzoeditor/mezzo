@@ -24,6 +24,10 @@ window.addEventListener('DOMContentLoaded', async () => {
       version: 1,
       defaultValue: [],
     },
+    'app.navigator.visible': {
+      version: 1,
+      defaultValue: true,
+    },
   });
 
   document.body.classList.add('vbox');
@@ -76,6 +80,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     },
   });
 
+  split.toggleLeftVisibility(await prefs.get('app.navigator.visible'));
+  tabstrip.addEventListener('dblclick', () => {
+    const visible = !split.isLeftVisible();
+    split.toggleLeftVisibility(visible);
+    prefs.set('app.navigator.visible', visible);
+  }, false);
+
   function persistTabs() {
     const selectedTab = tabstrip.selectedTab();
     const entries = tabstrip.tabs().map(id => ({id, selected: id === selectedTab}));
@@ -121,7 +132,6 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 
   window.addEventListener('beforeunload', event => {
-    debugger;
     let hasDirtyEditors = false;
     for (const [path, editor] of editors) {
       if (!isClean(editor)) {

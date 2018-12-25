@@ -20,6 +20,19 @@ export class SplitComponent extends HTMLElement {
     this._mouseDownWidth = 0;
   }
 
+  toggleLeftVisibility(visible) {
+    if (visible === this._left.isConnected)
+      return;
+    if (visible)
+      this.insertBefore(this._left, this._divider);
+    else
+      this._left.remove();
+  }
+
+  isLeftVisible() {
+    return this._left.isConnected;
+  }
+
   setLeftWidth(width) {
     this._left.style.setProperty('width', width + 'px');
     this._divider.style.setProperty('left', width - 4 + 'px');
