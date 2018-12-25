@@ -109,7 +109,7 @@ export class CMHighlighter {
           const type = token.split(' ').find(type => this._cmtokensToTheme.has(type));
           if (type)
             dType = this._cmtokensToTheme.get(type);
-          dType += '.cm-' + token;
+          dType += '.' + token;
         }
         decorations.add(initial.to + stream.start + textOffset, initial.to + stream.start + value.length + textOffset, dType);
         stream.start = stream.pos;
@@ -143,7 +143,42 @@ CodeMirror.copyState = function(mode, state) {
 // relies on this.
 CodeMirror.getMode = function(options, spec) {
   spec = CodeMirror.resolveMode(spec);
+  if (spec.name === 'javascript')
+    overrideModeWithPrefixedTokens(spec.name, 'js-');
+  else if (spec.name === 'css')
+    overrideModeWithPrefixedTokens(spec.name, 'css-');
+  else if (spec.name === 'xml')
+    overrideModeWithPrefixedTokens(spec.name, 'xml-');
   var mfactory = CodeMirror.modes[spec.name];
   if (!mfactory) return CodeMirror.getMode(options, 'text/plain');
   return mfactory(options, spec);
 };
+
+/**
+ * @param {string} modeName
+ * @param {string} tokenPrefix
+ */
+function overrideModeWithPrefixedTokens(modeName, tokenPrefix) {
+  const oldModeName = modeName + '-old';
+  if (CodeMirror.modes[oldModeName])
+    return;
+
+  CodeMirror.defineMode(oldModeName, CodeMirror.modes[modeName]);
+  CodeMirror.defineMode(modeName, modeConstructor);
+
+  function modeConstructor(config, parserConfig) {
+    const innerConfig = {};
+    for (const i in parserConfig)
+      innerConfig[i] = parserConfig[i];
+    innerConfig.name = oldModeName;
+    const codeMirrorMode = CodeMirror.getMode(config, innerConfig);
+    codeMirrorMode.name = modeName;
+    codeMirrorMode.token = tokenOverride.bind(null, codeMirrorMode.token);
+    return codeMirrorMode;
+  }
+
+  function tokenOverride(superToken, stream, state) {
+    const token = superToken(stream, state);
+    return token ? tokenPrefix + token.split(/ +/).join(' ' + tokenPrefix) : token;
+  }
+}

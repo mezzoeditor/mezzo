@@ -6,10 +6,20 @@ import {} from '../codemirror/modes/htmlmixed.js';
 
 export async function createHighlighter(editor) {
   return new CMHighlighter(editor, 'text/html', new Map(Object.entries({
-    'string': 'syntax.string',
-    'tag': 'syntax.keyword',
-    'number': 'syntax.number',
-    'comment': 'syntax.comment',
+    'css-property': 'syntax.string',
+    'css-meta': 'syntax.string',
+    'css-atom': 'syntax.keyword',
+    'css-number': 'syntax.number',
+    'css-comment': 'syntax.comment',
+    'css-variable-2': 'syntax.variable',
+    'css-string': 'syntax.string',
+    'xml-tag': 'syntax.keyword',
+    'xml-string': 'syntax.string',
+    'xml-comment': 'syntax.comment',
+    'js-keyword': 'syntax.keyword',
+    'js-string': 'syntax.string',
+    'js-number': 'syntax.number',
+    'js-comment': 'syntax.comment',
   })));
 }
 
