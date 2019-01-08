@@ -45,8 +45,6 @@ export class Mezzo {
       family: DOMUtils.isMac() ? 'Menlo' : 'monospace',
       size: 12,
       monospace: true,
-      topAscent: 2,
-      bottomDescent: 6
     });
 
     this._plugins = {

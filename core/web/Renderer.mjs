@@ -100,8 +100,8 @@ class ContextBasedMeasurer {
   constructor(ctx, fontConfig) {
     this._fontConfig = fontConfig;
     const {
-      topAscent = 0,
-      bottomDescent = 0,
+      topAscent = Math.round(fontConfig.size / 3),
+      bottomDescent = Math.round(fontConfig.size / 3),
     } = fontConfig;
     this._lineHeight = fontConfig.size + topAscent + bottomDescent;
     this._topAscent = topAscent;

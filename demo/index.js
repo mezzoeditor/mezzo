@@ -131,7 +131,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const size = parseInt(event.target.value);
     mezzo.renderer().setFontConfig({
       ...mezzo.renderer().fontConfig(),
-      size
+      size,
     });
   }, false);
 
