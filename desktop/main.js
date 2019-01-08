@@ -14,7 +14,7 @@ import { Preferences } from './Preferences.mjs';
 window.fs = new FileSystem();
 
 if (window._bindingInitialDirectory)
-  window.fs.initialize(window._bindingInitialDirectory);
+  window.fs.addRoot(window._bindingInitialDirectory);
 
 window.addEventListener('DOMContentLoaded', async () => {
   /** @type {!Map<string, !Editor>} */

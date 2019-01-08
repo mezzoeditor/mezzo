@@ -1,20 +1,20 @@
+import { EventEmitter } from '../core/utils/EventEmitter.mjs';
+
 let id = 1;
 
-export class FileSystem {
+export class FileSystem extends EventEmitter {
   constructor() {
-    this._filesChangedCallbacks = [];
-    this._rootsChangedCallbacks = [];
+    super();
     /** @type {!Map<string, !Set<string>>} */
     this._relativeRootPaths = new Map();
   }
 
-  initialize(path) {
+  addRoot(path) {
     this._relativeRootPaths.set(path, new Set());
     const callbackName = '_bindingFilesChanged' + (id++);
     window[callbackName] = this._bindingFilesChanged.bind(this, path);
     window._bindingInitializeFS(path, callbackName);
-    for (const callback of this._rootsChangedCallbacks)
-      callback.call(null, [path], []);
+    this.emit(FileSystem.Events.RootsChanged, [path], []);
   }
 
   _bindingFilesChanged(root, added, removed, changed) {
@@ -39,8 +39,7 @@ export class FileSystem {
       relativePaths.add(relPath);
       addedRelativePaths.push(relPath);
     }
-    for (const callback of this._filesChangedCallbacks)
-      callback.call(null, root, addedRelativePaths, removedRelativePaths, changedRelativePaths);
+    this.emit(FileSystem.Events.FilesChanged, root, addedRelativePaths, removedRelativePaths, changedRelativePaths);
 
     function relify(root, path) {
       path = path.substring(root.length);
@@ -82,14 +81,6 @@ export class FileSystem {
     return path.split('/').pop();
   }
 
-  addFilesChangedCallback(callback) {
-    this._filesChangedCallbacks.push(callback);
-  }
-
-  addRootsChangedCallback(callback) {
-    this._rootsChangedCallbacks.push(callback);
-  }
-
   async readFile(filePath) {
     return await window._bindingReadFile(filePath);
   }
@@ -98,4 +89,9 @@ export class FileSystem {
     await window._bindingSaveFile(filePath, content)
   }
 }
+
+FileSystem.Events = {
+  FilesChanged: Symbol('FilesChanged'),
+  RootsChanged: Symbol('RootsChanged'),
+};
 

@@ -1,4 +1,5 @@
 import { Icons } from './Icons.mjs';
+import { FileSystem } from './FileSystem.mjs';
 
 const NavigatorTreeNodeSymbol = Symbol('NavigatorTreeNodeSymbol');
 
@@ -10,8 +11,8 @@ export class SidebarComponent extends HTMLElement {
     super();
     this._fs = fs;
     this._delegate = delegate;
-    this._fs.addFilesChangedCallback(this._onFilesChanged.bind(this));
-    this._fs.addRootsChangedCallback(this._onRootsChanged.bind(this));
+    this._fs.on(FileSystem.Events.FilesChanged, this._onFilesChanged.bind(this));
+    this._fs.on(FileSystem.Events.RootsChanged, this._onRootsChanged.bind(this));
     this._selectedItem = null;
     this._header = document.createElement('header');
     this.appendChild(this._header);
