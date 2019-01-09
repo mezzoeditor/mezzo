@@ -3,6 +3,7 @@ import {} from '../codemirror/modes/overlay.js';
 import {} from '../codemirror/modes/xml.js';
 import {} from '../codemirror/modes/css.js';
 import {} from '../codemirror/modes/javascript.js';
+import {} from '../codemirror/modes/meta.js';
 import {} from '../codemirror/modes/markdown.js';
 import {} from '../codemirror/modes/gfm.js';
 
