@@ -154,6 +154,19 @@ CodeMirror.getMode = function(options, spec) {
   return mfactory(options, spec);
 };
 
+// Given a mode and a state (for that mode), find the inner mode and
+// state at the position that the state refers to.
+CodeMirror.innerMode = function(mode, state) {
+  let info;
+  while (mode.innerMode) {
+    info = mode.innerMode(state);
+    if (!info || info.mode == mode) break;
+    state = info.state;
+    mode = info.mode;
+  }
+  return info || {mode: mode, state: state};
+}
+
 /**
  * @param {string} modeName
  * @param {string} tokenPrefix
