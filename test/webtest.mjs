@@ -1,4 +1,4 @@
-#!/usr/bin/env node --experimental-modules
+#!/usr/bin/env node -r esm
 
 import {TestRunner, Reporter, Matchers} from '../utils/testrunner/index.mjs';
 import {StaticServer, url2path} from '../utils/StaticServer.mjs';

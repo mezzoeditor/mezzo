@@ -18,7 +18,7 @@ import fs from 'fs';
 import Diff from 'text-diff';
 import url from 'url';
 
-const __dirname = path.dirname(new url.URL(import.meta.url).pathname);
+const __DIRNAME = path.dirname(new url.URL(import.meta.url).pathname);
 
 const actualSuffix = '.actual';
 const expectedSuffix = '.expected';
@@ -80,7 +80,7 @@ function svgComparator(actual, expectedBuffer) {
   const result = diff.main(expected, actual);
   diff.cleanupSemantic(result);
   let htmldiff = diff.prettyHtml(result);
-  const diffStylePath = path.join(__dirname, 'textdiff.css');
+  const diffStylePath = path.join(__DIRNAME, 'textdiff.css');
   let html = `
     <link rel="stylesheet" href="file://${diffStylePath}">
     <h1>SVG Diff</h1>
@@ -122,7 +122,7 @@ function plainTextComparator(actual, expectedBuffer) {
   const result = diff.main(expected, actual);
   diff.cleanupSemantic(result);
   let html = diff.prettyHtml(result);
-  const diffStylePath = path.join(__dirname, 'textdiff.css');
+  const diffStylePath = path.join(__DIRNAME, 'textdiff.css');
   html = `<link rel="stylesheet" href="file://${diffStylePath}">` + html;
   return {
     diff: html,

@@ -1,4 +1,4 @@
-#!/usr/bin/env node --experimental-modules
+#!/usr/bin/env node -r esm
 
 import {TestRunner, Reporter, Matchers} from '../utils/testrunner/index.mjs';
 import path from 'path';
@@ -9,9 +9,9 @@ import rimraf from 'rimraf';
 const runner = new TestRunner();
 const {expect} = new Matchers();
 
-const __dirname = path.dirname(new url.URL(import.meta.url).pathname);
+const __DIRNAME = path.dirname(new url.URL(import.meta.url).pathname);
 const options = {
-  outputFolder: path.join(__dirname, '..', 'out'),
+  outputFolder: path.join(__DIRNAME, '..', 'out'),
   resetResults: process.argv.includes('--reset-results'),
 };
 

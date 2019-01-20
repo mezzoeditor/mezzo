@@ -19,7 +19,7 @@ import EventEmitter from 'events';
 import {Multimap} from './Multimap';
 import url from 'url';
 
-const __dirname = path.dirname(new url.URL(import.meta.url).pathname);
+const __DIRNAME = path.dirname(new url.URL(import.meta.url).pathname);
 const TimeoutError = new Error('Timeout');
 const TerminatedError = new Error('Terminated');
 
@@ -72,7 +72,7 @@ class UserCallback {
       const filePath = match[1];
       const lineNumber = match[2];
       const columnNumber = match[3];
-      if (filePath.includes(__dirname))
+      if (filePath.includes(__DIRNAME))
         continue;
       const fileName = filePath.split(path.sep).pop();
       return { fileName, filePath, lineNumber, columnNumber };

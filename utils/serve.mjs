@@ -1,4 +1,4 @@
-#!/usr/bin/env node --experimental-modules
+#!/usr/bin/env node -r esm
 
 import {StaticServer, url2path} from '../utils/StaticServer.mjs';
 import path from 'path';

@@ -14,8 +14,8 @@ export function addTests(runner, expect, options) {
   const {it, fit, xit} = runner;
   const {beforeAll, beforeEach, afterAll, afterEach} = runner;
 
-  const __dirname = path.dirname(new url.URL(import.meta.url).pathname);
-  const TESTDIR = path.join(__dirname, 'test-results');
+  const __DIRNAME = path.dirname(new url.URL(import.meta.url).pathname);
+  const TESTDIR = path.join(__DIRNAME, 'test-results');
   const OUTDIR = path.join(options.outputFolder, 'editor');
   const golden = new GoldenMatchers(TESTDIR, OUTDIR, options.resetResults);
 
