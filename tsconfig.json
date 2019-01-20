@@ -9,9 +9,16 @@
     "target": "es2017"
   },
   "include": [
-    "core/utils/Anchor.js",
-    "core/utils/EventEmitter.js",
-    "core/utils/Random.js",
-    "core/utils/RoundMode.js"
+    "core/utils"
+  ],
+  "exclude": [
+    "core/utils/NumberMonoid.js",
+    "core/utils/OrderedMonoidTree.js",
+    "core/utils/OrderedMonoidTree.spec.js",
+    "core/utils/RangeTree.js",
+    "core/utils/RangeTree.spec.js",
+    "core/utils/Trace.js",
+    "core/utils/WorkAllocator.js",
+    "core/utils/WorkAllocator.spec.js"
   ]
 }
