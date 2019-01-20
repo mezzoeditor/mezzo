@@ -2,10 +2,9 @@ import { Random } from './Random.js';
 
 /**
  * @template T
- * @extends Range
  * @typedef {{
- *   from: Anchor,
- *   to: Anchor,
+ *   from: Mezzo.Anchor,
+ *   to: Mezzo.Anchor,
  *   data: T,
  * }} RangeData
  * This is an immutable range with some data attached to it.
@@ -44,8 +43,8 @@ export class RangeTree {
    *   - not degenerate (|from| <= |to|);
    *   - disjoiint (no ranges have common interior point).
    * Only returns a handle if created with handles support.
-   * @param {Anchor} from
-   * @param {Anchor} to
+   * @param {Mezzo.Anchor} from
+   * @param {Mezzo.Anchor} to
    * @param {T} data
    * @return {RangeHandle|undefined}
    */
@@ -63,18 +62,9 @@ export class RangeTree {
   }
 
   /**
-   * Similar to add, but takes an object.
-   * @param {RangeData<T>} rangeData
-   * @return {RangeHandle|undefined}
-   */
-  addRangeData(rangeData) {
-    return add(rangeData.from, rangeData.to, rangeData.data);
-  }
-
-  /**
    * Removes a single range by handle and returns it's data if any.
    * @param {RangeHandle} handle
-   * @return {RangeData|undefined}
+   * @return {RangeData<T>|undefined}
    */
   remove(handle) {
     const range = this.resolve(handle);
@@ -97,7 +87,7 @@ export class RangeTree {
   /**
    * Returns the range's current bounds.
    * @param {RangeHandle} handle
-   * @return {RangeData|undefined}
+   * @return {RangeData<T>|undefined}
    */
   resolve(handle) {
     const stack = [];
@@ -163,8 +153,8 @@ export class RangeTree {
 
   /**
    * Returns the number of ranges which start at [from, to).
-   * @param {Anchor} from
-   * @param {Anchor} to
+   * @param {Mezzo.Anchor} from
+   * @param {Mezzo.Anchor} to
    * @return {number}
    */
   countStarting(from, to) {
@@ -173,8 +163,8 @@ export class RangeTree {
 
   /**
    * Returns the number of ranges which end at [from, to).
-   * @param {Anchor} from
-   * @param {Anchor} to
+   * @param {Mezzo.Anchor} from
+   * @param {Mezzo.Anchor} to
    * @return {number}
    */
   countEnding(from, to) {
@@ -183,8 +173,8 @@ export class RangeTree {
 
   /**
    * Returns the number of ranges which intersect or touch [from, to).
-   * @param {Anchor} from
-   * @param {Anchor} to
+   * @param {Mezzo.Anchor} from
+   * @param {Mezzo.Anchor} to
    * @return {number}
    */
   countTouching(from, to) {
@@ -193,7 +183,7 @@ export class RangeTree {
 
   /**
    * Lists all ranges.
-   * @return {Array<RangeData>}
+   * @return {Array<RangeData<T>>}
    */
   listAll() {
     const result = [];
@@ -203,9 +193,9 @@ export class RangeTree {
 
   /**
    * Lists all ranges which start at [from, to).
-   * @param {Anchor} from
-   * @param {Anchor} to
-   * @return {Array<RangeData>}
+   * @param {Mezzo.Anchor} from
+   * @param {Mezzo.Anchor} to
+   * @return {Array<RangeData<T>>}
    */
   listStarting(from, to) {
     const result = [];
@@ -215,9 +205,9 @@ export class RangeTree {
 
   /**
    * Lists all ranges which end at [from, to).
-   * @param {Anchor} from
-   * @param {Anchor} to
-   * @return {Array<RangeData>}
+   * @param {Mezzo.Anchor} from
+   * @param {Mezzo.Anchor} to
+   * @return {Array<RangeData<T>>}
    */
   listEnding(from, to) {
     const result = [];
@@ -227,9 +217,9 @@ export class RangeTree {
 
   /**
    * Lists all ranges which intersect or touch [from, to).
-   * @param {Anchor} from
-   * @param {Anchor} to
-   * @return {Array<RangeData>}
+   * @param {Mezzo.Anchor} from
+   * @param {Mezzo.Anchor} to
+   * @return {Array<RangeData<T>>}
    */
   listTouching(from, to) {
     const result = [];
@@ -246,8 +236,8 @@ export class RangeTree {
 
   /**
    * Removes all ranges which start at [from, to).
-   * @param {Anchor} from
-   * @param {Anchor} to
+   * @param {Mezzo.Anchor} from
+   * @param {Mezzo.Anchor} to
    */
   clearStarting(from, to) {
     this._starting(from, to, null);
@@ -255,8 +245,8 @@ export class RangeTree {
 
   /**
    * Removes all ranges which end at [from, to).
-   * @param {Anchor} from
-   * @param {Anchor} to
+   * @param {Mezzo.Anchor} from
+   * @param {Mezzo.Anchor} to
    */
   clearEnding(from, to) {
     this._ending(from, to, null);
@@ -264,8 +254,8 @@ export class RangeTree {
 
   /**
    * Removes all ranges which intersect or touch [from, to).
-   * @param {Anchor} from
-   * @param {Anchor} to
+   * @param {Mezzo.Anchor} from
+   * @param {Mezzo.Anchor} to
    */
   clearTouching(from, to) {
     this._touching(from, to, null);
@@ -273,7 +263,7 @@ export class RangeTree {
 
   /**
    * Visits all ranges.
-   * @param {function(RangeData)} visitor
+   * @param {function(RangeTreeNode<T>):void} visitor
    */
   visitAll(visitor) {
     visit(this._root, visitor);
@@ -281,9 +271,9 @@ export class RangeTree {
 
   /**
    * Visits all ranges which start at [from, to).
-   * @param {Anchor} from
-   * @param {Anchor} to
-   * @param {function(RangeData)} visitor
+   * @param {Mezzo.Anchor} from
+   * @param {Mezzo.Anchor} to
+   * @param {function(RangeTreeNode<T>):void} visitor
    */
   visitStarting(from, to, visitor) {
     this._starting(from, to, node => visit(node, visitor));
@@ -291,9 +281,9 @@ export class RangeTree {
 
   /**
    * Visits all ranges which end at [from, to).
-   * @param {Anchor} from
-   * @param {Anchor} to
-   * @param {function(RangeData)} visitor
+   * @param {Mezzo.Anchor} from
+   * @param {Mezzo.Anchor} to
+   * @param {function(RangeTreeNode<T>):void} visitor
    */
   visitEnding(from, to, visitor) {
     this._ending(from, to, node => visit(node, visitor));
@@ -301,9 +291,9 @@ export class RangeTree {
 
   /**
    * Visits all ranges which intersect or touch [from, to).
-   * @param {Anchor} from
-   * @param {Anchor} to
-   * @param {function(RangeData)} visitor
+   * @param {Mezzo.Anchor} from
+   * @param {Mezzo.Anchor} to
+   * @param {function(RangeTreeNode<T>):void} visitor
    */
   visitTouching(from, to, visitor) {
     this._touching(from, to, node => visit(node, visitor));
@@ -311,7 +301,7 @@ export class RangeTree {
 
   /**
    * Returns the first (sorted by start anchor) range.
-   * @return {?RangeData}
+   * @return {?RangeData<T>}
    */
   firstAll() {
     return this._root ? first(this._root) : null;
@@ -319,9 +309,9 @@ export class RangeTree {
 
   /**
    * Returns the first (sorted by start anchor) range which starts at [from, to).
-   * @param {Anchor} from
-   * @param {Anchor} to
-   * @return {?RangeData}
+   * @param {Mezzo.Anchor} from
+   * @param {Mezzo.Anchor} to
+   * @return {?RangeData<T>}
    */
   firstStarting(from, to) {
     return this._starting(from, to, node => node ? first(node) : null);
@@ -329,9 +319,9 @@ export class RangeTree {
 
   /**
    * Returns the first (sorted by start anchor) range which ends at [from, to).
-   * @param {Anchor} from
-   * @param {Anchor} to
-   * @return {?RangeData}
+   * @param {Mezzo.Anchor} from
+   * @param {Mezzo.Anchor} to
+   * @return {?RangeData<T>}
    */
   firstEnding(from, to) {
     return this._ending(from, to, node => node ? first(node) : null);
@@ -339,9 +329,9 @@ export class RangeTree {
 
   /**
    * Returns the first (sorted by start anchor) range which intersects or touches [from, to).
-   * @param {Anchor} from
-   * @param {Anchor} to
-   * @return {?RangeData}
+   * @param {Mezzo.Anchor} from
+   * @param {Mezzo.Anchor} to
+   * @return {?RangeData<T>}
    */
   firstTouching(from, to) {
     return this._touching(from, to, node => node ? first(node) : null);
@@ -349,7 +339,7 @@ export class RangeTree {
 
   /**
    * Returns the last (sorted by start anchor) range.
-   * @return {?RangeData}
+   * @return {?RangeData<T>}
    */
   lastAll() {
     return this._root ? last(this._root) : null;
@@ -357,9 +347,9 @@ export class RangeTree {
 
   /**
    * Returns the last (sorted by start anchor) range which starts at [from, to).
-   * @param {Anchor} from
-   * @param {Anchor} to
-   * @return {?RangeData}
+   * @param {Mezzo.Anchor} from
+   * @param {Mezzo.Anchor} to
+   * @return {?RangeData<T>}
    */
   lastStarting(from, to) {
     return this._starting(from, to, node => node ? last(node) : null);
@@ -367,9 +357,9 @@ export class RangeTree {
 
   /**
    * Returns the last (sorted by start anchor) range which ends at [from, to).
-   * @param {Anchor} from
-   * @param {Anchor} to
-   * @return {?RangeData}
+   * @param {Mezzo.Anchor} from
+   * @param {Mezzo.Anchor} to
+   * @return {?RangeData<T>}
    */
   lastEnding(from, to) {
     return this._ending(from, to, node => node ? last(node) : null);
@@ -377,9 +367,9 @@ export class RangeTree {
 
   /**
    * Returns the last (sorted by start anchor) range which intersects or touches [from, to).
-   * @param {Anchor} from
-   * @param {Anchor} to
-   * @return {?RangeData}
+   * @param {Mezzo.Anchor} from
+   * @param {Mezzo.Anchor} to
+   * @return {?RangeData<T>}
    */
   lastTouching(from, to) {
     return this._touching(from, to, node => node ? last(node) : null);
@@ -395,7 +385,7 @@ export class RangeTree {
    * (based on ranges being disjoint):
    *   let visitor = range => range.to;
    *
-   * @param {function(range: RangeData):Anchor} visitor
+   * @param {function(RangeTreeNode<T>):Mezzo.Anchor} visitor
    *
    * TODO: this could be done more effectively.
    */
@@ -416,8 +406,8 @@ export class RangeTree {
 
   /**
    * @template P
-   * @param {Anchor} from
-   * @param {Anchor} to
+   * @param {Mezzo.Anchor} from
+   * @param {Mezzo.Anchor} to
    * @param {?function(RangeTreeNode<T>|undefined):P} callback
    * @return {P}
    */
@@ -427,8 +417,8 @@ export class RangeTree {
 
   /**
    * @template P
-   * @param {Anchor} from
-   * @param {Anchor} to
+   * @param {Mezzo.Anchor} from
+   * @param {Mezzo.Anchor} to
    * @param {?function(RangeTreeNode<T>|undefined):P} callback
    * @return {P}
    */
@@ -438,8 +428,8 @@ export class RangeTree {
 
   /**
    * @template P
-   * @param {Anchor} from
-   * @param {Anchor} to
+   * @param {Mezzo.Anchor} from
+   * @param {Mezzo.Anchor} to
    * @param {?function(RangeTreeNode<T>|undefined):P} callback
    * @return {P}
    */
@@ -449,9 +439,9 @@ export class RangeTree {
 
   /**
    * @template P
-   * @param {Anchor} anchor1
+   * @param {Mezzo.Anchor} anchor1
    * @param {number} by1
-   * @param {Anchor} anchor2
+   * @param {Mezzo.Anchor} anchor2
    * @param {number} by2
    * @param {?function(RangeTreeNode<T>|undefined):P} callback
    * @return {P}
@@ -517,17 +507,16 @@ export class RangeTree {
 
 /**
  * @template T
- * @extends RangeData<T>
  * @typedef {{
  *   data: T,
- *   from: Anchor,
- *   to: Anchor,
+ *   from: Mezzo.Anchor,
+ *   to: Mezzo.Anchor,
  *   h: number,
  *   size: number,
- *   add: number|undefined,
- *   left: TreeNode|undefined,
- *   right: TreeNode|undefined,
- *   parent: TreeNode|undefined
+ *   add?: number,
+ *   left?: RangeTreeNode<T>,
+ *   right?: RangeTreeNode<T>,
+ *   parent?: RangeTreeNode<T>
  * }} RangeTreeNode
  */
 
@@ -600,9 +589,9 @@ const kTo = 1;
 /**
  * @template T
  * @param {RangeTreeNode<T>|undefined} node
- * @param {Anchor} key
+ * @param {Mezzo.Anchor} key
  * @param {number} splitBy
- * @return {{left: RangeTreeNode<T>|undefined, right: RangeTreeNode<T>|undefined}}
+ * @return {{left?: RangeTreeNode<T>, right?: RangeTreeNode<T>}}
  */
 function split(node, key, splitBy) {
   if (!node)
@@ -623,7 +612,7 @@ function split(node, key, splitBy) {
 /**
  * @template T
  * @param {RangeTreeNode<T>|undefined} node
- * @param {function(RangeTreeNode<T>)} visitor
+ * @param {function(RangeTreeNode<T>):void} visitor
  */
 function visit(node, visitor) {
   if (!node)
@@ -672,7 +661,7 @@ function last(node) {
 /**
  * @template T
  * @param {RangeTreeNode<T>|undefined} node
- * @param {Anchor} key
+ * @param {Mezzo.Anchor} key
  * @return {RangeTreeNode<T>|undefined}
  */
 function find(node, key) {
