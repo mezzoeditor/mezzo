@@ -24,6 +24,16 @@ class RemoteObject {
         });
       }
     });
+    this.rpcIgnoreResult = new Proxy({}, {
+      get(target, propKey, receiver) {
+        return async (...args) => await runtime._send({
+          type: 'voidrpc',
+          remoteObjectId,
+          method: propKey,
+          args,
+        });
+      }
+    });
   }
 
   runtime() {
@@ -206,12 +216,12 @@ class Runtime {
     if (data.requestId) {
       const response = {responseId: data.requestId};
       try {
-        if (data.type === 'rpc') {
+        if ((data.type === 'rpc' || data.type === 'voidrpc')) {
           const localObject = this._localObjects.get(data.remoteObjectId);
           if (!localObject)
             throw new Error(`[thread: ${this._name}] Cannot find object with id "${data.remoteObjectId}" while calling "${data.method}"`);
           const result = await localObject[data.method](...data.args);
-          response.result = result;
+          response.result = data.type === 'voidrpc' ? undefined : result;
         } else if (data.type === 'evaluate') {
           const fun = eval(data.fun);
           const args = await this._deserialize(data.args);

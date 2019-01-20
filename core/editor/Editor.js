@@ -219,7 +219,7 @@ export class Editor extends EventEmitter {
       for (let removedHandle of this._handles.replace(offset, offset + removed.length(), inserted.length()))
         removedHandle[RangeHandle._symbol]._wasRemoved();
       if (this._remoteDocument)
-        this._remoteDocument.rpc.replace(offset, offset + removed.length(), inserted.content());
+        this._remoteDocument.rpcIgnoreResult.replace(offset, offset + removed.length(), inserted.content());
     }
   }
 }
