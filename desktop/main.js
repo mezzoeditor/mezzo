@@ -1,15 +1,15 @@
-import { KeymapHandler } from '../core/web/KeymapHandler.mjs';
-import { Thread } from '../core/editor/Thread.mjs';
-import { WebPlatformSupport } from '../core/web/WebPlatformSupport.mjs';
+import { KeymapHandler } from '../core/web/KeymapHandler.js';
+import { Thread } from '../core/editor/Thread.js';
+import { WebPlatformSupport } from '../core/web/WebPlatformSupport.js';
 
-import { FileSystem } from './FileSystem.mjs';
-import { SplitComponent } from './SplitComponent.mjs';
-import { SidebarComponent } from './SidebarComponent.mjs';
-import { EditorComponent } from './EditorComponent.mjs';
-import { StatusbarComponent } from './StatusbarComponent.mjs';
-import { TabStripComponent } from './TabStripComponent.mjs';
-import { FileFilterItem, GoToLineItem, FilterDialogComponent } from './FilterDialogComponent.mjs';
-import { Preferences } from './Preferences.mjs';
+import { FileSystem } from './FileSystem.js';
+import { SplitComponent } from './SplitComponent.js';
+import { SidebarComponent } from './SidebarComponent.js';
+import { EditorComponent } from './EditorComponent.js';
+import { StatusbarComponent } from './StatusbarComponent.js';
+import { TabStripComponent } from './TabStripComponent.js';
+import { FileFilterItem, GoToLineItem, FilterDialogComponent } from './FilterDialogComponent.js';
+import { Preferences } from './Preferences.js';
 
 window.fs = new FileSystem();
 

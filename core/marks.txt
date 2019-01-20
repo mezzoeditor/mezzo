@@ -4,10 +4,10 @@ Date:   Sat Nov 3 18:20:43 2018 -0700
 
     folding
 
-diff --git a/src/core/Markup.mjs b/src/core/Markup.mjs
+diff --git a/src/core/Markup.js b/src/core/Markup.js
 index 13c97aa..4c4f14d 100644
---- a/src/core/Markup.mjs
-+++ b/src/core/Markup.mjs
+--- a/src/core/Markup.js
++++ b/src/core/Markup.js
 @@ -46,6 +46,12 @@ export const WrappingMode = {
    Word: 2,
  }

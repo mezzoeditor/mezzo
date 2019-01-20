@@ -1,13 +1,13 @@
-import { RangeTree } from "../core/utils/RangeTree.mjs";
-import { WrappingMode } from "../core/markup/Markup.mjs";
-import { Trace } from "../core/utils/Trace.mjs";
+import { RangeTree } from "../core/utils/RangeTree.js";
+import { WrappingMode } from "../core/markup/Markup.js";
+import { Trace } from "../core/utils/Trace.js";
 
-import { Mezzo } from "../mezzo/index.mjs";
+import { Mezzo } from "../mezzo/index.js";
 
 
 
-import ClassicTheme from "../themes/Classic.mjs";
-import DarkTheme from "../themes/Dark.mjs";
+import ClassicTheme from "../themes/Classic.js";
+import DarkTheme from "../themes/Dark.js";
 
 const mixinTheme = {
   "text": {

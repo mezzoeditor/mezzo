@@ -1,9 +1,9 @@
-import { TextDecorator } from "../src/core/Decorator.mjs";
+import { TextDecorator } from "../src/core/Decorator.js";
 
-import { WebEmbedder } from "../webembedder/index.mjs";
+import { WebEmbedder } from "../webembedder/index.js";
 
 
-import { trace } from "../src/core/Trace.mjs";
+import { trace } from "../src/core/Trace.js";
 trace.setup();
 
 const examples = [

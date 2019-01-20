@@ -8,10 +8,10 @@ html, body, .renderer {
 }
 </style>
 <script type='module'>
-import { Renderer } from '../Renderer.mjs';
-import ClassicTheme from '../../../../themes/Classic.mjs';
-import { WebPlatformSupport } from '../WebPlatformSupport.mjs';
-import { Editor } from '../../editor/Editor.mjs';
+import { Renderer } from '../Renderer.js';
+import ClassicTheme from '../../../../themes/Classic.js';
+import { WebPlatformSupport } from '../WebPlatformSupport.js';
+import { Editor } from '../../editor/Editor.js';
 
 const renderer = new Renderer(document, ClassicTheme);
 const editor = Editor.create(renderer.measurer(), WebPlatformSupport.instance());

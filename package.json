@@ -7,9 +7,9 @@
     "node": ">=10.0.0"
   },
   "scripts": {
-    "unit": "node -r esm test/unit.mjs",
-    "webtest": "node -r esm test/webtest.mjs",
-    "serve": "node -r esm utils/serve.mjs 9123",
+    "unit": "node -r esm test/unit.js",
+    "webtest": "node -r esm test/webtest.js",
+    "serve": "node -r esm utils/serve.js 9123",
     "test": "npm run unit && npm run webtest",
     "desktop": "node desktop/nodejs/launch.js"
   },
