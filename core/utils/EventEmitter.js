@@ -1,13 +1,13 @@
 export class EventEmitter {
   constructor() {
-    /** @type {!Map<string, !Set<function(*)>>} */
+    /** @type {!Map<string, !Set<EventEmitter.Listener>>} */
     this._listeners = new Map();
   }
 
   /**
    * @param {string} eventName
-   * @param {function(*)} listener
-   * @return {function()}
+   * @param {EventEmitter.Listener} listener
+   * @return {function():void}
    */
   on(eventName, listener) {
     let listeners = this._listeners.get(eventName);
@@ -21,7 +21,7 @@ export class EventEmitter {
 
   /**
    * @param {string} eventName
-   * @param {function(*)} listener
+   * @param {EventEmitter.Listener} listener
    */
   removeListener(eventName, listener) {
     let listeners = this._listeners.get(eventName);
@@ -32,7 +32,7 @@ export class EventEmitter {
 
   /**
    * @param {string} eventName
-   * @param {function(*)} listener
+   * @param {EventEmitter.Listener} listener
    */
   off(eventName, listener) {
     this.removeListener(eventName, listener);
@@ -52,7 +52,7 @@ export class EventEmitter {
   }
 
   /**
-   * @param {!Array<!{emitter: EventEmitter, eventName: string, listener: function(*)}>} descriptors
+   * @param {!Array<function():void>} descriptors
    */
   static removeEventListeners(descriptors) {
     for (const descriptor of descriptors)
@@ -60,3 +60,7 @@ export class EventEmitter {
     descriptors.splice(0, descriptors.length);
   }
 }
+
+/**
+ * @typedef {function(*):any} EventEmitter.Listener
+ */

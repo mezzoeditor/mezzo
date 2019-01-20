@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "noEmit": true,
+    "allowJs": true,
+    "checkJs": true,
+    "lib": [
+      "ES6","ScriptHost"
+    ],
+    "target": "es2017"
+  },
+  "include": [
+    "core/utils/Anchor.js",
+    "core/utils/EventEmitter.js",
+    "core/utils/Random.js",
+    "core/utils/RoundMode.js"
+  ]
+}
