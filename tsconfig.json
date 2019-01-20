@@ -13,8 +13,6 @@
   ],
   "exclude": [
     "core/utils/NumberMonoid.js",
-    "core/utils/OrderedMonoidTree.js",
-    "core/utils/OrderedMonoidTree.spec.js",
     "core/utils/RangeTree.js",
     "core/utils/RangeTree.spec.js",
     "core/utils/Trace.js",

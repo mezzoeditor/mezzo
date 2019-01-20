@@ -1,6 +1,14 @@
 import { Random } from '../utils/Random.js';
 
+/**
+ * @template D
+ * @template V
+ * @template K
+ */
 export class TreeFactory {
+  /**
+   * @param {Mezzo.OrderedMonoid<V, K>} monoid
+   */
   constructor(monoid) {
     this._helpers = new TreeHelpers(monoid);
     this.test = {buildFromNodes: this._helpers.buildFromNodes.bind(this._helpers)};
@@ -10,7 +18,7 @@ export class TreeFactory {
    * Constructs a tree from a sequence of values and data.
    * @param {Array<D>} data
    * @param {Array<V>} values
-   * @return {Tree}
+   * @return {Tree<D, K, V>}}
    */
   build(data, values) {
     if (values.length !== data.length)
@@ -34,10 +42,24 @@ export class TreeFactory {
   }
 }
 
+/**
+ * @template D
+ * @template K
+ * @template V
+ *
+ * This is an immutable tree which efficiently calculates composition
+ * for continuous ranges of the ordered monoid elements of type |V|.
+ *
+ * It also supports split and merge operations producing new trees, and lookup by
+ * the key of type |K| in the ordered monoid.
+ *
+ * Each node in the tree contains some data of type |D| and a monoid element of
+ * type |V|, called value.
+ */
 export class Tree {
   /**
    * @param {TreeHelpers} helpers
-   * @param {TreeNode|undefined}
+   * @param {TreeNode<D, V>=} root
    */
   constructor(helpers, root) {
     this._helpers = helpers;
@@ -138,10 +160,15 @@ export class Tree {
   }
 };
 
+/**
+ * @template D
+ * @template V
+ * @template K
+ */
 export class TreeIterator {
   /**
    * @param {TreeHelpers} helpers
-   * @param {TreeNode|undefined} root
+   * @param {TreeNode<D, V>|undefined} root
    */
   constructor(helpers, root) {
     this._helpers = helpers;
@@ -158,10 +185,10 @@ export class TreeIterator {
     /** @type {D|undefined} */
     this.data = undefined;
 
-    /** @type {Array<{node: TreeNode, value: V}>} */
+    /** @type {Array<{node: TreeNode<D, V>, value: V}>} */
     this._stack = null;
 
-    /** @type {TreeNode|undefined} */
+    /** @type {TreeNode<D, V>|undefined} */
     this._root = root;
   }
 
@@ -213,13 +240,15 @@ export class TreeIterator {
  * For non-leafs, |selfValue| is a monoid element for just that node.
  * |h| is a heap value for balancing the treap.
  *
+ * @template D
+ * @template V
  * @typedef {{
  *   data: D,
  *   value: V,
  *   h: number,
  *   selfValue?: V,
- *   left?: TreeNode,
- *   right?: TreeNode,
+ *   left?: TreeNode<D, V>,
+ *   right?: TreeNode<D, V>,
  * }} TreeNode
  */
 
@@ -235,8 +264,8 @@ export class TreeIterator {
  * Each node in the tree contains some data of type |D| and a monoid element of
  * type |E|, called value.
  *
- * @param {OrderedMonoid<V, K>} monoid
- * @return {OrderedMonoidTree<D, V, K>}
+ * @param {Mezzo.OrderedMonoid<V, K>} monoid
+ * @return {TreeFactory<D, V, K>}
  */
 export function CreateOrderedMonoidTree(monoid) {
   /**
@@ -257,7 +286,24 @@ const kSplitIntersectionToLeft = true;
 const kSplitIntersectionToRight = false;
 
 
+/**
+ * @template D
+ * @template K
+ * @template V
+ *
+ * This is an immutable tree which efficiently calculates composition
+ * for continuous ranges of the ordered monoid elements of type |V|.
+ *
+ * It also supports split and merge operations producing new trees, and lookup by
+ * the key of type |K| in the ordered monoid.
+ *
+ * Each node in the tree contains some data of type |D| and a monoid element of
+ * type |V|, called value.
+ */
 class TreeHelpers {
+  /**
+   * @param {Mezzo.OrderedMonoid<V, K>} monoid
+   */
   constructor(monoid) {
     this.monoid = monoid;
     this.random = Random(42);
@@ -265,10 +311,10 @@ class TreeHelpers {
   }
 
   /**
-   * @param {TreeNode} node
-   * @param {TreeNode|undefined} left
-   * @param {TreeNode|undefined} right
-   * @return {TreeNode}
+   * @param {TreeNode<D, V>} node
+   * @param {TreeNode<D, V>|undefined} left
+   * @param {TreeNode<D, V>|undefined} right
+   * @return {TreeNode<D, V>}
    */
   setChildren(node, left, right) {
     if (!node.selfValue && (left || right))
@@ -288,11 +334,11 @@ class TreeHelpers {
    * Left part contains all nodes up to key.
    * If node contains a key anchor inside, it will be returned in right part,
    * unless |intersectionToLeft| is true.
-   * @param {TreeNode|undefined} root
+   * @param {TreeNode<D, V>|undefined} root
    * @param {K} key
    * @param {boolean} intersectionToLeft
    * @param {V} current
-   * @return {{left: TreeNode|undefined, right: TreeNode|undefined}}
+   * @return {{left?: TreeNode<D, V>, right?: TreeNode<D, V>}}
    */
   splitNodes(root, key, intersectionToLeft, current) {
     if (!root)
@@ -311,8 +357,8 @@ class TreeHelpers {
   }
 
   /**
-   * @param {TreeNode|undefined} root
-   * @return {{left: TreeNode|undefined, right: TreeNode|undefined}}
+   * @param {TreeNode<D, V>|undefined} root
+   * @return {{left?: TreeNode<D, V>, right?: TreeNode<D, V>}}
    */
   splitFirstNode(root) {
     if (!root)
@@ -326,8 +372,8 @@ class TreeHelpers {
   }
 
   /**
-   * @param {TreeNode|undefined} root
-   * @return {{left: TreeNode|undefined, right: TreeNode|undefined}}
+   * @param {TreeNode<D, V>|undefined} root
+   * @return {{left?: TreeNode<D, V>, right?: TreeNode<D, V>}}
    */
   splitLastNode(root) {
     if (!root)
@@ -341,7 +387,7 @@ class TreeHelpers {
   }
 
   /**
-   * @param {TreeNode} node
+   * @param {TreeNode<D, V>} node
    * @param {Array<{data: D, value: V}>} list
    */
   collectNodes(node, list) {
@@ -353,8 +399,8 @@ class TreeHelpers {
   }
 
   /**
-   * @param {TreeNode} node
-   * @return {TreeNode}
+   * @param {TreeNode<D, V>} node
+   * @return {TreeNode<D, V>}
    */
   clone(node) {
     return {
@@ -365,7 +411,7 @@ class TreeHelpers {
   }
 
   /**
-   * @param {Array<TreeNode>} nodes
+   * @param {Array<TreeNode<D, V>>} nodes
    * @return {Tree}
    */
   buildFromNodes(nodes) {
@@ -408,7 +454,7 @@ class TreeHelpers {
 
     /**
      * @param {number} i
-     * @return {!TreeNode}
+     * @return {!TreeNode<D, V>}
      */
     const fill = i => {
       let left = l[i] === -1 ? undefined : fill(l[i]);
@@ -419,9 +465,9 @@ class TreeHelpers {
   }
 
   /**
-   * @param {TreeNode|undefined} left
-   * @param {TreeNode|undefined} right
-   * @return {TreeNode|undefined}
+   * @param {TreeNode<D, V>|undefined} left
+   * @param {TreeNode<D, V>|undefined} right
+   * @return {TreeNode<D, V>|undefined}
    */
   mergeNodes(left, right) {
     if (!left)
