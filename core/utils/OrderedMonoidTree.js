@@ -253,7 +253,7 @@ export function CreateOrderedMonoidTree(monoid) {
    * @return {TreeNode}
    */
   function setChildren(node, left, right) {
-    if (!node.self && (left || right))
+    if (!node.selfValue && (left || right))
       node.selfValue = node.value;
     if (left) {
       node.left = left;
