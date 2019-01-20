@@ -28,7 +28,7 @@ export class WorkAllocator {
    */
   _addWork(from, to) {
     if (from !== to)
-      this._work.add(from, to);
+      this._work.add(from, to, undefined);
   }
 
   /**
@@ -75,7 +75,7 @@ export class WorkAllocator {
   /**
    * @param {number=} from
    * @param {number=} to
-   * @return {?Range}
+   * @return {?Mezzo.Range}
    */
   workRange(from = 0, to = this._size) {
     from = this._clamp(from);

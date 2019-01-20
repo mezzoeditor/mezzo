@@ -13,8 +13,6 @@
   ],
   "exclude": [
     "core/utils/NumberMonoid.js",
-    "core/utils/Trace.js",
-    "core/utils/WorkAllocator.js",
-    "core/utils/WorkAllocator.spec.js"
+    "core/utils/Trace.js"
   ]
 }
