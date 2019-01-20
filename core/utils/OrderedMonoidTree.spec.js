@@ -30,7 +30,7 @@ export function addTests(runner, expect) {
 
   describe('OrderedMonoidTree', () => {
     it('empty tree', () => {
-      const tree = new Tree();
+      const tree = Tree.build([], []);
       expect(tree.value()).toBe(identity);
       expect(tree.collect()).toBe([]);
 
@@ -47,7 +47,7 @@ export function addTests(runner, expect) {
       expect(tmp2.data).toBe(null);
       expect(tmp2.tree.value()).toBe(identity);
 
-      const another = Tree.merge(tree, new Tree());
+      const another = Tree.merge(tree, Tree.build([], []));
       expect(another.value()).toBe(identity);
     });
 

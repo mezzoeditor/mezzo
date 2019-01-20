@@ -1,5 +1,228 @@
 import { Random } from '../utils/Random.js';
 
+export class TreeFactory {
+  constructor(monoid) {
+    this._helpers = new TreeHelpers(monoid);
+    this.test = {buildFromNodes: this._helpers.buildFromNodes.bind(this._helpers)};
+  }
+
+  /**
+   * Constructs a tree from a sequence of values and data.
+   * @param {Array<D>} data
+   * @param {Array<V>} values
+   * @return {Tree}
+   */
+  build(data, values) {
+    if (values.length !== data.length)
+      throw new Error('Values and data must be of the same length');
+    const nodes = [];
+    for (let i = 0; i < values.length; i++)
+      nodes.push({value: values[i], data: data[i], h: this._helpers.random()});
+    return this._helpers.buildFromNodes(nodes);
+  }
+
+  /**
+   * Constructs a tree by merging two other trees in the order left -> right.
+   * Note that |left| and |right| are not invalidated and can be used
+   * afterwards.
+   * @param {Tree} left
+   * @param {Tree} right
+   * @return {Tree}
+   */
+  merge(left, right) {
+    return new Tree(this._helpers, this._helpers.mergeNodes(left._root, right._root));
+  }
+}
+
+export class Tree {
+  /**
+   * @param {TreeHelpers} helpers
+   * @param {TreeNode|undefined}
+   */
+  constructor(helpers, root) {
+    this._helpers = helpers;
+    this._root = root;
+  }
+
+  /**
+   * Returns a monoid element corresponding to the whole tree.
+   * @return {V}
+   */
+  value() {
+    return this._root ? this._root.value : this._helpers.identity;
+  }
+
+  /**
+   * Creates an iterator. See TreeIterator.
+   * @return {TreeIterator}
+   */
+  iterator() {
+    return new TreeIterator(this._helpers, this._root);
+  }
+
+  /**
+   * Splits the tree by two lookup keys, putting the nodes containing |from| and |to|
+   * to the middle part.
+   * @param {K} from
+   * @param {K} to
+   * @return {{left: Tree, right: Tree, middle: Tree}}
+   */
+  split(from, to) {
+    let tmp = this._helpers.splitNodes(this._root, to, kSplitIntersectionToLeft, this._helpers.identity);
+    const right = new Tree(this._helpers, tmp.right);
+    tmp = this._helpers.splitNodes(tmp.left, from, kSplitIntersectionToRight, this._helpers.identity);
+    const left = new Tree(this._helpers, tmp.left);
+    const middle = new Tree(this._helpers, tmp.right);
+    return {left, right, middle};
+  }
+
+  /**
+   * Returns data of the first node.
+   * @return {{data: ?D, value: ?V}}
+   */
+  first() {
+    if (!this._root)
+      return {data: null, value: null};
+    let node = this._root;
+    while (node.left) node = node.left;
+    return {data: node.data, value: node.value};
+  }
+
+  /**
+   * Returns data of the last node.
+   * @return {{data: ?D, value: ?V}}
+   */
+  last() {
+    if (!this._root)
+      return {data: null, value: null};
+    let node = this._root;
+    while (node.right) node = node.right;
+    return {data: node.data, value: node.value};
+  }
+
+  /**
+   * Splits the first node of the tree if any.
+   * @return {{data: ?D, value: ?V, tree: Tree}}
+   */
+  splitFirst() {
+    const tmp = this._helpers.splitFirstNode(this._root);
+    return {
+      data: tmp.left ? tmp.left.data : null,
+      value: tmp.left ? tmp.left.value : null,
+      tree: new Tree(this._helpers, tmp.right)
+    };
+  }
+
+  /**
+   * Splits the last node of the tree if any.
+   * @return {{data: ?D, value: ?V, tree: Tree}}
+   */
+  splitLast() {
+    const tmp = this._helpers.splitLastNode(this._root);
+    return {
+      data: tmp.right ? tmp.right.data : null,
+      value: tmp.right ? tmp.right.value : null,
+      tree: new Tree(this._helpers, tmp.left)
+    };
+  }
+
+  /**
+   * Returns every node's data and value.
+   * @return {Array<{data: D, value: V}>}
+   */
+  collect() {
+    const list = [];
+    if (this._root)
+      this._helpers.collectNodes(this._root, list);
+    return list;
+  }
+};
+
+export class TreeIterator {
+  /**
+   * @param {TreeHelpers} helpers
+   * @param {TreeNode|undefined} root
+   */
+  constructor(helpers, root) {
+    this._helpers = helpers;
+
+    /** @type {V|undefined} */
+    this.before = undefined;
+
+    /** @type {V|undefined} */
+    this.after = undefined;
+
+    /** @type {V|undefined} */
+    this.value = undefined;
+
+    /** @type {D|undefined} */
+    this.data = undefined;
+
+    /** @type {Array<{node: TreeNode, value: V}>} */
+    this._stack = null;
+
+    /** @type {TreeNode|undefined} */
+    this._root = root;
+  }
+
+  /**
+   * Clones this iterator, which can be used independetly from now on.
+   * @return {TreeIterator}
+   */
+  clone() {
+    let iterator = new TreeIterator(this._helpers, this._root);
+    iterator.before = this.before;
+    iterator.after = this.after;
+    iterator.value = this.value;
+    iterator.data = this.data;
+    iterator._stack = this._stack.slice();
+    return iterator;
+  }
+
+  /**
+   * Moves iterator to a first node which covers |key|, or
+   * to the position after the last node, if |key| is more than the
+   * whole tree's value.
+   * @param {K} key
+   */
+  locate(key) {
+    this._helpers.locateIterator(this, key);
+  }
+
+  /**
+   * Moves iterator to the next node or to the position after the last node.
+   * Returns whether new position does point to a node.
+   * @return {boolean}
+   */
+  next() {
+    return this._helpers.iteratorNext(this);
+  }
+
+  /**
+   * Moves iterator to the next node or to the position before the first node.
+   * Returns whether new position does point to a node.
+   * @return {boolean}
+   */
+  prev() {
+    return this._helpers.iteratorPrev(this);
+  }
+};
+
+/**
+ * |value| is a composition over the whole subtree.
+ * For non-leafs, |selfValue| is a monoid element for just that node.
+ * |h| is a heap value for balancing the treap.
+ *
+ * @typedef {{
+ *   data: D,
+ *   value: V,
+ *   h: number,
+ *   selfValue?: V,
+ *   left?: TreeNode,
+ *   right?: TreeNode,
+ * }} TreeNode
+ */
+
 /**
  * @template D, V, K
  *
@@ -16,135 +239,6 @@ import { Random } from '../utils/Random.js';
  * @return {OrderedMonoidTree<D, V, K>}
  */
 export function CreateOrderedMonoidTree(monoid) {
-  class Tree {
-    /**
-     * Constructs a tree from a sequence of values and data.
-     * @param {Array<D>} data
-     * @param {Array<V>} values
-     * @return {Tree}
-     */
-    static build(data, values) {
-      if (values.length !== data.length)
-        throw new Error('Values and data must be of the same length');
-      const nodes = [];
-      for (let i = 0; i < values.length; i++)
-        nodes.push({value: values[i], data: data[i], h: random()});
-      return buildFromNodes(nodes);
-    }
-
-    /**
-     * Constructs a tree by merging two other trees in the order left -> right.
-     * Note that |left| and |right| are not invalidated and can be used
-     * afterwards.
-     * @param {Tree} left
-     * @param {Tree} right
-     * @return {Tree}
-     */
-    static merge(left, right) {
-      return new Tree(mergeNodes(left._root, right._root));
-    }
-
-    /**
-     * Returns a monoid element corresponding to the whole tree.
-     * @return {V}
-     */
-    value() {
-      return this._root ? this._root.value : identity;
-    }
-
-    /**
-     * Creates an iterator. See TreeIterator.
-     * @return {TreeIterator}
-     */
-    iterator() {
-      return new TreeIterator(this._root);
-    }
-
-    /**
-     * Splits the tree by two lookup keys, putting the nodes containing |from| and |to|
-     * to the middle part.
-     * @param {K} from
-     * @param {K} to
-     * @return {{left: Tree, right: Tree, middle: Tree}}
-     */
-    split(from, to) {
-      let tmp = splitNodes(this._root, to, kSplitIntersectionToLeft, identity);
-      const right = new Tree(tmp.right);
-      tmp = splitNodes(tmp.left, from, kSplitIntersectionToRight, identity);
-      const left = new Tree(tmp.left);
-      const middle = new Tree(tmp.right);
-      return {left, right, middle};
-    }
-
-    /**
-     * Returns data of the first node.
-     * @return {{data: ?D, value: ?V}}
-     */
-    first() {
-      if (!this._root)
-        return {data: null, value: null};
-      let node = this._root;
-      while (node.left) node = node.left;
-      return {data: node.data, value: node.value};
-    }
-
-    /**
-     * Returns data of the last node.
-     * @return {{data: ?D, value: ?V}}
-     */
-    last() {
-      if (!this._root)
-        return {data: null, value: null};
-      let node = this._root;
-      while (node.right) node = node.right;
-      return {data: node.data, value: node.value};
-    }
-
-    /**
-     * Splits the first node of the tree if any.
-     * @return {{data: ?D, value: ?V, tree: Tree}}
-     */
-    splitFirst() {
-      const tmp = splitFirstNode(this._root);
-      return {
-        data: tmp.left ? tmp.left.data : null,
-        value: tmp.left ? tmp.left.value : null,
-        tree: new Tree(tmp.right)
-      };
-    }
-
-    /**
-     * Splits the last node of the tree if any.
-     * @return {{data: ?D, value: ?V, tree: Tree}}
-     */
-    splitLast() {
-      const tmp = splitLastNode(this._root);
-      return {
-        data: tmp.right ? tmp.right.data : null,
-        value: tmp.right ? tmp.right.value : null,
-        tree: new Tree(tmp.left)
-      };
-    }
-
-    /**
-     * Returns every node's data and value.
-     * @return {Array<{data: D, value: V}>}
-     */
-    collect() {
-      const list = [];
-      if (this._root)
-        collectNodes(this._root, list);
-      return list;
-    }
-
-    /**
-     * @param {TreeNode|undefined}
-     */
-    constructor(root) {
-      this._root = root;
-    }
-  };
-
   /**
    * Iterator points to a specific node of the Tree, position before the first node
    * or position after the last node. It provides current node's |value| and |data|,
@@ -153,115 +247,39 @@ export function CreateOrderedMonoidTree(monoid) {
    * When pointing after the last node, everything except |before| is undefined.
    * When pointing before the first node, everything except |after| is undefined.
    */
-  class TreeIterator {
-    /**
-     * @param {TreeNode|undefined} root
-     */
-    constructor(root) {
-      /** @type {V|undefined} */
-      this.before = undefined;
-
-      /** @type {V|undefined} */
-      this.after = undefined;
-
-      /** @type {V|undefined} */
-      this.value = undefined;
-
-      /** @type {D|undefined} */
-      this.data = undefined;
-
-      /** @type {Array<{node: TreeNode, value: V}>} */
-      this._stack = null;
-
-      /** @type {TreeNode|undefined} */
-      this._root = root;
-    }
-
-    /**
-     * Clones this iterator, which can be used independetly from now on.
-     * @return {TreeIterator}
-     */
-    clone() {
-      let iterator = new TreeIterator(this._root);
-      iterator.before = this.before;
-      iterator.after = this.after;
-      iterator.value = this.value;
-      iterator.data = this.data;
-      iterator._stack = this._stack.slice();
-      return iterator;
-    }
-
-    /**
-     * Moves iterator to a first node which covers |key|, or
-     * to the position after the last node, if |key| is more than the
-     * whole tree's value.
-     * @param {K} key
-     */
-    locate(key) {
-      locateIterator(this, key);
-    }
-
-    /**
-     * Moves iterator to the next node or to the position after the last node.
-     * Returns whether new position does point to a node.
-     * @return {boolean}
-     */
-    next() {
-      return iteratorNext(this);
-    }
-
-    /**
-     * Moves iterator to the next node or to the position before the first node.
-     * Returns whether new position does point to a node.
-     * @return {boolean}
-     */
-    prev() {
-      return iteratorPrev(this);
-    }
-  };
-
-  Tree.test = {buildFromNodes};
 
   // -------------- Implementation details below -----------------
 
-  const random = Random(42);
-  const identity = monoid.identityValue();
+  return new TreeFactory(monoid);
+};
 
-  const kSplitIntersectionToLeft = true;
-  const kSplitIntersectionToRight = false;
+const kSplitIntersectionToLeft = true;
+const kSplitIntersectionToRight = false;
 
-  /**
-   * |value| is a composition over the whole subtree.
-   * For non-leafs, |selfValue| is a monoid element for just that node.
-   * |h| is a heap value for balancing the treap.
-   *
-   * @typedef {{
-   *   data: D,
-   *   value: V,
-   *   h: number,
-   *   selfValue: E|undefined,
-   *   left: TreeNode|undefined,
-   *   right: TreeNode|undefined,
-   * }} TreeNode
-   */
+
+class TreeHelpers {
+  constructor(monoid) {
+    this.monoid = monoid;
+    this.random = Random(42);
+    this.identity = monoid.identityValue();
+  }
 
   /**
    * @param {TreeNode} node
    * @param {TreeNode|undefined} left
    * @param {TreeNode|undefined} right
-   * @param {boolean} clone
    * @return {TreeNode}
    */
-  function setChildren(node, left, right) {
+  setChildren(node, left, right) {
     if (!node.selfValue && (left || right))
       node.selfValue = node.value;
     if (left) {
       node.left = left;
-      node.value = monoid.combineValues(left.value, node.value);
+      node.value = this.monoid.combineValues(left.value, node.value);
     }
     if (right) {
       node.right = right;
-      node.value = monoid.combineValues(node.value, right.value);
+      node.value = this.monoid.combineValues(node.value, right.value);
     }
     return node;
   }
@@ -276,19 +294,19 @@ export function CreateOrderedMonoidTree(monoid) {
    * @param {V} current
    * @return {{left: TreeNode|undefined, right: TreeNode|undefined}}
    */
-  function splitNodes(root, key, intersectionToLeft, current) {
+  splitNodes(root, key, intersectionToLeft, current) {
     if (!root)
       return {};
-    const before = root.left ? monoid.combineValues(current, root.left.value) : current;
-    const after = monoid.combineValues(before, root.selfValue !== undefined ? root.selfValue : root.value);
-    const rootToLeft = monoid.valueGreaterOrEqualThanKey(before, key) ? false :
-        (monoid.valueGreaterThanKey(after, key) ? intersectionToLeft === kSplitIntersectionToLeft : true);
+    const before = root.left ? this.monoid.combineValues(current, root.left.value) : current;
+    const after = this.monoid.combineValues(before, root.selfValue !== undefined ? root.selfValue : root.value);
+    const rootToLeft = this.monoid.valueGreaterOrEqualThanKey(before, key) ? false :
+        (this.monoid.valueGreaterThanKey(after, key) ? intersectionToLeft === kSplitIntersectionToLeft : true);
     if (rootToLeft) {
-      const tmp = splitNodes(root.right, key, intersectionToLeft, after);
-      return {left: setChildren(clone(root), root.left, tmp.left), right: tmp.right};
+      const tmp = this.splitNodes(root.right, key, intersectionToLeft, after);
+      return {left: this.setChildren(this.clone(root), root.left, tmp.left), right: tmp.right};
     } else {
-      const tmp = splitNodes(root.left, key, intersectionToLeft, current);
-      return {left: tmp.left, right: setChildren(clone(root), tmp.right, root.right)};
+      const tmp = this.splitNodes(root.left, key, intersectionToLeft, current);
+      return {left: tmp.left, right: this.setChildren(this.clone(root), tmp.right, root.right)};
     }
   }
 
@@ -296,14 +314,14 @@ export function CreateOrderedMonoidTree(monoid) {
    * @param {TreeNode|undefined} root
    * @return {{left: TreeNode|undefined, right: TreeNode|undefined}}
    */
-  function splitFirstNode(root) {
+  splitFirstNode(root) {
     if (!root)
       return {};
     if (root.left) {
-      const tmp = splitFirstNode(root.left);
-      return {left: tmp.left, right: setChildren(clone(root), tmp.right, root.right)};
+      const tmp = this.splitFirstNode(root.left);
+      return {left: tmp.left, right: this.setChildren(this.clone(root), tmp.right, root.right)};
     } else {
-      return {left: setChildren(clone(root), undefined, undefined), right: root.right};
+      return {left: this.setChildren(this.clone(root), undefined, undefined), right: root.right};
     }
   }
 
@@ -311,14 +329,14 @@ export function CreateOrderedMonoidTree(monoid) {
    * @param {TreeNode|undefined} root
    * @return {{left: TreeNode|undefined, right: TreeNode|undefined}}
    */
-  function splitLastNode(root) {
+  splitLastNode(root) {
     if (!root)
       return {};
     if (root.right) {
-      const tmp = splitLastNode(root.right);
-      return {left: setChildren(clone(root), root.left, tmp.left), right: tmp.right};
+      const tmp = this.splitLastNode(root.right);
+      return {left: this.setChildren(this.clone(root), root.left, tmp.left), right: tmp.right};
     } else {
-      return {left: root.left, right: setChildren(clone(root), undefined, undefined)};
+      return {left: root.left, right: this.setChildren(this.clone(root), undefined, undefined)};
     }
   }
 
@@ -326,19 +344,19 @@ export function CreateOrderedMonoidTree(monoid) {
    * @param {TreeNode} node
    * @param {Array<{data: D, value: V}>} list
    */
-  function collectNodes(node, list) {
+  collectNodes(node, list) {
     if (node.left)
-      collectNodes(node.left, list);
+      this.collectNodes(node.left, list);
     list.push({data: node.data, value: node.selfValue !== undefined ? node.selfValue : node.value});
     if (node.right)
-      collectNodes(node.right, list);
+      this.collectNodes(node.right, list);
   }
 
   /**
    * @param {TreeNode} node
    * @return {TreeNode}
    */
-  function clone(node) {
+  clone(node) {
     return {
       data: node.data,
       h: node.h,
@@ -350,11 +368,11 @@ export function CreateOrderedMonoidTree(monoid) {
    * @param {Array<TreeNode>} nodes
    * @return {Tree}
    */
-  function buildFromNodes(nodes) {
+  buildFromNodes(nodes) {
     if (!nodes.length)
-      return new Tree();
+      return new Tree(this);
     if (nodes.length === 1)
-      return new Tree(nodes[0]);
+      return new Tree(this, nodes[0]);
 
     const stack = new Int32Array(nodes.length);
     let stackLength = 0;
@@ -395,9 +413,9 @@ export function CreateOrderedMonoidTree(monoid) {
     const fill = i => {
       let left = l[i] === -1 ? undefined : fill(l[i]);
       let right = r[i] === -1 ? undefined : fill(r[i]);
-      return setChildren(nodes[i], left, right);
+      return this.setChildren(nodes[i], left, right);
     };
-    return new Tree(fill(root));
+    return new Tree(this, fill(root));
   }
 
   /**
@@ -405,39 +423,39 @@ export function CreateOrderedMonoidTree(monoid) {
    * @param {TreeNode|undefined} right
    * @return {TreeNode|undefined}
    */
-  function mergeNodes(left, right) {
+  mergeNodes(left, right) {
     if (!left)
       return right;
     if (!right)
       return left;
     if (left.h > right.h)
-      return setChildren(clone(left), left.left, mergeNodes(left.right, right));
+      return this.setChildren(this.clone(left), left.left, this.mergeNodes(left.right, right));
     else
-      return setChildren(clone(right), mergeNodes(left, right.left), right.right);
+      return this.setChildren(this.clone(right), this.mergeNodes(left, right.left), right.right);
   }
 
   /**
    * @param {TreeIterator} iterator
    * @param {K} key
    */
-  function locateIterator(iterator, key) {
+  locateIterator(iterator, key) {
     if (!iterator._root)
       return;
     iterator._stack = [];
-    let value = identity;
+    let value = this.identity;
     let node = iterator._root;
     while (true) {
       iterator._stack.push({node, value});
       if (node.left) {
-        const next = monoid.combineValues(value, node.left.value);
-        if (monoid.valueGreaterOrEqualThanKey(next, key)) {
+        const next = this.monoid.combineValues(value, node.left.value);
+        if (this.monoid.valueGreaterOrEqualThanKey(next, key)) {
           node = node.left;
           continue;
         }
         value = next;
       }
-      const next = monoid.combineValues(value, node.selfValue !== undefined ? node.selfValue : node.value);
-      if (monoid.valueGreaterOrEqualThanKey(next, key)) {
+      const next = this.monoid.combineValues(value, node.selfValue !== undefined ? node.selfValue : node.value);
+      if (this.monoid.valueGreaterOrEqualThanKey(next, key)) {
         iterator.value = node.selfValue !== undefined ? node.selfValue : node.value;
         iterator.data = node.data;
         iterator.before = value;
@@ -455,8 +473,8 @@ export function CreateOrderedMonoidTree(monoid) {
       node = node.right;
     }
 
-    if (iterator.before !== undefined && !monoid.valueGreaterOrEqualThanKey(iterator.before, key) &&
-        iterator.after !== undefined && !monoid.valueGreaterThanKey(iterator.after, key)) {
+    if (iterator.before !== undefined && !this.monoid.valueGreaterOrEqualThanKey(iterator.before, key) &&
+        iterator.after !== undefined && !this.monoid.valueGreaterThanKey(iterator.after, key)) {
       iterator.next();
     }
   }
@@ -465,7 +483,7 @@ export function CreateOrderedMonoidTree(monoid) {
    * @param {TreeIterator} iterator
    * @return {boolean}
    */
-  function iteratorNext(iterator) {
+  iteratorNext(iterator) {
     if (!iterator._root || iterator.after === undefined)
       return false;
 
@@ -474,8 +492,8 @@ export function CreateOrderedMonoidTree(monoid) {
       // |node| is a first node already.
     } else if (node.right) {
       if (node.left)
-        value = monoid.combineValues(value, node.left.value);
-      value = monoid.combineValues(value, node.selfValue !== undefined ? node.selfValue : node.value);
+        value = this.monoid.combineValues(value, node.left.value);
+      value = this.monoid.combineValues(value, node.selfValue !== undefined ? node.selfValue : node.value);
       node = node.right;
       while (true) {
         iterator._stack.push({node, value});
@@ -500,11 +518,11 @@ export function CreateOrderedMonoidTree(monoid) {
     }
 
     if (node.left)
-      value = monoid.combineValues(value, node.left.value);
+      value = this.monoid.combineValues(value, node.left.value);
     iterator.value = node.selfValue !== undefined ? node.selfValue : node.value;
     iterator.data = node.data;
     iterator.before = iterator.after;
-    iterator.after = monoid.combineValues(value, iterator.value);
+    iterator.after = this.monoid.combineValues(value, iterator.value);
     return true;
   }
 
@@ -512,7 +530,7 @@ export function CreateOrderedMonoidTree(monoid) {
    * @param {TreeIterator} iterator
    * @return {boolean}
    */
-  function iteratorPrev(iterator) {
+  iteratorPrev(iterator) {
     if (!iterator._root || iterator.before === undefined)
       return false;
 
@@ -526,8 +544,8 @@ export function CreateOrderedMonoidTree(monoid) {
         if (!node.right)
           break;
         if (node.left)
-          value = monoid.combineValues(value, node.left.value);
-        value = monoid.combineValues(value, node.selfValue !== undefined ? node.selfValue : node.value);
+          value = this.monoid.combineValues(value, node.left.value);
+        value = this.monoid.combineValues(value, node.selfValue !== undefined ? node.selfValue : node.value);
         node = node.right;
       }
     } else {
@@ -547,13 +565,11 @@ export function CreateOrderedMonoidTree(monoid) {
     }
 
     if (node.left)
-      value = monoid.combineValues(value, node.left.value);
+      value = this.monoid.combineValues(value, node.left.value);
     iterator.value = node.selfValue !== undefined ? node.selfValue : node.value;
     iterator.data = node.data;
     iterator.after = iterator.before;
     iterator.before = value;
     return true;
   }
-
-  return Tree;
-};
+}

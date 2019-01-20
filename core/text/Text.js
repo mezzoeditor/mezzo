@@ -255,7 +255,7 @@ export class Text {
       data.push(...this._chunks);
       values.push(...this._chunks.map(chunk => measurer.mapValue(chunk).value));
       chunkContent(right, data, values);
-      return new Tree(data, values);
+      return Tree.build(data, values);
     }
 
     if (combine)
