@@ -2,15 +2,6 @@ import { RoundMode } from '../utils/RoundMode.js';
 import { TextMetricsMonoid } from './TextMetrics.js';
 import { TextUtils } from './TextUtils.js';
 
-/**
- * @typedef {{x: number, y: number}} Point
- * 2-dimensional position in a text.
- *
- *
- * @typedef {{x: number, y: number, offset: Mezzo.Offset}} Location
- * This is a combination of point and offset.
- */
-
 const monoid = new TextMetricsMonoid();
 
 /**
@@ -19,7 +10,21 @@ const monoid = new TextMetricsMonoid();
  * @template S - the type of state.
  * @implements StringMorphism<Mezzo.TextMetrics, Mezzo.TextLookupKey, S>
  */
-class TextMeasurerBase {
+export class TextMeasurerBase {
+  /**
+   * @param {?RegExp} widthOneRegex
+   * @param {function(string):number} measureBMP
+   * @param {function(string):number} measureSupplementary
+   */
+  constructor(widthOneRegex, measureBMP, measureSupplementary) {
+    this._widthOneRegex = widthOneRegex;
+    this._measureBMP = measureBMP;
+    this._measureSupplementary = measureSupplementary;
+    this._bmp = new Float32Array(65536);
+    this._bmp.fill(-1);
+    this._supplementary = {};
+  }
+
   /**
    * @override
    * @return {TextMetricsMonoid}
@@ -85,9 +90,9 @@ class TextMeasurerBase {
    * @param {string} s
    * @param {S} state
    * @param {Mezzo.TextMetrics} before
-   * @param {Point} point
+   * @param {Mezzo.Point} point
    * @param {RoundMode} roundMode
-   * @return {Location}
+   * @return {Mezzo.Location}
    */
   locateByPoint(s, state, before, point, roundMode) {
     return this._locateByPoint(s, state, before, point, roundMode);
@@ -107,7 +112,7 @@ class TextMeasurerBase {
    * @param {S} state
    * @param {Mezzo.TextMetrics} before
    * @param {Mezzo.Offset} offset
-   * @return {Location}
+   * @return {Mezzo.Location}
    */
   locateByOffset(s, state, before, offset) {
     return this._locateByOffset(s, state, before, offset);
@@ -128,20 +133,6 @@ class TextMeasurerBase {
    */
   fillXMap(xmap, isRTL, s, startX, multiplier) {
     this._fillXMap(xmap, isRTL, s, startX, multiplier);
-  }
-
-  /**
-   * @param {?RegExp} widthOneRegex
-   * @param {function(string):number} measureBMP
-   * @param {function(string):number} measureSupplementary
-   */
-  constructor(widthOneRegex, measureBMP, measureSupplementary) {
-    this._widthOneRegex = widthOneRegex;
-    this._measureBMP = measureBMP;
-    this._measureSupplementary = measureSupplementary;
-    this._bmp = new Float32Array(65536);
-    this._bmp.fill(-1);
-    this._supplementary = {};
   }
 
   /**
@@ -278,9 +269,9 @@ class TextMeasurerBase {
    * @param {string} s
    * @param {S} state
    * @param {Mezzo.TextMetrics} before
-   * @param {Point} point
+   * @param {Mezzo.Point} point
    * @param {RoundMode} roundMode
-   * @return {Location}
+   * @return {Mezzo.Location}
    */
   _locateByPoint(s, state, before, point, roundMode) {
     const x = before.lastWidth;
@@ -306,7 +297,7 @@ class TextMeasurerBase {
    * @param {S} state
    * @param {number} x
    * @param {number} y
-   * @param {Point} point
+   * @param {Mezzo.Point} point
    * @return {{lineStartOffset: Mezzo.Offset, lineEndOffset: Mezzo.Offset, x: number, y: number}}
    */
   _locateLineByPoint(s, state, x, y, point) {
@@ -318,7 +309,7 @@ class TextMeasurerBase {
    * @param {S} state
    * @param {Mezzo.TextMetrics} before
    * @param {Mezzo.Offset} offset
-   * @return {Location}
+   * @return {Mezzo.Location}
    */
   _locateByOffset(s, state, before, offset) {
     if (s.length < offset - before.length)
@@ -426,7 +417,7 @@ export class TextMeasurer extends TextMeasurerBase {
    * @param {undefined} state
    * @param {number} x
    * @param {number} y
-   * @param {Point} point
+   * @param {Mezzo.Point} point
    * @return {{lineStartOffset: Mezzo.Offset, lineEndOffset: Mezzo.Offset, x: number, y: number}}
    */
   _locateLineByPoint(s, state, x, y, point) {
@@ -518,6 +509,7 @@ class WrappingStateTraits {
   }
 };
 
+/** @type {Mezzo.StateTraits<WrappingState>} */
 const wrappingStateTraits = new WrappingStateTraits();
 
 /**
@@ -577,7 +569,7 @@ class WrappingTextMeasurer extends TextMeasurerBase {
    * @param {WrappingState} state
    * @param {number} x
    * @param {number} y
-   * @param {Point} point
+   * @param {Mezzo.Point} point
    * @return {{lineStartOffset: number, lineEndOffset: number, x: number, y: number}}
    */
   _locateLineByPoint(s, state, x, y, point) {

@@ -1,6 +1,9 @@
-import {TreeFactory as RealTreeFactory, Tree as RealTree, TreeIterator as RealTreeIterator} from './utils/OrderedMonoidTree.js';
-import {TextIterator as RealTextIterator} from './text/TextIterator.js';
-import {Text as RealText} from './text/Text.js';
+import {TreeFactory as JSTreeFactory, Tree as JSTree, TreeIterator as JSTreeIterator} from './utils/OrderedMonoidTree.js';
+import {TextIterator as JSTextIterator} from './text/TextIterator.js';
+import {Text as JSText} from './text/Text.js';
+import {RangeTree as JSRangeTree} from './utils/RangeTree.js';
+import {Frame as JSFrame, FrameContent as JSFrameContent} from './markup/Frame.js';
+import {TextMeasurerBase as JSTextMeasurerBase } from './text/TextMeasurer.js';
 export {};
 
 declare global {
@@ -83,6 +86,17 @@ declare global {
      * The zero-based offset of a code unit inside a string.
      */
     export type Offset = number;
+
+    /**
+     * @typedef {{x: number, y: number}} Point
+     * 2-dimensional position in a text.
+     */
+    export type Point = {x: number, y: number};
+
+    /**
+     * This is a combination of point and offset.
+     */
+    export type Location = {x: number, y: number, offset: Mezzo.Offset};
 
     /**
      * A 2-dimensional position in a text. Both dimensions zero-based.
@@ -171,11 +185,15 @@ declare global {
      */
     export type StringMorphism<V,K,S> = TextMorphism<string, V, K, S>;
 
-    export class TreeFactory<D,V,K> extends RealTreeFactory<D,V,K> {}
-    export class Tree<D,K,V> extends RealTree<D,K,V> {}
-    export class TreeIterator<D,V,K> extends RealTreeIterator<D,V,K> {}
-    export class TextIterator extends RealTextIterator {}
-    export class Text extends RealText {}
+    export class TreeFactory<D,V,K> extends JSTreeFactory<D,V,K> {}
+    export class Tree<D,K,V> extends JSTree<D,K,V> {}
+    export class TreeIterator<D,V,K> extends JSTreeIterator<D,V,K> {}
+    export class TextIterator extends JSTextIterator {}
+    export class Text extends JSText {}
+    export class RangeTree<D> extends JSRangeTree<D> {}
+    export class Frame extends JSFrame {}
+    export class FrameContent extends JSFrameContent {}
+    export class TextMeasurerBase<S> extends JSTextMeasurerBase<S> {}
 
     /**
      * Text morphism with text iterator input for efficiency.
@@ -201,5 +219,45 @@ declare global {
       oldSelection?: Array<SelectionRange>,
       selectionChanged: boolean,
     };
+
+    /**
+     * Measurer converts strings to widths and provides line height.
+     */
+    export interface Measurer {
+      /**
+       * The default width of a code point, should be a positive number.
+       * Note that code points from Supplementary Planes cannot be given default width.
+       * The total width of a |string| with all code points of default width will be
+       * |string.length * defaultWidth|.
+       */
+      defaultWidth():number;
+
+      /**
+       * Regex for strings which consist only of characters with default width and height.
+       * Used for fast-path calculations. If non-null, must also match the new lines.
+       */
+      defaultWidthRegex():RegExp;
+
+      /**
+       * Measures the width of a string.
+       */
+      measureString(string):number;
+
+      lineHeight():number;
+    }
+
+    export type FrameDecorationCallback = (content:Mezzo.FrameContent) => void;
+
+    export interface PlatformSupport {
+      requestIdleCallback(callback:(...args: any[])=>void):number;
+
+      cancelIdleCallback(number);
+
+      throttle(ms:number);
+
+      createWorker(initializer:(MessagePort)=>void):(Worker|null);
+
+      debugLogger(namespace:string):(string)=>void;
+    }
   }
 }

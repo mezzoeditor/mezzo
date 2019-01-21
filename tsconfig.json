@@ -4,7 +4,7 @@
     "allowJs": true,
     "checkJs": true,
     "lib": [
-      "ESNext","ScriptHost"
+      "ESNext","ScriptHost", "DOM"
     ],
     "module": "esnext",
     "target": "ESNext"
@@ -14,7 +14,7 @@
   ],
   "exclude": [
     "core/editor",
-    "core/markup",
+    "core/markup/Markup.spec.js",
     "core/web",
     "core/utils/NumberMonoid.js",
     "core/utils/Trace.js"

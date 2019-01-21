@@ -33,9 +33,9 @@ export class TreeFactory {
    * Constructs a tree by merging two other trees in the order left -> right.
    * Note that |left| and |right| are not invalidated and can be used
    * afterwards.
-   * @param {Tree} left
-   * @param {Tree} right
-   * @return {Tree}
+   * @param {Tree<D, K, V>} left
+   * @param {Tree<D, K, V>} right
+   * @return {Tree<D, K, V>}
    */
   merge(left, right) {
     return new Tree(this._helpers, this._helpers.mergeNodes(left._root, right._root));
@@ -76,7 +76,7 @@ export class Tree {
 
   /**
    * Creates an iterator. See TreeIterator.
-   * @return {TreeIterator}
+   * @return {TreeIterator<D,V,K>}
    */
   iterator() {
     return new TreeIterator(this._helpers, this._root);
@@ -87,7 +87,7 @@ export class Tree {
    * to the middle part.
    * @param {K} from
    * @param {K} to
-   * @return {{left: Tree, right: Tree, middle: Tree}}
+   * @return {{left: Tree<D,K,V>, right: Tree<D,K,V>, middle: Tree<D,K,V>}}
    */
   split(from, to) {
     let tmp = this._helpers.splitNodes(this._root, to, kSplitIntersectionToLeft, this._helpers.identity);
@@ -124,7 +124,7 @@ export class Tree {
 
   /**
    * Splits the first node of the tree if any.
-   * @return {{data: ?D, value: ?V, tree: Tree}}
+   * @return {{data: ?D, value: ?V, tree: Tree<D,K,V>}}
    */
   splitFirst() {
     const tmp = this._helpers.splitFirstNode(this._root);
@@ -137,7 +137,7 @@ export class Tree {
 
   /**
    * Splits the last node of the tree if any.
-   * @return {{data: ?D, value: ?V, tree: Tree}}
+   * @return {{data: ?D, value: ?V, tree: Tree<D,K,V>}}
    */
   splitLast() {
     const tmp = this._helpers.splitLastNode(this._root);
@@ -412,7 +412,7 @@ class TreeHelpers {
 
   /**
    * @param {Array<TreeNode<D, V>>} nodes
-   * @return {Tree}
+   * @return {Tree<D,K,V>}
    */
   buildFromNodes(nodes) {
     if (!nodes.length)

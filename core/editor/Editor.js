@@ -2,38 +2,12 @@ import { Document } from '../text/Document.js';
 import { RangeTree } from '../utils/RangeTree.js';
 import { Input } from './Input.js';
 import { DefaultTokenizer } from './Tokenizer.js';
-import { Markup, Measurer } from '../markup/Markup.js';
+import { Markup} from '../markup/Markup.js';
 import { EventEmitter } from '../utils/EventEmitter.js';
-
-export class PlatformSupport {
-  /**
-   * @param {function(?)} callback
-   * @return {number}
-   */
-  requestIdleCallback(callback) { }
-
-  /**
-   * @param {number} callbackId
-   */
-  cancelIdleCallback(id) { }
-
-  /**
-   * @param {number} ms
-   */
-  throttle(ms) { }
-
-  /**
-   * @param {function(port)} workerFunction
-   * @return {?Worker}
-   */
-  createWorker(workerFunction) { }
-
-  debugLogger(namespace) { return () => {} }
-}
 
 export class Editor extends EventEmitter {
   /**
-   * @param {!Measurer} measurer
+   * @param {!Mezzo.Measurer} measurer
    * @param {!Platform} platformSupport
    * @param {!Thread} thread
    * @return {!Promise<!Editor>}
@@ -46,7 +20,7 @@ export class Editor extends EventEmitter {
   }
 
   /**
-   * @param {!Measurer} measurer
+   * @param {!Mezzo.Measurer} measurer
    * @param {!Platform} platformSupport
    * @return {!Editor}
    */
@@ -56,7 +30,7 @@ export class Editor extends EventEmitter {
 
   /**
    * @param {!Document} document
-   * @param {!Measurer} measurer
+   * @param {!Mezzo.Measurer} measurer
    * @param {!Platform} platformSupport
    * @param {?Handle} remoteDocument
    */

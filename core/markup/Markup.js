@@ -9,40 +9,7 @@ import { FrameContent, VisibleRange } from './Frame.js';
 import { WorkAllocator } from '../utils/WorkAllocator.js';
 import { RangeTree } from '../utils/RangeTree.js';
 
-/**
- * Measurer converts strings to widths and provides line height.
- *
- * @interface
- */
-export class Measurer {
-  /**
-   * The default width of a code point, should be a positive number.
-   * Note that code points from Supplementary Planes cannot be given default width.
-   * The total width of a |string| with all code points of default width will be
-   * |string.length * defaultWidth|.
-   *
-   * @return {number}
-   */
-  defaultWidth() {
-  }
-
-  /**
-   * Regex for strings which consist only of characters with default width and height.
-   * Used for fast-path calculations. If non-null, must also match the new lines.
-   *
-   * @return {?RegExp}
-   */
-  defaultWidthRegex() {
-  }
-
-  /**
-   * Measures the width of a string.
-   * @param {string} s
-   */
-  measureString(s) {
-  }
-};
-
+/** @enum {number} */
 export const WrappingMode = {
   None: 0,
   Line: 1,
@@ -50,15 +17,15 @@ export const WrappingMode = {
 }
 
 /**
- * @type {OrderedMonoidTree<string, TextMetrics, TextLookupKey>}
+ * @type {Mezzo.TreeFactory<ChunkData, Mezzo.TextMetrics, Mezzo.TextLookupKey>}
  */
-const Tree = CreateOrderedMonoidTree(new TextMetricsMonoid());
+const TreeFactory = CreateOrderedMonoidTree(new TextMetricsMonoid());
 
 export class Markup extends EventEmitter {
   /**
-   * @param {Measurer} measurer
+   * @param {Mezzo.Measurer} measurer
    * @param {Document} document
-   * @param {PlatformSupport} platformSupport
+   * @param {Mezzo.PlatformSupport} platformSupport
    */
   constructor(measurer, document, platformSupport) {
     super();
@@ -76,6 +43,8 @@ export class Markup extends EventEmitter {
     this._platformSupport = platformSupport;
 
     this._frozen = false;
+    /** @type {Mezzo.TextMeasurerBase<number|undefined>} */
+    this._textMeasurer;
     this._wrappingMode = WrappingMode.None;
     this._wrappingLimit = null;
     this._contentWidth = 0;
@@ -86,14 +55,15 @@ export class Markup extends EventEmitter {
     this._hiddenRanges = new RangeTree(false /* createHandles */);
     this._jobId = 0;
     this._lastFrameRange = {from: 0, to: 0};
-    this._tree = Tree.build([], []);
+    /** @type {Mezzo.Tree<ChunkData, Mezzo.TextLookupKey, Mezzo.TextMetrics>} */
+    this._tree = TreeFactory.build([], []);
 
     this._externalMeasurer = null;
     this.setMeasurer(measurer);
   }
 
   /**
-   * @param {Measurer} measurer
+   * @param {Mezzo.Measurer} measurer
    */
   setMeasurer(measurer) {
     if (this._externalMeasurer === measurer)
@@ -160,8 +130,8 @@ export class Markup extends EventEmitter {
   }
 
   /**
-   * @param {Anchor} from
-   * @param {Anchor} to
+   * @param {Mezzo.Anchor} from
+   * @param {Mezzo.Anchor} to
    */
   hideRange(from, to) {
     if (this._hiddenRanges.countTouching(from, to))
@@ -172,7 +142,7 @@ export class Markup extends EventEmitter {
   }
 
   /**
-   * @param {Replacement} replacement
+   * @param {Mezzo.Replacement} replacement
    */
   _replace(replacement) {
     const from = replacement.offset;
@@ -202,19 +172,20 @@ export class Markup extends EventEmitter {
 
     let middle;
     if (newFrom !== newTo) {
-      middle = Tree.build([kUnmeasuredData], [this._textMeasurer.unmappedValue(newTo - newFrom)]);
+      middle = TreeFactory.build([kUnmeasuredData], [this._textMeasurer.unmappedValue(newTo - newFrom)]);
     } else {
-      middle = Tree.build([], []);
+      middle = TreeFactory.build([], []);
     }
-    this._tree = Tree.merge(split.left, Tree.merge(middle, split.right));
+    /** @type {Mezzo.Tree<ChunkData, Mezzo.TextLookupKey, Mezzo.TextMetrics>} */
+    this._tree = TreeFactory.merge(split.left, TreeFactory.merge(middle, split.right));
   }
 
   /**
-   * @param {Range} r
+   * @param {Mezzo.Range} r
    * @param {number} from
    * @param {number} to
    * @param {number} inserted
-   * @return {Range}
+   * @return {Mezzo.Range}
    */
   _rebaseLastFrameRange(r, from, to, inserted) {
     if (r.from >= to) {
@@ -225,7 +196,7 @@ export class Markup extends EventEmitter {
   }
 
   /**
-   * @param {Point} point
+   * @param {Mezzo.Point} point
    * @param {RoundMode} roundMode
    * @return {number}
    */
@@ -237,7 +208,7 @@ export class Markup extends EventEmitter {
   }
 
   /**
-   * @param {Point} point
+   * @param {Mezzo.Point} point
    * @param {RoundMode} roundMode
    * @return {number}
    */
@@ -254,7 +225,7 @@ export class Markup extends EventEmitter {
 
   /**
    * @param {number} offset
-   * @return {Point}
+   * @return {Mezzo.Point}
    */
   offsetToPoint(offset) {
     const point = this._offsetToVirtualPoint(offset);
@@ -263,7 +234,7 @@ export class Markup extends EventEmitter {
 
   /**
    * @param {number} offset
-   * @return {Point}
+   * @return {Mezzo.Point}
    */
   _offsetToVirtualPoint(offset) {
     offset = Math.max(0, Math.min(offset, this._text.length()));
@@ -319,7 +290,7 @@ export class Markup extends EventEmitter {
    * @param {number} from
    * @param {number} to
    * @param {number} budget
-   * @return {Range}
+   * @return {Mezzo.Range}
    */
   _rechunkRange(from, to, budget) {
     const split = this._tree.split({offset: from}, {offset: to});
@@ -335,7 +306,7 @@ export class Markup extends EventEmitter {
     if (newTo > newFrom && TextUtils.isSurrogate(this._text.iterator(newTo - 1).charCodeAt(0)))
       newTo++;
 
-    /** @type {Array<TextMetrics>} */
+    /** @type {Array<Mezzo.TextMetrics>} */
     const values = [];
     /** @type {Array<ChunkData>} */
     const data = [];
@@ -395,14 +366,14 @@ export class Markup extends EventEmitter {
         this._allocator.undone(newTo, newTo + tmp.value.length);
     }
 
-    this._tree = Tree.merge(split.left, Tree.merge(Tree.build(data, values), split.right));
+    this._tree = TreeFactory.merge(split.left, TreeFactory.merge(TreeFactory.build(data, values), split.right));
     this._allocator.done(newFrom, newTo);
     return { from: newFrom, to: newTo };
   }
 
   /**
-   * @param {Point} point
-   * @return {Point}
+   * @param {Mezzo.Point} point
+   * @return {Mezzo.Point}
    */
   _clampVirtualPoint(point) {
     if (point.y < 0)
@@ -417,10 +388,10 @@ export class Markup extends EventEmitter {
   }
 
   /**
-   * @param {Frame} frame
+   * @param {Mezzo.Frame} frame
    * @param {{left: number, top: number, width: number, height: number}} rect
    * @param {{ratio: number, minDecorationHeight: number}} scrollbarParams
-   * @param {Array<FrameDecorationCallback>} decorationCallbacks
+   * @param {Array<Mezzo.FrameDecorationCallback>} decorationCallbacks
    */
   buildFrame(frame, rect, scrollbarParams, decorationCallbacks) {
     this._frozen = true;
@@ -429,7 +400,7 @@ export class Markup extends EventEmitter {
 
     /** @type {Array<Line>} */
     const lines = [];
-    /** @type {Array<Range>} */
+    /** @type {Array<Mezzo.Range>} */
     const ranges = [];
 
     let y = this.offsetToPoint(this.pointToOffset({x: rect.left, y: rect.top})).y;
@@ -536,14 +507,14 @@ export class Markup extends EventEmitter {
   }
 
   /*
-   * @return {Range}
+   * @return {Mezzo.Range}
    */
   lastFrameRange() {
     return this._lastFrameRange;
   }
 
   /**
-   * @param {Frame} frame
+   * @param {Mezzo.Frame} frame
    * @param {Array<Line>} lines
    * @param {FrameContent} frameContent
    */
@@ -616,7 +587,7 @@ export class Markup extends EventEmitter {
   }
 
   /**
-   * @param {Frame} frame
+   * @param {Mezzo.Frame} frame
    * @param {FrameContent} frameContent
    * @param {{ratio: number, minDecorationHeight: number}} scrollbarParams
    */
@@ -655,7 +626,7 @@ Markup.Events = {
 };
 
 /**
- * @param {Array<Range>} ranges
+ * @param {Array<Mezzo.Range>} ranges
  * @param {Document} document
  * @return {Array<VisibleRange>}
  */
@@ -687,12 +658,12 @@ function joinRanges(ranges, document) {
 }
 
 /**
- * @typedef {{measurer: TextMeasurer, stateBefore: *, stateAfter: *}} ChunkData
+ * @typedef {{measurer: Mezzo.TextMeasurerBase, stateBefore: (undefined|number), stateAfter: (undefined|number)}} ChunkData
  * Null measurer means unmeasured chunk.
  */
 
 /**
- * @param {Anchor} anchor
+ * @param {Mezzo.Anchor} anchor
  * @return {number}
  */
 function Offset(anchor) {
@@ -707,7 +678,7 @@ function Offset(anchor) {
  *   to: number,
  *   start: number,
  *   end: number,
- *   ranges: Array<{from: number, to: number, x: number, measurer: TextMetrics}>
+ *   ranges: Array<{from: number, to: number, x: number, measurer: Mezzo.TextMeasurerBase}>
  * }} Line
  */
 

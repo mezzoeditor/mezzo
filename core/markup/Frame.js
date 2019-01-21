@@ -10,7 +10,7 @@ export class FrameContent {
 
     /**
      * The total range of frame contents.
-     * @type {Range}
+     * @type {Mezzo.Range}
      */
     this.range = {from: 0, to: 0};
 
@@ -22,13 +22,13 @@ export class FrameContent {
 
     /**
      * Ranges with styles used to decorate the text.
-     * @type {Array<RangeTree<string>>}
+     * @type {Array<Mezzo.RangeTree<string>>}
      */
     this.textDecorations = [];
 
     /**
      * Ranges with styles used to decorate the text background.
-     * @type {Array<RangeTree<string>>}
+     * @type {Array<Mezzo.RangeTree<string>>}
      */
     this.backgroundDecorations = [];
 
@@ -36,14 +36,16 @@ export class FrameContent {
      * Ranges with styles used to decorate the lines.
      * Note that ranges should be grouped by style for
      * efficient processing, as opposite to text/background.
-     * @type {Array<{style: string, ranges: RangeTree<>}>}
+     * @type {Array<{style: string, ranges: Mezzo.RangeTree<string>}>}
      */
     this.lineDecorations = [];
   }
 };
 
 /**
- * @typedef {function(FrameContent)} FrameDecorationCallback
+ * @typedef {{
+ *   metrics: Mezzo.TextMetrics
+ * }} Widget
  */
 
 export class Frame {
@@ -98,7 +100,7 @@ export class VisibleRange {
  * @param {!Document} document
  * @param {number} from
  * @param {number} to
- * @param {{content: string, left: number, right: number}} cache
+ * @param {{content?: string, left?: number, right?: number}} cache
  * @param {number} left
  * @param {number} right
  * @return {string}
@@ -106,11 +108,11 @@ export class VisibleRange {
 function cachedContent(document, from, to, cache, left, right) {
   left = Math.min(left, from);
   right = Math.min(right, document.text().length() - to);
-  if (cache._content === undefined || cache._left < left || cache._right < right) {
-    cache._left = Math.max(left, cache._left || 0);
-    cache._right = Math.max(right, cache._right || 0);
-    cache._content = document.text().content(from - cache._left, to + cache._right);
+  if (cache.content === undefined || cache.left < left || cache.right < right) {
+    cache.left = Math.max(left, cache.left || 0);
+    cache.right = Math.max(right, cache.right || 0);
+    cache.content = document.text().content(from - cache.left, to + cache.right);
   }
-  return cache._content.substring(cache._left - left,
-                                  cache._content.length - (cache._right - right));
+  return cache.content.substring(cache.left - left,
+                                  cache.content.length - (cache.right - right));
 }
