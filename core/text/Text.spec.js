@@ -30,6 +30,7 @@ export function addTests(runner, expect) {
       const random = Random(143);
       const lineCount = 200;
       const chunks = [];
+      /** @type {Array<{line: number, column: number, offset: number, nonStrict?: {column: number}}>} */
       const locationQueries = [];
       let offset = 0;
       for (let i = 0; i < lineCount; i++) {

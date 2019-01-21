@@ -1,3 +1,4 @@
+/** @enum {number} */
 export const RoundMode = {
   Floor: 0,
   Round: 1,

@@ -6,7 +6,7 @@
  */
 export class TextIterator {
   /**
-   * @param {OrderedMonoidTreeIterator<TextMetrics, TextLookupKey>} iterator
+   * @param {Mezzo.TreeIterator<string, Mezzo.TextMetrics, Mezzo.TextLookupKey>} iterator
    * @param {number} offset
    * @param {number} from
    * @param {number} to
@@ -142,7 +142,7 @@ export class TextIterator {
    * to the start of the first occurance of |query|. If the |query|
    * cannot be found, advances to the end and returns false.
    * @param {string} query
-   * @param {{caseInsensetive: boolean}} options
+   * @param {{caseInsensetive?: boolean}} options
    * @return {boolean}
    */
   find(query, options = {}) {
@@ -287,7 +287,7 @@ export class TextIterator {
   /**
    * Returns char at position |current + offset|.
    * @param {number} offset
-   * @return {number}
+   * @return {string}
    */
   charAt(offset) {
     if (!offset)

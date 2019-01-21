@@ -4,14 +4,18 @@
     "allowJs": true,
     "checkJs": true,
     "lib": [
-      "ES6","ScriptHost"
+      "ESNext","ScriptHost"
     ],
-    "target": "es2017"
+    "module": "esnext",
+    "target": "ESNext"
   },
   "include": [
-    "core/utils"
+    "core/"
   ],
   "exclude": [
+    "core/editor",
+    "core/markup",
+    "core/web",
     "core/utils/NumberMonoid.js",
     "core/utils/Trace.js"
   ]

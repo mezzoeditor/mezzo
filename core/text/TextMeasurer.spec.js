@@ -134,7 +134,7 @@ export function addTests(runner, expect) {
 
     it('locateByOffset non-strict', () => {
       const testMeasurer = createTestMeasurer();
-      expect(testMeasurer.locateByOffset('😀😀', null, {length: 3, lastWidth: 3, lineBreaks: 3}, 6)).toBe({offset: 5, x: 103, y: 3});
+      expect(testMeasurer.locateByOffset('😀😀', null, {length: 3, lastWidth: 3, lineBreaks: 3, firstWidth: 0, longestWidth: 0}, 6)).toBe({offset: 5, x: 103, y: 3});
     });
 
     it('locateByPoint with round modes', () => {

@@ -3,11 +3,15 @@ import { TextUtils } from './TextUtils.js';
 import { TextMetricsMonoid } from './TextMetrics.js';
 import { TextMeasurer } from './TextMeasurer.js';
 import { TextIterator } from './TextIterator.js';
+import { RoundMode } from '../utils/RoundMode.js';
 
 /**
- * @type {OrderedMonoidTree<string, TextMetrics, TextLookupKey>}
+ * @typedef {Mezzo.Tree<string, Mezzo.TextLookupKey, Mezzo.TextMetrics>} Tree
  */
-const Tree = CreateOrderedMonoidTree(new TextMetricsMonoid());
+/**
+ * @type {Mezzo.TreeFactory<string, Mezzo.TextMetrics, Mezzo.TextLookupKey>}
+ */
+const TreeFactory = CreateOrderedMonoidTree(new TextMetricsMonoid());
 
 // We should measure performance/memory and consider different chunk sizes
 // based on total document length.
@@ -53,8 +57,8 @@ export class Text {
   }
 
   /**
-   * @param {Offset=} from
-   * @param {Offset=} to
+   * @param {Mezzo.Offset=} from
+   * @param {Mezzo.Offset=} to
    * @return {string}
    */
   content(from, to) {
@@ -64,9 +68,9 @@ export class Text {
   }
 
   /**
-   * @param {Offset} offset
-   * @param {Offset=} from
-   * @param {Offset=} to
+   * @param {Mezzo.Offset} offset
+   * @param {Mezzo.Offset=} from
+   * @param {Mezzo.Offset=} to
    * @return {TextIterator}
    */
   iterator(offset, from, to) {
@@ -79,8 +83,8 @@ export class Text {
   }
 
   /**
-   * @param {Offset} from
-   * @param {Offset} to
+   * @param {Mezzo.Offset} from
+   * @param {Mezzo.Offset} to
    * @param {Text} insertion
    * @return {{removed: Text, result: Text}}
    */
@@ -120,23 +124,24 @@ export class Text {
 
     const middle = insertion._buildWithChunks(left, right);
     return {
-      result: Text._fromTree(Tree.merge(split.left, Tree.merge(middle, split.right))),
+      result: Text._fromTree(TreeFactory.merge(split.left, TreeFactory.merge(middle, split.right))),
       removed: Text._fromLMR(leftRemoved, tmp.tree, rightRemoved)
     };
   }
 
   /**
-   * @param {Offset} from
-   * @param {Offset} to
+   * @param {Mezzo.Offset} from
+   * @param {Mezzo.Offset} to
    * @return {Text}
    */
   subtext(from, to) {
+    throw new Error('NOT IMPLEMENTED!');
     // TODO: we'll need this eventually.
   }
 
   /**
-   * @param {Offset} offset
-   * @return {Position}
+   * @param {Mezzo.Offset} offset
+   * @return {Mezzo.Position}
    */
   offsetToPosition(offset) {
     offset = Math.max(0, Math.min(offset, this._length));
@@ -152,8 +157,8 @@ export class Text {
   }
 
   /**
-   * @param {Position} position
-   * @return {Offset}
+   * @param {Mezzo.Position} position
+   * @return {Mezzo.Offset}
    */
   positionToOffset(position) {
     if (position.line < 0)
@@ -169,7 +174,7 @@ export class Text {
     iterator.locate(point);
     if (iterator.data === undefined)
       return iterator.before ? iterator.before.length : 0;
-    return measurer.locateByPoint(iterator.data, null, iterator.before, point).offset;
+    return measurer.locateByPoint(iterator.data, null, iterator.before, point, RoundMode.Round).offset;
   }
 
   /**
@@ -197,17 +202,17 @@ export class Text {
       this._string = undefined;
     } else if (this._chunks) {
       const values = this._chunks.map(chunk => measurer.mapValue(chunk).value);
-      this._tree = Tree.build(this._chunks, values);
+      this._tree = TreeFactory.build(this._chunks, values);
       this._chunks = undefined;
     } else if (this._middle) {
       const leftTree = chunkedTree(this._left);
       const rightTree = chunkedTree(this._right);
-      this._tree = Tree.merge(leftTree, Tree.merge(this._middle, rightTree));
+      this._tree = TreeFactory.merge(leftTree, TreeFactory.merge(this._middle, rightTree));
       this._left = undefined;
       this._right = undefined;
       this._middle = undefined;
     } else {
-      this._tree = Tree.build([], []);
+      this._tree = TreeFactory.build([], []);
     }
     return this._tree;
   }
@@ -228,14 +233,14 @@ export class Text {
         return chunkedTree(left + this.content(0, this._length) + right);
       if (left.length + this._length <= kDefaultChunkSize)
         return chunkedTree(left + this.content(0, this._length), right);
-      return Tree.merge(chunkedTree(left), Tree.merge(this._tree, chunkedTree(right)));
+      return TreeFactory.merge(chunkedTree(left), TreeFactory.merge(this._tree, chunkedTree(right)));
     }
 
     if (this._middle) {
       if (combine)
         return chunkedTree(left + this.content(0, this._length) + right);
       // TODO: might make sense to rechunk (left + this._left + this._middle) if too short.
-      return Tree.merge(chunkedTree(left + this._left), Tree.merge(this._middle, chunkedTree(this._right + right)));
+      return TreeFactory.merge(chunkedTree(left + this._left), TreeFactory.merge(this._middle, chunkedTree(this._right + right)));
     }
 
     if (this._string) {
@@ -255,7 +260,7 @@ export class Text {
       data.push(...this._chunks);
       values.push(...this._chunks.map(chunk => measurer.mapValue(chunk).value));
       chunkContent(right, data, values);
-      return Tree.build(data, values);
+      return TreeFactory.build(data, values);
     }
 
     if (combine)
@@ -299,13 +304,13 @@ function chunkedTree(...content) {
   const values = [];
   for (const s of content)
     chunkContent(s, data, values);
-  return Tree.build(data, values);
+  return TreeFactory.build(data, values);
 }
 
 /**
  * @param {string} content
  * @param {Array<string>} data
- * @param {Array<TextMetrics>} values
+ * @param {Array<Mezzo.TextMetrics>} values
  */
 function chunkContent(content, data, values, chunkSize = kDefaultChunkSize) {
   let index = 0;
@@ -334,7 +339,7 @@ Text.test.fromStringChunked = function(string, chunkSize) {
   const data = [];
   const values = [];
   chunkContent(string, data, values, chunkSize);
-  text._tree = Tree.build(data, values);
+  text._tree = TreeFactory.build(data, values);
   text._length = text._tree.value().length;
   return text;
 };

@@ -1,43 +1,17 @@
 import { Text } from './Text.js';
 import { EventEmitter } from '../utils/EventEmitter.js';
 
-/**
- * @typedef {{
- *   before: Text,
- *   offset: number,
- *   inserted: Text,
- *   removed: Text,
- *   after: Text,
- * }} Replacement;
- */
-
-/**
- * @typedef {{
- *   anchor: number,
- *   focus: number,
- *   upDownX: (number|undefined),
- * }} SelectionRange;
- */
-
-/**
- * @typedef {{
- *  replacements: Array<Replacement>,
- *  oldSelection: ?Array<SelectionRange>,
- *  selectionChanged: boolean,
- * }} DocumentChangedEvent
- */
-
 export class Document extends EventEmitter {
   constructor() {
     super();
     this._text = new Text();
-    /** @type {Array<SelectionRange>} */
+    /** @type {Array<Mezzo.SelectionRange>} */
     this._selection = [];
 
     this._operation = 0;
-    /** @type {Array<Replacement>} */
+    /** @type {Array<Mezzo.Replacement>} */
     this._operationReplacements = [];
-    /** @type {?Array<SelectionRange>} */
+    /** @type {?Array<Mezzo.SelectionRange>} */
     this._oldSelection = null;
     this._dispatchingChangedEvent = false;
 
@@ -49,7 +23,7 @@ export class Document extends EventEmitter {
   }
 
   static importable() {
-    return {name: this.name, url: import.meta.url};
+    return {name: this.name, url: import.meta['url']};
   }
 
   /**
@@ -102,7 +76,7 @@ export class Document extends EventEmitter {
   /**
    * Returns selection ranges sorted in an ascending order wrt order
    * of insertion.
-   * @return {Array<SelectionRange>}
+   * @return {Array<Mezzo.SelectionRange>}
    */
   selection() {
     return this._selection.slice();
@@ -111,14 +85,14 @@ export class Document extends EventEmitter {
   /**
    * Returns selection ranges sorted in an ascending order wrt offsets
    * in the document.
-   * @return {Array<SelectionRange>}
+   * @return {Array<Mezzo.SelectionRange>}
    */
   sortedSelection() {
     return this._selection.slice().sort(selectionRangeComparator);
   }
 
   /**
-   * @param {Array<SelectionRange>} ranges
+   * @param {Array<Mezzo.SelectionRange>} ranges
    * @return {boolean}
    */
   setSelection(ranges) {
@@ -129,12 +103,12 @@ export class Document extends EventEmitter {
       return false;
     this._oldSelection = this._selection;
     this._selection = ranges;
-    this._maybeEmit();
+    this._maybeEmit(Document.History.Push);
     return true;
   }
 
   /**
-   * @return {?SelectionRange}
+   * @return {?Mezzo.SelectionRange}
    */
   lastCursor() {
     return this._selection.length ? this._selection[this._selection.length - 1] : null;
@@ -148,10 +122,10 @@ export class Document extends EventEmitter {
   }
 
   /**
-   * @param {function()} fun
+   * @param {function():void} fun
    * @param {string} historyAction
    */
-  operation(fun, historyAction) {
+  operation(fun, historyAction = Document.History.Push) {
     if (this._dispatchingChangedEvent)
       throw new Error('Cannot modify document from-inside change event');
     ++this._operation;
@@ -163,7 +137,7 @@ export class Document extends EventEmitter {
   /**
    * @param {string} historyAction
    */
-  _maybeEmit(historyAction = Document.History.Push) {
+  _maybeEmit(historyAction) {
     if (this._operation || (!this._operationReplacements.length && !this._oldSelection))
       return;
     // If there are some edits, make sure selection is consistent with document.
@@ -208,7 +182,7 @@ export class Document extends EventEmitter {
 
   /**
    * @param {Text|string} text
-   * @param {Array<SelectionRange>} selection
+   * @param {Array<Mezzo.SelectionRange>} selection
    */
   reset(text, selection = []) {
     if (this._dispatchingChangedEvent)
@@ -239,7 +213,7 @@ export class Document extends EventEmitter {
       after: result
     });
     this._text = result;
-    this._maybeEmit();
+    this._maybeEmit(Document.History.Push);
     return removed;
   }
 
@@ -325,8 +299,8 @@ Document.History = {
 };
 
 /**
- * @param {Array<SelectionRange>} aRanges
- * @param {Array<SelectionRange>} bRanges
+ * @param {Array<Mezzo.SelectionRange>} aRanges
+ * @param {Array<Mezzo.SelectionRange>} bRanges
  * @return {boolean}
  */
 function checkSelectionsEqual(aRanges, bRanges) {
@@ -342,8 +316,8 @@ function checkSelectionsEqual(aRanges, bRanges) {
 }
 
 /**
- * @param {SelectionRange} a
- * @param {SelectionRange} b
+ * @param {Mezzo.SelectionRange} a
+ * @param {Mezzo.SelectionRange} b
  * @return {number}
  */
 export function selectionRangeComparator(a, b) {
@@ -356,8 +330,8 @@ export function selectionRangeComparator(a, b) {
 
 /**
  * @param {Text} text
- * @param {Array<SelectionRange>} ranges
- * @return {Array<SelectionRange>}
+ * @param {Array<Mezzo.SelectionRange>} ranges
+ * @return {Array<Mezzo.SelectionRange>}
  */
 function normalizeSelection(text, ranges) {
   if (!ranges.length)
@@ -416,8 +390,8 @@ Document.Events = {
 
 class HistoryEntry {
   /**
-   * @param {Array<Replacement>} replacements
-   * @param {Array<SelectionRange>} selection
+   * @param {Array<Mezzo.Replacement>} replacements
+   * @param {Array<Mezzo.SelectionRange>} selection
    */
   constructor(replacements, selection, generation) {
     this.selection = selection;

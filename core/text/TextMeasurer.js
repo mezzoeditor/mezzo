@@ -7,7 +7,7 @@ import { TextUtils } from './TextUtils.js';
  * 2-dimensional position in a text.
  *
  *
- * @typedef {{x: number, y: number, offset: Offset}} Location
+ * @typedef {{x: number, y: number, offset: Mezzo.Offset}} Location
  * This is a combination of point and offset.
  */
 
@@ -17,7 +17,7 @@ const monoid = new TextMetricsMonoid();
  * This interface calculates metrics for string chunks.
  *
  * @template S - the type of state.
- * @implements StringMorphism<TextMetrics, TextLookupKey, S>
+ * @implements StringMorphism<Mezzo.TextMetrics, Mezzo.TextLookupKey, S>
  */
 class TextMeasurerBase {
   /**
@@ -30,21 +30,30 @@ class TextMeasurerBase {
 
   /**
    * @override
-   * @return {?StateTraits<S>}
+   * @return {?Mezzo.StateTraits<S>}
    */
   stateTraits() {
     return null;
   }
 
   /**
-   * Returns metrics for a string. See |TextMetrics| for definition.
+   * Returns metrics for a string. See |Mezzo.TextMetrics| for definition.
    * The resulting |state| should be passed to the next chunk being measured.
    * @override
    * @param {string} s
    * @param {S} state
-   * @return {{value: TextMetrics, state: S}}
+   * @return {{value: Mezzo.TextMetrics, state: S}}
    */
   mapValue(s, state) {
+    return {
+      value: {
+        length: s.length,
+        firstWidth: 0,
+        lastWidth: 0,
+        longestWidth: 0
+      },
+      state,
+    };
   }
 
   /**
@@ -52,7 +61,7 @@ class TextMeasurerBase {
    * which can be used as a placeholder until the real value is calculated.
    * @override
    * @param {number} length
-   * @return {TextMetrics}
+   * @return {Mezzo.TextMetrics}
    */
   unmappedValue(length) {
     return {length, firstWidth: 0, lastWidth: 0, longestWidth: 0};
@@ -75,7 +84,7 @@ class TextMeasurerBase {
    *
    * @param {string} s
    * @param {S} state
-   * @param {TextMetrics} before
+   * @param {Mezzo.TextMetrics} before
    * @param {Point} point
    * @param {RoundMode} roundMode
    * @return {Location}
@@ -96,8 +105,8 @@ class TextMeasurerBase {
    *
    * @param {string} s
    * @param {S} state
-   * @param {TextMetrics} before
-   * @param {Offset} offset
+   * @param {Mezzo.TextMetrics} before
+   * @param {Mezzo.Offset} offset
    * @return {Location}
    */
   locateByOffset(s, state, before, offset) {
@@ -170,8 +179,8 @@ class TextMeasurerBase {
   /**
    * Returns the total width of a substring, which must not contain line breaks.
    * @param {string} s
-   * @param {Offset} from
-   * @param {Offset} to
+   * @param {Mezzo.Offset} from
+   * @param {Mezzo.Offset} to
    * @return {number}
    */
   _measureString(s, from, to) {
@@ -207,11 +216,11 @@ class TextMeasurerBase {
   /**
    * Locates an offset by width in a string, which must not contain line breaks.
    * @param {string} s
-   * @param {Offset} from
-   * @param {Offset} to
+   * @param {Mezzo.Offset} from
+   * @param {Mezzo.Offset} to
    * @param {number} width
    * @param {RoundMode} roundMode
-   * @return {{offset: Offset, width: number}}
+   * @return {{offset: Mezzo.Offset, width: number}}
    */
   _locateByWidth(s, from, to, width, roundMode) {
     if (!width)
@@ -268,7 +277,7 @@ class TextMeasurerBase {
   /**
    * @param {string} s
    * @param {S} state
-   * @param {TextMetrics} before
+   * @param {Mezzo.TextMetrics} before
    * @param {Point} point
    * @param {RoundMode} roundMode
    * @return {Location}
@@ -298,16 +307,17 @@ class TextMeasurerBase {
    * @param {number} x
    * @param {number} y
    * @param {Point} point
-   * @return {{lineStartOffset: Offset, lineEndOffset: Offset, x: number, y: number}}
+   * @return {{lineStartOffset: Mezzo.Offset, lineEndOffset: Mezzo.Offset, x: number, y: number}}
    */
   _locateLineByPoint(s, state, x, y, point) {
+    return {lineStartOffset: 0, lineEndOffset: 0, x: 0, y: 0};
   }
 
   /**
    * @param {string} s
    * @param {S} state
-   * @param {TextMetrics} before
-   * @param {Offset} offset
+   * @param {Mezzo.TextMetrics} before
+   * @param {Mezzo.Offset} offset
    * @return {Location}
    */
   _locateByOffset(s, state, before, offset) {
@@ -336,17 +346,18 @@ class TextMeasurerBase {
    * Locates a line by the offset.
    * @param {string} s
    * @param {S} state
-   * @param {Offset} offset
+   * @param {Mezzo.Offset} offset
    * @param {number} x
    * @param {number} y
-   * @return {{lineStartOffset: Offset, x: number, y: number}}
+   * @return {{lineStartOffset: Mezzo.Offset, x: number, y: number}}
    */
   _locateLineByOffset(s, state, offset, x, y) {
+    return {lineStartOffset: 0, x: 0, y: 0};
   }
 };
 
 /**
- * @implements StringMorphism<TextMetrics, TextLookupKey, undefined>
+ * @implements StringMorphism<Mezzo.TextMetrics, Mezzo.TextLookupKey, undefined>
  */
 export class TextMeasurer extends TextMeasurerBase {
   /**
@@ -373,9 +384,10 @@ export class TextMeasurer extends TextMeasurerBase {
   /**
    * @override
    * @param {string} s
-   * @return {{value: TextMetrics}}
+   * @param {undefined} state
+   * @return {{value: Mezzo.TextMetrics, state: undefined}}
    */
-  mapValue(s) {
+  mapValue(s, state = undefined) {
     const metrics = {
       length: s.length,
       firstWidth: 0,
@@ -405,7 +417,7 @@ export class TextMeasurer extends TextMeasurerBase {
     }
     if (lineBreaks)
       metrics.lineBreaks = lineBreaks;
-    return {value: metrics};
+    return {value: metrics, state: undefined};
   }
 
   /**
@@ -415,7 +427,7 @@ export class TextMeasurer extends TextMeasurerBase {
    * @param {number} x
    * @param {number} y
    * @param {Point} point
-   * @return {{lineStartOffset: Offset, lineEndOffset: Offset, x: number, y: number}}
+   * @return {{lineStartOffset: Mezzo.Offset, lineEndOffset: Mezzo.Offset, x: number, y: number}}
    */
   _locateLineByPoint(s, state, x, y, point) {
     let lineStartOffset = 0;
@@ -438,10 +450,10 @@ export class TextMeasurer extends TextMeasurerBase {
    * @override
    * @param {string} s
    * @param {undefined} state
-   * @param {Offset} offset
+   * @param {Mezzo.Offset} offset
    * @param {number} x
    * @param {number} y
-   * @return {{lineStartOffset: Offset, x: number, y: number}}
+   * @return {{lineStartOffset: Mezzo.Offset, x: number, y: number}}
    */
   _locateLineByOffset(s, state, offset, x, y) {
     let lineStartOffset = 0;
@@ -466,7 +478,7 @@ export class TextMeasurer extends TextMeasurerBase {
 /**
  * State traits for wrapping measurer.
  *
- * @implements StateTraits<WrappingState>
+ * @implements Mezzo.StateTraits<WrappingState>
  */
 class WrappingStateTraits {
   /**
@@ -509,7 +521,7 @@ class WrappingStateTraits {
 const wrappingStateTraits = new WrappingStateTraits();
 
 /**
- * @implements StringMorphism<TextMetrics, TextLookupKey, WrappingState>
+ * @implements StringMorphism<Mezzo.TextMetrics, Mezzo.TextLookupKey, WrappingState>
  */
 class WrappingTextMeasurer extends TextMeasurerBase {
   /**
@@ -525,7 +537,7 @@ class WrappingTextMeasurer extends TextMeasurerBase {
 
   /**
    * @override
-   * @return {StateTraits<WrappingState>}
+   * @return {Mezzo.StateTraits<WrappingState>}
    */
   stateTraits() {
     return wrappingStateTraits;
@@ -534,16 +546,17 @@ class WrappingTextMeasurer extends TextMeasurerBase {
   /**
    * @param {string} s
    * @param {WrappingState} state
-   * @return {Array<{offset: Offset, width: number}>}
+   * @return {Array<{offset: Mezzo.Offset, width: number}>}
    */
   _wrap(s, state) {
+    return [];
   }
 
   /**
    * @override
    * @param {string} s
    * @param {WrappingState} state
-   * @return {{value: TextMetrics, state: WrappingState}}
+   * @return {{value: Mezzo.TextMetrics, state: WrappingState}}
    */
   mapValue(s, state) {
     const metrics = {length: s.length, firstWidth: 0, lastWidth: 0, longestWidth: 0, lineBreaks: -1};
@@ -589,7 +602,7 @@ class WrappingTextMeasurer extends TextMeasurerBase {
    * @override
    * @param {string} s
    * @param {WrappingState} state
-   * @param {Offset} offset
+   * @param {Mezzo.Offset} offset
    * @param {number} x
    * @param {number} y
    * @return {{lineStartOffset: number, x: number, y: number}}
@@ -630,7 +643,7 @@ export class WordWrappingTextMeasurer extends WrappingTextMeasurer {
    * @override
    * @param {string} s
    * @param {WrappingState} state
-   * @return {Array<{offset: Offset, width: number}>}
+   * @return {Array<{offset: Mezzo.Offset, width: number}>}
    */
   _wrap(s, state) {
     const widthOne = this._widthOneRegex && this._widthOneRegex.test(s);
@@ -707,7 +720,7 @@ export class LineWrappingTextMeasurer extends WrappingTextMeasurer {
    * @override
    * @param {string} s
    * @param {WrappingState} state
-   * @return {Array<{offset: Offset, width: number}>}
+   * @return {Array<{offset: Mezzo.Offset, width: number}>}
    */
   _wrap(s, state) {
     const limit = this._maxLineWidth;
