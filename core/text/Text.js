@@ -9,7 +9,7 @@ import { RoundMode } from '../utils/RoundMode.js';
  * @typedef {Mezzo.Tree<string, Mezzo.TextLookupKey, Mezzo.TextMetrics>} Tree
  */
 /**
- * @type {Mezzo.TreeFactory<string, Mezzo.TextMetrics, Mezzo.TextLookupKey>}
+ * @type {Mezzo.TreeFactory<string, Mezzo.TextLookupKey, Mezzo.TextMetrics>}
  */
 const treeFactory = new TreeFactory(new TextMetricsMonoid());
 

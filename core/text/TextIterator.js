@@ -6,7 +6,7 @@
  */
 export class TextIterator {
   /**
-   * @param {Mezzo.TreeIterator<string, Mezzo.TextMetrics, Mezzo.TextLookupKey>} iterator
+   * @param {Mezzo.TreeIterator<string, Mezzo.TextLookupKey, Mezzo.TextMetrics>} iterator
    * @param {number} offset
    * @param {number} from
    * @param {number} to

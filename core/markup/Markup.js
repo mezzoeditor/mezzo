@@ -17,7 +17,7 @@ export const WrappingMode = {
 }
 
 /**
- * @type {Mezzo.TreeFactory<ChunkData, Mezzo.TextMetrics, Mezzo.TextLookupKey>}
+ * @type {Mezzo.TreeFactory<ChunkData, Mezzo.TextLookupKey, Mezzo.TextMetrics>}
  */
 const treeFactory = new TreeFactory(new TextMetricsMonoid());
 

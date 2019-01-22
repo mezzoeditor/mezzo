@@ -2,8 +2,8 @@ import { Random } from '../utils/Random.js';
 
 /**
  * @template D
- * @template V
  * @template K
+ * @template V
  */
 export class TreeFactory {
   /**
@@ -76,7 +76,7 @@ export class Tree {
 
   /**
    * Creates an iterator. See TreeIterator.
-   * @return {TreeIterator<D,V,K>}
+   * @return {TreeIterator<D,K,V>}
    */
   iterator() {
     return new TreeIterator(this._helpers, this._root);
@@ -169,12 +169,12 @@ export class Tree {
  * When pointing before the first node, everything except |after| is undefined.
  *
  * @template D
- * @template V
  * @template K
+ * @template V
  */
 export class TreeIterator {
   /**
-   * @param {TreeHelpers} helpers
+   * @param {TreeHelpers<D, K, V>} helpers
    * @param {TreeNode<D, V>|undefined} root
    */
   constructor(helpers, root) {
@@ -201,7 +201,7 @@ export class TreeIterator {
 
   /**
    * Clones this iterator, which can be used independetly from now on.
-   * @return {TreeIterator}
+   * @return {TreeIterator<D, K, V>}
    */
   clone() {
     let iterator = new TreeIterator(this._helpers, this._root);
@@ -449,7 +449,7 @@ class TreeHelpers {
   }
 
   /**
-   * @param {TreeIterator} iterator
+   * @param {TreeIterator<D, K, V>} iterator
    * @param {K} key
    */
   locateIterator(iterator, key) {
@@ -494,7 +494,7 @@ class TreeHelpers {
   }
 
   /**
-   * @param {TreeIterator} iterator
+   * @param {TreeIterator<D, K, V>} iterator
    * @return {boolean}
    */
   iteratorNext(iterator) {
@@ -541,7 +541,7 @@ class TreeHelpers {
   }
 
   /**
-   * @param {TreeIterator} iterator
+   * @param {TreeIterator<D, K, V>} iterator
    * @return {boolean}
    */
   iteratorPrev(iterator) {

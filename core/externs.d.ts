@@ -11,9 +11,9 @@ import {TextMeasurerBase as JSTextMeasurerBase } from './text/TextMeasurer.js';
 declare global {
   module Mezzo {
     // Export JS-defined classes into Mezzo global namespace.
-    export class TreeFactory<D,V,K> extends JSTreeFactory<D,V,K> {}
+    export class TreeFactory<D,K,V> extends JSTreeFactory<D,K,V> {}
     export class Tree<D,K,V> extends JSTree<D,K,V> {}
-    export class TreeIterator<D,V,K> extends JSTreeIterator<D,V,K> {}
+    export class TreeIterator<D,K,V> extends JSTreeIterator<D,K,V> {}
     export class TextIterator extends JSTextIterator {}
     export class Text extends JSText {}
     export class RangeTree<D> extends JSRangeTree<D> {}
