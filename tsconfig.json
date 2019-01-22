@@ -13,9 +13,20 @@
     "core/"
   ],
   "exclude": [
-    "core/editor",
+    "core/editor/CumulativeIndexer.js",
+    "core/editor/Editor.js",
+    "core/editor/Editor.spec.js",
+    "core/editor/Input.js",
+    "core/editor/Input.spec.js",
+    "core/editor/Thread.js",
+    "core/editor/Thread.spec.js",
+    "core/editor/Tokenizer.js",
     "core/markup/Markup.spec.js",
-    "core/web",
+    "core/web/DOMUtils.js",
+    "core/web/KeymapHandler.js",
+    "core/web/Renderer.js",
+    "core/web/Renderer.spec.js",
+    "core/web/WebPlatformSupport.js",
     "core/utils/NumberMonoid.js",
     "core/utils/Trace.js"
   ]
