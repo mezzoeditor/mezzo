@@ -10,6 +10,7 @@ export class Tokenizer {
    * Return weather the char belongs to the word
    */
   isWordChar(char) {
+    return false;
   }
 
   /**
@@ -18,6 +19,7 @@ export class Tokenizer {
    * Return weather the char belongs to the word
    */
   isSpaceChar(char) {
+    return false;
   }
 
   /**
@@ -26,6 +28,7 @@ export class Tokenizer {
    * Return weather the char belongs to the word
    */
   isPunctuationChar(char) {
+    return false;
   }
 };
 
@@ -59,7 +62,7 @@ export class DefaultTokenizer {
 }
 
 /**
- * @param {!Document} document
+ * @param {!Mezzo.Document} document
  * @param {!Tokenizer} tokenizer
  * @param {number} offset
  * @return {number}
@@ -86,7 +89,7 @@ Tokenizer.leftBoundary = function(document, tokenizer, offset) {
 };
 
 /**
- * @param {!Document} document
+ * @param {!Mezzo.Document} document
  * @param {!Tokenizer} tokenizer
  * @param {number} offset
  * @return {number}
@@ -96,7 +99,7 @@ Tokenizer.rightBoundary = function(document, tokenizer, offset) {
   let it = document.text().iterator(offset);
   if (it.current === '\n')
     return offset + 1;
-  while (!it.outOfBounds() && it.curreent !== '\n' && tokenizer.isSpaceChar(it.current))
+  while (!it.outOfBounds() && it.current !== '\n' && tokenizer.isSpaceChar(it.current))
     it.next();
   if (it.outOfBounds())
     return it.offset;
@@ -113,10 +116,10 @@ Tokenizer.rightBoundary = function(document, tokenizer, offset) {
 };
 
 /**
- * @param {!Document} document
+ * @param {!Mezzo.Document} document
  * @param {!Tokenizer} tokenizer
  * @param {number} offset
- * @return {!Range}
+ * @return {!Mezzo.Range}
  */
 Tokenizer.characterGroupRange = function(document, tokenizer, offset) {
   let from = document.text().iterator(offset);
@@ -139,9 +142,9 @@ Tokenizer.characterGroupRange = function(document, tokenizer, offset) {
 }
 
 /**
- * @param {!Document} document
+ * @param {!Mezzo.Document} document
  * @param {!Tokenizer} tokenizer
- * @param {!Range} range
+ * @param {!Mezzo.Range} range
  * @return {boolean}
  */
 Tokenizer.isWord = function(document, tokenizer, range) {

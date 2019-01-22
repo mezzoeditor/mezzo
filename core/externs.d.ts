@@ -7,6 +7,7 @@ import {Text as JSText} from './text/Text.js';
 import {RangeTree as JSRangeTree} from './utils/RangeTree.js';
 import {Frame as JSFrame, FrameContent as JSFrameContent} from './markup/Frame.js';
 import {TextMeasurerBase as JSTextMeasurerBase } from './text/TextMeasurer.js';
+import {Document as JSDocument } from './text/Document.js';
 
 declare global {
   module Mezzo {
@@ -20,6 +21,7 @@ declare global {
     export class Frame extends JSFrame {}
     export class FrameContent extends JSFrameContent {}
     export class TextMeasurerBase<S> extends JSTextMeasurerBase<S> {}
+    export class Document extends JSDocument {}
 
     /**
      * Anchor represents a position between two offsets which is aligned

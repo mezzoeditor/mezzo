@@ -20,7 +20,6 @@
     "core/editor/Input.spec.js",
     "core/editor/Thread.js",
     "core/editor/Thread.spec.js",
-    "core/editor/Tokenizer.js",
     "core/markup/Markup.spec.js",
     "core/web/DOMUtils.js",
     "core/web/KeymapHandler.js",
