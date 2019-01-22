@@ -18,7 +18,7 @@ export class TreeFactory {
    * Constructs a tree from a sequence of values and data.
    * @param {Array<D>} data
    * @param {Array<V>} values
-   * @return {Tree<D, K, V>}}
+   * @return {Tree<D, K, V>}
    */
   build(data, values) {
     if (values.length !== data.length)
@@ -161,6 +161,13 @@ export class Tree {
 };
 
 /**
+ * Iterator points to a specific node of the Tree, position before the first node
+ * or position after the last node. It provides current node's |value| and |data|,
+ * as well as values |before| and |after| the node.
+ *
+ * When pointing after the last node, everything except |before| is undefined.
+ * When pointing before the first node, everything except |after| is undefined.
+ *
  * @template D
  * @template V
  * @template K
@@ -252,36 +259,6 @@ export class TreeIterator {
  * }} TreeNode
  */
 
-/**
- * @template D, V, K
- *
- * This is an immutable tree which efficiently calculates composition
- * for continuous ranges of the ordered monoid elements of type |E|.
- *
- * It also supports split and merge operations producing new trees, and lookup by
- * the key of type |K| in the ordered monoid.
- *
- * Each node in the tree contains some data of type |D| and a monoid element of
- * type |E|, called value.
- *
- * @param {Mezzo.OrderedMonoid<V, K>} monoid
- * @return {TreeFactory<D, V, K>}
- */
-export function CreateOrderedMonoidTree(monoid) {
-  /**
-   * Iterator points to a specific node of the Tree, position before the first node
-   * or position after the last node. It provides current node's |value| and |data|,
-   * as well as values |before| and |after| the node.
-   *
-   * When pointing after the last node, everything except |before| is undefined.
-   * When pointing before the first node, everything except |after| is undefined.
-   */
-
-  // -------------- Implementation details below -----------------
-
-  return new TreeFactory(monoid);
-};
-
 const kSplitIntersectionToLeft = true;
 const kSplitIntersectionToRight = false;
 
@@ -290,15 +267,6 @@ const kSplitIntersectionToRight = false;
  * @template D
  * @template K
  * @template V
- *
- * This is an immutable tree which efficiently calculates composition
- * for continuous ranges of the ordered monoid elements of type |V|.
- *
- * It also supports split and merge operations producing new trees, and lookup by
- * the key of type |K| in the ordered monoid.
- *
- * Each node in the tree contains some data of type |D| and a monoid element of
- * type |V|, called value.
  */
 class TreeHelpers {
   /**

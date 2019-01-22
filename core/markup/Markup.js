@@ -1,4 +1,4 @@
-import { CreateOrderedMonoidTree } from '../utils/OrderedMonoidTree.js';
+import { TreeFactory } from '../utils/OrderedMonoidTree.js';
 import { TextUtils } from '../text/TextUtils.js';
 import { TextMetricsMonoid } from '../text/TextMetrics.js';
 import { EventEmitter } from '../utils/EventEmitter.js';
@@ -19,7 +19,7 @@ export const WrappingMode = {
 /**
  * @type {Mezzo.TreeFactory<ChunkData, Mezzo.TextMetrics, Mezzo.TextLookupKey>}
  */
-const TreeFactory = CreateOrderedMonoidTree(new TextMetricsMonoid());
+const treeFactory = new TreeFactory(new TextMetricsMonoid());
 
 export class Markup extends EventEmitter {
   /**
@@ -56,7 +56,7 @@ export class Markup extends EventEmitter {
     this._jobId = 0;
     this._lastFrameRange = {from: 0, to: 0};
     /** @type {Mezzo.Tree<ChunkData, Mezzo.TextLookupKey, Mezzo.TextMetrics>} */
-    this._tree = TreeFactory.build([], []);
+    this._tree = treeFactory.build([], []);
 
     this._externalMeasurer = null;
     this.setMeasurer(measurer);
@@ -172,12 +172,12 @@ export class Markup extends EventEmitter {
 
     let middle;
     if (newFrom !== newTo) {
-      middle = TreeFactory.build([kUnmeasuredData], [this._textMeasurer.unmappedValue(newTo - newFrom)]);
+      middle = treeFactory.build([kUnmeasuredData], [this._textMeasurer.unmappedValue(newTo - newFrom)]);
     } else {
-      middle = TreeFactory.build([], []);
+      middle = treeFactory.build([], []);
     }
     /** @type {Mezzo.Tree<ChunkData, Mezzo.TextLookupKey, Mezzo.TextMetrics>} */
-    this._tree = TreeFactory.merge(split.left, TreeFactory.merge(middle, split.right));
+    this._tree = treeFactory.merge(split.left, treeFactory.merge(middle, split.right));
   }
 
   /**
@@ -366,7 +366,7 @@ export class Markup extends EventEmitter {
         this._allocator.undone(newTo, newTo + tmp.value.length);
     }
 
-    this._tree = TreeFactory.merge(split.left, TreeFactory.merge(TreeFactory.build(data, values), split.right));
+    this._tree = treeFactory.merge(split.left, treeFactory.merge(treeFactory.build(data, values), split.right));
     this._allocator.done(newFrom, newTo);
     return { from: newFrom, to: newTo };
   }

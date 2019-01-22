@@ -1,4 +1,4 @@
-import { CreateOrderedMonoidTree } from './OrderedMonoidTree.js';
+import { TreeFactory } from './OrderedMonoidTree.js';
 
 class TestMonoid {
   identityValue() {
@@ -21,7 +21,7 @@ class TestMonoid {
 const monoid = new TestMonoid();
 const identity = monoid.identityValue();
 
-const Tree = CreateOrderedMonoidTree(monoid);
+const treeFactory = new TreeFactory(monoid);
 
 export function addTests(runner, expect) {
   const {describe, xdescribe, fdescribe} = runner;
@@ -30,7 +30,7 @@ export function addTests(runner, expect) {
 
   describe('OrderedMonoidTree', () => {
     it('empty tree', () => {
-      const tree = Tree.build([], []);
+      const tree = treeFactory.build([], []);
       expect(tree.value()).toBe(identity);
       expect(tree.collect()).toBe([]);
 
@@ -47,7 +47,7 @@ export function addTests(runner, expect) {
       expect(tmp2.data).toBe(null);
       expect(tmp2.tree.value()).toBe(identity);
 
-      const another = Tree.merge(tree, Tree.build([], []));
+      const another = treeFactory.merge(tree, treeFactory.build([], []));
       expect(another.value()).toBe(identity);
     });
 
@@ -57,38 +57,38 @@ export function addTests(runner, expect) {
       const node3 = {data: 'd3', value: 3};
       const node4 = {data: 'd4', value: 4};
 
-      const tree12 = Tree.build(['d1', 'd2'], [1, 2]);
+      const tree12 = treeFactory.build(['d1', 'd2'], [1, 2]);
       expect(tree12.value()).toBe(1 + 2);
       expect(tree12.collect()).toBe([node1, node2]);
-      const tree3 = Tree.build(['d3'], [3]);
+      const tree3 = treeFactory.build(['d3'], [3]);
       expect(tree3.value()).toBe(3);
       expect(tree3.collect()).toBe([node3]);
-      const tree0 = Tree.build([], []);
+      const tree0 = treeFactory.build([], []);
       expect(tree0.value()).toBe(0);
       expect(tree0.collect()).toBe([]);
-      const tree4 = Tree.build(['d4'], [4]);
+      const tree4 = treeFactory.build(['d4'], [4]);
       expect(tree4.value()).toBe(4);
       expect(tree4.collect()).toBe([node4]);
 
-      const tree012 = Tree.merge(tree0, tree12);
+      const tree012 = treeFactory.merge(tree0, tree12);
       expect(tree012.value()).toBe(0 + 1 + 2);
       expect(tree012.collect()).toBe([node1, node2]);
-      const tree124 = Tree.merge(tree12, tree4);
+      const tree124 = treeFactory.merge(tree12, tree4);
       expect(tree124.value()).toBe(1 + 2 + 4);
       expect(tree124.collect()).toBe([node1, node2, node4]);
-      const tree3124 = Tree.merge(tree3, tree124);
+      const tree3124 = treeFactory.merge(tree3, tree124);
       expect(tree3124.value()).toBe(3 + 1 + 2 + 4);
       expect(tree3124.collect()).toBe([node3, node1, node2, node4]);
 
-      const tree43 = Tree.merge(tree4, tree3);
+      const tree43 = treeFactory.merge(tree4, tree3);
       expect(tree43.value()).toBe(4 + 3);
       expect(tree43.collect()).toBe([node4, node3]);
-      const tree43012 = Tree.merge(tree43, tree012);
+      const tree43012 = treeFactory.merge(tree43, tree012);
       expect(tree43012.value()).toBe(4 + 3 + 0 + 1 + 2);
       expect(tree43012.collect()).toBe([node4, node3, node1, node2]);
 
-      const tree30 = Tree.merge(tree3, tree0);
-      const tree300303 = Tree.merge(tree30, Tree.merge(tree0, Tree.merge(tree30, tree3)));
+      const tree30 = treeFactory.merge(tree3, tree0);
+      const tree300303 = treeFactory.merge(tree30, treeFactory.merge(tree0, treeFactory.merge(tree30, tree3)));
       expect(tree300303.value()).toBe(3 + 0 + 0 + 3 + 0 + 3);
       expect(tree300303.collect()).toBe([node3, node3, node3]);
     });
@@ -103,7 +103,7 @@ export function addTests(runner, expect) {
       const node6 = {data: 'd6', value: values[5]};
       let tmp;
 
-      const tree = Tree.build(['d1', 'd2', 'd3', 'd4', 'd5', 'd6'], values);
+      const tree = treeFactory.build(['d1', 'd2', 'd3', 'd4', 'd5', 'd6'], values);
       expect(tree.collect()).toBe([node1, node2, node3, node4, node5, node6]);
 
       tmp = tree.split(0, 0);
@@ -167,7 +167,7 @@ export function addTests(runner, expect) {
       }
       const total = before[nodes.length];
 
-      const tree = Tree.test.buildFromNodes(nodes.map(x => ({h: x.h, data: x.data, value: x.value})));
+      const tree = treeFactory.test.buildFromNodes(nodes.map(x => ({h: x.h, data: x.data, value: x.value})));
       const iterator = tree.iterator();
       for (let start = -1; start <= total + 1; start++) {
         let i = 0;
@@ -218,7 +218,7 @@ export function addTests(runner, expect) {
     });
 
     it('anchors 1', () => {
-      const tree = Tree.build(['d1', 'd2'], [1.5, 2]);
+      const tree = treeFactory.build(['d1', 'd2'], [1.5, 2]);
       const iterator = tree.iterator();
 
       iterator.locate(0);
@@ -259,7 +259,7 @@ export function addTests(runner, expect) {
     });
 
     it('anchors 2', () => {
-      const tree = Tree.build(['d1', 'd2', 'd3'], [1, 0, 1]);
+      const tree = treeFactory.build(['d1', 'd2', 'd3'], [1, 0, 1]);
       const iterator = tree.iterator();
       let tmp;
 
@@ -308,7 +308,7 @@ export function addTests(runner, expect) {
     });
 
     it('anchors 3', () => {
-      const tree = Tree.build(['d1', 'd2', 'd3'], [1.5, 0, 0.5]);
+      const tree = treeFactory.build(['d1', 'd2', 'd3'], [1.5, 0, 0.5]);
       const iterator = tree.iterator();
       let tmp;
 

@@ -1,4 +1,4 @@
-import { CreateOrderedMonoidTree } from '../utils/OrderedMonoidTree.js';
+import { TreeFactory } from '../utils/OrderedMonoidTree.js';
 import { TextUtils } from './TextUtils.js';
 import { TextMetricsMonoid } from './TextMetrics.js';
 import { TextMeasurer } from './TextMeasurer.js';
@@ -11,7 +11,7 @@ import { RoundMode } from '../utils/RoundMode.js';
 /**
  * @type {Mezzo.TreeFactory<string, Mezzo.TextMetrics, Mezzo.TextLookupKey>}
  */
-const TreeFactory = CreateOrderedMonoidTree(new TextMetricsMonoid());
+const treeFactory = new TreeFactory(new TextMetricsMonoid());
 
 // We should measure performance/memory and consider different chunk sizes
 // based on total document length.
@@ -124,7 +124,7 @@ export class Text {
 
     const middle = insertion._buildWithChunks(left, right);
     return {
-      result: Text._fromTree(TreeFactory.merge(split.left, TreeFactory.merge(middle, split.right))),
+      result: Text._fromTree(treeFactory.merge(split.left, treeFactory.merge(middle, split.right))),
       removed: Text._fromLMR(leftRemoved, tmp.tree, rightRemoved)
     };
   }
@@ -202,17 +202,17 @@ export class Text {
       this._string = undefined;
     } else if (this._chunks) {
       const values = this._chunks.map(chunk => measurer.mapValue(chunk).value);
-      this._tree = TreeFactory.build(this._chunks, values);
+      this._tree = treeFactory.build(this._chunks, values);
       this._chunks = undefined;
     } else if (this._middle) {
       const leftTree = chunkedTree(this._left);
       const rightTree = chunkedTree(this._right);
-      this._tree = TreeFactory.merge(leftTree, TreeFactory.merge(this._middle, rightTree));
+      this._tree = treeFactory.merge(leftTree, treeFactory.merge(this._middle, rightTree));
       this._left = undefined;
       this._right = undefined;
       this._middle = undefined;
     } else {
-      this._tree = TreeFactory.build([], []);
+      this._tree = treeFactory.build([], []);
     }
     return this._tree;
   }
@@ -233,14 +233,14 @@ export class Text {
         return chunkedTree(left + this.content(0, this._length) + right);
       if (left.length + this._length <= kDefaultChunkSize)
         return chunkedTree(left + this.content(0, this._length), right);
-      return TreeFactory.merge(chunkedTree(left), TreeFactory.merge(this._tree, chunkedTree(right)));
+      return treeFactory.merge(chunkedTree(left), treeFactory.merge(this._tree, chunkedTree(right)));
     }
 
     if (this._middle) {
       if (combine)
         return chunkedTree(left + this.content(0, this._length) + right);
       // TODO: might make sense to rechunk (left + this._left + this._middle) if too short.
-      return TreeFactory.merge(chunkedTree(left + this._left), TreeFactory.merge(this._middle, chunkedTree(this._right + right)));
+      return treeFactory.merge(chunkedTree(left + this._left), treeFactory.merge(this._middle, chunkedTree(this._right + right)));
     }
 
     if (this._string) {
@@ -260,7 +260,7 @@ export class Text {
       data.push(...this._chunks);
       values.push(...this._chunks.map(chunk => measurer.mapValue(chunk).value));
       chunkContent(right, data, values);
-      return TreeFactory.build(data, values);
+      return treeFactory.build(data, values);
     }
 
     if (combine)
@@ -304,7 +304,7 @@ function chunkedTree(...content) {
   const values = [];
   for (const s of content)
     chunkContent(s, data, values);
-  return TreeFactory.build(data, values);
+  return treeFactory.build(data, values);
 }
 
 /**
@@ -339,7 +339,7 @@ Text.test.fromStringChunked = function(string, chunkSize) {
   const data = [];
   const values = [];
   chunkContent(string, data, values, chunkSize);
-  text._tree = TreeFactory.build(data, values);
+  text._tree = treeFactory.build(data, values);
   text._length = text._tree.value().length;
   return text;
 };
