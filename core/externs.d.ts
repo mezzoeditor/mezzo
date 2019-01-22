@@ -1,13 +1,26 @@
+// Import JS-defined classes into TypeScript land to re-export these
+// classes into global Mezzo namespace later.
+
 import {TreeFactory as JSTreeFactory, Tree as JSTree, TreeIterator as JSTreeIterator} from './utils/OrderedMonoidTree.js';
 import {TextIterator as JSTextIterator} from './text/TextIterator.js';
 import {Text as JSText} from './text/Text.js';
 import {RangeTree as JSRangeTree} from './utils/RangeTree.js';
 import {Frame as JSFrame, FrameContent as JSFrameContent} from './markup/Frame.js';
 import {TextMeasurerBase as JSTextMeasurerBase } from './text/TextMeasurer.js';
-export {};
 
 declare global {
   module Mezzo {
+    // Export JS-defined classes into Mezzo global namespace.
+    export class TreeFactory<D,V,K> extends JSTreeFactory<D,V,K> {}
+    export class Tree<D,K,V> extends JSTree<D,K,V> {}
+    export class TreeIterator<D,V,K> extends JSTreeIterator<D,V,K> {}
+    export class TextIterator extends JSTextIterator {}
+    export class Text extends JSText {}
+    export class RangeTree<D> extends JSRangeTree<D> {}
+    export class Frame extends JSFrame {}
+    export class FrameContent extends JSFrameContent {}
+    export class TextMeasurerBase<S> extends JSTextMeasurerBase<S> {}
+
     /**
      * Anchor represents a position between two offsets which is aligned
      * either to the left (stored as integer |offset|) or to the right (stored
@@ -184,16 +197,6 @@ declare global {
      * Text morphism with string input.
      */
     export type StringMorphism<V,K,S> = TextMorphism<string, V, K, S>;
-
-    export class TreeFactory<D,V,K> extends JSTreeFactory<D,V,K> {}
-    export class Tree<D,K,V> extends JSTree<D,K,V> {}
-    export class TreeIterator<D,V,K> extends JSTreeIterator<D,V,K> {}
-    export class TextIterator extends JSTextIterator {}
-    export class Text extends JSText {}
-    export class RangeTree<D> extends JSRangeTree<D> {}
-    export class Frame extends JSFrame {}
-    export class FrameContent extends JSFrameContent {}
-    export class TextMeasurerBase<S> extends JSTextMeasurerBase<S> {}
 
     /**
      * Text morphism with text iterator input for efficiency.
