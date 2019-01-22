@@ -45,7 +45,7 @@ export class RangeTree {
    * Only returns a handle if created with handles support.
    * @param {Mezzo.Anchor} from
    * @param {Mezzo.Anchor} to
-   * @param {T} data
+   * @param {T=} data
    * @return {RangeHandle|undefined}
    */
   add(from, to, data) {

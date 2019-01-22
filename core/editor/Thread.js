@@ -9,8 +9,13 @@
  *
  * NOTE: *every* RemoteObject should be "disposed" when not needed
  * to avoid memory leaks.
+ * @template T
  */
-class RemoteObject {
+export class RemoteObject {
+  /**
+   * @param {Runtime} runtime
+   * @param {string} remoteObjectId
+   */
   constructor(runtime, remoteObjectId) {
     this._runtime = runtime;
     this._remoteObjectId = remoteObjectId;
@@ -36,6 +41,9 @@ class RemoteObject {
     });
   }
 
+  /**
+   * @return {!Runtime}
+   */
   runtime() {
     return this._runtime;
   }
@@ -52,9 +60,21 @@ const SPECIAL_OBJECT_KEY = 'hRmU4CzGcj6A46J6dgWf3ek7zneBUjFU';
 const localObjectSymbol = Symbol('LocalObject');
 
 /**
+ * @typedef {{
+ *   onmessage: function(any):void,
+ *   postMessage: function(any):void,
+ * }} Port
+ */
+
+/**
  * Runtime encapsulates access to the remote javascript runtime.
  */
 class Runtime {
+  /**
+   * @param {string} name
+   * @param {Port} port
+   * @param {Mezzo.PlatformSupport} platformSupport
+   */
   constructor(name, port, platformSupport) {
     this._name = name;
     this._port = port;
@@ -72,6 +92,9 @@ class Runtime {
    * Mark object as exposed. When transfered using either arguments
    * or return value of `runtime.evaluate`, it'll be transformed to
    * RemoteObject on the other end.
+   * @param {T} obj
+   * @return {T}
+   * @template T
    */
   expose(obj) {
     // Mark object as exposed.
@@ -81,6 +104,9 @@ class Runtime {
     return obj;
   }
 
+  /**
+   * @return {Mezzo.PlatformSupport}
+   */
   platformSupport() {
     return this._platformSupport;
   }
@@ -103,6 +129,9 @@ class Runtime {
     return await this._deserialize(result);
   }
 
+  /**
+   * @param {RemoteObject} remoteObject
+   */
   async _dispose(remoteObject) {
     await this._send({
       type: 'dispose',
@@ -111,6 +140,10 @@ class Runtime {
     this._remoteObjects.delete(remoteObject._remoteObjectId);
   }
 
+  /**
+   * @param {any} obj
+   * @return {any}
+   */
   _serialize(obj) {
     if (obj[localObjectSymbol]) {
       const local = obj[localObjectSymbol];
@@ -148,6 +181,10 @@ class Runtime {
     return obj;
   }
 
+  /**
+   * @param {any} obj
+   * @return {Promise<any>}
+   */
   async _deserialize(obj) {
     if (obj[SPECIAL_OBJECT_KEY]) {
       if (obj.importable)
@@ -246,6 +283,10 @@ class Runtime {
   }
 }
 
+/**
+ * @param {Port} port
+ * @param {Mezzo.PlatformSupport} platformSupport
+ */
 export function workerFunction(port, platformSupport) {
   const runtime = new Runtime('worker', port, platformSupport);
   port.postMessage('workerready');
@@ -256,10 +297,11 @@ export function workerFunction(port, platformSupport) {
  */
 export class Thread extends Runtime {
   /**
-   * @param {!PlatformSupport} platformSupport
+   * @param {!Mezzo.PlatformSupport} platformSupport
+   * @return {Promise<Thread>}
    */
   static async create(platformSupport) {
-    const worker = platformSupport.createWorker(import.meta.url, 'workerFunction');
+    const worker = platformSupport.createWorker(import.meta['url'], 'workerFunction');
     await new Promise(fulfill => {
       worker.onmessage = (event) => {
         if (event.data !== 'workerready')
@@ -271,6 +313,10 @@ export class Thread extends Runtime {
     return new Thread(worker, platformSupport);
   }
 
+  /**
+   * @param {!Worker} worker
+   * @param {Mezzo.PlatformSupport} platformSupport
+   */
   constructor(worker, platformSupport) {
     super('ui', worker, platformSupport);
     this._worker = worker;

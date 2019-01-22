@@ -8,8 +8,8 @@ import { EventEmitter } from '../utils/EventEmitter.js';
 export class Editor extends EventEmitter {
   /**
    * @param {!Mezzo.Measurer} measurer
-   * @param {!Platform} platformSupport
-   * @param {!Thread} thread
+   * @param {!Mezzo.PlatformSupport} platformSupport
+   * @param {!Mezzo.Thread} thread
    * @return {!Promise<!Editor>}
    */
   static async createWithRemoteDocument(measurer, platformSupport, thread) {
@@ -21,7 +21,7 @@ export class Editor extends EventEmitter {
 
   /**
    * @param {!Mezzo.Measurer} measurer
-   * @param {!Platform} platformSupport
+   * @param {!Mezzo.PlatformSupport} platformSupport
    * @return {!Editor}
    */
   static create(measurer, platformSupport) {
@@ -29,10 +29,10 @@ export class Editor extends EventEmitter {
   }
 
   /**
-   * @param {!Document} document
+   * @param {!Mezzo.Document} document
    * @param {!Mezzo.Measurer} measurer
-   * @param {!Platform} platformSupport
-   * @param {?Handle} remoteDocument
+   * @param {!Mezzo.PlatformSupport} platformSupport
+   * @param {?Mezzo.RemoteObject<Mezzo.Document>} remoteDocument
    */
   constructor(document, measurer, platformSupport, remoteDocument) {
     super();
@@ -40,7 +40,7 @@ export class Editor extends EventEmitter {
     this._document = document;
     this._document.on(Document.Events.Changed, this._onDocumentChanged.bind(this));
     this._platformSupport = platformSupport;
-    /** @type {!Array<DecorationCallback>} */
+    /** @type {!Array<Mezzo.FrameDecorationCallback>} */
     this._decorationCallbacks = [this._onDecorate.bind(this)];
 
     this._markup = new Markup(measurer, this._document, platformSupport);
@@ -57,7 +57,7 @@ export class Editor extends EventEmitter {
   }
 
   /**
-   * @param {FrameContent} frameContent
+   * @param {Mezzo.FrameContent} frameContent
    */
   _onDecorate(frameContent) {
     // If there's no highlighter - just draw a black text.
@@ -81,7 +81,7 @@ export class Editor extends EventEmitter {
   }
 
   /**
-   * @return {!PlatformSupport}
+   * @return {!Mezzo.PlatformSupport}
    */
   platformSupport() {
     return this._platformSupport;
@@ -100,7 +100,7 @@ export class Editor extends EventEmitter {
   }
 
   /**
-   * @param {!Range} range
+   * @param {!Mezzo.Range} range
    * @param {!{left: number, right: number, top: number, bottom: number}=} padding
    */
   revealRange(range, padding) {
@@ -108,7 +108,7 @@ export class Editor extends EventEmitter {
   }
 
   /**
-   * @param {DecorationCallback} callback
+   * @param {Mezzo.FrameDecorationCallback} callback
    * @return {function()}
    */
   addDecorationCallback(callback) {
@@ -118,7 +118,7 @@ export class Editor extends EventEmitter {
   }
 
   /**
-   * @param {DecorationCallback} callback
+   * @param {Mezzo.FrameDecorationCallback} callback
    */
   removeDecorationCallback(callback) {
     let index = this._decorationCallbacks.indexOf(callback);
@@ -128,42 +128,42 @@ export class Editor extends EventEmitter {
   }
 
   /**
-   * @return {!Array<DecorationCallback>}
+   * @return {!Array<Mezzo.FrameDecorationCallback>}
    */
   decorationCallbacks() {
     return this._decorationCallbacks;
   }
 
   /**
-   * @return {?Tokenizer}
+   * @return {?Mezzo.Tokenizer}
    */
   tokenizer() {
     return this._tokenizer;
   }
 
   /**
-   * @param {?Tokenizer} tokenizer
+   * @param {?Mezzo.Tokenizer} tokenizer
    */
   setTokenizer(tokenizer) {
     this._tokenizer = tokenizer;
   }
 
   /**
-   * @return {!Document}
+   * @return {!Mezzo.Document}
    */
   document() {
     return this._document;
   }
 
   /**
-   * @return {!Markup}
+   * @return {!Mezzo.Markup}
    */
   markup() {
     return this._markup;
   }
 
   /**
-   * @return {!Input}
+   * @return {!Mezzo.Input}
    */
   input() {
     return this._input;
@@ -186,14 +186,14 @@ export class Editor extends EventEmitter {
   }
 
   /**
-   * @param {!DocumentChangedEvent} event
+   * @param {!Mezzo.DocumentChangedEvent} event
    */
   _onDocumentChanged({replacements}) {
     for (const {offset, removed, inserted} of replacements) {
       for (let removedHandle of this._handles.replace(offset, offset + removed.length(), inserted.length()))
         removedHandle[RangeHandle._symbol]._wasRemoved();
       if (this._remoteDocument)
-        this._remoteDocument.rpcIgnoreResult.replace(offset, offset + removed.length(), inserted.content());
+        this._remoteDocument.rpcIgnoreResult['replace'](offset, offset + removed.length(), inserted.content());
     }
   }
 }

@@ -93,8 +93,8 @@ export class RemoteCumulativeIndexer extends EventEmitter {
 
 export class CumulativeIndexer extends EventEmitter {
   /**
-   * @param {!Document} document
-   * @param {!PlatformSupport} platformSupport
+   * @param {!Mezzo.Document} document
+   * @param {!Mezzo.PlatformSupport} platformSupport
    * @param {!CumulativeIndexer.Delegate} delegate
    * @param {{budget: number, density: number}=} options
    */
@@ -121,7 +121,7 @@ export class CumulativeIndexer extends EventEmitter {
   }
 
   static importable() {
-    return {url: import.meta.url, name: this.name};
+    return {url: import.meta['url'], name: this.name};
   }
 
   states() {
@@ -228,7 +228,7 @@ export class CumulativeIndexer extends EventEmitter {
   }
 
   /**
-   * @param {!DocumentChangedEvent} event
+   * @param {!Mezzo.DocumentChangedEvent} event
    */
   _onDocumentChanged({replacements}) {
     if (!replacements.length)
@@ -251,17 +251,31 @@ CumulativeIndexer.Events = {
   Changed: 'changed'
 };
 
+/**
+ * @template T
+ */
 CumulativeIndexer.Delegate = class {
+  /**
+   * @return T
+   */
   initialState() { }
 
-  isEqualStates(state1, state2) { }
+  /**
+   * @param {T} state1
+   * @param {T} state2
+   * @return {boolean}
+   */
+  isEqualStates(state1, state2) {
+    return false;
+  }
 
   /**
-   * @param {TextIterator} iterator
-   * @param {*} state
-   * @return {*}
+   * @param {Mezzo.TextIterator} iterator
+   * @param {T} state
+   * @return {T}
    * Returns a state after processing a chunk defined by iterator.
    */
   indexIterator(iterator, state) {
+    return null;
   }
 }

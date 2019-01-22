@@ -13,12 +13,8 @@
     "core/"
   ],
   "exclude": [
-    "core/editor/CumulativeIndexer.js",
-    "core/editor/Editor.js",
     "core/editor/Editor.spec.js",
-    "core/editor/Input.js",
     "core/editor/Input.spec.js",
-    "core/editor/Thread.js",
     "core/editor/Thread.spec.js",
     "core/markup/Markup.spec.js",
     "core/web/DOMUtils.js",

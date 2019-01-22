@@ -9,6 +9,10 @@ import {Frame as JSFrame, FrameContent as JSFrameContent} from './markup/Frame.j
 import {TextMeasurerBase as JSTextMeasurerBase} from './text/TextMeasurer.js';
 import {Document as JSDocument} from './text/Document.js';
 import {Markup as JSMarkup} from './markup/Markup.js';
+import {Thread as JSThread, RemoteObject as JSRemoteObject} from './editor/Thread.js';
+import {Editor as JSEditor} from './editor/Editor.js';
+import {Input as JSInput} from './editor/Input.js';
+import {Tokenizer as JSTokenizer, DefaultTokenizer as JSDefaultTokenizer} from './editor/Tokenizer.js';
 
 declare global {
   module Mezzo {
@@ -24,6 +28,12 @@ declare global {
     export class TextMeasurerBase<S> extends JSTextMeasurerBase<S> {}
     export class Document extends JSDocument {}
     export class Markup extends JSMarkup {}
+    export class Thread extends JSThread {}
+    export class RemoteObject<T> extends JSRemoteObject<T> {}
+    export class Editor extends JSEditor {}
+    export class Input extends JSInput {}
+    export class Tokenizer extends JSTokenizer {}
+    export class DefaultTokenizer extends JSDefaultTokenizer {}
 
     /**
      * Anchor represents a position between two offsets which is aligned
@@ -262,7 +272,7 @@ declare global {
 
       throttle(ms:number);
 
-      createWorker(initializer:(MessagePort)=>void):(Worker|null);
+      createWorker(url:string, functionName:string):(Worker|null);
 
       debugLogger(namespace:string):(string)=>void;
     }
