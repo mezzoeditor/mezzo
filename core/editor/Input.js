@@ -7,6 +7,7 @@ import { Document, selectionRangeComparator } from '../text/Document.js';
  * @typedef {{
  *   from: number,
  *   to: number,
+ *   cursorOffset?: number,
  *   s: string,
  * }} RangeEdit;
  */
@@ -18,9 +19,11 @@ import { Document, selectionRangeComparator } from '../text/Document.js';
  * }} InputOverride;
  */
 
+const kOriginalRange = Symbol('originalRange');
+
 export class Input extends EventEmitter {
   /**
-   * @param {!Editor} editor
+   * @param {!Mezzo.Editor} editor
    */
   constructor(editor) {
     super();
@@ -225,7 +228,7 @@ export class Input extends EventEmitter {
   }
 
   /**
-   * @param {!Markup} markup
+   * @param {!Mezzo.Markup} markup
    * @return {boolean}
    */
   moveUp(markup) {
@@ -240,7 +243,7 @@ export class Input extends EventEmitter {
   }
 
   /**
-   * @param {!Markup} markup
+   * @param {!Mezzo.Markup} markup
    * @return {boolean}
    */
   movePageDown(markup) {
@@ -259,7 +262,7 @@ export class Input extends EventEmitter {
   }
 
   /**
-   * @param {!Markup} markup
+   * @param {!Mezzo.Markup} markup
    * @return {boolean}
    */
   movePageUp(markup) {
@@ -278,7 +281,7 @@ export class Input extends EventEmitter {
   }
 
   /**
-   * @param {!Markup} markup
+   * @param {!Mezzo.Markup} markup
    * @return {boolean}
    */
   moveDown(markup) {
@@ -293,7 +296,7 @@ export class Input extends EventEmitter {
   }
 
   /**
-   * @param {!Markup} markup
+   * @param {!Mezzo.Markup} markup
    * @return {boolean}
    */
   moveLeft(markup) {
@@ -306,7 +309,7 @@ export class Input extends EventEmitter {
   }
 
   /**
-   * @param {!Markup} markup
+   * @param {!Mezzo.Markup} markup
    * @return {boolean}
    */
   moveRight(markup) {
@@ -379,7 +382,7 @@ export class Input extends EventEmitter {
   }
 
   /**
-   * @param {!Markup} markup
+   * @param {!Mezzo.Markup} markup
    * @return {boolean}
    */
   moveLineStart(markup) {
@@ -396,7 +399,7 @@ export class Input extends EventEmitter {
   }
 
   /**
-   * @param {!Markup} markup
+   * @param {!Mezzo.Markup} markup
    * @return {boolean}
    */
   moveLineEnd(markup) {
@@ -407,7 +410,7 @@ export class Input extends EventEmitter {
   }
 
   /**
-   * @param {!Markup} markup
+   * @param {!Mezzo.Markup} markup
    * @return {boolean}
    */
   selectUp(markup) {
@@ -418,7 +421,7 @@ export class Input extends EventEmitter {
   }
 
   /**
-   * @param {!Markup} markup
+   * @param {!Mezzo.Markup} markup
    * @return {boolean}
    */
   selectDown(markup) {
@@ -429,7 +432,7 @@ export class Input extends EventEmitter {
   }
 
   /**
-   * @param {!Markup} markup
+   * @param {!Mezzo.Markup} markup
    * @return {boolean}
    */
   selectLeft(markup) {
@@ -439,7 +442,7 @@ export class Input extends EventEmitter {
   }
 
   /**
-   * @param {!Markup} markup
+   * @param {!Mezzo.Markup} markup
    * @return {boolean}
    */
   selectRight(markup) {
@@ -469,7 +472,7 @@ export class Input extends EventEmitter {
   }
 
   /**
-   * @param {!Markup} markup
+   * @param {!Mezzo.Markup} markup
    * @return {boolean}
    */
   selectLineStart(markup) {
@@ -486,7 +489,7 @@ export class Input extends EventEmitter {
   }
 
   /**
-   * @param {!Markup} markup
+   * @param {!Mezzo.Markup} markup
    * @return {boolean}
    */
   selectLineEnd(markup) {
@@ -496,8 +499,6 @@ export class Input extends EventEmitter {
   }
 
   selectAll() {
-    if (this._frozen)
-      throw new Error('Cannot change selection while frozen');
     this._document.setSelection([{
       anchor: 0,
       focus: this._document.text().length()
@@ -508,8 +509,6 @@ export class Input extends EventEmitter {
    * @return {boolean}
    */
   collapseSelection() {
-    if (this._frozen)
-      throw new Error('Cannot change selection while frozen');
     const selection = this._document.sortedSelection();
     if (selection.length === 0)
       return false;
@@ -533,7 +532,7 @@ export class Input extends EventEmitter {
   }
 
   /**
-   * @return {!SelectionRange} range
+   * @param {!Mezzo.SelectionRange} range
    */
   setLastCursor(range) {
     const selection = this._document.selection();
@@ -546,12 +545,10 @@ export class Input extends EventEmitter {
   // -------- Internals --------
 
   /**
-   * @param {function(!SelectionRange):?SelectionRange} rangeCallback
+   * @param {function(!Mezzo.SelectionRange):?Mezzo.SelectionRange} rangeCallback
    * @return {boolean}
    */
   _updateSelection(rangeCallback) {
-    if (this._frozen)
-      throw new Error('Cannot change selection while frozen');
     const selection = this._document.selection();
     if (!selection.length)
       return false;
@@ -595,7 +592,7 @@ export class Input extends EventEmitter {
           break;
         }
       }
-      replaced.originalRange = range;
+      replaced[kOriginalRange] = range;
       edits.push(replaced);
     }
     // Compute history action.
@@ -609,11 +606,13 @@ export class Input extends EventEmitter {
       let newSelection = [];
       for (const edit of edits) {
         this._document.replace(edit.from + delta, edit.to + delta, edit.s);
-        newSelection.push({anchor: edit.cursorOffset + delta, focus: edit.cursorOffset + delta, originalRange: edit.originalRange});
+        const range = {anchor: edit.cursorOffset + delta, focus: edit.cursorOffset + delta};
+        range[kOriginalRange] = edit[kOriginalRange];
+        newSelection.push(range);
         delta += edit.s.length - (edit.to - edit.from);
       }
       // Restore selection order based on the originalRange order.
-      newSelection.sort((a, b) => ordering.get(a.originalRange) - ordering.get(b.originalRange));
+      newSelection.sort((a, b) => ordering.get(a[kOriginalRange]) - ordering.get(b[kOriginalRange]));
       this._document.setSelection(newSelection);
     }, historyAction);
     this._document.setMetadata(this._historyMetadata, newMetadata);
@@ -667,7 +666,7 @@ export class Input extends EventEmitter {
   }
 
   /**
-   * @param {!Markup} markup
+   * @param {!Mezzo.Markup} markup
    * @param {number} offset
    * @return {number}
    */
@@ -679,7 +678,7 @@ export class Input extends EventEmitter {
   }
 
   /**
-   * @param {!Markup} markup
+   * @param {!Mezzo.Markup} markup
    * @param {number} offset
    * @return {number}
    */
@@ -692,7 +691,7 @@ export class Input extends EventEmitter {
   }
 
   /**
-   * @param {!Markup} markup
+   * @param {!Mezzo.Markup} markup
    * @param {number} offset
    * @return {number}
    */
@@ -702,7 +701,7 @@ export class Input extends EventEmitter {
   }
 
   /**
-   * @param {!Markup} markup
+   * @param {!Mezzo.Markup} markup
    * @param {number} offset
    * @return {number}
    */
@@ -712,7 +711,7 @@ export class Input extends EventEmitter {
   }
 
   /**
-   * @param {!Markup} markup
+   * @param {!Mezzo.Markup} markup
    * @param {number} offset
    * @param {number} upDownX
    * @param {number} lineCount
@@ -727,7 +726,7 @@ export class Input extends EventEmitter {
   }
 
   /**
-   * @param {!Markup} markup
+   * @param {!Mezzo.Markup} markup
    * @param {number} offset
    * @param {number} upDownX
    * @param {number} lineCount
