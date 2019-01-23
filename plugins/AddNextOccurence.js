@@ -1,13 +1,28 @@
 import { Document } from '../core/text/Document.js';
 import { Tokenizer } from '../core/editor/Tokenizer.js';
 
+/**
+ * @typedef {{
+ *   nextOccurenceText: string,
+ *   nextOccurenceGroupOnly: boolean,
+ *   nextOccurenceSearchOffset: number,
+ *   nextOccurenceSearchEnd: number
+ * }} AddNextOccurenceState
+ */
+
 export class AddNextOccurence {
+  /**
+   * @param {!Mezzo.Editor} editor
+   */
   constructor(editor) {
     this._metadataSymbol = Symbol('AddNextOccurence.metadata');
     this._editor = editor;
     this._document = editor.document();
   }
 
+  /**
+   * @return {AddNextOccurenceState}
+   */
   _state() {
     const state = this._document.metadata(this._metadataSymbol);
     if (state)
@@ -20,6 +35,9 @@ export class AddNextOccurence {
     };
   }
 
+  /**
+   * @return {boolean}
+   */
   addNext() {
     let tokenizer = this._editor.tokenizer();
     const selection = this._document.selection();

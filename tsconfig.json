@@ -10,7 +10,8 @@
     "target": "ESNext"
   },
   "include": [
-    "core/"
+    "core/",
+    "plugins/"
   ],
   "exclude": [
     "core/editor/Editor.spec.js",
@@ -23,6 +24,19 @@
     "core/web/Renderer.spec.js",
     "core/web/WebPlatformSupport.js",
     "core/utils/NumberMonoid.js",
-    "core/utils/Trace.js"
+    "core/utils/Trace.js",
+
+    "plugins/AddNextOccurence.spec.js",
+    "plugins/BlockIndentation.js",
+    "plugins/Search.js",
+    "plugins/Search.spec.js",
+    "plugins/SelectedWordHighlighter.js",
+    "plugins/SelectionDecorator.js",
+    "plugins/SmartBraces.js",
+    "plugins/TrailingWhitespaces.js",
+    "plugins/WordDictionary.js",
+    "plugins/WordDictionary.spec.js",
+
+    "plugins/web"
   ]
 }
